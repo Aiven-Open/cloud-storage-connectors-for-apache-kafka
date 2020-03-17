@@ -1,0 +1,90 @@
+plugins {
+
+    id 'java-library'
+
+    id 'maven-publish'
+
+    id "checkstyle"
+
+    id "jacoco"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+compileJava {
+    options.compilerArgs = ['-Xlint:all', '-Werror']
+}
+
+checkstyle {
+    toolVersion "8.29"
+    configDir rootProject.file("checkstyle/")
+}
+
+jacoco {
+    toolVersion = "0.8.5"
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+ext {
+    kafkaVersion = "1.1.0"
+    junitVersion = "5.6.2"
+}
+
+
+dependencies {
+    compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
+    compileOnly "org.apache.kafka:connect-runtime:$kafkaVersion"
+
+    implementation "org.slf4j:slf4j-api:1.7.25"
+    implementation "com.google.guava:guava:28.2-jre"
+
+    implementation "org.apache.commons:commons-text:1.8"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+}
+
+group = "io.aiven"
+version = "0.9"
+
+test {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = getGroup()
+            artifactId = "aiven-kafka-connect-commons"
+            version = getVersion()
+
+            pom {
+                name = "Aiven Kafka connector commons"
+                description = "A Kafka connector commons utils library"
+                url = "https://aiven.io"
+                organization {
+                    name = "Aiven Oy"
+                    url = "https://aiven.io"
+                }
+                licenses {
+                    license {
+                        name = "GNU Affero General Public License 3.0"
+                        url = "https://www.gnu.org/licenses/agpl-3.0.en.html"
+                        distribution = "repo"
+                    }
+                }
+            }
+
+            from components.java
+        }
+    }
+
+}
+
