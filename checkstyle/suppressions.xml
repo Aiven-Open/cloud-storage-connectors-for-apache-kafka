@@ -28,5 +28,8 @@
     <suppress checks="LineLength"
               files="(FilenameTemplateValidatorTest).java" />
 
+    <suppress checks="(ClassFanOutComplexity)"
+              files="(S3SinkConfig|S3SinkTaskTest).java"/>
+
 
 </suppressions>
