@@ -9,4 +9,7 @@
     <suppress checks="(Indentation)"
               files="(AivenCommonConfig).java"/>
 
+    <suppress checks="(ConstantName)"
+              files="(FormatterUtils).java"/>
+
 </suppressions>
