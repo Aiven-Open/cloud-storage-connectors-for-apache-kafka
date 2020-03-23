@@ -33,6 +33,10 @@ public final class FormatterUtils {
                 ? String.format("%020d", sinkRecord.kafkaOffset())
                 : Long.toString(sinkRecord.kafkaOffset());
 
+    public static String formatKafkaOffset(final SinkRecord record) {
+        return formatKafkaOffset.apply(record, Parameter.of("padding", "true"));
+    }
+
     public static final BiFunction<TimestampSource, Parameter, String> formatTimestamp =
         new BiFunction<>() {
 
