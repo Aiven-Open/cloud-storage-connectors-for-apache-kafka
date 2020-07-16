@@ -22,15 +22,13 @@ import java.util.stream.Collectors;
 import com.google.common.base.Objects;
 
 public class OutputField {
-
-    private OutputFieldType fieldType;
-
-    private OutputFieldEncodingType encodingType;
-
     public static final String SUPPORTED_OUTPUT_FIELDS =
         OutputFieldType.names().stream()
             .map(f -> "'" + f + "'")
             .collect(Collectors.joining(", "));
+
+    private OutputFieldType fieldType;
+    private OutputFieldEncodingType encodingType;
 
     public OutputField(final OutputFieldType fieldType, final OutputFieldEncodingType encodingType) {
         this.fieldType = fieldType;

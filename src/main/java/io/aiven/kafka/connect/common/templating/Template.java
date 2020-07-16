@@ -24,7 +24,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.common.lang.Pair;
@@ -43,10 +42,6 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
  * <p>Non-bound variables are left as is.
  */
 public final class Template {
-
-    private static final Pattern VARIABLE_PATTERN =
-        Pattern.compile("\\{\\{\\s*(([\\w_]+)(:([\\w]+)=([\\w]+))?)\\s*}}");
-
     private final List<Pair<String, Parameter>> variablesAndParameters;
 
     private final List<TemplatePart> templateParts;
@@ -61,20 +56,28 @@ public final class Template {
         this.templateParts = templateParts;
     }
 
+    public String originalTemplate() {
+        return originalTemplateString;
+    }
+
     public final List<String> variables() {
         return variablesAndParameters.stream()
             .map(Pair::left)
             .collect(Collectors.toList());
     }
 
-    public final List<Pair<String, Parameter>> variablesWithNonEmptyParameters() {
+    public final Set<String> variablesSet() {
+        return variablesAndParameters.stream().map(Pair::left).collect(Collectors.toSet());
+    }
+
+    public final List<Pair<String, Parameter>> variablesWithParameters() {
+        return variablesAndParameters;
+    }
+
+    public final List<Pair<String, Parameter>>  variablesWithNonEmptyParameters() {
         return variablesAndParameters.stream()
             .filter(e -> !e.right().isEmpty())
             .collect(Collectors.toList());
-    }
-
-    public final Set<String> variablesSet() {
-        return variablesAndParameters.stream().map(Pair::left).collect(Collectors.toSet());
     }
 
     public final Instance instance() {

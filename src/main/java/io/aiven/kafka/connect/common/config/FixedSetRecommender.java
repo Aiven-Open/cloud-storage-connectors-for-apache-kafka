@@ -30,7 +30,7 @@ import org.apache.kafka.common.config.ConfigDef;
  * A {@link ConfigDef.Recommender} that always supports only
  * the predefined set of values. {@link #visible(String, Map)} is always {@code true}.
  */
-class FixedSetRecommender implements ConfigDef.Recommender {
+public class FixedSetRecommender implements ConfigDef.Recommender {
 
     private final List<Object> supportedValues;
 
@@ -49,7 +49,7 @@ class FixedSetRecommender implements ConfigDef.Recommender {
         return true;
     }
 
-    static FixedSetRecommender ofSupportedValues(final Collection<?> supportedValues) {
+    public static FixedSetRecommender ofSupportedValues(final Collection<?> supportedValues) {
         Objects.requireNonNull(supportedValues, "supportedValues cannot be null");
         return new FixedSetRecommender(supportedValues);
     }

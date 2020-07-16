@@ -18,10 +18,8 @@
 package io.aiven.kafka.connect.common.output;
 
 public class PlainValueWriter extends AbstractValueWriter {
-
     @Override
     protected byte[] getOutputBytes(final byte[] value) {
         return value;
     }
-
 }

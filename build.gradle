@@ -33,12 +33,13 @@ repositories {
 }
 
 ext {
-    kafkaVersion = "1.0.2"
+    kafkaVersion = "1.1.0"
 }
 
 
 dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
+    compileOnly "org.apache.kafka:connect-runtime:$kafkaVersion"
 
     implementation "org.slf4j:slf4j-api:1.7.25"
     implementation "com.google.guava:guava:28.2-jre"

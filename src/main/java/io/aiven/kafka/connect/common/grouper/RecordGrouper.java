@@ -15,7 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.aiven.kafka.connect.common.templating;
+package io.aiven.kafka.connect.common.grouper;
 
-public interface TemplatePart {
+import java.util.List;
+import java.util.Map;
+
+import org.apache.kafka.connect.sink.SinkRecord;
+
+/**
+ * The interface for classes that associates {@link SinkRecord}s with files by some criteria.
+ */
+public interface RecordGrouper {
+    /**
+     * Associate the record with the appropriate file.
+     */
+    void put(SinkRecord record);
+
+    /**
+     * Clear all records.
+     */
+    void clear();
+
+    /**
+     * Get all records associated with files, grouped by the file name.
+     */
+    Map<String, List<SinkRecord>> records();
+
 }

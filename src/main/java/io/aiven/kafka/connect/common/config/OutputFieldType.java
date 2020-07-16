@@ -26,7 +26,8 @@ public enum OutputFieldType {
     KEY("key"),
     VALUE("value"),
     OFFSET("offset"),
-    TIMESTAMP("timestamp");
+    TIMESTAMP("timestamp"),
+    HEADERS("headers");
 
     public final String name;
 
@@ -45,6 +46,8 @@ public enum OutputFieldType {
             return OFFSET;
         } else if (TIMESTAMP.name.equalsIgnoreCase(name)) {
             return TIMESTAMP;
+        } else if (HEADERS.name.equalsIgnoreCase(name)) {
+            return HEADERS;
         } else {
             throw new IllegalArgumentException("Unknown output field: " + name);
         }
