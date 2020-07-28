@@ -12,4 +12,4 @@ To use this library for development *Aiven Kafka Connectors* you need to build a
  
 # License
 
-This project is licensed under the [GNU Affero General Public License 3.0](LICENSE)
+This project is licensed under the [Apache License, Version 2.0](LICENSE).
