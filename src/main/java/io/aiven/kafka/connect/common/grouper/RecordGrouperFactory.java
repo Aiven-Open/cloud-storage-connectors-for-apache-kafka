@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.grouper;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +27,6 @@ import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
 import io.aiven.kafka.connect.common.templating.Template;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -36,23 +36,22 @@ public final class RecordGrouperFactory {
 
     public static final String TOPIC_PARTITION_RECORD = TopicPartitionRecordGrouper.class.getName();
 
-    public static final Map<String, List<Pair<String, Boolean>>> SUPPORTED_VARIABLES =
-        Map.of(
-            TOPIC_PARTITION_RECORD, ImmutableList.of(
+    public static final Map<String, List<Pair<String, Boolean>>> SUPPORTED_VARIABLES = new LinkedHashMap<>() {{
+            put(TOPIC_PARTITION_RECORD, List.of(
                 Pair.of(FilenameTemplateVariable.TOPIC.name, true),
                 Pair.of(FilenameTemplateVariable.PARTITION.name, true),
                 Pair.of(FilenameTemplateVariable.START_OFFSET.name, true),
                 Pair.of(FilenameTemplateVariable.TIMESTAMP.name, false)
-            ),
-            KEY_RECORD, ImmutableList.of(Pair.of(FilenameTemplateVariable.KEY.name, true))
-        );
+            ));
+            put(KEY_RECORD, List.of(Pair.of(FilenameTemplateVariable.KEY.name, true)));
+        }};
 
-    public static final Set<String> ALL_SUPPORTED_VARIABLES =
+    public static final List<String> ALL_SUPPORTED_VARIABLES =
         SUPPORTED_VARIABLES.values()
             .stream()
             .flatMap(List::stream)
             .map(Pair::getLeft)
-            .collect(Collectors.toSet());
+            .collect(Collectors.toList());
 
     private static final Set<String> KEY_RECORD_REQUIRED_VARS =
         SUPPORTED_VARIABLES.get(KEY_RECORD).stream()

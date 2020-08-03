@@ -17,10 +17,11 @@
 package io.aiven.kafka.connect.common.config;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 public enum FilenameTemplateVariable {
+    KEY("key"),
     TOPIC("topic"),
     PARTITION("partition"),
     START_OFFSET(
@@ -28,7 +29,7 @@ public enum FilenameTemplateVariable {
         new ParameterDescriptor(
             "padding",
             false,
-            Set.of(Boolean.TRUE.toString(), Boolean.FALSE.toString())
+            List.of(Boolean.TRUE.toString(), Boolean.FALSE.toString())
         )
     ),
     TIMESTAMP(
@@ -36,10 +37,9 @@ public enum FilenameTemplateVariable {
         new ParameterDescriptor(
             "unit",
             true,
-            Set.of("YYYY", "MM", "dd", "HH")
+            List.of("YYYY", "MM", "dd", "HH")
         )
-    ),
-    KEY("key");
+    );
 
     public final String name;
 
@@ -87,17 +87,17 @@ public enum FilenameTemplateVariable {
             new ParameterDescriptor(
                 "__no_parameter__",
                 false,
-                Collections.emptySet());
+                Collections.emptyList());
 
         public final String name;
 
         public final boolean required;
 
-        public Set<String> values;
+        public List<String> values;
 
         public ParameterDescriptor(final String name,
                                    final boolean required,
-                                   final Set<String> values) {
+                                   final List<String> values) {
             this.name = name;
             this.required = required;
             this.values = values;
