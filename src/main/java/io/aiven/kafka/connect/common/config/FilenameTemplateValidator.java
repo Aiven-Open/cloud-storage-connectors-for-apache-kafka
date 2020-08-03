@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,19 +31,18 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import static io.aiven.kafka.connect.common.config.FilenameTemplateVariable.ParameterDescriptor;
+import static io.aiven.kafka.connect.common.config.FilenameTemplateVariable.START_OFFSET;
+import static io.aiven.kafka.connect.common.config.FilenameTemplateVariable.TIMESTAMP;
 import static io.aiven.kafka.connect.common.grouper.RecordGrouperFactory.ALL_SUPPORTED_VARIABLES;
 import static io.aiven.kafka.connect.common.grouper.RecordGrouperFactory.SUPPORTED_VARIABLES_LIST;
 
 public final class FilenameTemplateValidator implements ConfigDef.Validator {
 
-    private static final Map<String, FilenameTemplateVariable.ParameterDescriptor> SUPPORTED_VARIABLE_PARAMETERS =
-        Map.of(
-            FilenameTemplateVariable.START_OFFSET.name,
-            FilenameTemplateVariable.START_OFFSET.parameterDescriptor,
-
-            FilenameTemplateVariable.TIMESTAMP.name,
-            FilenameTemplateVariable.TIMESTAMP.parameterDescriptor
-        );
+    private static final Map<String, ParameterDescriptor> SUPPORTED_VARIABLE_PARAMETERS = new LinkedHashMap<>() {{
+            put(START_OFFSET.name, START_OFFSET.parameterDescriptor);
+            put(TIMESTAMP.name, TIMESTAMP.parameterDescriptor);
+        }};
 
     private final String configName;
 
