@@ -1,3 +1,7 @@
+![Push Workflow](https://github.com/aiven/aiven-kafka-connect-commons/workflows/Push%20Workflow/badge.svg)
+![Release Workflow](https://github.com/aiven/aiven-kafka-connect-commons/workflows/Release%20Workflow/badge.svg)
+![Publish Workflow](https://github.com/aiven/aiven-kafka-connect-commons/workflows/Publish%20Workflow/badge.svg)
+
 # Avien Kafka Connect Common Module
 
 Shared common functionality among *Aiven Kafka Connectors*:

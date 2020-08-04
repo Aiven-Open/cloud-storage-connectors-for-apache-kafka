@@ -1,26 +1,63 @@
+/*
+ * Copyright 2020 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 plugins {
 
-    id 'java-library'
+    // https://docs.gradle.org/current/userguide/java_library_plugin.html
+    id "java-library"
 
-    id 'maven-publish'
-
+    // https://docs.gradle.org/current/userguide/checkstyle_plugin.html
     id "checkstyle"
 
+    // https://docs.gradle.org/current/userguide/jacoco_plugin.html
     id "jacoco"
+
+    // https://docs.gradle.org/current/userguide/distribution_plugin.html
+    id "distribution"
+
+    // https://docs.gradle.org/current/userguide/publishing_maven.html
+    id "maven-publish"
+
+    id "com.jfrog.bintray" version "1.8.1"
 }
+
+group = "io.aiven"
+version = System.getenv("RELEASE_VERSION") ?: "0-SNAPSHOT"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+
+    withJavadocJar()
+    withSourcesJar()
 }
 
 compileJava {
-    options.compilerArgs = ['-Xlint:all', '-Werror']
+    options.compilerArgs = ["-Xlint:all", "-Werror"]
+}
+
+javadoc {
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
 }
 
 checkstyle {
     toolVersion "8.29"
-    configDir rootProject.file("checkstyle/")
+    getConfigDirectory().set(rootProject.file("checkstyle/"))
 }
 
 jacoco {
@@ -37,6 +74,20 @@ ext {
     junitVersion = "5.6.2"
 }
 
+distributions {
+    main {
+        contents {
+            from jar
+            from configurations.runtimeClasspath
+
+            into("/") {
+                from projectDir
+                include "version.txt", "README*", "LICENSE*", "NOTICE*", "licenses/"
+                include "config/"
+            }
+        }
+    }
+}
 
 dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
@@ -51,8 +102,28 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
 
-group = "io.aiven"
-version = "0.9"
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    publications = ['maven']
+    publish = true
+    override = false
+    pkg {
+        repo = 'maven'
+        name = 'aiven-kafka-connect-commons'
+        userOrg = 'aiven'
+        licenses = ['Apache-2.0']
+        websiteUrl = 'https://github.com/aiven/aiven-kafka-connect-commons'
+        vcsUrl = 'https://github.com/aiven/aiven-kafka-connect-commons.git'
+        labels = ['kafka', 'connect']
+        publicDownloadNumbers = true
+        version {
+            name = project.getVersion()
+            desc = 'Aiven Kafka Connect Commons ' + project.getVersion()
+            released  = new Date()
+        }
+    }
+}
 
 test {
     useJUnitPlatform()
@@ -64,7 +135,6 @@ publishing {
             groupId = getGroup()
             artifactId = "aiven-kafka-connect-commons"
             version = getVersion()
-
             pom {
                 name = "Aiven Kafka connector commons"
                 description = "A Kafka connector commons utils library"
@@ -75,16 +145,13 @@ publishing {
                 }
                 licenses {
                     license {
-                        name = "GNU Affero General Public License 3.0"
-                        url = "https://www.gnu.org/licenses/agpl-3.0.en.html"
+                        name = "Apache 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0"
                         distribution = "repo"
                     }
                 }
             }
-
             from components.java
         }
     }
-
 }
-
