@@ -1,9 +1,10 @@
 name: Release Workflow
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*'
 jobs:
-  publish:
+  build:
     name: Release
     runs-on: ubuntu-latest
     steps:
@@ -13,9 +14,19 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 11
-      - name: Build with Gradle
-        run: ./gradlew build
-      - name: Publish package
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body:
+          draft: false
+          prerelease: false
+      - name: Publish Package
         run: ./gradlew publishMavenPublicationToGitHubPackagesRepository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ github.ref }}
