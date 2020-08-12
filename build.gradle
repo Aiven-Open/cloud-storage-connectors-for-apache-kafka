@@ -89,7 +89,7 @@ dependencies {
 }
 
 group = "io.aiven"
-version = System.getenv("GITHUB_RUN_NUMBER") ?: "0-SNAPSHOT"
+version = System.getenv("RELEASE_VERSION") ?: "0-SNAPSHOT"
 
 test {
     useJUnitPlatform()
