@@ -21,6 +21,8 @@ jobs:
           java-version: 11
       - name: Build with Gradle
         run: ./gradlew distZip distTar
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.tag }}
       - name: Release
         id: create_release
         uses: actions/create-release@v1
