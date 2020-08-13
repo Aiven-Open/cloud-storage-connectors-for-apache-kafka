@@ -8,7 +8,7 @@ on:
         default: ''
 jobs:
   publish:
-    name: Publish
+    name: Publish v${{ github.event.inputs.tag }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
