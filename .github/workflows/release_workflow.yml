@@ -2,7 +2,7 @@ name: Release and Publish Workflow
 on:
   push:
     tags:
-      - v*
+      - '**'
 jobs:
   build:
     name: Release
