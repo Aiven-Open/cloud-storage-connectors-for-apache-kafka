@@ -33,22 +33,22 @@ jobs:
           draft: false
           prerelease: false
       - name: Upload Release Asset zip
-          id: upload-release-asset-zip
-          uses: actions/upload-release-asset@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          with:
-            upload_url: ${{ steps.create_release.outputs.upload_url }}
-            asset_path: ./build/distributions/aiven-kafka-connect-commons-${{ github.event.inputs.tag }}.zip
-            asset_name: aiven-kafka-connect-commons-${{ github.event.inputs.tag }}.zip
-            asset_content_type: application/zip
+        id: upload-release-asset-zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/distributions/aiven-kafka-connect-commons-${{ github.event.inputs.tag }}.zip
+          asset_name: aiven-kafka-connect-commons-${{ github.event.inputs.tag }}.zip
+          asset_content_type: application/zip
       - name: Upload Release Asset tar
-          id: upload-release-asset-tar
-          uses: actions/upload-release-asset@v1
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          with:
-            upload_url: ${{ steps.create_release.outputs.upload_url }}
-            asset_path: ./build/distributions/aiven-kafka-connect-commons-${{ github.event.inputs.tag }}.tar
-            asset_name: aiven-kafka-connect-commons-${{ github.event.inputs.tag }}.tar
-            asset_content_type: application/x-tar
+        id: upload-release-asset-tar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/distributions/aiven-kafka-connect-commons-${{ github.event.inputs.tag }}.tar
+          asset_name: aiven-kafka-connect-commons-${{ github.event.inputs.tag }}.tar
+          asset_content_type: application/x-tar
