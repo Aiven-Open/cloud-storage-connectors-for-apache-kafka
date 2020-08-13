@@ -1,4 +1,4 @@
-name: Release and Publish Workflow
+name: Release Workflow
 on:
   workflow_dispatch:
     inputs:

@@ -1,7 +1,11 @@
 name: Publish Workflow
 on:
-  release:
-    types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag'
+        required: true
+        default: ''
 jobs:
   publish:
     name: Publish
@@ -9,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          ref: v${{ github.event.inputs.tag }}
       - name: Set up Java
         uses: actions/setup-java@v1
         with:
@@ -19,4 +25,4 @@ jobs:
         run: ./gradlew publishMavenPublicationToGitHubPackagesRepository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_VERSION: ${{ github.ref }}
+          RELEASE_VERSION: ${{ github.event.inputs.tag }}
