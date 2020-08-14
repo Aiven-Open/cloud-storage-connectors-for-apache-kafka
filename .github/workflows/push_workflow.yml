@@ -17,8 +17,3 @@ jobs:
           java-version: 11
       - name: Build with Gradle
         run: ./gradlew build
-      - name: Bump version and push tag
-        uses: mathieudutour/github-tag-action@v4.5
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          create_annotated_tag: true
