@@ -30,6 +30,8 @@ plugins {
 
     // https://docs.gradle.org/current/userguide/publishing_maven.html
     id "maven-publish"
+
+    id "com.jfrog.bintray" version "1.8.0"
 }
 
 java {
@@ -91,6 +93,24 @@ dependencies {
 group = "io.aiven"
 version = System.getenv("RELEASE_VERSION") ?: "0-SNAPSHOT"
 
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    publications = ['maven']
+    pkg {
+        repo = 'maven'
+        name = 'aiven-kafka-connect-commons'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/aiven/aiven-kafka-connect-commons'
+        version {
+            name = version
+            desc = 'Aiven Kafka Connect Commons ' + version
+            released  = new Date()
+            vcsTag = version
+        }
+    }
+}
+
 test {
     useJUnitPlatform()
 }
@@ -121,8 +141,8 @@ publishing {
                 }
                 licenses {
                     license {
-                        name = "GNU Affero General Public License 3.0"
-                        url = "https://www.gnu.org/licenses/agpl-3.0.en.html"
+                        name = "Apache 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0"
                         distribution = "repo"
                     }
                 }
