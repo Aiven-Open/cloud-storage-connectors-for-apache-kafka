@@ -31,8 +31,11 @@ plugins {
     // https://docs.gradle.org/current/userguide/publishing_maven.html
     id "maven-publish"
 
-    id "com.jfrog.bintray" version "1.8.0"
+    id "com.jfrog.bintray" version "1.8.1"
 }
+
+group = "io.aiven"
+version = System.getenv("RELEASE_VERSION") ?: "0-SNAPSHOT"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -45,7 +48,7 @@ compileJava {
 
 checkstyle {
     toolVersion "8.29"
-    configDir rootProject.file("checkstyle/")
+    getConfigDirectory().set(rootProject.file("checkstyle/"))
 }
 
 jacoco {
@@ -60,6 +63,7 @@ repositories {
 ext {
     kafkaVersion = "1.1.0"
     junitVersion = "5.6.2"
+    packageVersion = version
 }
 
 distributions {
@@ -90,23 +94,25 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
 
-group = "io.aiven"
-version = System.getenv("RELEASE_VERSION") ?: "0-SNAPSHOT"
-
 bintray {
     user = System.getenv('BINTRAY_USER')
     key = System.getenv('BINTRAY_KEY')
     publications = ['maven']
+    publish = true
+    override = true
     pkg {
         repo = 'maven'
         name = 'aiven-kafka-connect-commons'
+        userOrg = 'aiven'
         licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/aiven/aiven-kafka-connect-commons'
+        websiteUrl = 'https://github.com/aiven/aiven-kafka-connect-commons'
+        vcsUrl = 'https://github.com/aiven/aiven-kafka-connect-commons.git'
+        labels = ['kafka', 'connect']
+        publicDownloadNumbers = true
         version {
-            name = version
-            desc = 'Aiven Kafka Connect Commons ' + version
+            name = packageVersion
+            desc = 'Aiven Kafka Connect Commons ' + packageVersion
             released  = new Date()
-            vcsTag = version
         }
     }
 }
@@ -129,7 +135,7 @@ publishing {
     publications {
         maven(MavenPublication) {
             groupId = getGroup()
-            artifactId = "aiven-kafka-connect-commons"
+            artifactId = getName()
             version = getVersion()
             pom {
                 name = "Aiven Kafka connector commons"
