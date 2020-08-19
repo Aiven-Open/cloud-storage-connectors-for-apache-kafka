@@ -19,10 +19,8 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 11
-      - name: Build with Gradle
-        run: ./gradlew build
-      - name: Publish
-        run: ./gradlew bintrayUpload
+      - name: Build and Publish with Gradle
+        run: ./gradlew clean build bintrayUpload --debug
         env:
           BINTRAY_USER: ${{ secrets.BINTRAY_USER }}
           BINTRAY_KEY: ${{ secrets.BINTRAY_KEY }}

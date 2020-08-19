@@ -110,8 +110,8 @@ bintray {
         labels = ['kafka', 'connect']
         publicDownloadNumbers = true
         version {
-            name = packageVersion
-            desc = 'Aiven Kafka Connect Commons ' + packageVersion
+            name = project.getVersion()
+            desc = 'Aiven Kafka Connect Commons ' + project.getVersion()
             released  = new Date()
         }
     }
