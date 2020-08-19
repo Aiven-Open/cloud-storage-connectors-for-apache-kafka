@@ -40,10 +40,19 @@ version = System.getenv("RELEASE_VERSION") ?: "0-SNAPSHOT"
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+
+    withJavadocJar()
+    withSourcesJar()
 }
 
 compileJava {
     options.compilerArgs = ["-Xlint:all", "-Werror"]
+}
+
+javadoc {
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
 }
 
 checkstyle {
@@ -63,7 +72,6 @@ repositories {
 ext {
     kafkaVersion = "1.1.0"
     junitVersion = "5.6.2"
-    packageVersion = version
 }
 
 distributions {
@@ -99,7 +107,7 @@ bintray {
     key = System.getenv('BINTRAY_KEY')
     publications = ['maven']
     publish = true
-    override = true
+    override = false
     pkg {
         repo = 'maven'
         name = 'aiven-kafka-connect-commons'
@@ -122,20 +130,10 @@ test {
 }
 
 publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/aiven/aiven-kafka-connect-commons")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
     publications {
         maven(MavenPublication) {
             groupId = getGroup()
-            artifactId = getName()
+            artifactId = "aiven-kafka-connect-commons"
             version = getVersion()
             pom {
                 name = "Aiven Kafka connector commons"
