@@ -31,5 +31,7 @@
     <suppress checks="(ClassFanOutComplexity)"
               files="(S3SinkConfig|S3SinkTaskTest).java"/>
 
+    <suppress checks="ClassDataAbstractionCoupling"
+              files="(S3SinkConfig|S3SinkTaskTest).java"/>
 
 </suppressions>
