@@ -26,6 +26,14 @@ wrapper {
     }
 }
 
+repositories {
+    mavenLocal()
+    jcenter()
+    maven {
+        url "https://aiven.bintray.com/maven"
+    }
+}
+
 ext {
     kafkaVersion = "1.1.0"
     parquetVersion = "1.11.2"
