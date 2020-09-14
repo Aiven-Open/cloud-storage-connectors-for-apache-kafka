@@ -108,18 +108,18 @@ bintray {
     publish = true
     override = false
     pkg {
+        userOrg = 'aiven'
         repo = 'maven'
         name = 'aiven-kafka-connect-commons'
-        userOrg = 'aiven'
         licenses = ['Apache-2.0']
         websiteUrl = 'https://github.com/aiven/aiven-kafka-connect-commons'
         vcsUrl = 'https://github.com/aiven/aiven-kafka-connect-commons.git'
-        labels = ['kafka', 'connect']
+        labels = ['kafka', 'kafka-connect']
         publicDownloadNumbers = true
         version {
             name = project.getVersion()
             desc = 'Aiven Kafka Connect Commons ' + project.getVersion()
-            released  = new Date()
+            released = new Date()
         }
     }
 }
@@ -135,8 +135,8 @@ publishing {
             artifactId = "aiven-kafka-connect-commons"
             version = getVersion()
             pom {
-                name = "Aiven Kafka connector commons"
-                description = "A Kafka connector commons utils library"
+                name = "Aiven Kafka Connect commons"
+                description = "A Kafka Connect commons"
                 url = "https://aiven.io"
                 organization {
                     name = "Aiven Oy"
