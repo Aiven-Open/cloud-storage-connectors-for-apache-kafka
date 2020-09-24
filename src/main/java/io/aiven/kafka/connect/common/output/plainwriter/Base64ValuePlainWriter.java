@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.output;
+package io.aiven.kafka.connect.common.output.plainwriter;
 
-public class PlainValueWriter extends AbstractValueWriter {
+import java.util.Base64;
+
+public class Base64ValuePlainWriter extends AbstractValuePlainWriter {
     @Override
     protected byte[] getOutputBytes(final byte[] value) {
-        return value;
+        return Base64.getEncoder().encode(value);
     }
 }

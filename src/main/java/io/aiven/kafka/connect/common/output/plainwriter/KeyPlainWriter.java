@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.output;
+package io.aiven.kafka.connect.common.output.plainwriter;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -25,7 +25,7 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
-public final class KeyWriter implements OutputFieldWriter {
+public final class KeyPlainWriter implements OutputFieldPlainWriter {
     /**
      * Takes the {@link SinkRecord}'s key as a byte array.
      *

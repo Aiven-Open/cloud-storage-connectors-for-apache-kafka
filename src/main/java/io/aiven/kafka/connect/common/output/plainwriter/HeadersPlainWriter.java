@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.output;
+package io.aiven.kafka.connect.common.output.plainwriter;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -27,7 +27,7 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.header.Header;
 import org.apache.kafka.connect.sink.SinkRecord;
 
-public class HeadersWriter implements OutputFieldWriter {
+public class HeadersPlainWriter implements OutputFieldPlainWriter {
     private static final byte[] HEADER_KEY_VALUE_SEPARATOR = ":".getBytes(StandardCharsets.UTF_8);
     private static final byte[] HEADERS_SEPARATOR = ";".getBytes(StandardCharsets.UTF_8);
     private final ByteArrayConverter byteArrayConverter = new ByteArrayConverter();

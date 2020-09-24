@@ -14,24 +14,15 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.output;
+package io.aiven.kafka.connect.common.output.plainwriter;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Objects;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-public final class TimestampWriter implements OutputFieldWriter {
-    @Override
-    public void write(final SinkRecord record,
-                      final OutputStream outputStream) throws IOException {
-        Objects.requireNonNull(record, "record cannot be null");
-        Objects.requireNonNull(outputStream, "outputStream cannot be null");
+public interface OutputFieldPlainWriter {
 
-        if (record.timestamp() != null) {
-            outputStream.write(record.timestamp().toString().getBytes(StandardCharsets.UTF_8));
-        }
-    }
+    void write(SinkRecord record, OutputStream outputStream) throws IOException;
+
 }

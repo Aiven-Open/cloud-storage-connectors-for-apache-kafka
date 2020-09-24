@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.output;
+package io.aiven.kafka.connect.common.output.plainwriter;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -23,7 +23,7 @@ import java.util.Objects;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-public final class OffsetWriter implements OutputFieldWriter {
+public final class OffsetPlainWriter implements OutputFieldPlainWriter {
     @Override
     public void write(final SinkRecord record,
                       final OutputStream outputStream) throws IOException {

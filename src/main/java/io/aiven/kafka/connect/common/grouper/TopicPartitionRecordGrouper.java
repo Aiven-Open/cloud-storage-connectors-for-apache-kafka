@@ -58,6 +58,7 @@ public final class TopicPartitionRecordGrouper implements RecordGrouper {
      *
      * @param filenameTemplate  the filename template.
      * @param maxRecordsPerFile the maximum number of records per file ({@code null} for unlimited).
+     * @param tsSource timestamp sources
      */
     public TopicPartitionRecordGrouper(final Template filenameTemplate,
                                        final Integer maxRecordsPerFile,
