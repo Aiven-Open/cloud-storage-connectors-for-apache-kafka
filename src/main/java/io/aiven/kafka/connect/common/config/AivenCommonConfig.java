@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -28,11 +29,13 @@ import org.apache.kafka.common.config.ConfigDef;
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsEncodingValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
+import io.aiven.kafka.connect.common.config.validators.OutputTypeValidator;
 import io.aiven.kafka.connect.common.templating.Template;
 
 public class AivenCommonConfig extends AbstractConfig {
     public static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
     public static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
+    public static final String FORMAT_OUTPUT_TYPE_CONFIG = "format.output.type";
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
     public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
@@ -52,6 +55,8 @@ public class AivenCommonConfig extends AbstractConfig {
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
                                                            final OutputFieldType defaultFieldType) {
         int formatGroupCounter = 0;
+
+        addFormatTypeConfig(configDef, formatGroupCounter);
 
         configDef.define(
             FORMAT_OUTPUT_FIELDS_CONFIG,
@@ -82,6 +87,31 @@ public class AivenCommonConfig extends AbstractConfig {
             FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG,
             FixedSetRecommender.ofSupportedValues(OutputFieldEncodingType.names())
         );
+    }
+
+    protected static void addFormatTypeConfig(final ConfigDef configDef,
+                                              final int formatGroupCounter) {
+        final String supportedFormatTypes = FormatType.names().stream()
+            .map(f -> "'" + f + "'")
+            .collect(Collectors.joining(", "));
+        configDef.define(
+            FORMAT_OUTPUT_TYPE_CONFIG,
+            ConfigDef.Type.STRING,
+            FormatType.CSV.name,
+            new OutputTypeValidator(),
+            ConfigDef.Importance.MEDIUM,
+            "The format type of output content"
+                + "The supported values are: " + supportedFormatTypes + ".",
+            GROUP_FORMAT,
+            formatGroupCounter,
+            ConfigDef.Width.NONE,
+            FORMAT_OUTPUT_TYPE_CONFIG,
+            FixedSetRecommender.ofSupportedValues(FormatType.names())
+        );
+    }
+
+    public FormatType getFormatType() {
+        return FormatType.forName(getString(FORMAT_OUTPUT_TYPE_CONFIG));
     }
 
     protected static void addCompressionTypeConfig(final ConfigDef configDef,
