@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 public enum FormatType {
 
     CSV("csv"),
+    JSON("json"),
     JSONL("jsonl");
 
     public static final String SUPPORTED_FORMAT_TYPES =

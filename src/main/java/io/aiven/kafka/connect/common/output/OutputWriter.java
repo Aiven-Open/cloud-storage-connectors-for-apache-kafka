@@ -18,40 +18,52 @@ package io.aiven.kafka.connect.common.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.Objects;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-public abstract class OutputWriter {
+import io.aiven.kafka.connect.common.config.OutputField;
 
-    protected OutputStream outputStream;
-    protected Boolean isOutputEmpty;
+public abstract class OutputWriter implements AutoCloseable {
 
-    public OutputWriter(final OutputStream outputStream) {
+    private OutputStream outputStream;
+    private Boolean isOutputEmpty;
+    private Boolean isClosed;
+    private OutputStreamWriter writer;
+
+    public OutputWriter(final Collection<OutputField> fields,
+                        final OutputStream outputStream) {
+        this.writer = writer(fields);
         this.outputStream = outputStream;
         this.isOutputEmpty = true;
+        this.isClosed = false;
     }
 
     public void writeRecord(final SinkRecord record) throws IOException {
         Objects.requireNonNull(record, "record cannot be null");
         if (!this.isOutputEmpty) {
-            writeRecordsSeparator();
+            writer.writeRecordsSeparator(outputStream);
         } else {
-            startWriting();
+            writer.startWriting(outputStream);
             this.isOutputEmpty = false;
         }
-        writeOneRecord(record);
+        writer.writeOneRecord(outputStream, record);
     }
 
-
-    protected void startWriting() throws IOException {
+    public void close()  throws IOException {
+        if (!isClosed) {
+            try {
+                writer.stopWriting(outputStream);
+                this.outputStream.flush();
+            } finally {
+                if (this.outputStream != null) {
+                    this.outputStream.close();
+                    this.isClosed = true;
+                }
+            }
+        }
     }
 
-    protected void writeRecordsSeparator() throws IOException {
-    }
-
-    protected void writeOneRecord(final SinkRecord record) throws IOException {
-
-    }
-
+    protected abstract OutputStreamWriter writer(final Collection<OutputField> fields);
 }
