@@ -18,14 +18,40 @@ package io.aiven.kafka.connect.common.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Objects;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-public interface OutputWriter {
+public abstract class OutputWriter {
 
-    void writeLastRecord(final SinkRecord record,
-                         final OutputStream outputStream) throws IOException;
+    protected OutputStream outputStream;
+    protected Boolean isOutputEmpty;
 
-    void writeRecord(final SinkRecord record,
-                     final OutputStream outputStream) throws IOException;
+    public OutputWriter(final OutputStream outputStream) {
+        this.outputStream = outputStream;
+        this.isOutputEmpty = true;
+    }
+
+    public void writeRecord(final SinkRecord record) throws IOException {
+        Objects.requireNonNull(record, "record cannot be null");
+        if (!this.isOutputEmpty) {
+            writeRecordsSeparator();
+        } else {
+            startWriting();
+            this.isOutputEmpty = false;
+        }
+        writeOneRecord(record);
+    }
+
+
+    protected void startWriting() throws IOException {
+    }
+
+    protected void writeRecordsSeparator() throws IOException {
+    }
+
+    protected void writeOneRecord(final SinkRecord record) throws IOException {
+
+    }
+
 }

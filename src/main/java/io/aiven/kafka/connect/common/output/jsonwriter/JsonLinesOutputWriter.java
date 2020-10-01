@@ -20,16 +20,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.OutputField;
-import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.output.OutputWriter;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -38,37 +35,31 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 
-public class JsonLinesOutputWriter implements OutputWriter {
+public class JsonLinesOutputWriter extends OutputWriter {
 
     private final Map<String, OutputFieldBuilder> fieldBuilders;
     private static final byte[] RECORD_SEPARATOR = "\n".getBytes(StandardCharsets.UTF_8);
     private final ObjectMapper objectMapper;
 
-    JsonLinesOutputWriter(final Map<String, OutputFieldBuilder> fieldBuilders) {
-
+    JsonLinesOutputWriter(final OutputStream outputStream,
+                          final Map<String, OutputFieldBuilder> fieldBuilders) {
+        super(outputStream);
         this.fieldBuilders = fieldBuilders;
         this.objectMapper = new ObjectMapper();
         objectMapper.setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
     }
 
-    public void writeRecord(final SinkRecord record,
-                            final OutputStream outputStream) throws IOException {
-        Objects.requireNonNull(record, "record cannot be null");
-        Objects.requireNonNull(outputStream, "outputStream cannot be null");
-
-        outputStream.write(objectMapper.writeValueAsBytes(writeFields(record)));
-        outputStream.write(RECORD_SEPARATOR);
+    @Override
+    protected void writeRecordsSeparator() throws IOException {
+        this.outputStream.write(RECORD_SEPARATOR);
     }
 
-    public void writeLastRecord(final SinkRecord record,
-                                final OutputStream outputStream) throws IOException {
-        Objects.requireNonNull(record, "record cannot be null");
-        Objects.requireNonNull(outputStream, "outputStream cannot be null");
-
-        outputStream.write(objectMapper.writeValueAsBytes(writeFields(record)));
+    @Override
+    protected void writeOneRecord(final SinkRecord record) throws IOException {
+        outputStream.write(objectMapper.writeValueAsBytes(getFields(record)));
     }
 
-    private JsonNode writeFields(final SinkRecord record) throws IOException {
+    private ObjectNode getFields(final SinkRecord record) throws IOException {
         final Iterator<Map.Entry<String, OutputFieldBuilder>> writerIter = fieldBuilders.entrySet().iterator();
 
 
@@ -87,42 +78,17 @@ public class JsonLinesOutputWriter implements OutputWriter {
     }
 
     public static final class Builder {
-        private final Map<String, OutputFieldBuilder> fieldBuilders = new HashMap<>();
+        private JsonOutputFieldComposer fieldsComposer = new JsonOutputFieldComposer();
 
         public final JsonLinesOutputWriter.Builder addFields(final Collection<OutputField> fields) {
             Objects.requireNonNull(fields, "fields cannot be null");
 
-            for (final OutputField field : fields) {
-                fieldBuilders.put(field.getFieldType().name, writerFromType(field.getFieldType()));
-            }
-
+            fieldsComposer = fieldsComposer.addFields(fields);
             return this;
         }
 
-        private OutputFieldBuilder writerFromType(final OutputFieldType fieldType) {
-            switch (fieldType) {
-                case KEY:
-                    return new KeyBuilder();
-
-                case VALUE:
-                    return new ValueBuilder();
-
-                case OFFSET:
-                    return new OffsetBuilder();
-
-                case TIMESTAMP:
-                    return new TimestampBuilder();
-
-                case HEADERS:
-                    return new HeaderBuilder();
-
-                default:
-                    throw new ConnectException("Unknown output field type " + fieldType);
-            }
-        }
-
-        public final JsonLinesOutputWriter build() {
-            return new JsonLinesOutputWriter(fieldBuilders);
+        public final JsonLinesOutputWriter build(final OutputStream outputStream) {
+            return new JsonLinesOutputWriter(outputStream, fieldsComposer.fieldBuilders);
         }
     }
 

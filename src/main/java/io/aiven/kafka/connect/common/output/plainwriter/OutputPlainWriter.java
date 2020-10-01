@@ -31,34 +31,26 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.output.OutputWriter;
 
-public final class OutputPlainWriter implements OutputWriter {
+public final class OutputPlainWriter extends OutputWriter {
 
     private static final byte[] FIELD_SEPARATOR = ",".getBytes(StandardCharsets.UTF_8);
     private static final byte[] RECORD_SEPARATOR = "\n".getBytes(StandardCharsets.UTF_8);
 
     private final List<OutputFieldPlainWriter> writers;
 
-    private OutputPlainWriter(final List<OutputFieldPlainWriter> writers) {
+    private OutputPlainWriter(final OutputStream outputStream,
+                              final List<OutputFieldPlainWriter> writers) {
+        super(outputStream);
         this.writers = writers;
     }
 
-    public void writeRecord(final SinkRecord record,
-                            final OutputStream outputStream) throws IOException {
-        Objects.requireNonNull(record, "record cannot be null");
-        Objects.requireNonNull(outputStream, "outputStream cannot be null");
-        writeFields(record, outputStream);
-        outputStream.write(RECORD_SEPARATOR);
+    @Override
+    protected void writeRecordsSeparator() throws IOException {
+        this.outputStream.write(RECORD_SEPARATOR);
     }
 
-    public void writeLastRecord(final SinkRecord record,
-                                final OutputStream outputStream) throws IOException {
-        Objects.requireNonNull(record, "record cannot be null");
-        Objects.requireNonNull(outputStream, "outputStream cannot be null");
-        writeFields(record, outputStream);
-    }
-
-    private void writeFields(final SinkRecord record,
-                             final OutputStream outputStream) throws IOException {
+    @Override
+    protected void writeOneRecord(final SinkRecord record) throws IOException {
         final Iterator<OutputFieldPlainWriter> writerIter = writers.iterator();
         writerIter.next().write(record, outputStream);
         while (writerIter.hasNext()) {
@@ -115,8 +107,8 @@ public final class OutputPlainWriter implements OutputWriter {
             return this;
         }
 
-        public final OutputPlainWriter build() {
-            return new OutputPlainWriter(writers);
+        public final OutputPlainWriter build(final OutputStream outputStream) {
+            return new OutputPlainWriter(outputStream, writers);
         }
     }
 

@@ -23,52 +23,207 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 
+import io.aiven.kafka.connect.common.config.OutputField;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.output.jsonwriter.JsonLinesOutputWriter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
+    private final OutputFieldEncodingType noEncoding = OutputFieldEncodingType.NONE;
 
-public class JsonLinesOutputWriterTest {
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    protected ByteArrayOutputStream byteStream;
-    protected JsonLinesOutputWriter sut;
+    @BeforeEach
+    void setUp() {
 
-    protected SinkRecord createRecord(final String key,
-                                      final Schema valueSchema,
-                                      final Object value,
-                                      final int offset,
-                                      final Long timestamp
-    ) {
-        return new SinkRecord(
-                "anyTopic",
-                0,
-                Schema.STRING_SCHEMA,
-                key,
-                valueSchema,
-                value,
-                offset,
-                timestamp,
-                TimestampType.CREATE_TIME);
+        byteStream = new ByteArrayOutputStream();
+        sut = null;
     }
 
-    protected void assertRecords(final List<SinkRecord> records, final String expected) throws IOException {
-        for (int i = 0; i < records.size() - 1; i++) {
-            sut.writeRecord(records.get(i), byteStream);
-        }
-        sut.writeLastRecord(records.get(records.size() - 1), byteStream);
-        assertEquals(expected, parseJsonLines(byteStream.toByteArray()));
+    @Test
+    void jsonValueWithoutMetadataAndValue() throws IOException {
+        sut = JsonLinesOutputWriter.builder().addFields(Collections.EMPTY_LIST).build(byteStream);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+
+        final String expected = "{}";
+
+        assertRecords(Collections.singletonList(record1), expected);
     }
 
-    // It also makes sure that bytes represents a valid JSONs lines with \n as Delimiter
-    protected String parseJsonLines(final byte[] json) throws IOException {
+    @Test
+    void jsonValueWithValue() throws IOException {
+        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+
+        final String expected = "{\"value\":{\"name\":\"John\"}}";
+
+        assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    @Test
+    void jsonValueWithOneFieldAndValue() throws IOException {
+        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding),
+                new OutputField(OutputFieldType.KEY, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+
+        final String expected = "{\"value\":{\"name\":\"John\"},\"key\":\"key0\"}";
+
+        assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    @Test
+    void multiStringJsonValueWithOneFieldAndValue() throws IOException {
+        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding),
+                new OutputField(OutputFieldType.KEY, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+        final Struct struct2 = new Struct(level1Schema).put("name", "Pekka");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+        final SinkRecord record2 = createRecord("key0", level1Schema, struct2, 1, 1000L);
+
+        final String expected = "{\"value\":{\"name\":\"John\"},\"key\":\"key0\"}\n"
+                              + "{\"value\":{\"name\":\"Pekka\"},\"key\":\"key0\"}";
+
+        assertRecords(Arrays.asList(record1, record2), expected);
+    }
+
+    @Test
+    void jsonValueWithAllMetadata() throws IOException {
+        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding),
+                new OutputField(OutputFieldType.KEY, noEncoding),
+                new OutputField(OutputFieldType.OFFSET, noEncoding),
+                new OutputField(OutputFieldType.TIMESTAMP, noEncoding),
+                new OutputField(OutputFieldType.HEADERS, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+        record1.headers().add("headerKey", "headerValue", Schema.STRING_SCHEMA);
+
+        final String expected = "{\"headers\":[{\"key\":\"headerKey\",\"value\":\"headerValue\"}],"
+                + "\"offset\":1,"
+                + "\"value\":{\"name\":\"John\"},"
+                + "\"key\":\"key0\","
+                + "\"timestamp\":\"1970-01-01T00:00:01Z\"}";
+
+        assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    @Test
+    void jsonValueWithMultipleHeaders() throws IOException {
+        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding),
+                new OutputField(OutputFieldType.HEADERS, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+        record1.headers().add("headerKey1", "headerValue1", Schema.STRING_SCHEMA);
+        record1.headers().add("headerKey2", "headerValue2", Schema.STRING_SCHEMA);
+
+        final String expected = "{\"headers\":"
+                + "[{\"key\":\"headerKey1\",\"value\":\"headerValue1\"},"
+                + "{\"key\":\"headerKey2\",\"value\":\"headerValue2\"}],"
+                                + "\"value\":{\"name\":\"John\"}}";
+
+        assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    @Test
+    void jsonValueWithMissingValue() throws IOException {
+        final List<OutputField> fields = Collections.singletonList(new OutputField(OutputFieldType.VALUE, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, null, 1, 1000L);
+
+        final String expected = "{\"value\":null}";
+
+        assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    @Test
+    void jsonValueWithMissingKey() throws IOException {
+        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding),
+                new OutputField(OutputFieldType.KEY, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+        final Schema level1Schema = SchemaBuilder.struct().field("name", Schema.STRING_SCHEMA);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+
+        final SinkRecord record1 = createRecord(null, level1Schema, struct1, 1, 1000L);
+
+        final String expected = "{\"value\":{\"name\":\"John\"},\"key\":null}";
+
+        assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    @Test
+    void jsonValueWithMissingTimestamp() throws IOException {
+        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding),
+                new OutputField(OutputFieldType.TIMESTAMP, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+        final Schema level1Schema = SchemaBuilder.struct().field("name", Schema.STRING_SCHEMA);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+
+        final SinkRecord record1 = createRecord(null, level1Schema, struct1, 1, null);
+
+        final String expected = "{\"value\":{\"name\":\"John\"},\"timestamp\":null}";
+
+        assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    @Test
+    void jsonValueWithMissingHeader() throws IOException {
+        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding),
+                new OutputField(OutputFieldType.HEADERS, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+
+        final String expected = "{\"headers\":[],\"value\":{\"name\":\"John\"}}";
+
+        assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    // JsonLinesWriter could generate a valid Json without even calling `writeLastRecord`.
+    // Still, it is not recommended to use it that way, because it could change.
+    @Test
+    void doNotHaveToFailIfLastRecordIsMissing() throws IOException {
+        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding));
+        sut = JsonLinesOutputWriter.builder().addFields(fields).build(byteStream);
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+        final Struct struct2 = new Struct(level1Schema).put("name", "Pekka");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+        final SinkRecord record2 = createRecord("key0", level1Schema, struct2, 1, 1000L);
+
+        final String expected = "{\"value\":{\"name\":\"John\"}}\n"
+            + "{\"value\":{\"name\":\"Pekka\"}}";
+
+        assertEquals(expected, useWithWrongLastRecord(Arrays.asList(record1, record2)));
+    }
+
+    protected String parseJson(final byte[] json) throws IOException {
         final Charset utf8 = StandardCharsets.UTF_8;
         final ByteArrayInputStream stream = new ByteArrayInputStream(json);
         final InputStreamReader streamReader = new InputStreamReader(stream, utf8);
@@ -85,5 +240,5 @@ public class JsonLinesOutputWriterTest {
         }
         return stringBuilder.toString();
     }
-}
 
+}
