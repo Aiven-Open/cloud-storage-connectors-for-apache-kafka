@@ -16,53 +16,34 @@
 
 package io.aiven.kafka.connect.common.output.plainwriter;
 
-import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
 import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.OutputField;
+import io.aiven.kafka.connect.common.output.OutputStreamWriter;
 import io.aiven.kafka.connect.common.output.OutputWriter;
 
-public final class OutputPlainWriter extends OutputWriter {
 
-    private static final byte[] FIELD_SEPARATOR = ",".getBytes(StandardCharsets.UTF_8);
-    private static final byte[] RECORD_SEPARATOR = "\n".getBytes(StandardCharsets.UTF_8);
+public class PlainOutputWriter extends OutputWriter {
 
-    private final List<OutputFieldPlainWriter> writers;
-
-    private OutputPlainWriter(final OutputStream outputStream,
-                              final List<OutputFieldPlainWriter> writers) {
-        super(outputStream);
-        this.writers = writers;
+    public PlainOutputWriter(final Collection<OutputField> fields, final OutputStream outputStream) {
+        super(fields, outputStream);
     }
 
     @Override
-    protected void writeRecordsSeparator() throws IOException {
-        this.outputStream.write(RECORD_SEPARATOR);
+    protected OutputStreamWriter writer(final Collection<OutputField> fields) {
+        return new Builder().addFields(fields).build();
     }
 
-    @Override
-    protected void writeOneRecord(final SinkRecord record) throws IOException {
-        final Iterator<OutputFieldPlainWriter> writerIter = writers.iterator();
-        writerIter.next().write(record, outputStream);
-        while (writerIter.hasNext()) {
-            outputStream.write(FIELD_SEPARATOR);
-            writerIter.next().write(record, outputStream);
-        }
-    }
-
-    public static final class Builder {
+    static final class Builder {
         private final List<OutputFieldPlainWriter> writers = new ArrayList<>();
 
-        public final Builder addFields(final Collection<OutputField> fields) {
+        final Builder addFields(final Collection<OutputField> fields) {
             Objects.requireNonNull(fields, "fields cannot be null");
 
             for (final OutputField field : fields) {
@@ -107,12 +88,8 @@ public final class OutputPlainWriter extends OutputWriter {
             return this;
         }
 
-        public final OutputPlainWriter build(final OutputStream outputStream) {
-            return new OutputPlainWriter(outputStream, writers);
+        final PlainOutputStreamWriter build() {
+            return new PlainOutputStreamWriter(writers);
         }
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 }

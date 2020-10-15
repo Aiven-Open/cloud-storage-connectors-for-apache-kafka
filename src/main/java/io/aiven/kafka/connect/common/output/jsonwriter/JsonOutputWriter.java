@@ -25,9 +25,9 @@ import io.aiven.kafka.connect.common.output.OutputStreamWriter;
 import io.aiven.kafka.connect.common.output.OutputWriter;
 
 
-public class JsonLinesOutputWriter extends OutputWriter {
+public class JsonOutputWriter extends OutputWriter {
 
-    public JsonLinesOutputWriter(final Collection<OutputField> fields, final OutputStream outputStream) {
+    public JsonOutputWriter(final Collection<OutputField> fields, final OutputStream outputStream) {
         super(fields, outputStream);
     }
 
@@ -37,17 +37,17 @@ public class JsonLinesOutputWriter extends OutputWriter {
     }
 
     static final class Builder {
-        private JsonOutputFieldComposer fieldsComposer = new JsonOutputFieldComposer();
+        private final JsonOutputFieldComposer fieldsComposer = new JsonOutputFieldComposer();
 
-        final JsonLinesOutputWriter.Builder addFields(final Collection<OutputField> fields) {
+        final JsonOutputWriter.Builder addFields(final Collection<OutputField> fields) {
             Objects.requireNonNull(fields, "fields cannot be null");
 
-            fieldsComposer = fieldsComposer.addFields(fields);
+            fieldsComposer.addFields(fields);
             return this;
         }
 
-        final JsonLinesOutputStreamWriter build() {
-            return new JsonLinesOutputStreamWriter(fieldsComposer.fieldBuilders);
+        final JsonOutputStreamWriter build() {
+            return new JsonOutputStreamWriter(fieldsComposer.fieldBuilders);
         }
     }
 }

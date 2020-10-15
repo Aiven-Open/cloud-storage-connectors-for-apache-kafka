@@ -63,9 +63,11 @@ public abstract class JsonOutputWriterTestHelper {
 
     // It also makes sure that bytes represents a valid JSON
     protected void assertRecords(final List<SinkRecord> records, final String expected) throws IOException {
+
         for (int i = 0; i < records.size(); i++) {
             sut.writeRecord(records.get(i));
         }
+        sut.close();
         assertEquals(expected, parseJson(byteStream.toByteArray()));
     }
 
