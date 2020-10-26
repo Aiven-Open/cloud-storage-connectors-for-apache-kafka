@@ -32,6 +32,10 @@ repositories {
     maven {
         url "http://dl.bintray.com/aiven/maven"
     }
+    // For kafka-avro-serializer and kafka-connect-avro-converter
+    maven {
+        url "https://packages.confluent.io/maven"
+    }
 }
 
 ext {
