@@ -53,7 +53,6 @@ class JsonOutputStreamWriter implements OutputStreamWriter {
     @Override
     public void writeRecordsSeparator(final OutputStream outputStream) throws IOException {
         outputStream.write(RECORD_SEPARATOR);
-        outputStream.close();
     }
 
     @Override
