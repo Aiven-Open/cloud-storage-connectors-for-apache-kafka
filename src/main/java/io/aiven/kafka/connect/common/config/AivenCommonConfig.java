@@ -25,11 +25,13 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsEncodingValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputTypeValidator;
+import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.templating.Template;
 
 public class AivenCommonConfig extends AbstractConfig {
@@ -143,6 +145,18 @@ public class AivenCommonConfig extends AbstractConfig {
 
     public final Template getFilenameTemplate() {
         return Template.of(getFilename());
+    }
+
+    protected final void validateKeyFilenameTemplate() {
+        // Special checks for {{key}} filename template.
+        final Template filenameTemplate = getFilenameTemplate();
+        if (RecordGrouperFactory.KEY_RECORD.equals(RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate))) {
+            if (getMaxRecordsPerFile() > 1) {
+                final String msg = String.format("When %s is %s, %s must be either 1 or not set",
+                        FILE_NAME_TEMPLATE_CONFIG, filenameTemplate, FILE_MAX_RECORDS);
+                throw new ConfigException(msg);
+            }
+        }
     }
 
     public final String getFilename() {
