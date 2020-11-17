@@ -93,6 +93,28 @@ public class VariableTemplatePart implements TemplatePart {
             }
         }
 
+        @Override
+        public String toString() {
+            return name + "=" + value;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            final Parameter parameter = (Parameter) o;
+            return Objects.equals(name, parameter.name)
+                    && Objects.equals(value, parameter.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, value);
+        }
     }
 
 }
