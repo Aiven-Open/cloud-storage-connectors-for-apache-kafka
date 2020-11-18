@@ -68,11 +68,9 @@ public final class TopicPartitionRecordGrouper implements RecordGrouper {
         this.filenameTemplate = filenameTemplate;
         this.maxRecordsPerFile = maxRecordsPerFile;
         this.setTimestamp = new Function<Parameter, String>() {
-
-            //FIXME move into commons lib
             private final Map<String, DateTimeFormatter> timestampFormatters =
                 Map.of(
-                    "YYYY", DateTimeFormatter.ofPattern("YYYY"),
+                    "yyyy", DateTimeFormatter.ofPattern("yyyy"),
                     "MM", DateTimeFormatter.ofPattern("MM"),
                     "dd", DateTimeFormatter.ofPattern("dd"),
                     "HH", DateTimeFormatter.ofPattern("HH")
@@ -105,7 +103,6 @@ public final class TopicPartitionRecordGrouper implements RecordGrouper {
     }
 
     private String generateRecordKey(final TopicPartition tp, final SinkRecord headRecord) {
-        //FIXME move into commons lib
         final Function<Parameter, String> setKafkaOffset =
             usePaddingParameter -> usePaddingParameter.asBoolean()
                 ? String.format("%020d", headRecord.kafkaOffset())

@@ -37,7 +37,7 @@ public enum FilenameTemplateVariable {
         new ParameterDescriptor(
             "unit",
             true,
-            List.of("YYYY", "MM", "dd", "HH")
+            List.of("yyyy", "MM", "dd", "HH")
         )
     );
 
