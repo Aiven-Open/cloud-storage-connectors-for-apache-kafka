@@ -28,10 +28,7 @@ wrapper {
 
 repositories {
     mavenLocal()
-    jcenter()
-    maven {
-        url "http://dl.bintray.com/aiven/maven"
-    }
+    mavenCentral()
     // For kafka-avro-serializer and kafka-connect-avro-converter
     maven {
         url "https://packages.confluent.io/maven"
