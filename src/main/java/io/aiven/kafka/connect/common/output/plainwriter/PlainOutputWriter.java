@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2021 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,13 +31,15 @@ import io.aiven.kafka.connect.common.output.OutputWriter;
 
 public class PlainOutputWriter extends OutputWriter {
 
-    public PlainOutputWriter(final Collection<OutputField> fields, final OutputStream outputStream) {
-        super(fields, outputStream);
+    PlainOutputWriter(final OutputStream outputStream,
+                      final OutputStreamWriter outputStreamWriter) {
+        super(outputStream, outputStreamWriter);
     }
 
-    @Override
-    protected OutputStreamWriter writer(final Collection<OutputField> fields) {
-        return new Builder().addFields(fields).build();
+    public static PlainOutputWriter createFor(final Collection<OutputField> fields,
+                                              final OutputStream outputStream) {
+        final var outputStreamWriter = new Builder().addFields(fields).build();
+        return new PlainOutputWriter(outputStream, outputStreamWriter);
     }
 
     static final class Builder {
@@ -45,7 +47,6 @@ public class PlainOutputWriter extends OutputWriter {
 
         final Builder addFields(final Collection<OutputField> fields) {
             Objects.requireNonNull(fields, "fields cannot be null");
-
             for (final OutputField field : fields) {
                 switch (field.getFieldType()) {
                     case KEY:
@@ -91,5 +92,6 @@ public class PlainOutputWriter extends OutputWriter {
         final PlainOutputStreamWriter build() {
             return new PlainOutputStreamWriter(writers);
         }
+
     }
 }

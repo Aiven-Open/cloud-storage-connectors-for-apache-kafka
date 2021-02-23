@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2021 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,13 @@ import io.aiven.kafka.connect.common.output.OutputWriter;
 
 public class JsonOutputWriter extends OutputWriter {
 
-    public JsonOutputWriter(final Collection<OutputField> fields, final OutputStream outputStream) {
-        super(fields, outputStream);
+    JsonOutputWriter(final OutputStream outputStream, final OutputStreamWriter outputStreamWriter) {
+        super(outputStream, outputStreamWriter);
     }
 
-    @Override
-    protected OutputStreamWriter writer(final Collection<OutputField> fields) {
-        return new Builder().addFields(fields).build();
+    public static JsonOutputWriter createFor(final Collection<OutputField> fields, final OutputStream out) {
+        final var outputStreamWriter = new Builder().addFields(fields).build();
+        return new JsonOutputWriter(out, outputStreamWriter);
     }
 
     static final class Builder {
