@@ -22,17 +22,16 @@ import java.io.OutputStream;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 public interface OutputStreamWriter {
-    default void startWriting(final OutputStream outputStream) throws IOException {
 
+    default void startWriting(final OutputStream outputStream) throws IOException {
     }
 
     default void writeRecordsSeparator(final OutputStream outputStream) throws IOException {
-
     }
 
     void writeOneRecord(final OutputStream outputStream, final SinkRecord record) throws IOException;
 
     default void stopWriting(final OutputStream outputStream) throws IOException {
-
     }
+
 }
