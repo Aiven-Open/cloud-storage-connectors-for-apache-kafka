@@ -49,7 +49,7 @@ public abstract class AbstractValuePlainWriter implements OutputFieldPlainWriter
             throw new DataException(msg);
         }
 
-        // Do nothing if the key is null.
+        // Do nothing if the value is null.
         if (record.value() == null) {
             return;
         }

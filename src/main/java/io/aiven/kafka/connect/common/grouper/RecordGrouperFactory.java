@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
+import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.templating.Template;
 
 import com.google.common.collect.Sets;
@@ -107,8 +108,11 @@ public final class RecordGrouperFactory {
                 config.getMaxRecordsPerFile() != 0
                     ? config.getMaxRecordsPerFile()
                     : null;
-            return new TopicPartitionRecordGrouper(
-                    fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource());
+            return config.getFormatType() == FormatType.PARQUET
+                    ? new ParquetTopicPartitionRecordGrouper(
+                            fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource())
+                    : new TopicPartitionRecordGrouper(
+                            fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource());
         }
     }
 
