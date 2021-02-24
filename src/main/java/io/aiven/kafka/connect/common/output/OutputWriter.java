@@ -61,7 +61,7 @@ public abstract class OutputWriter implements AutoCloseable {
         }
     }
 
-    protected void writeRecord(final SinkRecord record) throws IOException {
+    public void writeRecord(final SinkRecord record) throws IOException {
         Objects.requireNonNull(record, "record cannot be null");
         if (!this.isOutputEmpty) {
             writer.writeRecordsSeparator(outputStream);

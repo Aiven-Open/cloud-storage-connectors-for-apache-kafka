@@ -91,7 +91,7 @@ distributions {
 
 dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
-    implementation "org.apache.kafka:connect-runtime:$kafkaVersion"
+    compileOnly "org.apache.kafka:connect-runtime:$kafkaVersion"
     compileOnly "org.apache.kafka:connect-json:$kafkaVersion"
     implementation "org.apache.parquet:parquet-avro:$parquetVersion"
 
