@@ -108,9 +108,7 @@ public final class RecordGrouperFactory {
                     ? config.getMaxRecordsPerFile()
                     : null;
             return new TopicPartitionRecordGrouper(
-                fileNameTemplate,
-                maxRecordsPerFile,
-                config.getFilenameTimestampSource());
+                    fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource());
         }
     }
 

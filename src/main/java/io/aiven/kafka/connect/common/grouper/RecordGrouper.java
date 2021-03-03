@@ -42,4 +42,10 @@ public interface RecordGrouper {
      */
     Map<String, List<SinkRecord>> records();
 
+    interface Rotator<T> {
+
+        boolean rotate(T t);
+
+    }
+
 }
