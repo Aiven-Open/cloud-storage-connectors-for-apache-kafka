@@ -91,7 +91,8 @@ final class TopicPartitionRecordGrouperTest {
     final void unlimited() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final TopicPartitionRecordGrouper grouper =
-            new TopicPartitionRecordGrouper(filenameTemplate, null, DEFAULT_TS_SOURCE);
+            new TopicPartitionRecordGrouper(
+                    filenameTemplate, null, DEFAULT_TS_SOURCE);
 
         grouper.put(T0P1R0);
         grouper.put(T0P0R0);
@@ -125,7 +126,8 @@ final class TopicPartitionRecordGrouperTest {
     final void limited() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final TopicPartitionRecordGrouper grouper =
-            new TopicPartitionRecordGrouper(filenameTemplate, 2, DEFAULT_TS_SOURCE);
+            new TopicPartitionRecordGrouper(
+                    filenameTemplate, 2, DEFAULT_TS_SOURCE);
 
         grouper.put(T0P1R0);
         grouper.put(T0P0R0);
@@ -170,7 +172,8 @@ final class TopicPartitionRecordGrouperTest {
     final void clear() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final TopicPartitionRecordGrouper grouper =
-            new TopicPartitionRecordGrouper(filenameTemplate, null, DEFAULT_TS_SOURCE);
+            new TopicPartitionRecordGrouper(
+                    filenameTemplate, null, DEFAULT_TS_SOURCE);
 
         grouper.put(T0P1R0);
         grouper.put(T0P0R0);
@@ -206,7 +209,8 @@ final class TopicPartitionRecordGrouperTest {
     final void setZeroPaddingForKafkaOffset() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset:padding=true}}");
         final TopicPartitionRecordGrouper grouper =
-            new TopicPartitionRecordGrouper(filenameTemplate, null, DEFAULT_TS_SOURCE);
+            new TopicPartitionRecordGrouper(
+                    filenameTemplate, null, DEFAULT_TS_SOURCE);
 
         grouper.put(T1P1R0);
         grouper.put(T1P1R1);
@@ -251,10 +255,7 @@ final class TopicPartitionRecordGrouperTest {
 
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
-                filenameTemplate,
-                null,
-                TimestampSource.of(TimestampSource.Type.WALLCLOCK)
-            );
+                filenameTemplate, null, TimestampSource.of(TimestampSource.Type.WALLCLOCK));
 
         grouper.put(T1P1R0);
         grouper.put(T1P1R1);
@@ -319,10 +320,7 @@ final class TopicPartitionRecordGrouperTest {
         when(timestampSourceMock.time()).thenReturn(firstHourTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
-                filenameTemplate,
-                null,
-                timestampSourceMock
-            );
+                filenameTemplate, null, timestampSourceMock);
 
         grouper.put(T0P0R1);
         grouper.put(T0P0R2);
@@ -381,10 +379,7 @@ final class TopicPartitionRecordGrouperTest {
         when(timestampSourceMock.time()).thenReturn(firstDayTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
-                filenameTemplate,
-                null,
-                timestampSourceMock
-            );
+                filenameTemplate, null, timestampSourceMock);
 
         grouper.put(T0P1R0);
         grouper.put(T0P1R1);
@@ -439,10 +434,7 @@ final class TopicPartitionRecordGrouperTest {
         when(timestampSourceMock.time()).thenReturn(firstMonthTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
-                filenameTemplate,
-                null,
-                timestampSourceMock
-            );
+                filenameTemplate, null, timestampSourceMock);
 
         grouper.put(T0P1R0);
         grouper.put(T0P1R1);
@@ -497,10 +489,7 @@ final class TopicPartitionRecordGrouperTest {
         when(timestampSourceMock.time()).thenReturn(firstYearTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
-                filenameTemplate,
-                null,
-                timestampSourceMock
-            );
+                filenameTemplate, null, timestampSourceMock);
 
         grouper.put(T0P1R0);
         grouper.put(T0P1R1);

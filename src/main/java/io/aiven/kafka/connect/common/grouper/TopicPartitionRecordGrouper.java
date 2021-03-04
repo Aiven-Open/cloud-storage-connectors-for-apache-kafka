@@ -53,6 +53,8 @@ public final class TopicPartitionRecordGrouper implements RecordGrouper {
 
     private final Function<Parameter, String> setTimestamp;
 
+    private final Rotator<List<SinkRecord>> rotator;
+
     /**
      * A constructor.
      *
@@ -67,7 +69,7 @@ public final class TopicPartitionRecordGrouper implements RecordGrouper {
         Objects.requireNonNull(tsSource, "tsSource cannot be null");
         this.filenameTemplate = filenameTemplate;
         this.maxRecordsPerFile = maxRecordsPerFile;
-        this.setTimestamp = new Function<Parameter, String>() {
+        this.setTimestamp = new Function<>() {
             private final Map<String, DateTimeFormatter> timestampFormatters =
                 Map.of(
                     "yyyy", DateTimeFormatter.ofPattern("yyyy"),
@@ -82,6 +84,14 @@ public final class TopicPartitionRecordGrouper implements RecordGrouper {
             }
 
         };
+        this.rotator = buffer -> {
+            final var unlimited = maxRecordsPerFile == null;
+            if (unlimited) {
+                return false;
+            } else {
+                return buffer.size() >= maxRecordsPerFile;
+            }
+        };
     }
 
     @Override
@@ -90,16 +100,13 @@ public final class TopicPartitionRecordGrouper implements RecordGrouper {
 
         final TopicPartition tp = new TopicPartition(record.topic(), record.kafkaPartition());
         final SinkRecord currentHeadRecord = currentHeadRecords.computeIfAbsent(tp, ignored -> record);
-        final String recordKey = generateRecordKey(tp, currentHeadRecord);
-
-        if (shouldCreateNewFile(recordKey)) {
+        String recordKey = generateRecordKey(tp, currentHeadRecord);
+        if (rotator.rotate(fileBuffers.getOrDefault(recordKey, Collections.emptyList()))) {
             // Create new file using this record as the head record.
             currentHeadRecords.put(tp, record);
-            final String newRecordKey = generateRecordKey(tp, record);
-            fileBuffers.computeIfAbsent(newRecordKey, ignored -> new ArrayList<>()).add(record);
-        } else {
-            fileBuffers.computeIfAbsent(recordKey, ignored -> new ArrayList<>()).add(record);
+            recordKey = generateRecordKey(tp, record);
         }
+        fileBuffers.computeIfAbsent(recordKey, ignored -> new ArrayList<>()).add(record);
     }
 
     private String generateRecordKey(final TopicPartition tp, final SinkRecord headRecord) {
@@ -120,16 +127,6 @@ public final class TopicPartitionRecordGrouper implements RecordGrouper {
                 FilenameTemplateVariable.TIMESTAMP.name,
                 setTimestamp
             ).render();
-    }
-
-    private boolean shouldCreateNewFile(final String recordKey) {
-        final boolean unlimited = maxRecordsPerFile == null;
-        if (unlimited) {
-            return false;
-        } else {
-            final List<SinkRecord> buffer = fileBuffers.get(recordKey);
-            return buffer == null || buffer.size() >= maxRecordsPerFile;
-        }
     }
 
     @Override
