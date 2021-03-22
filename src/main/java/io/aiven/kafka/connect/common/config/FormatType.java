@@ -25,7 +25,8 @@ public enum FormatType {
 
     CSV("csv"),
     JSON("json"),
-    JSONL("jsonl");
+    JSONL("jsonl"),
+    PARQUET("parquet");
 
     public static final String SUPPORTED_FORMAT_TYPES =
             FormatType.names().stream()
