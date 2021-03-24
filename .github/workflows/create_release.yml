@@ -38,15 +38,7 @@ jobs:
 
       - name: Build
         run: |
-          ./gradlew distTar distZip
-
-          export tar_file=$(ls ./build/distributions/ | grep tar)
-          export zip_file=$(ls ./build/distributions/ | grep zip)
-          echo tar_file=${tar_file} >> $GITHUB_ENV
-          echo zip_file=${zip_file} >> $GITHUB_ENV
-
-          echo tar_path=`realpath ./build/distributions/${tar_file}` >> $GITHUB_ENV
-          echo zip_path=`realpath ./build/distributions/${zip_file}` >> $GITHUB_ENV
+          ./gradlew clean build
 
       - name: Create tag
         run: |
