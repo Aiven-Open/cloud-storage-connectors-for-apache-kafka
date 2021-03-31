@@ -49,6 +49,13 @@ jobs:
           git tag -a "v${{ env.version }}" -m "Release version ${{ env.version }}"
           git push origin "v${{ env.version }}"
 
+      - name: Create tag
+        run: |
+          git config --local user.name "GitHub Action"
+          git config --local user.email "action@github.com"
+          git tag -a "v${{ env.version }}" -m "Release version ${{ env.version }}"
+          git push origin "v${{ env.version }}"
+
       - name: Create release draft
         id: create_release
         uses: actions/create-release@v1
