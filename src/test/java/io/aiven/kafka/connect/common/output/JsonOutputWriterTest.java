@@ -215,6 +215,19 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
         });
     }
 
+    @Test
+    void plainJsonValues() throws IOException {
+        sut = new JsonOutputWriter(byteStream);
+
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+        final Struct struct2 = new Struct(level1Schema).put("name", "Pekka");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+        final SinkRecord record2 = createRecord("key0", level1Schema, struct2, 1, 1000L);
+
+        assertRecords(List.of(record1, record2), "[{\"name\":\"John\"},{\"name\":\"Pekka\"}]");
+    }
+
     @Override
     String parseJson(final byte[] json) throws IOException {
         return objectMapper.readTree(json).toString();

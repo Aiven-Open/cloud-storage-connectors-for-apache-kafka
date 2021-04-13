@@ -18,10 +18,7 @@ package io.aiven.kafka.connect.common.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.kafka.connect.errors.ConnectException;
@@ -114,6 +111,8 @@ public abstract class OutputWriter implements AutoCloseable {
 
         protected Collection<OutputField> outputFields;
 
+        protected boolean unwrapValue = false;
+
         public Builder withCompressionType(final CompressionType compressionType) {
             if (Objects.isNull(compressionType)) {
                 this.compressionType = CompressionType.NONE;
@@ -133,16 +132,21 @@ public abstract class OutputWriter implements AutoCloseable {
         }
 
         public OutputWriter build(final OutputStream out, final FormatType formatType) throws IOException {
-            Objects.requireNonNull(outputFields, "Output fields haven't been set");
             Objects.requireNonNull(out, "Output stream hasn't been set");
             switch (formatType) {
                 case CSV:
+                    Objects.requireNonNull(outputFields, "Output fields haven't been set");
                     return new PlainOutputWriter(outputFields, getCompressedStream(out));
                 case JSONL:
-                    return new JsonLinesOutputWriter(outputFields, getCompressedStream(out));
+                    return outputFields == null
+                        ? new JsonLinesOutputWriter(getCompressedStream(out))
+                        : new JsonLinesOutputWriter(outputFields, getCompressedStream(out));
                 case JSON:
-                    return new JsonOutputWriter(outputFields, getCompressedStream(out));
+                    return outputFields == null
+                        ? new JsonOutputWriter(getCompressedStream(out))
+                        : new JsonOutputWriter(outputFields, getCompressedStream(out));
                 case PARQUET:
+                    Objects.requireNonNull(outputFields, "Output fields haven't been set");
                     if (Objects.isNull(externalProperties)) {
                         externalProperties = Collections.emptyMap();
                     }

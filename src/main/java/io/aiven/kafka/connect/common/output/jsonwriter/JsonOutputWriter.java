@@ -30,6 +30,10 @@ public class JsonOutputWriter extends OutputWriter {
         super(outputStream, new Builder().addFields(fields).build());
     }
 
+    public JsonOutputWriter(final OutputStream outputStream) {
+        super(outputStream, new PlainValueJsonOutputStreamWriter());
+    }
+
     static final class Builder {
         private final JsonOutputFieldComposer fieldsComposer = new JsonOutputFieldComposer();
 

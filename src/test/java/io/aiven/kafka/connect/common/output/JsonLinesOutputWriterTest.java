@@ -228,6 +228,20 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
         assertEquals(expected, useWithWrongLastRecord(Arrays.asList(record1, record2)));
     }
 
+    @Test
+    void plainJsonValueWithValue() throws IOException {
+        sut = new JsonLinesOutputWriter(byteStream);
+
+        final Struct struct1 = new Struct(level1Schema).put("name", "John");
+        final Struct struct2 = new Struct(level1Schema).put("name", "Pekka");
+
+        final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
+        final SinkRecord record2 = createRecord("key0", level1Schema, struct2, 1, 1000L);
+
+        final String expected = "{\"name\":\"John\"}\n{\"name\":\"Pekka\"}";
+        assertEquals(expected, useWithWrongLastRecord(Arrays.asList(record1, record2)));
+    }
+
     protected String parseJson(final byte[] json) throws IOException {
         final Charset utf8 = StandardCharsets.UTF_8;
         final ByteArrayInputStream stream = new ByteArrayInputStream(json);
