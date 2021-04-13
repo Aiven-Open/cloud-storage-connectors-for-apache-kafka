@@ -109,12 +109,8 @@ public abstract class OutputWriter implements AutoCloseable {
     public static class Builder {
 
         protected CompressionType compressionType;
-
         protected Map<String, String> externalProperties;
-
         protected Collection<OutputField> outputFields;
-
-        protected boolean unwrapValue = false;
 
         public Builder withCompressionType(final CompressionType compressionType) {
             if (Objects.isNull(compressionType)) {
