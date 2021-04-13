@@ -16,15 +16,16 @@
 
 package io.aiven.kafka.connect.common.output.jsonwriter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.aiven.kafka.connect.common.output.OutputStreamWriter;
-import org.apache.kafka.connect.sink.SinkRecord;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
+import org.apache.kafka.connect.sink.SinkRecord;
+
+import io.aiven.kafka.connect.common.output.OutputStreamWriter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 class PlainValueJsonLinesOutputStreamWriter implements OutputStreamWriter {
 

@@ -18,7 +18,10 @@ package io.aiven.kafka.connect.common.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Objects;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.kafka.connect.errors.ConnectException;
