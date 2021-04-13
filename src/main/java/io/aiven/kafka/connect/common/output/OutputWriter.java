@@ -138,11 +138,11 @@ public abstract class OutputWriter implements AutoCloseable {
                     Objects.requireNonNull(outputFields, "Output fields haven't been set");
                     return new PlainOutputWriter(outputFields, getCompressedStream(out));
                 case JSONL:
-                    return outputFields == null
+                    return outputFields == null || outputFields.isEmpty()
                         ? new JsonLinesOutputWriter(getCompressedStream(out))
                         : new JsonLinesOutputWriter(outputFields, getCompressedStream(out));
                 case JSON:
-                    return outputFields == null
+                    return outputFields == null || outputFields.isEmpty()
                         ? new JsonOutputWriter(getCompressedStream(out))
                         : new JsonOutputWriter(outputFields, getCompressedStream(out));
                 case PARQUET:
