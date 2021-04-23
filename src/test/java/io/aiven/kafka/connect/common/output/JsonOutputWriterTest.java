@@ -35,6 +35,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
@@ -69,6 +70,22 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
         final String expected = "[{\"value\":{\"name\":\"John\"}}]";
 
         assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    @Test
+    void jsonValueWithSingleField() throws IOException {
+        final List<OutputField> fields = Collections.singletonList(new OutputField(OutputFieldType.VALUE, noEncoding));
+        final Struct struct = new Struct(level1Schema).put("name", "John");
+        final SinkRecord record = createRecord("key0", level1Schema, struct, 1, 1000L);
+
+        try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            final JsonOutputWriter writer = new JsonOutputWriter(fields, byteStream, false)) {
+
+            writer.writeRecord(record);
+            writer.close();
+
+            assertThat(byteStream.toString()).isEqualTo("[\n{\"name\":\"John\"}\n]");
+        }
     }
 
     @Test

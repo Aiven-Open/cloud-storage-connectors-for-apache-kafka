@@ -40,6 +40,7 @@ import io.aiven.kafka.connect.common.output.jsonwriter.JsonLinesOutputWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
@@ -47,9 +48,7 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
 
     @BeforeEach
     void setUp() {
-
         byteStream = new ByteArrayOutputStream();
-        sut = null;
     }
 
     @Test
@@ -78,6 +77,21 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
         final String expected = "{\"value\":{\"name\":\"John\"}}";
 
         assertRecords(Collections.singletonList(record1), expected);
+    }
+
+    @Test
+    void jsonValueWithSingleField() throws IOException {
+        final List<OutputField> fields = Collections.singletonList(new OutputField(OutputFieldType.VALUE, noEncoding));
+        final Struct struct = new Struct(level1Schema).put("name", "John");
+        final SinkRecord record = createRecord("key0", level1Schema, struct, 1, 1000L);
+
+        try (final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+            final JsonLinesOutputWriter writer = new JsonLinesOutputWriter(fields, byteStream, false)) {
+
+            writer.writeRecord(record);
+
+            assertThat(byteStream.toString()).isEqualTo("{\"name\":\"John\"}");
+        }
     }
 
     @Test

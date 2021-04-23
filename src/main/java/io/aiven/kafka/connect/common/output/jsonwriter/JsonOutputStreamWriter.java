@@ -19,8 +19,8 @@ package io.aiven.kafka.connect.common.output.jsonwriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -32,15 +32,18 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 class JsonOutputStreamWriter implements OutputStreamWriter {
-
-    private final Map<String, OutputFieldBuilder> fieldBuilders;
-    private final ObjectMapper objectMapper;
     private static final byte[] BATCH_START = "[\n".getBytes(StandardCharsets.UTF_8);
     private static final byte[] RECORD_SEPARATOR = ",\n".getBytes(StandardCharsets.UTF_8);
     private static final byte[] BATCH_END = "\n]".getBytes(StandardCharsets.UTF_8);
 
-    JsonOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders) {
+    private final Map<String, OutputFieldBuilder> fieldBuilders;
+    private final boolean envelopeEnabled;
+    private final ObjectMapper objectMapper;
+
+    JsonOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders,
+                           final boolean envelopeEnabled) {
         this.fieldBuilders = fieldBuilders;
+        this.envelopeEnabled = envelopeEnabled;
         this.objectMapper = new ObjectMapper();
         objectMapper.setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
     }
@@ -65,21 +68,18 @@ class JsonOutputStreamWriter implements OutputStreamWriter {
         outputStream.write(BATCH_END);
     }
 
-    private ObjectNode getFields(final SinkRecord record) throws IOException {
-        final Iterator<Map.Entry<String, OutputFieldBuilder>> writerIter = fieldBuilders.entrySet().iterator();
-
-
-        final ObjectNode root = JsonNodeFactory.instance.objectNode();
-        while (writerIter.hasNext()) {
-            writeEntry(writerIter.next(), record, root);
+    private JsonNode getFields(final SinkRecord record) throws IOException {
+        if (envelopeEnabled) {
+            final ObjectNode root = JsonNodeFactory.instance.objectNode();
+            final Set<Map.Entry<String, OutputFieldBuilder>> entries = fieldBuilders.entrySet();
+            for (final Map.Entry<String, OutputFieldBuilder> entry : entries) {
+                final JsonNode node = entry.getValue().build(record);
+                root.set(entry.getKey(), node);
+            }
+            return root;
+        } else {
+            // json envelope can be disabled only in case of single field
+            return fieldBuilders.entrySet().iterator().next().getValue().build(record);
         }
-        return root;
-    }
-
-    private void writeEntry(final Map.Entry<String, OutputFieldBuilder> entry,
-                            final SinkRecord record,
-                            final ObjectNode root) throws IOException {
-        final JsonNode node = entry.getValue().build(record);
-        root.set(entry.getKey(), node);
     }
 }

@@ -38,6 +38,7 @@ public class AivenCommonConfig extends AbstractConfig {
     public static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
     public static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
     public static final String FORMAT_OUTPUT_TYPE_CONFIG = "format.output.type";
+    public static final String FORMAT_OUTPUT_ENVELOPE_CONFIG = "format.output.envelope";
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
     public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
@@ -52,6 +53,18 @@ public class AivenCommonConfig extends AbstractConfig {
 
     protected AivenCommonConfig(final ConfigDef definition, final Map<?, ?> originals) {
         super(definition, originals);
+        validate();
+    }
+
+    private void validate() {
+        // Special checks for output json envelope config.
+        final List<io.aiven.kafka.connect.common.config.OutputField> outputFields = getOutputFields();
+        final Boolean outputEnvelopConfig = envelopeEnabled();
+        if (!outputEnvelopConfig && outputFields.toArray().length != 1) {
+            final String msg = String.format("When %s is %s, %s must contain only one field",
+                FORMAT_OUTPUT_ENVELOPE_CONFIG, false, FORMAT_OUTPUT_FIELDS_CONFIG);
+            throw new ConfigException(msg);
+        }
     }
 
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
@@ -82,12 +95,24 @@ public class AivenCommonConfig extends AbstractConfig {
             new OutputFieldsEncodingValidator(),
             ConfigDef.Importance.MEDIUM,
             "The type of encoding for the value field. "
-                + "The supported values are: " + OutputField.SUPPORTED_OUTPUT_FIELDS + ".",
+                + "The supported values are: " + OutputFieldEncodingType.SUPPORTED_FIELD_ENCODING_TYPES + ".",
             GROUP_FORMAT,
-            formatGroupCounter,
+            formatGroupCounter++,
             ConfigDef.Width.NONE,
             FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG,
             FixedSetRecommender.ofSupportedValues(OutputFieldEncodingType.names())
+        );
+
+        configDef.define(
+            FORMAT_OUTPUT_ENVELOPE_CONFIG,
+            ConfigDef.Type.BOOLEAN,
+            true,
+            ConfigDef.Importance.MEDIUM,
+            "Whether to enable envelope for entries with single field.",
+            GROUP_FORMAT,
+            formatGroupCounter,
+            ConfigDef.Width.SHORT,
+            FORMAT_OUTPUT_ENVELOPE_CONFIG
         );
     }
 
@@ -137,6 +162,10 @@ public class AivenCommonConfig extends AbstractConfig {
 
     public CompressionType getCompressionType() {
         return CompressionType.forName(getString(FILE_COMPRESSION_TYPE_CONFIG));
+    }
+
+    public Boolean envelopeEnabled() {
+        return getBoolean(FORMAT_OUTPUT_ENVELOPE_CONFIG);
     }
 
     public OutputFieldEncodingType getOutputFieldEncodingType() {
