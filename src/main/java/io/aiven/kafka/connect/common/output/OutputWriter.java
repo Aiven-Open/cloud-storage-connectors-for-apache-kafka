@@ -114,6 +114,8 @@ public abstract class OutputWriter implements AutoCloseable {
 
         protected Collection<OutputField> outputFields;
 
+        protected Boolean envelopeEnabled;
+
         public Builder withCompressionType(final CompressionType compressionType) {
             if (Objects.isNull(compressionType)) {
                 this.compressionType = CompressionType.NONE;
@@ -132,6 +134,11 @@ public abstract class OutputWriter implements AutoCloseable {
             return this;
         }
 
+        public Builder withEnvelopeEnabled(final Boolean enabled) {
+            this.envelopeEnabled = enabled;
+            return this;
+        }
+
         public OutputWriter build(final OutputStream out, final FormatType formatType) throws IOException {
             Objects.requireNonNull(outputFields, "Output fields haven't been set");
             Objects.requireNonNull(out, "Output stream hasn't been set");
@@ -139,9 +146,9 @@ public abstract class OutputWriter implements AutoCloseable {
                 case CSV:
                     return new PlainOutputWriter(outputFields, getCompressedStream(out));
                 case JSONL:
-                    return new JsonLinesOutputWriter(outputFields, getCompressedStream(out));
+                    return new JsonLinesOutputWriter(outputFields, getCompressedStream(out), envelopeEnabled);
                 case JSON:
-                    return new JsonOutputWriter(outputFields, getCompressedStream(out));
+                    return new JsonOutputWriter(outputFields, getCompressedStream(out), envelopeEnabled);
                 case PARQUET:
                     if (Objects.isNull(externalProperties)) {
                         externalProperties = Collections.emptyMap();

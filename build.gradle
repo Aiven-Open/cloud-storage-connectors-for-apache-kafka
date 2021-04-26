@@ -169,6 +169,7 @@ dependencies {
     testImplementation "io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+    testImplementation 'org.assertj:assertj-core:3.19.0'
 }
 
 test {
