@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.output.parquet;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.kafka.connect.errors.ConnectException;
@@ -47,14 +48,25 @@ class ParquetSchemaBuilder {
 
     private final Logger logger = LoggerFactory.getLogger(ParquetSchemaBuilder.class);
 
-    private final Collection<OutputField> fields;
+    protected final Collection<OutputField> fields;
 
-    private final AvroData avroData;
+    protected final AvroData avroData;
+
+    private final boolean envelopeEnabled;
+
+    ParquetSchemaBuilder(final Collection<OutputField> fields,
+                         final AvroData avroData,
+                         final boolean envelopeEnabled) {
+        this.fields = fields;
+        this.avroData = avroData;
+        this.envelopeEnabled = envelopeEnabled;
+    }
 
     ParquetSchemaBuilder(final Collection<OutputField> fields,
                          final AvroData avroData) {
         this.fields = fields;
         this.avroData = avroData;
+        this.envelopeEnabled = true;
     }
 
     public Schema buildSchema(final SinkRecord record) {
@@ -90,20 +102,54 @@ class ParquetSchemaBuilder {
         return SchemaBuilder.map().values(avroData.fromConnectSchema(headerSchema));
     }
 
-    private Schema avroSchemaFor(final SinkRecord record) {
-        final var schemaFields =
+    protected Schema avroSchemaFor(final SinkRecord record) {
+        if (envelopeEnabled) {
+            final var schemaFields =
                 SchemaBuilder
-                        .builder("io.aiven.parquet.output.schema")
-                        .record("connector_records")
-                        .fields();
-        for (final var f : fields) {
-            final var schema = outputFieldSchema(f, record);
-            schemaFields.name(f.getFieldType().name).type(schema).noDefault();
+                    .builder("io.aiven.parquet.output.schema")
+                    .record("connector_records")
+                    .fields();
+            for (final var f : fields) {
+                final var schema = outputFieldSchema(f, record);
+                schemaFields.name(f.getFieldType().name).type(schema).noDefault();
+            }
+            return schemaFields.endRecord();
+        } else {
+            return tryUnwrapEnvelope(record);
         }
-        return schemaFields.endRecord();
     }
 
-    private Schema outputFieldSchema(final OutputField field, final SinkRecord record) {
+    private Schema tryUnwrapEnvelope(final SinkRecord record) {
+        // envelope can be disabled only in case of single field
+        final OutputField field = fields.iterator().next();
+        final Schema schema = outputFieldSchema(field, record);
+        if (schema.getType() == Schema.Type.MAP) {
+            @SuppressWarnings("unchecked") final Map<String, Object> value =
+                    (Map<String, Object>) record.value();
+            final var schemaFields =
+                    SchemaBuilder
+                            .builder("io.aiven.parquet.output.schema")
+                            .record("connector_records")
+                            .fields();
+            for (final Map.Entry<String, Object> entry : value.entrySet()) {
+                schemaFields.name(entry.getKey()).type(schema.getValueType()).noDefault();
+            }
+            return schemaFields.endRecord();
+        } else if (schema.getType() == Schema.Type.RECORD) {
+            return avroData.fromConnectSchema(record.valueSchema());
+        } else {
+            return SchemaBuilder
+                .builder("io.aiven.parquet.output.schema")
+                .record("connector_records")
+                .fields()
+                .name(field.getFieldType().name)
+                .type(schema)
+                .noDefault()
+                .endRecord();
+        }
+    }
+
+    protected Schema outputFieldSchema(final OutputField field, final SinkRecord record) {
         switch (field.getFieldType()) {
             case KEY:
                 return avroData.fromConnectSchema(record.keySchema());

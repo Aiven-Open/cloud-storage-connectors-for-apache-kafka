@@ -78,7 +78,7 @@ class JsonOutputStreamWriter implements OutputStreamWriter {
             }
             return root;
         } else {
-            // json envelope can be disabled only in case of single field
+            // envelope can be disabled only in case of single field
             return fieldBuilders.entrySet().iterator().next().getValue().build(record);
         }
     }
