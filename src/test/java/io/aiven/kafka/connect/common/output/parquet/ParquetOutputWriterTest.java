@@ -28,8 +28,10 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
@@ -50,6 +52,7 @@ import org.apache.parquet.io.SeekableInputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ParquetOutputWriterTest {
@@ -69,6 +72,7 @@ class ParquetOutputWriterTest {
                 ),
                 SchemaBuilder.STRING_SCHEMA,
                 values,
+                true,
                 true
         );
         var counter = 0;
@@ -99,7 +103,8 @@ class ParquetOutputWriterTest {
                 ),
                 SchemaBuilder.STRING_SCHEMA,
                 values,
-                false
+                false,
+                true
         );
         var counter = 0;
         for (final var r : readRecords(parquetFile)) {
@@ -136,7 +141,8 @@ class ParquetOutputWriterTest {
                 List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)),
                 recordSchema,
                 values,
-                false
+                false,
+                true
         );
         var counter = 0;
         for (final var r : readRecords(parquetFile)) {
@@ -144,6 +150,44 @@ class ParquetOutputWriterTest {
             assertEquals(expectedString, r);
             counter++;
         }
+    }
+
+    @Test
+    void testWriteValueStructWithoutEnvelope(@TempDir final Path tmpDir) throws IOException {
+        final var parquetFile = tmpDir.resolve("parquet.file");
+        final var recordSchema =
+                SchemaBuilder.struct()
+                        .field("name", Schema.STRING_SCHEMA)
+                        .field("age", Schema.INT32_SCHEMA)
+                        .build();
+
+        final var values =
+                List.of(
+                        new Struct(recordSchema)
+                                .put("name", "name-0").put("age", 0),
+                        new Struct(recordSchema)
+                                .put("name", "name-1").put("age", 1),
+                        new Struct(recordSchema)
+                                .put("name", "name-2").put("age", 2),
+                        new Struct(recordSchema)
+                                .put("name", "name-3").put("age", 3)
+                );
+        writeRecords(
+                parquetFile,
+                List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)),
+                recordSchema,
+                values,
+                false,
+                false
+        );
+
+        final List<String> actualRecords = readRecords(parquetFile);
+        assertThat(actualRecords).hasSameSizeAs(values)
+            .containsExactlyElementsOf(
+                    values.stream()
+                            .map(struct -> "{\"name\": \"" + struct.get("name") + "\","
+                                    + " \"age\": " + struct.get("age") + "}")
+                            .collect(Collectors.toList()));
     }
 
     @Test
@@ -162,7 +206,8 @@ class ParquetOutputWriterTest {
                 List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)),
                 recordSchema,
                 values,
-                false
+                false,
+                true
         );
         var counter = 0;
         for (final var r : readRecords(parquetFile)) {
@@ -182,7 +227,8 @@ class ParquetOutputWriterTest {
                 List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)),
                 recordSchema,
                 List.of(Map.of("a", 1, "b", 2)),
-                false
+                false,
+                true
         );
         for (final var r : readRecords(parquetFile)) {
             final var mapValue =  "{\"a\": 1, \"b\": 2}";
@@ -191,17 +237,36 @@ class ParquetOutputWriterTest {
         }
     }
 
+    @Test
+    void testWriteValueMapWithoutEnvelope(@TempDir final Path tmpDir) throws IOException {
+        final var parquetFile = tmpDir.resolve("parquet.file");
+        final var recordSchema = SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA).build();
+
+        writeRecords(
+                parquetFile,
+                List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)),
+                recordSchema,
+                List.of(new HashMap<>(Map.of("a", 1, "b", 2))),
+                false,
+                false
+        );
+
+        final var expectedString = "{\"a\": 1, \"b\": 2}";
+        assertThat(readRecords(parquetFile)).containsExactly(expectedString);
+    }
+
     private <T> void writeRecords(final Path parquetFile,
                                   final Collection<OutputField> fields,
                                   final Schema recordSchema,
                                   final List<T> records,
-                                  final boolean withHeaders) throws IOException {
+                                  final boolean withHeaders,
+                                  final boolean withEnvelope) throws IOException {
         final OutputStream out = new FileOutputStream(parquetFile.toFile());
         final Headers headers = new ConnectHeaders();
         headers.add("a", "b".getBytes(StandardCharsets.UTF_8), Schema.BYTES_SCHEMA);
         headers.add("c", "d".getBytes(StandardCharsets.UTF_8), Schema.BYTES_SCHEMA);
         try (final var o = out;
-             final var parquetWriter = new ParquetOutputWriter(fields, o, Collections.emptyMap())) {
+             final var parquetWriter = new ParquetOutputWriter(fields, o, Collections.emptyMap(), withEnvelope)) {
             int counter = 0;
             final var sinkRecords = new ArrayList<SinkRecord>();
             for (final var r : records) {

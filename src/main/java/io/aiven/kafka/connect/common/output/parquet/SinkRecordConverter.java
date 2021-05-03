@@ -18,6 +18,8 @@ package io.aiven.kafka.connect.common.output.parquet;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -41,9 +43,18 @@ class SinkRecordConverter {
 
     private final AvroData avroData;
 
+    private final boolean envelopeEnabled;
+
+    SinkRecordConverter(final Collection<OutputField> fields, final AvroData avroData, final boolean envelopeEnabled) {
+        this.fields = fields;
+        this.avroData = avroData;
+        this.envelopeEnabled = envelopeEnabled;
+    }
+
     SinkRecordConverter(final Collection<OutputField> fields, final AvroData avroData) {
         this.fields = fields;
         this.avroData = avroData;
+        this.envelopeEnabled = true;
     }
 
     public GenericRecord convert(final SinkRecord record, final Schema schema) {
@@ -52,12 +63,38 @@ class SinkRecordConverter {
     }
 
     private GenericRecord createRecord(final Schema schema, final SinkRecord record) {
-        final var avroRecord = new GenericData.Record(schema);
-        for (final var f : fields) {
-            final var fieldValue = getRecordValueFor(f.getFieldType(), record);
-            avroRecord.put(f.getFieldType().name, fieldValue);
+        if (envelopeEnabled) {
+            final var avroRecord = new GenericData.Record(schema);
+            for (final var f : fields) {
+                final var fieldValue = getRecordValueFor(f.getFieldType(), record);
+                avroRecord.put(f.getFieldType().name, fieldValue);
+            }
+            return avroRecord;
+        } else {
+            return tryUnwrapEnvelope(schema, record);
         }
-        return avroRecord;
+    }
+
+    private GenericData.Record tryUnwrapEnvelope(final Schema schema, final SinkRecord record) {
+        // envelope can be disabled only in case of single field
+        final OutputField field = fields.iterator().next();
+        final var fieldValue = getRecordValueFor(field.getFieldType(), record);
+        final Schema.Type originalValueSchemaType = avroData.fromConnectSchema(record.valueSchema()).getType();
+        if (originalValueSchemaType == Schema.Type.MAP) {
+            @SuppressWarnings("unchecked") final Set<Map.Entry<String, Object>> entries =
+                ((Map<String, Object>) fieldValue).entrySet();
+            final var avroRecord = new GenericData.Record(schema);
+            for (final Map.Entry<String, Object> entry : entries) {
+                avroRecord.put(entry.getKey(), entry.getValue());
+            }
+            return avroRecord;
+        } else if (originalValueSchemaType == Schema.Type.RECORD) {
+            return (GenericData.Record) fieldValue;
+        } else {
+            final var avroRecord = new GenericData.Record(schema);
+            avroRecord.put(field.getFieldType().name, fieldValue);
+            return avroRecord;
+        }
     }
 
 

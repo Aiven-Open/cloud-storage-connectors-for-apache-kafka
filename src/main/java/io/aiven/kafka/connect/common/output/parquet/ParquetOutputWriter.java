@@ -47,11 +47,12 @@ public class ParquetOutputWriter extends OutputWriter {
 
     public ParquetOutputWriter(final Collection<OutputField> fields,
                                final OutputStream out,
-                               final Map<String, String> externalConfig) {
+                               final Map<String, String> externalConfig,
+                               final boolean envelopeEnabled) {
         super(new ParquetPositionOutputStream(out), new OutputStreamWriterStub(), externalConfig);
         final var avroData = new AvroData(new AvroDataConfig(externalConfig));
-        this.sinkRecordConverter = new SinkRecordConverter(fields, avroData);
-        this.parquetSchemaBuilder = new ParquetSchemaBuilder(fields, avroData);
+        this.sinkRecordConverter = new SinkRecordConverter(fields, avroData, envelopeEnabled);
+        this.parquetSchemaBuilder = new ParquetSchemaBuilder(fields, avroData, envelopeEnabled);
     }
 
     @Override

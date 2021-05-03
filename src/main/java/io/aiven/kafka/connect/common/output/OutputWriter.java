@@ -114,7 +114,7 @@ public abstract class OutputWriter implements AutoCloseable {
 
         protected Collection<OutputField> outputFields;
 
-        protected Boolean envelopeEnabled;
+        protected boolean envelopeEnabled = true;
 
         public Builder withCompressionType(final CompressionType compressionType) {
             if (Objects.isNull(compressionType)) {
@@ -155,7 +155,7 @@ public abstract class OutputWriter implements AutoCloseable {
                     }
                     //parquet has its own way for compression,
                     // CompressionType passes by to writer and set explicitly to AvroParquetWriter
-                    return new ParquetOutputWriter(outputFields, out, externalProperties);
+                    return new ParquetOutputWriter(outputFields, out, externalProperties, envelopeEnabled);
                 default:
                     throw new ConnectException("Unsupported format type " + formatType);
             }
