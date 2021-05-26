@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-// Copyright 2020 Aiven Oy
+// Copyright 2021 Aiven Oy
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,8 @@
 // limitations under the License.
 -->
 <!DOCTYPE suppressions PUBLIC
-        "-//Puppy Crawl//DTD Suppressions 1.1//EN"
-        "http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
-
+        "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <suppressions>
 
     <suppress checks="(Indentation)"
@@ -25,5 +24,8 @@
 
     <suppress checks="(ConstantName)"
               files="(FormatterUtils).java"/>
+
+    <suppress checks="LineLength"
+              files="(FilenameTemplateValidatorTest).java" />
 
 </suppressions>

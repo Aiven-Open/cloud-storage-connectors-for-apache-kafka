@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2021 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,14 @@ import java.util.Objects;
 public enum FilenameTemplateVariable {
     KEY("key"),
     TOPIC("topic"),
-    PARTITION("partition"),
+    PARTITION(
+        "partition",
+        new ParameterDescriptor(
+                "padding",
+                false,
+                List.of(Boolean.TRUE.toString(), Boolean.FALSE.toString())
+        )
+    ),
     START_OFFSET(
         "start_offset",
         new ParameterDescriptor(
