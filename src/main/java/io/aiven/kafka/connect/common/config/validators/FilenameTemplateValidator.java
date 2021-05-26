@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2021 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.config;
+package io.aiven.kafka.connect.common.config.validators;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,12 +25,14 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import static io.aiven.kafka.connect.common.config.FilenameTemplateVariable.PARTITION;
 import static io.aiven.kafka.connect.common.config.FilenameTemplateVariable.ParameterDescriptor;
 import static io.aiven.kafka.connect.common.config.FilenameTemplateVariable.START_OFFSET;
 import static io.aiven.kafka.connect.common.config.FilenameTemplateVariable.TIMESTAMP;
@@ -39,7 +41,8 @@ import static io.aiven.kafka.connect.common.grouper.RecordGrouperFactory.SUPPORT
 
 public final class FilenameTemplateValidator implements ConfigDef.Validator {
 
-    private static final Map<String, ParameterDescriptor> SUPPORTED_VARIABLE_PARAMETERS = new LinkedHashMap<>() {{
+    static final Map<String, ParameterDescriptor> SUPPORTED_VARIABLE_PARAMETERS = new LinkedHashMap<>() {{
+            put(PARTITION.name, PARTITION.parameterDescriptor);
             put(START_OFFSET.name, START_OFFSET.parameterDescriptor);
             put(TIMESTAMP.name, TIMESTAMP.parameterDescriptor);
         }};
@@ -99,7 +102,7 @@ public final class FilenameTemplateValidator implements ConfigDef.Validator {
             if (SUPPORTED_VARIABLE_PARAMETERS.containsKey(varName)) {
                 final FilenameTemplateVariable.ParameterDescriptor expectedParameter =
                     SUPPORTED_VARIABLE_PARAMETERS.get(varName);
-                if (!expectedParameter.values.contains(varParam.value())) {
+                if (!varParam.matches(expectedParameter)) {
                     isVariableParametersSupported = false;
                     break;
                 }

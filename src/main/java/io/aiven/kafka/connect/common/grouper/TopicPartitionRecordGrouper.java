@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2021 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
      *
      * @param filenameTemplate  the filename template.
      * @param maxRecordsPerFile the maximum number of records per file ({@code null} for unlimited).
-     * @param tsSource timestamp sources
+     * @param tsSource          timestamp sources
      */
     TopicPartitionRecordGrouper(final Template filenameTemplate,
                                 final Integer maxRecordsPerFile,
@@ -114,12 +114,16 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
             usePaddingParameter -> usePaddingParameter.asBoolean()
                 ? String.format("%020d", headRecord.kafkaOffset())
                 : Long.toString(headRecord.kafkaOffset());
+        final Function<Parameter, String> setKafkaPartition =
+            usePaddingParameter -> usePaddingParameter.asBoolean()
+                    ? String.format("%010d", headRecord.kafkaPartition())
+                    : Long.toString(headRecord.kafkaPartition());
 
         return filenameTemplate.instance()
                 .bindVariable(FilenameTemplateVariable.TOPIC.name, tp::topic)
                 .bindVariable(
                         FilenameTemplateVariable.PARTITION.name,
-                        () -> Integer.toString(tp.partition())
+                        setKafkaPartition
                 ).bindVariable(
                         FilenameTemplateVariable.START_OFFSET.name,
                         setKafkaOffset

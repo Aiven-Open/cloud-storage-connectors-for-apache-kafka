@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2021 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package io.aiven.kafka.connect.common.templating;
 
 import java.util.Objects;
+
+import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
 
 public class VariableTemplatePart implements TemplatePart {
 
@@ -114,6 +116,10 @@ public class VariableTemplatePart implements TemplatePart {
         @Override
         public int hashCode() {
             return Objects.hash(name, value);
+        }
+
+        public boolean matches(final FilenameTemplateVariable.ParameterDescriptor descriptor) {
+            return descriptor.name.equals(name) && descriptor.values.contains(value);
         }
     }
 

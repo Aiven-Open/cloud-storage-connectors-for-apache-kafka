@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2021 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.contains;
@@ -66,13 +67,13 @@ final class TopicPartitionRecordGrouperTest {
         "topic0", 1, Schema.OPTIONAL_STRING_SCHEMA, "some_key", null, null, 13);
 
     private static final SinkRecord T1P1R0 = new SinkRecord(
-        "topic1", 0, Schema.OPTIONAL_STRING_SCHEMA, "some_key", null, null, 1000);
+        "topic1", 1, Schema.OPTIONAL_STRING_SCHEMA, "some_key", null, null, 1000);
     private static final SinkRecord T1P1R1 = new SinkRecord(
-        "topic1", 0, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 1001);
+        "topic1", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 1001);
     private static final SinkRecord T1P1R2 = new SinkRecord(
-        "topic1", 0, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 1002);
+        "topic1", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 1002);
     private static final SinkRecord T1P1R3 = new SinkRecord(
-        "topic1", 0, Schema.OPTIONAL_STRING_SCHEMA, "some_key", null, null, 1003);
+        "topic1", 1, Schema.OPTIONAL_STRING_SCHEMA, "some_key", null, null, 1003);
 
     private static final TimestampSource DEFAULT_TS_SOURCE =
         TimestampSource.of(TimestampSource.Type.WALLCLOCK);
@@ -112,13 +113,13 @@ final class TopicPartitionRecordGrouperTest {
         final Map<String, List<SinkRecord>> records = grouper.records();
         assertThat(
             records.keySet(),
-            containsInAnyOrder("topic0-0-0", "topic0-1-10", "topic1-0-1000")
+            containsInAnyOrder("topic0-0-0", "topic0-1-10", "topic1-1-1000")
         );
         assertThat(records.get("topic0-0-0"),
             contains(T0P0R0, T0P0R1, T0P0R2, T0P0R3, T0P0R4, T0P0R5));
         assertThat(records.get("topic0-1-10"),
             contains(T0P1R0, T0P1R1, T0P1R2, T0P1R3));
-        assertThat(records.get("topic1-0-1000"),
+        assertThat(records.get("topic1-1-1000"),
             contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3));
     }
 
@@ -149,8 +150,8 @@ final class TopicPartitionRecordGrouperTest {
             records.keySet(),
             containsInAnyOrder(
                 "topic0-0-0", "topic0-0-2", "topic0-0-4",
-                "topic0-1-10", "topic0-1-12", "topic1-0-1000",
-                "topic1-0-1002")
+                "topic0-1-10", "topic0-1-12", "topic1-1-1000",
+                "topic1-1-1002")
         );
         assertThat(records.get("topic0-0-0"),
             contains(T0P0R0, T0P0R1));
@@ -162,9 +163,9 @@ final class TopicPartitionRecordGrouperTest {
             contains(T0P1R0, T0P1R1));
         assertThat(records.get("topic0-1-12"),
             contains(T0P1R2, T0P1R3));
-        assertThat(records.get("topic1-0-1000"),
+        assertThat(records.get("topic1-1-1000"),
             contains(T1P1R0, T1P1R1));
-        assertThat(records.get("topic1-0-1002"),
+        assertThat(records.get("topic1-1-1002"),
             contains(T1P1R2, T1P1R3));
     }
 
@@ -197,11 +198,11 @@ final class TopicPartitionRecordGrouperTest {
         final Map<String, List<SinkRecord>> records = grouper.records();
         assertThat(
             records.keySet(),
-            containsInAnyOrder("topic0-0-4", "topic1-0-1000")
+            containsInAnyOrder("topic0-0-4", "topic1-1-1000")
         );
         assertThat(records.get("topic0-0-4"),
             contains(T0P0R4, T0P0R5));
-        assertThat(records.get("topic1-0-1000"),
+        assertThat(records.get("topic1-1-1000"),
             contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3));
     }
 
@@ -224,16 +225,39 @@ final class TopicPartitionRecordGrouperTest {
             records.keySet(),
             containsInAnyOrder(
                 "topic0-0-00000000000000000004",
-                "topic1-0-00000000000000001000")
+                "topic1-1-00000000000000001000")
         );
         assertThat(
             records.get("topic0-0-00000000000000000004"),
             contains(T0P0R4, T0P0R5)
         );
         assertThat(
-            records.get("topic1-0-00000000000000001000"),
+            records.get("topic1-1-00000000000000001000"),
             contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3)
         );
+    }
+
+    @Test
+    final void setZeroPaddingForKafkaPartition() {
+        final Template filenameTemplate = Template.of("{{topic}}-{{partition:padding=true}}-{{start_offset}}");
+        final TopicPartitionRecordGrouper grouper =
+                new TopicPartitionRecordGrouper(
+                        filenameTemplate, null, DEFAULT_TS_SOURCE);
+
+        grouper.put(T1P1R0);
+        grouper.put(T1P1R1);
+        grouper.put(T0P0R4);
+        grouper.put(T1P1R2);
+        grouper.put(T1P1R3);
+        grouper.put(T0P0R5);
+
+        final Map<String, List<SinkRecord>> records = grouper.records();
+        assertThat(records)
+                .extractingByKey("topic0-0000000000-4").asList()
+                .containsExactly(T0P0R4, T0P0R5);
+        assertThat(records)
+                .extractingByKey("topic1-0000000001-1000").asList()
+                .containsExactly(T1P1R0, T1P1R1, T1P1R2, T1P1R3);
     }
 
     @Test
@@ -249,7 +273,7 @@ final class TopicPartitionRecordGrouperTest {
             );
         final ZonedDateTime t = TimestampSource.of(TimestampSource.Type.WALLCLOCK).time();
         final String expectedTs =
-            t.format(DateTimeFormatter.ofPattern("YYYY"))
+            t.format(DateTimeFormatter.ofPattern("yyyy"))
                 + t.format(DateTimeFormatter.ofPattern("MM"))
                 + t.format(DateTimeFormatter.ofPattern("dd"));
 
@@ -270,14 +294,14 @@ final class TopicPartitionRecordGrouperTest {
             records.keySet(),
             containsInAnyOrder(
                 "topic0-0-4-" + expectedTs,
-                "topic1-0-1000-" + expectedTs
+                "topic1-1-1000-" + expectedTs
             )
         );
         assertThat(
             records.keySet(),
             containsInAnyOrder(
                 "topic0-0-4-" + expectedTs,
-                "topic1-0-1000-" + expectedTs
+                "topic1-1-1000-" + expectedTs
             )
         );
         assertThat(
@@ -285,7 +309,7 @@ final class TopicPartitionRecordGrouperTest {
             contains(T0P0R4, T0P0R5)
         );
         assertThat(
-            records.get("topic1-0-1000-" + expectedTs),
+            records.get("topic1-1-1000-" + expectedTs),
             contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3)
         );
     }
@@ -307,12 +331,12 @@ final class TopicPartitionRecordGrouperTest {
         final ZonedDateTime firstHourTime = ZonedDateTime.now();
         final ZonedDateTime secondHourTime = firstHourTime.plusHours(1);
         final String firstHourTs =
-            firstHourTime.format(DateTimeFormatter.ofPattern("YYYY"))
+            firstHourTime.format(DateTimeFormatter.ofPattern("yyyy"))
                 + firstHourTime.format(DateTimeFormatter.ofPattern("MM"))
                 + firstHourTime.format(DateTimeFormatter.ofPattern("dd"))
                 + firstHourTime.format(DateTimeFormatter.ofPattern("HH"));
         final String secondHourTs =
-            secondHourTime.format(DateTimeFormatter.ofPattern("YYYY"))
+            secondHourTime.format(DateTimeFormatter.ofPattern("yyyy"))
                 + secondHourTime.format(DateTimeFormatter.ofPattern("MM"))
                 + secondHourTime.format(DateTimeFormatter.ofPattern("dd"))
                 + secondHourTime.format(DateTimeFormatter.ofPattern("HH"));
@@ -368,11 +392,11 @@ final class TopicPartitionRecordGrouperTest {
         final ZonedDateTime firstDayTime = ZonedDateTime.now();
         final ZonedDateTime secondDayTime = firstDayTime.plusDays(1);
         final String firstDayTs =
-            firstDayTime.format(DateTimeFormatter.ofPattern("YYYY"))
+            firstDayTime.format(DateTimeFormatter.ofPattern("yyyy"))
                 + firstDayTime.format(DateTimeFormatter.ofPattern("MM"))
                 + firstDayTime.format(DateTimeFormatter.ofPattern("dd"));
         final String secondDayTs =
-            secondDayTime.format(DateTimeFormatter.ofPattern("YYYY"))
+            secondDayTime.format(DateTimeFormatter.ofPattern("yyyy"))
                 + secondDayTime.format(DateTimeFormatter.ofPattern("MM"))
                 + secondDayTime.format(DateTimeFormatter.ofPattern("dd"));
 
@@ -480,10 +504,10 @@ final class TopicPartitionRecordGrouperTest {
         final ZonedDateTime firstYearTime = ZonedDateTime.now();
         final ZonedDateTime secondYearMonth = firstYearTime.plusYears(1);
         final String firstYearTs =
-            firstYearTime.format(DateTimeFormatter.ofPattern("YYYY"))
+            firstYearTime.format(DateTimeFormatter.ofPattern("yyyy"))
                 + firstYearTime.format(DateTimeFormatter.ofPattern("MM"));
         final String secondYearTs =
-            secondYearMonth.format(DateTimeFormatter.ofPattern("YYYY"))
+            secondYearMonth.format(DateTimeFormatter.ofPattern("yyyy"))
                 + secondYearMonth.format(DateTimeFormatter.ofPattern("MM"));
 
         when(timestampSourceMock.time()).thenReturn(firstYearTime);
