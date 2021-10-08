@@ -2,7 +2,7 @@
 ![Release Workflow](https://github.com/aiven/commons-for-apache-kafka-connect/workflows/Release%20Workflow/badge.svg)
 ![Publish Workflow](https://github.com/aiven/commons-for-apache-kafka-connect/workflows/Publish%20Workflow/badge.svg)
 
-# Avien's Common Module for Apache Kafka connectors
+# Aiven's Common Module for Apache Kafka connectors
 
 Shared common functionality among Aiven's connectors for Apache Kafka:
 - [Aiven GCS Connector](https://github.com/aiven/gcs-connector-for-apache-kafka)
