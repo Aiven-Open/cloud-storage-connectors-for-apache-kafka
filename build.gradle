@@ -180,15 +180,15 @@ publishing {
     publications {
         maven(MavenPublication) {
             groupId = getGroup()
-            artifactId = "aiven-kafka-connect-commons"
+            artifactId = "commons-for-apache-kafka-connect"
             version = getVersion()
 
             from components.java
 
             pom {
-                name = "Aiven Kafka Connect commons"
-                description = "A Kafka Connect commons"
-                url = "https://github.com/aiven/aiven-kafka-connect-commons"
+                name = "Avien's Common Module for Apache Kafka connectors"
+                description = "Avien's Common Module for Apache Kafka connectors"
+                url = "https://github.com/aiven/commons-for-apache-kafka-connect"
                 organization {
                     name = "Aiven Oy"
                     url = "https://aiven.io"
@@ -211,9 +211,9 @@ publishing {
                 }
 
                 scm {
-                    connection = 'scm:git:git://github.com:aiven/aiven-kafka-connect-commons.git'
-                    developerConnection = 'scm:git:ssh://github.com:aiven/aiven-kafka-connect-commons.git'
-                    url = 'https://github.com/aiven/aiven-kafka-connect-commons'
+                    connection = 'scm:git:git://github.com:aiven/commons-for-apache-kafka-connect.git'
+                    developerConnection = 'scm:git:ssh://github.com:aiven/commons-for-apache-kafka-connect.git'
+                    url = 'https://github.com/aiven/commons-for-apache-kafka-connect'
                 }
             }
         }
