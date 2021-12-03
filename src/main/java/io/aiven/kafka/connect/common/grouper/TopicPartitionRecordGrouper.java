@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 
 import org.apache.kafka.common.TopicPartition;
@@ -30,6 +31,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
 import io.aiven.kafka.connect.common.config.TimestampSource;
+import io.aiven.kafka.connect.common.config.TimestampSource.FieldNameTimeStampSource;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
@@ -49,8 +51,14 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
 
     private final Map<String, List<SinkRecord>> fileBuffers = new HashMap<>();
 
-    private final Function<Parameter, String> setTimestamp;
-
+    private final TimestampSource tsSource;
+    final Map<String, DateTimeFormatter> timestampFormatters =
+        Map.of(
+            "yyyy", DateTimeFormatter.ofPattern("yyyy"),
+            "MM", DateTimeFormatter.ofPattern("MM"),
+            "dd", DateTimeFormatter.ofPattern("dd"),
+            "HH", DateTimeFormatter.ofPattern("HH")
+        );
     private final Rotator<List<SinkRecord>> rotator;
 
     /**
@@ -65,22 +73,10 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
                                 final TimestampSource tsSource) {
         Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
         Objects.requireNonNull(tsSource, "tsSource cannot be null");
+
         this.filenameTemplate = filenameTemplate;
-        this.setTimestamp = new Function<>() {
-            private final Map<String, DateTimeFormatter> timestampFormatters =
-                Map.of(
-                    "yyyy", DateTimeFormatter.ofPattern("yyyy"),
-                    "MM", DateTimeFormatter.ofPattern("MM"),
-                    "dd", DateTimeFormatter.ofPattern("dd"),
-                    "HH", DateTimeFormatter.ofPattern("HH")
-                );
+        this.tsSource = tsSource;
 
-            @Override
-            public String apply(final Parameter parameter) {
-                return tsSource.time().format(timestampFormatters.get(parameter.value()));
-            }
-
-        };
         this.rotator = buffer -> {
             final var unlimited = maxRecordsPerFile == null;
             if (unlimited) {
@@ -98,15 +94,42 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
         fileBuffers.computeIfAbsent(recordKey, ignored -> new ArrayList<>()).add(record);
     }
 
+    protected boolean createNewDestinationTimestampPartition(final TimestampSource tsSource,
+        final SinkRecord headRecord,
+        final SinkRecord recordToSink) {
+
+        // only check if timestamp partitions if the timestampSource is FieldNameTimeStampSource
+        return tsSource.getClass().equals(FieldNameTimeStampSource.class)
+            && !generateTimestampPartitionForRecord(headRecord)
+            .equals(generateTimestampPartitionForRecord(recordToSink));
+    }
+
     protected String resolveRecordKeyFor(final SinkRecord record) {
         final TopicPartition tp = new TopicPartition(record.topic(), record.kafkaPartition());
         final SinkRecord currentHeadRecord = currentHeadRecords.computeIfAbsent(tp, ignored -> record);
         String recordKey = generateRecordKey(tp, currentHeadRecord);
-        if (rotator.rotate(fileBuffers.get(recordKey))) {
+
+        // rotate if past max records per file or underlying record ts partition != current head record's
+        if (rotator.rotate(fileBuffers.get(recordKey)) || createNewDestinationTimestampPartition(
+            tsSource, currentHeadRecord, record)) {
             // Create new file using this record as the head record.
             recordKey = generateNewRecordKey(record);
         }
         return recordKey;
+    }
+
+    protected String generateTimestampPartitionForRecord(final SinkRecord record) {
+
+        final Function<Parameter, String> setTimestampSegment =
+            parameter -> tsSource.time(Optional.of(record))
+                .format(timestampFormatters.get(parameter.value()));
+
+        // only applies the timestamp portion(s) (aka yyyy, MM,..) of the filename template
+        return filenameTemplate.instance()
+           .bindVariable(
+                FilenameTemplateVariable.TIMESTAMP.name,
+               setTimestampSegment
+            ).render();
     }
 
     private String generateRecordKey(final TopicPartition tp, final SinkRecord headRecord) {
@@ -119,6 +142,10 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
                     ? String.format("%010d", headRecord.kafkaPartition())
                     : Long.toString(headRecord.kafkaPartition());
 
+        final Function<Parameter, String> setTimestampSegment =
+            parameter -> tsSource.time(Optional.of(headRecord))
+                .format(timestampFormatters.get(parameter.value()));
+
         return filenameTemplate.instance()
                 .bindVariable(FilenameTemplateVariable.TOPIC.name, tp::topic)
                 .bindVariable(
@@ -129,7 +156,7 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
                         setKafkaOffset
                 ).bindVariable(
                         FilenameTemplateVariable.TIMESTAMP.name,
-                        setTimestamp
+                        setTimestampSegment
                 ).render();
     }
 

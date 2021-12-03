@@ -16,13 +16,18 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.Optional;
+
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.sink.SinkRecord;
 
 public interface TimestampSource {
 
-    ZonedDateTime time();
+    ZonedDateTime time(final Optional<SinkRecord> record);
 
     static TimestampSource of(final Type extractorType) {
         return of(ZoneOffset.UTC, extractorType);
@@ -32,6 +37,8 @@ public interface TimestampSource {
         switch (extractorType) {
             case WALLCLOCK:
                 return new WallclockTimestampSource(zoneId);
+            case PARTITION_FIELDNAME:
+                return new FieldNameTimeStampSource(zoneId);
             default:
                 throw new IllegalArgumentException(
                     String.format("Unsupported timestamp extractor type: %s", extractorType)
@@ -39,9 +46,10 @@ public interface TimestampSource {
         }
     }
 
+
     enum Type {
 
-        WALLCLOCK;
+        WALLCLOCK, PARTITION_FIELDNAME;
 
         public static Type of(final String name) {
             for (final Type t : Type.values()) {
@@ -63,8 +71,38 @@ public interface TimestampSource {
         }
 
         @Override
-        public ZonedDateTime time() {
+        public ZonedDateTime time(final Optional<SinkRecord> record) {
             return ZonedDateTime.now(zoneId);
+        }
+
+    }
+
+
+    final class FieldNameTimeStampSource implements TimestampSource {
+
+        private final ZoneId zoneId;
+        private String partitionFieldName;
+
+        protected FieldNameTimeStampSource(final ZoneId zoneId) {
+            this.zoneId = zoneId;
+        }
+
+        public void setPartitionFieldName(final String partitionFieldName) {
+            this.partitionFieldName = partitionFieldName;
+        }
+
+        @Override
+        public ZonedDateTime time(final Optional<SinkRecord> sinkRecord) {
+            // for the time being, we are only able to retrieve from root level fields
+            final Object value = sinkRecord.get().value();
+            final Struct struct = (Struct) value;
+            final Object timestampValue = struct.get(partitionFieldName);
+
+            // for the time being, we are only extracting timestamp values that can be cast to Java Number
+            final Number millis = (Number) timestampValue;
+            final Instant instant = Instant.ofEpochMilli(millis.longValue());
+
+            return ZonedDateTime.ofInstant(instant, zoneId);
         }
 
     }

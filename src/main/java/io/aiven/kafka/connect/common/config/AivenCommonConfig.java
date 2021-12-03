@@ -28,12 +28,14 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.kafka.connect.common.config.TimestampSource.FieldNameTimeStampSource;
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsEncodingValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputTypeValidator;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.templating.Template;
+
 
 public class AivenCommonConfig extends AbstractConfig {
     public static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
@@ -45,6 +47,7 @@ public class AivenCommonConfig extends AbstractConfig {
     public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
+    public static final String PARTITION_FIELD_NAME = "partition.field.name";
 
     private static final String GROUP_AWS = "AWS";
     private static final String GROUP_FILE = "File";
@@ -249,10 +252,15 @@ public class AivenCommonConfig extends AbstractConfig {
     }
 
     public final TimestampSource getFilenameTimestampSource() {
-        return TimestampSource.of(
+        final TimestampSource timestampSource = TimestampSource.of(
             getFilenameTimezone(),
             TimestampSource.Type.of(getString(FILE_NAME_TIMESTAMP_SOURCE))
         );
+        if (timestampSource.getClass().equals(FieldNameTimeStampSource.class)) {
+          ((FieldNameTimeStampSource) timestampSource)
+              .setPartitionFieldName(getString(PARTITION_FIELD_NAME));
+        }
+        return timestampSource;
     }
 
     public final int getMaxRecordsPerFile() {

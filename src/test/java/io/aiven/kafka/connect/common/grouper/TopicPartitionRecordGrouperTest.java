@@ -21,11 +21,16 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.TimestampSource;
+import io.aiven.kafka.connect.common.config.TimestampSource.FieldNameTimeStampSource;
+import io.aiven.kafka.connect.common.config.TimestampSource.Type;
 import io.aiven.kafka.connect.common.templating.Template;
 
 import org.junit.jupiter.api.Test;
@@ -39,6 +44,7 @@ import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -77,6 +83,11 @@ final class TopicPartitionRecordGrouperTest {
 
     private static final TimestampSource DEFAULT_TS_SOURCE =
         TimestampSource.of(TimestampSource.Type.WALLCLOCK);
+
+    private static final TimestampSource FIELD_NAME_TS_SOURCE =
+        TimestampSource.of(Type.PARTITION_FIELDNAME);
+
+    private static final String PARTITION_FIELD_NAME = "event_occurrence_timestamp";
 
     @ParameterizedTest
     @NullSource
@@ -271,7 +282,7 @@ final class TopicPartitionRecordGrouperTest {
                     + "{{timestamp:unit=MM}}"
                     + "{{timestamp:unit=dd}}"
             );
-        final ZonedDateTime t = TimestampSource.of(TimestampSource.Type.WALLCLOCK).time();
+        final ZonedDateTime t = TimestampSource.of(TimestampSource.Type.WALLCLOCK).time(Optional.empty());
         final String expectedTs =
             t.format(DateTimeFormatter.ofPattern("yyyy"))
                 + t.format(DateTimeFormatter.ofPattern("MM"))
@@ -341,7 +352,7 @@ final class TopicPartitionRecordGrouperTest {
                 + secondHourTime.format(DateTimeFormatter.ofPattern("dd"))
                 + secondHourTime.format(DateTimeFormatter.ofPattern("HH"));
 
-        when(timestampSourceMock.time()).thenReturn(firstHourTime);
+        when(timestampSourceMock.time(any())).thenReturn(firstHourTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
                 filenameTemplate, null, timestampSourceMock);
@@ -350,7 +361,7 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P0R2);
         grouper.put(T0P0R3);
 
-        when(timestampSourceMock.time()).thenReturn(secondHourTime);
+        when(timestampSourceMock.time(any())).thenReturn(secondHourTime);
 
         grouper.put(T0P0R4);
         grouper.put(T0P0R5);
@@ -400,7 +411,7 @@ final class TopicPartitionRecordGrouperTest {
                 + secondDayTime.format(DateTimeFormatter.ofPattern("MM"))
                 + secondDayTime.format(DateTimeFormatter.ofPattern("dd"));
 
-        when(timestampSourceMock.time()).thenReturn(firstDayTime);
+        when(timestampSourceMock.time(any())).thenReturn(firstDayTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
                 filenameTemplate, null, timestampSourceMock);
@@ -409,7 +420,7 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P1R1);
         grouper.put(T0P1R2);
 
-        when(timestampSourceMock.time()).thenReturn(secondDayTime);
+        when(timestampSourceMock.time(any())).thenReturn(secondDayTime);
 
         grouper.put(T0P1R3);
 
@@ -455,7 +466,7 @@ final class TopicPartitionRecordGrouperTest {
             secondMonth.format(DateTimeFormatter.ofPattern("yyyy"))
                 + secondMonth.format(DateTimeFormatter.ofPattern("MM"));
 
-        when(timestampSourceMock.time()).thenReturn(firstMonthTime);
+        when(timestampSourceMock.time(any())).thenReturn(firstMonthTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
                 filenameTemplate, null, timestampSourceMock);
@@ -464,7 +475,7 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P1R1);
         grouper.put(T0P1R2);
 
-        when(timestampSourceMock.time()).thenReturn(secondMonth);
+        when(timestampSourceMock.time(any())).thenReturn(secondMonth);
 
         grouper.put(T0P1R3);
 
@@ -510,7 +521,7 @@ final class TopicPartitionRecordGrouperTest {
             secondYearMonth.format(DateTimeFormatter.ofPattern("yyyy"))
                 + secondYearMonth.format(DateTimeFormatter.ofPattern("MM"));
 
-        when(timestampSourceMock.time()).thenReturn(firstYearTime);
+        when(timestampSourceMock.time(any())).thenReturn(firstYearTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
                 filenameTemplate, null, timestampSourceMock);
@@ -519,7 +530,7 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P1R1);
         grouper.put(T0P1R2);
 
-        when(timestampSourceMock.time()).thenReturn(secondYearMonth);
+        when(timestampSourceMock.time(any())).thenReturn(secondYearMonth);
 
         grouper.put(T0P1R3);
 
@@ -543,5 +554,68 @@ final class TopicPartitionRecordGrouperTest {
             contains(T0P1R3)
         );
     }
+
+    @Test
+    void generateTimestampPartitionDailyPartition() {
+
+        ((FieldNameTimeStampSource) FIELD_NAME_TS_SOURCE).setPartitionFieldName(PARTITION_FIELD_NAME);
+
+        final Template filenameTemplate = Template.of("{{topic}}/"
+            + "ds={{timestamp:unit=yyyy}}-{{timestamp:unit=MM}}-{{timestamp:unit=dd}}/"
+            + "{{topic}}-{{partition}}-{{start_offset}}");
+        final TopicPartitionRecordGrouper grouper =
+            new TopicPartitionRecordGrouper(
+                filenameTemplate, null, FIELD_NAME_TS_SOURCE);
+        final Schema schemaWithPartitionField = SchemaBuilder.struct()
+            .name("com.example.with_partition_field").version(1)
+            .field(PARTITION_FIELD_NAME, Schema.INT64_SCHEMA)
+            .build();
+
+        final Long eventOccurrenceTimestamp = 1637035167540L;
+        final Struct value = new Struct(schemaWithPartitionField);
+        value.put(PARTITION_FIELD_NAME, eventOccurrenceTimestamp);
+
+        final SinkRecord sinkRecord = new SinkRecord(
+            "topic1", 0,
+            SchemaBuilder.string().optional().version(1).build(), "some_key",
+            schemaWithPartitionField, value, 2);
+        final String expected = "{{topic}}/ds=2021-11-16/"
+            + "{{topic}}-{{partition}}-{{start_offset}}"; // non-timestamp templates fields are ignored
+
+        final String res = grouper.generateTimestampPartitionForRecord(sinkRecord);
+        assertEquals(expected, res);
+    }
+
+    @Test
+    void generateTimestampPartitionPartitionHourly() {
+
+        ((FieldNameTimeStampSource) FIELD_NAME_TS_SOURCE).setPartitionFieldName(PARTITION_FIELD_NAME);
+
+        final Template filenameTemplate = Template.of("/"
+            + "ds={{timestamp:unit=yyyy}}-{{timestamp:unit=MM}}-{{timestamp:unit=dd}}/"
+            + "hour={{timestamp:unit=HH}}");
+        final TopicPartitionRecordGrouper grouper =
+            new TopicPartitionRecordGrouper(
+                filenameTemplate, null, FIELD_NAME_TS_SOURCE);
+        final Schema schemaWithPartitionField = SchemaBuilder.struct()
+            .name("com.example.with_partition_field").version(1)
+            .field(PARTITION_FIELD_NAME, Schema.INT64_SCHEMA)
+            .build();
+
+        final Long eventOccurrenceTimestamp = 1637035167540L;
+        final Struct value = new Struct(schemaWithPartitionField);
+        value.put(PARTITION_FIELD_NAME, eventOccurrenceTimestamp);
+
+        final SinkRecord sinkRecord = new SinkRecord(
+            "topic1", 0,
+            SchemaBuilder.string().optional().version(1).build(), "some_key",
+            schemaWithPartitionField, value, 2);
+        final String expected = "/ds=2021-11-16/hour=03";
+
+        final String res = grouper.generateTimestampPartitionForRecord(sinkRecord);
+        assertEquals(expected, res);
+    }
+
+
 
 }
