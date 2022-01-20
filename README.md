@@ -2,7 +2,7 @@
 ![Release Workflow](https://github.com/aiven/commons-for-apache-kafka-connect/workflows/Release%20Workflow/badge.svg)
 ![Publish Workflow](https://github.com/aiven/commons-for-apache-kafka-connect/workflows/Publish%20Workflow/badge.svg)
 
-# Aiven's Common Module for Apache Kafka connectors
+# Aiven's Common Module for Apache Kafka® connectors
 
 Shared common functionality among Aiven's connectors for Apache Kafka:
 - [Aiven GCS Connector](https://github.com/aiven/gcs-connector-for-apache-kafka)
@@ -17,3 +17,7 @@ To use this library for development, you need to build and publish it in your lo
 # License
 
 This project is licensed under the [Apache License, Version 2.0](LICENSE).
+
+# Trademarks
+
+Apache Kafka, Apache Kafka Connect and Apache Maven are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries.
