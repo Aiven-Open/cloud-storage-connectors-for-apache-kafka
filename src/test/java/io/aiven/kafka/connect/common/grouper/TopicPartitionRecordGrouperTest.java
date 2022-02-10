@@ -22,6 +22,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -39,6 +40,7 @@ import static org.hamcrest.Matchers.anEmptyMap;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -74,6 +76,19 @@ final class TopicPartitionRecordGrouperTest {
         "topic1", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 1002);
     private static final SinkRecord T1P1R3 = new SinkRecord(
         "topic1", 1, Schema.OPTIONAL_STRING_SCHEMA, "some_key", null, null, 1003);
+
+    private static final SinkRecord T2P1R0 = new SinkRecord(
+            "topic2", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 2000, 1635375104000L,
+            TimestampType.CREATE_TIME);
+    private static final SinkRecord T2P1R1 = new SinkRecord(
+            "topic2", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 2001, 1635461504000L,
+            TimestampType.CREATE_TIME);
+    private static final SinkRecord T2P1R2 = new SinkRecord(
+            "topic2", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 2002, 1635547904000L,
+            TimestampType.CREATE_TIME);
+    private static final SinkRecord T2P1R3 = new SinkRecord(
+            "topic2", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 2003, 1635547906000L,
+            TimestampType.CREATE_TIME);
 
     private static final TimestampSource DEFAULT_TS_SOURCE =
         TimestampSource.of(TimestampSource.Type.WALLCLOCK);
@@ -261,25 +276,25 @@ final class TopicPartitionRecordGrouperTest {
     }
 
     @Test
-    final void addTimeUnitsToTheFileName() {
+    final void addTimeUnitsToTheFileNameUsingWallclockTimestampSource() {
         final Template filenameTemplate =
-            Template.of(
-                "{{topic}}-"
-                    + "{{partition}}-"
-                    + "{{start_offset}}-"
-                    + "{{timestamp:unit=yyyy}}"
-                    + "{{timestamp:unit=MM}}"
-                    + "{{timestamp:unit=dd}}"
-            );
-        final ZonedDateTime t = TimestampSource.of(TimestampSource.Type.WALLCLOCK).time();
+                Template.of(
+                        "{{topic}}-"
+                                + "{{partition}}-"
+                                + "{{start_offset}}-"
+                                + "{{timestamp:unit=yyyy}}"
+                                + "{{timestamp:unit=MM}}"
+                                + "{{timestamp:unit=dd}}"
+                );
+        final ZonedDateTime t = TimestampSource.of(TimestampSource.Type.WALLCLOCK).time(null);
         final String expectedTs =
-            t.format(DateTimeFormatter.ofPattern("yyyy"))
-                + t.format(DateTimeFormatter.ofPattern("MM"))
-                + t.format(DateTimeFormatter.ofPattern("dd"));
+                t.format(DateTimeFormatter.ofPattern("yyyy"))
+                        + t.format(DateTimeFormatter.ofPattern("MM"))
+                        + t.format(DateTimeFormatter.ofPattern("dd"));
 
         final TopicPartitionRecordGrouper grouper =
-            new TopicPartitionRecordGrouper(
-                filenameTemplate, null, TimestampSource.of(TimestampSource.Type.WALLCLOCK));
+                new TopicPartitionRecordGrouper(
+                        filenameTemplate, null, TimestampSource.of(TimestampSource.Type.WALLCLOCK));
 
         grouper.put(T1P1R0);
         grouper.put(T1P1R1);
@@ -291,26 +306,19 @@ final class TopicPartitionRecordGrouperTest {
         final Map<String, List<SinkRecord>> records = grouper.records();
 
         assertThat(
-            records.keySet(),
-            containsInAnyOrder(
-                "topic0-0-4-" + expectedTs,
-                "topic1-1-1000-" + expectedTs
-            )
+                records.keySet(),
+                containsInAnyOrder(
+                        "topic0-0-4-" + expectedTs,
+                        "topic1-1-1000-" + expectedTs
+                )
         );
         assertThat(
-            records.keySet(),
-            containsInAnyOrder(
-                "topic0-0-4-" + expectedTs,
-                "topic1-1-1000-" + expectedTs
-            )
+                records.get("topic0-0-4-" + expectedTs),
+                contains(T0P0R4, T0P0R5)
         );
         assertThat(
-            records.get("topic0-0-4-" + expectedTs),
-            contains(T0P0R4, T0P0R5)
-        );
-        assertThat(
-            records.get("topic1-1-1000-" + expectedTs),
-            contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3)
+                records.get("topic1-1-1000-" + expectedTs),
+                contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3)
         );
     }
 
@@ -341,7 +349,8 @@ final class TopicPartitionRecordGrouperTest {
                 + secondHourTime.format(DateTimeFormatter.ofPattern("dd"))
                 + secondHourTime.format(DateTimeFormatter.ofPattern("HH"));
 
-        when(timestampSourceMock.time()).thenReturn(firstHourTime);
+        when(timestampSourceMock.time(any())).thenReturn(firstHourTime);
+
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
                 filenameTemplate, null, timestampSourceMock);
@@ -350,7 +359,7 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P0R2);
         grouper.put(T0P0R3);
 
-        when(timestampSourceMock.time()).thenReturn(secondHourTime);
+        when(timestampSourceMock.time(any())).thenReturn(secondHourTime);
 
         grouper.put(T0P0R4);
         grouper.put(T0P0R5);
@@ -400,7 +409,7 @@ final class TopicPartitionRecordGrouperTest {
                 + secondDayTime.format(DateTimeFormatter.ofPattern("MM"))
                 + secondDayTime.format(DateTimeFormatter.ofPattern("dd"));
 
-        when(timestampSourceMock.time()).thenReturn(firstDayTime);
+        when(timestampSourceMock.time(any())).thenReturn(firstDayTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
                 filenameTemplate, null, timestampSourceMock);
@@ -409,7 +418,7 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P1R1);
         grouper.put(T0P1R2);
 
-        when(timestampSourceMock.time()).thenReturn(secondDayTime);
+        when(timestampSourceMock.time(any())).thenReturn(secondDayTime);
 
         grouper.put(T0P1R3);
 
@@ -455,7 +464,7 @@ final class TopicPartitionRecordGrouperTest {
             secondMonth.format(DateTimeFormatter.ofPattern("yyyy"))
                 + secondMonth.format(DateTimeFormatter.ofPattern("MM"));
 
-        when(timestampSourceMock.time()).thenReturn(firstMonthTime);
+        when(timestampSourceMock.time(any())).thenReturn(firstMonthTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
                 filenameTemplate, null, timestampSourceMock);
@@ -464,7 +473,7 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P1R1);
         grouper.put(T0P1R2);
 
-        when(timestampSourceMock.time()).thenReturn(secondMonth);
+        when(timestampSourceMock.time(any())).thenReturn(secondMonth);
 
         grouper.put(T0P1R3);
 
@@ -510,7 +519,7 @@ final class TopicPartitionRecordGrouperTest {
             secondYearMonth.format(DateTimeFormatter.ofPattern("yyyy"))
                 + secondYearMonth.format(DateTimeFormatter.ofPattern("MM"));
 
-        when(timestampSourceMock.time()).thenReturn(firstYearTime);
+        when(timestampSourceMock.time(any())).thenReturn(firstYearTime);
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
                 filenameTemplate, null, timestampSourceMock);
@@ -519,7 +528,7 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P1R1);
         grouper.put(T0P1R2);
 
-        when(timestampSourceMock.time()).thenReturn(secondYearMonth);
+        when(timestampSourceMock.time(any())).thenReturn(secondYearMonth);
 
         grouper.put(T0P1R3);
 
@@ -544,4 +553,64 @@ final class TopicPartitionRecordGrouperTest {
         );
     }
 
+    @Test
+    final void rotateDailyWithEventTimestampSource() {
+        final Template filenameTemplate =
+                Template.of(
+                        "{{topic}}-"
+                                + "{{partition}}-"
+                                + "{{start_offset}}-"
+                                + "{{timestamp:unit=yyyy}}"
+                                + "{{timestamp:unit=MM}}"
+                                + "{{timestamp:unit=dd}}"
+                );
+        final ZonedDateTime t0 = TimestampSource.of(TimestampSource.Type.EVENT).time(T2P1R0);
+        final ZonedDateTime t1 = TimestampSource.of(TimestampSource.Type.EVENT).time(T2P1R1);
+        final ZonedDateTime t2 = TimestampSource.of(TimestampSource.Type.EVENT).time(T2P1R2);
+
+        final String expectedTs0 =
+                t0.format(DateTimeFormatter.ofPattern("yyyy"))
+                        + t0.format(DateTimeFormatter.ofPattern("MM"))
+                        + t0.format(DateTimeFormatter.ofPattern("dd"));
+        final String expectedTs1 =
+                t1.format(DateTimeFormatter.ofPattern("yyyy"))
+                        + t1.format(DateTimeFormatter.ofPattern("MM"))
+                        + t1.format(DateTimeFormatter.ofPattern("dd"));
+        final String expectedTs2 =
+                t2.format(DateTimeFormatter.ofPattern("yyyy"))
+                        + t2.format(DateTimeFormatter.ofPattern("MM"))
+                        + t2.format(DateTimeFormatter.ofPattern("dd"));
+
+        final TopicPartitionRecordGrouper grouper =
+                new TopicPartitionRecordGrouper(
+                        filenameTemplate, null, TimestampSource.of(TimestampSource.Type.EVENT));
+
+        grouper.put(T2P1R0);
+        grouper.put(T2P1R1);
+        grouper.put(T2P1R2);
+        grouper.put(T2P1R3);
+
+        final Map<String, List<SinkRecord>> records = grouper.records();
+
+        assertThat(
+                records.keySet(),
+                containsInAnyOrder(
+                        "topic2-1-2000-" + expectedTs0,
+                        "topic2-1-2000-" + expectedTs1,
+                        "topic2-1-2000-" + expectedTs2
+                )
+        );
+        assertThat(
+                records.get("topic2-1-2000-" + expectedTs0),
+                contains(T2P1R0)
+        );
+        assertThat(
+                records.get("topic2-1-2000-" + expectedTs1),
+                contains(T2P1R1)
+        );
+        assertThat(
+                records.get("topic2-1-2000-" + expectedTs2),
+                contains(T2P1R2, T2P1R3)
+        );
+    }
 }

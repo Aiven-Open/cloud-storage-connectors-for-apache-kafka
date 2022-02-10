@@ -16,13 +16,17 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
+import org.apache.kafka.connect.sink.SinkRecord;
+
 public interface TimestampSource {
 
-    ZonedDateTime time();
+    ZonedDateTime time(final SinkRecord record);
 
     static TimestampSource of(final Type extractorType) {
         return of(ZoneOffset.UTC, extractorType);
@@ -32,6 +36,8 @@ public interface TimestampSource {
         switch (extractorType) {
             case WALLCLOCK:
                 return new WallclockTimestampSource(zoneId);
+            case EVENT:
+                return new EventTimestampSource(zoneId);
             default:
                 throw new IllegalArgumentException(
                     String.format("Unsupported timestamp extractor type: %s", extractorType)
@@ -39,9 +45,12 @@ public interface TimestampSource {
         }
     }
 
+    Type type();
+
     enum Type {
 
-        WALLCLOCK;
+        WALLCLOCK,
+        EVENT;
 
         public static Type of(final String name) {
             for (final Type t : Type.values()) {
@@ -54,7 +63,6 @@ public interface TimestampSource {
 
     }
 
-
     final class WallclockTimestampSource implements TimestampSource {
         private final ZoneId zoneId;
 
@@ -63,9 +71,30 @@ public interface TimestampSource {
         }
 
         @Override
-        public ZonedDateTime time() {
+        public ZonedDateTime time(final SinkRecord record) {
             return ZonedDateTime.now(zoneId);
         }
 
+        public Type type() {
+            return Type.WALLCLOCK;
+        }
+    }
+
+    final class EventTimestampSource implements TimestampSource {
+        private final ZoneId zoneId;
+
+        protected EventTimestampSource(final ZoneId zoneId) {
+            this.zoneId = zoneId;
+        }
+
+        @Override
+        public ZonedDateTime time(final SinkRecord record) {
+            final LocalDateTime localDateTime = new Timestamp(record.timestamp()).toLocalDateTime();
+            return ZonedDateTime.of(localDateTime, zoneId);
+        }
+
+        public Type type() {
+            return Type.EVENT;
+        }
     }
 }

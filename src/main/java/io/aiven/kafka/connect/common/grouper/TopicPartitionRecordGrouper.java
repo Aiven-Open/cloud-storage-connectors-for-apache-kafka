@@ -49,7 +49,7 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
 
     private final Map<String, List<SinkRecord>> fileBuffers = new HashMap<>();
 
-    private final Function<Parameter, String> setTimestamp;
+    private final Function<SinkRecord, Function<Parameter, String>> setTimestampBasedOnRecord;
 
     private final Rotator<List<SinkRecord>> rotator;
 
@@ -66,20 +66,23 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
         Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
         Objects.requireNonNull(tsSource, "tsSource cannot be null");
         this.filenameTemplate = filenameTemplate;
-        this.setTimestamp = new Function<>() {
-            private final Map<String, DateTimeFormatter> timestampFormatters =
-                Map.of(
-                    "yyyy", DateTimeFormatter.ofPattern("yyyy"),
-                    "MM", DateTimeFormatter.ofPattern("MM"),
-                    "dd", DateTimeFormatter.ofPattern("dd"),
-                    "HH", DateTimeFormatter.ofPattern("HH")
-                );
-
+        this.setTimestampBasedOnRecord = new Function<>() {
             @Override
-            public String apply(final Parameter parameter) {
-                return tsSource.time().format(timestampFormatters.get(parameter.value()));
+            public Function<Parameter, String> apply(final SinkRecord record) {
+                return new Function<Parameter, String>() {
+                    private final Map<String, DateTimeFormatter> timestampFormatters =
+                            Map.of(
+                                    "yyyy", DateTimeFormatter.ofPattern("yyyy"),
+                                    "MM", DateTimeFormatter.ofPattern("MM"),
+                                    "dd", DateTimeFormatter.ofPattern("dd"),
+                                    "HH", DateTimeFormatter.ofPattern("HH")
+                            );
+                    @Override
+                    public String apply(final Parameter parameter) {
+                        return tsSource.time(record).format(timestampFormatters.get(parameter.value()));
+                    }
+                };
             }
-
         };
         this.rotator = buffer -> {
             final var unlimited = maxRecordsPerFile == null;
@@ -101,7 +104,7 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
     protected String resolveRecordKeyFor(final SinkRecord record) {
         final TopicPartition tp = new TopicPartition(record.topic(), record.kafkaPartition());
         final SinkRecord currentHeadRecord = currentHeadRecords.computeIfAbsent(tp, ignored -> record);
-        String recordKey = generateRecordKey(tp, currentHeadRecord);
+        String recordKey = generateRecordKey(tp, currentHeadRecord, record);
         if (rotator.rotate(fileBuffers.get(recordKey))) {
             // Create new file using this record as the head record.
             recordKey = generateNewRecordKey(record);
@@ -109,7 +112,10 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
         return recordKey;
     }
 
-    private String generateRecordKey(final TopicPartition tp, final SinkRecord headRecord) {
+    private String generateRecordKey(
+        final TopicPartition tp,
+        final SinkRecord headRecord,
+        final SinkRecord currentRecord) {
         final Function<Parameter, String> setKafkaOffset =
             usePaddingParameter -> usePaddingParameter.asBoolean()
                 ? String.format("%020d", headRecord.kafkaOffset())
@@ -129,14 +135,14 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
                         setKafkaOffset
                 ).bindVariable(
                         FilenameTemplateVariable.TIMESTAMP.name,
-                        setTimestamp
+                        setTimestampBasedOnRecord.apply(currentRecord)
                 ).render();
     }
 
     protected String generateNewRecordKey(final SinkRecord record) {
         final TopicPartition tp = new TopicPartition(record.topic(), record.kafkaPartition());
         currentHeadRecords.put(tp, record);
-        return generateRecordKey(tp, record);
+        return generateRecordKey(tp, record, record);
     }
 
     @Override
