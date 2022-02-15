@@ -43,8 +43,8 @@ class ValueBuilder implements OutputFieldBuilder {
      * Takes the {@link SinkRecord}'s value as a JSON.
      *
      * @param record        the record to get the value from
-     * @throws DataException when the value is not actually a JSON
      * @return JsonNode     Value transformed to any JSON value
+     * @throws DataException when the value is not actually a JSON
      */
     @Override
     public JsonNode build(final SinkRecord record) throws IOException {
