@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+import org.gradle.util.DistributionLocator
+import org.gradle.util.GradleVersion
+
 plugins {
 
     // https://docs.gradle.org/current/userguide/java_library_plugin.html
@@ -53,13 +56,26 @@ javadoc {
     options.addBooleanOption('html5', true)
 }
 
+wrapper {
+    distributionType = 'ALL'
+    doLast {
+        final DistributionLocator locator = new DistributionLocator()
+        final GradleVersion version = GradleVersion.version(wrapper.gradleVersion)
+        final URI distributionUri = locator.getDistributionFor(version, wrapper.distributionType.name().toLowerCase(Locale.ENGLISH))
+        final URI sha256Uri = new URI(distributionUri.toString() + ".sha256")
+        final String sha256Sum = new String(sha256Uri.toURL().bytes)
+        wrapper.getPropertiesFile() << "distributionSha256Sum=${sha256Sum}\n"
+        println "Added checksum to wrapper properties"
+    }
+}
+
 checkstyle {
-    toolVersion "8.29"
+    toolVersion "9.2.1"
     getConfigDirectory().set(rootProject.file("checkstyle/"))
 }
 
 jacoco {
-    toolVersion = "0.8.5"
+    toolVersion = "0.8.7"
 }
 
 repositories {
