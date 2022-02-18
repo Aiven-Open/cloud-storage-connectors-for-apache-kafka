@@ -53,7 +53,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ParquetOutputWriterTest {
 
@@ -86,7 +85,7 @@ class ParquetOutputWriterTest {
                             + "\"headers\": "
                             + "{\"a\": {\"bytes\": \"b\"}, \"c\": {\"bytes\": \"d\"}}, "
                             + "\"value\": \"" + values.get(counter) + "\"}";
-            assertEquals(expectedString, r);
+            assertThat(r).isEqualTo(expectedString);
             counter++;
         }
     }
@@ -111,7 +110,7 @@ class ParquetOutputWriterTest {
             final var expectedString =
                     "{\"key\": \"some-key-" + counter + "\", "
                             + "\"value\": \"" + values.get(counter) + "\"}";
-            assertEquals(expectedString, r);
+            assertThat(r).isEqualTo(expectedString);
             counter++;
         }
     }
@@ -147,7 +146,7 @@ class ParquetOutputWriterTest {
         var counter = 0;
         for (final var r : readRecords(parquetFile)) {
             final var expectedString = "{\"value\": {\"name\": \"name-" + counter + "\", \"age\": " + counter + "}}";
-            assertEquals(expectedString, r);
+            assertThat(r).isEqualTo(expectedString);
             counter++;
         }
     }
@@ -212,7 +211,7 @@ class ParquetOutputWriterTest {
         var counter = 0;
         for (final var r : readRecords(parquetFile)) {
             final var expectedString = "{\"value\": " + values.get(counter) + "}";
-            assertEquals(expectedString, r);
+            assertThat(r).isEqualTo(expectedString);
             counter++;
         }
     }
@@ -233,7 +232,7 @@ class ParquetOutputWriterTest {
         for (final var r : readRecords(parquetFile)) {
             final var mapValue =  "{\"a\": 1, \"b\": 2}";
             final var expectedString = "{\"value\": " + mapValue + "}";
-            assertEquals(expectedString, r);
+            assertThat(r).isEqualTo(expectedString);
         }
     }
 
@@ -316,7 +315,7 @@ class ParquetOutputWriterTest {
         }
 
         @Override
-        public SeekableInputStream newStream() throws IOException {
+        public SeekableInputStream newStream() {
             return new DelegatingSeekableInputStream(Channels.newInputStream(seekableByteChannel)) {
                 @Override
                 public long getPos() throws IOException {

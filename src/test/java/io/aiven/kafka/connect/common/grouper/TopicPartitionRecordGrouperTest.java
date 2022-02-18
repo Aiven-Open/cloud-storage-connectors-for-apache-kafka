@@ -35,11 +35,9 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anEmptyMap;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
+import static org.assertj.core.util.Lists.list;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -93,18 +91,29 @@ final class TopicPartitionRecordGrouperTest {
     private static final TimestampSource DEFAULT_TS_SOURCE =
         TimestampSource.of(TimestampSource.Type.WALLCLOCK);
 
+    @Test
+    void withoutNecessaryParameters() {
+        assertThatThrownBy(() -> new TopicPartitionRecordGrouper(null, 0, DEFAULT_TS_SOURCE))
+            .isInstanceOf(NullPointerException.class)
+            .hasMessage("filenameTemplate cannot be null");
+
+        assertThatThrownBy(() -> new TopicPartitionRecordGrouper(Template.of("{{topic}}"), 0, null))
+            .isInstanceOf(NullPointerException.class)
+            .hasMessage("tsSource cannot be null");
+    }
+
     @ParameterizedTest
     @NullSource
     @ValueSource(ints = 10)
-    final void empty(final Integer maxRecordsPerFile) {
+    void empty(final Integer maxRecordsPerFile) {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(filenameTemplate, maxRecordsPerFile, DEFAULT_TS_SOURCE);
-        assertThat(grouper.records(), anEmptyMap());
+        assertThat(grouper.records()).isEmpty();
     }
 
     @Test
-    final void unlimited() {
+    void unlimited() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
@@ -126,20 +135,16 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P1R3);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder("topic0-0-0", "topic0-1-10", "topic1-1-1000")
-        );
-        assertThat(records.get("topic0-0-0"),
-            contains(T0P0R0, T0P0R1, T0P0R2, T0P0R3, T0P0R4, T0P0R5));
-        assertThat(records.get("topic0-1-10"),
-            contains(T0P1R0, T0P1R1, T0P1R2, T0P1R3));
-        assertThat(records.get("topic1-1-1000"),
-            contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3));
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-0-0", list(T0P0R0, T0P0R1, T0P0R2, T0P0R3, T0P0R4, T0P0R5)),
+                entry("topic0-1-10", list(T0P1R0, T0P1R1, T0P1R2, T0P1R3)),
+                entry("topic1-1-1000", list(T1P1R0, T1P1R1, T1P1R2, T1P1R3))
+            );
     }
 
     @Test
-    final void limited() {
+    void limited() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
@@ -161,31 +166,20 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P1R3);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder(
-                "topic0-0-0", "topic0-0-2", "topic0-0-4",
-                "topic0-1-10", "topic0-1-12", "topic1-1-1000",
-                "topic1-1-1002")
-        );
-        assertThat(records.get("topic0-0-0"),
-            contains(T0P0R0, T0P0R1));
-        assertThat(records.get("topic0-0-2"),
-            contains(T0P0R2, T0P0R3));
-        assertThat(records.get("topic0-0-4"),
-            contains(T0P0R4, T0P0R5));
-        assertThat(records.get("topic0-1-10"),
-            contains(T0P1R0, T0P1R1));
-        assertThat(records.get("topic0-1-12"),
-            contains(T0P1R2, T0P1R3));
-        assertThat(records.get("topic1-1-1000"),
-            contains(T1P1R0, T1P1R1));
-        assertThat(records.get("topic1-1-1002"),
-            contains(T1P1R2, T1P1R3));
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-0-0", list(T0P0R0, T0P0R1)),
+                entry("topic0-0-2", list(T0P0R2, T0P0R3)),
+                entry("topic0-0-4", list(T0P0R4, T0P0R5)),
+                entry("topic0-1-10", list(T0P1R0, T0P1R1)),
+                entry("topic0-1-12", list(T0P1R2, T0P1R3)),
+                entry("topic1-1-1000", list(T1P1R0, T1P1R1)),
+                entry("topic1-1-1002", list(T1P1R2, T1P1R3))
+            );
     }
 
     @Test
-    final void clear() {
+    void clear() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
@@ -201,7 +195,7 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P1R3);
 
         grouper.clear();
-        assertThat(grouper.records(), anEmptyMap());
+        assertThat(grouper.records()).isEmpty();
 
         grouper.put(T1P1R0);
         grouper.put(T1P1R1);
@@ -211,18 +205,16 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P0R5);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder("topic0-0-4", "topic1-1-1000")
-        );
-        assertThat(records.get("topic0-0-4"),
-            contains(T0P0R4, T0P0R5));
-        assertThat(records.get("topic1-1-1000"),
-            contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3));
+
+        assertThat(records)
+            .containsExactly(
+                entry("topic0-0-4", list(T0P0R4, T0P0R5)),
+                entry("topic1-1-1000", list(T1P1R0, T1P1R1, T1P1R2, T1P1R3))
+            );
     }
 
     @Test
-    final void setZeroPaddingForKafkaOffset() {
+    void setZeroPaddingForKafkaOffset() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset:padding=true}}");
         final TopicPartitionRecordGrouper grouper =
             new TopicPartitionRecordGrouper(
@@ -236,24 +228,15 @@ final class TopicPartitionRecordGrouperTest {
         grouper.put(T0P0R5);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder(
-                "topic0-0-00000000000000000004",
-                "topic1-1-00000000000000001000")
-        );
-        assertThat(
-            records.get("topic0-0-00000000000000000004"),
-            contains(T0P0R4, T0P0R5)
-        );
-        assertThat(
-            records.get("topic1-1-00000000000000001000"),
-            contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3)
-        );
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-0-00000000000000000004", list(T0P0R4, T0P0R5)),
+                entry("topic1-1-00000000000000001000", list(T1P1R0, T1P1R1, T1P1R2, T1P1R3))
+            );
     }
 
     @Test
-    final void setZeroPaddingForKafkaPartition() {
+    void setZeroPaddingForKafkaPartition() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition:padding=true}}-{{start_offset}}");
         final TopicPartitionRecordGrouper grouper =
                 new TopicPartitionRecordGrouper(
@@ -268,15 +251,14 @@ final class TopicPartitionRecordGrouperTest {
 
         final Map<String, List<SinkRecord>> records = grouper.records();
         assertThat(records)
-                .extractingByKey("topic0-0000000000-4").asList()
-                .containsExactly(T0P0R4, T0P0R5);
-        assertThat(records)
-                .extractingByKey("topic1-0000000001-1000").asList()
-                .containsExactly(T1P1R0, T1P1R1, T1P1R2, T1P1R3);
+            .containsOnly(
+                entry("topic0-0000000000-4", list(T0P0R4, T0P0R5)),
+                entry("topic1-0000000001-1000", list(T1P1R0, T1P1R1, T1P1R2, T1P1R3))
+            );
     }
 
     @Test
-    final void addTimeUnitsToTheFileNameUsingWallclockTimestampSource() {
+    void addTimeUnitsToTheFileNameUsingWallclockTimestampSource() {
         final Template filenameTemplate =
                 Template.of(
                         "{{topic}}-"
@@ -305,21 +287,11 @@ final class TopicPartitionRecordGrouperTest {
 
         final Map<String, List<SinkRecord>> records = grouper.records();
 
-        assertThat(
-                records.keySet(),
-                containsInAnyOrder(
-                        "topic0-0-4-" + expectedTs,
-                        "topic1-1-1000-" + expectedTs
-                )
-        );
-        assertThat(
-                records.get("topic0-0-4-" + expectedTs),
-                contains(T0P0R4, T0P0R5)
-        );
-        assertThat(
-                records.get("topic1-1-1000-" + expectedTs),
-                contains(T1P1R0, T1P1R1, T1P1R2, T1P1R3)
-        );
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-0-4-" + expectedTs, list(T0P0R4, T0P0R5)),
+                entry("topic1-1-1000-" + expectedTs, list(T1P1R0, T1P1R1, T1P1R2, T1P1R3))
+            );
     }
 
     @Test
@@ -366,23 +338,11 @@ final class TopicPartitionRecordGrouperTest {
 
         final Map<String, List<SinkRecord>> records = grouper.records();
 
-        assertEquals(2, records.size());
-
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder(
-                "topic0-0-1-" + firstHourTs,
-                "topic0-0-1-" + secondHourTs
-            )
-        );
-        assertThat(
-            records.get("topic0-0-1-" + firstHourTs),
-            contains(T0P0R1, T0P0R2, T0P0R3)
-        );
-        assertThat(
-            records.get("topic0-0-1-" + secondHourTs),
-            contains(T0P0R4, T0P0R5)
-        );
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-0-1-" + firstHourTs, list(T0P0R1, T0P0R2, T0P0R3)),
+                entry("topic0-0-1-" + secondHourTs, list(T0P0R4, T0P0R5))
+            );
     }
 
     @Test
@@ -424,23 +384,11 @@ final class TopicPartitionRecordGrouperTest {
 
         final Map<String, List<SinkRecord>> records = grouper.records();
 
-        assertEquals(2, records.size());
-
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder(
-                "topic0-1-10-" + firstDayTs,
-                "topic0-1-10-" + secondDayTs
-            )
-        );
-        assertThat(
-            records.get("topic0-1-10-" + firstDayTs),
-            contains(T0P1R0, T0P1R1, T0P1R2)
-        );
-        assertThat(
-            records.get("topic0-1-10-" + secondDayTs),
-            contains(T0P1R3)
-        );
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-1-10-" + firstDayTs, list(T0P1R0, T0P1R1, T0P1R2)),
+                entry("topic0-1-10-" + secondDayTs, list(T0P1R3))
+            );
     }
 
     @Test
@@ -479,23 +427,11 @@ final class TopicPartitionRecordGrouperTest {
 
         final Map<String, List<SinkRecord>> records = grouper.records();
 
-        assertEquals(2, records.size());
-
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder(
-                "topic0-1-10-" + firstMonthTs,
-                "topic0-1-10-" + secondMonthTs
-            )
-        );
-        assertThat(
-            records.get("topic0-1-10-" + firstMonthTs),
-            contains(T0P1R0, T0P1R1, T0P1R2)
-        );
-        assertThat(
-            records.get("topic0-1-10-" + secondMonthTs),
-            contains(T0P1R3)
-        );
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-1-10-" + firstMonthTs, list(T0P1R0, T0P1R1, T0P1R2)),
+                entry("topic0-1-10-" + secondMonthTs, list(T0P1R3))
+            );
     }
 
     @Test
@@ -534,27 +470,15 @@ final class TopicPartitionRecordGrouperTest {
 
         final Map<String, List<SinkRecord>> records = grouper.records();
 
-        assertEquals(2, records.size());
-
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder(
-                "topic0-1-10-" + firstYearTs,
-                "topic0-1-10-" + secondYearTs
-            )
-        );
-        assertThat(
-            records.get("topic0-1-10-" + firstYearTs),
-            contains(T0P1R0, T0P1R1, T0P1R2)
-        );
-        assertThat(
-            records.get("topic0-1-10-" + secondYearTs),
-            contains(T0P1R3)
-        );
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-1-10-" + firstYearTs, list(T0P1R0, T0P1R1, T0P1R2)),
+                entry("topic0-1-10-" + secondYearTs, list(T0P1R3))
+            );
     }
 
     @Test
-    final void rotateDailyWithEventTimestampSource() {
+    void rotateDailyWithEventTimestampSource() {
         final Template filenameTemplate =
                 Template.of(
                         "{{topic}}-"
@@ -592,25 +516,11 @@ final class TopicPartitionRecordGrouperTest {
 
         final Map<String, List<SinkRecord>> records = grouper.records();
 
-        assertThat(
-                records.keySet(),
-                containsInAnyOrder(
-                        "topic2-1-2000-" + expectedTs0,
-                        "topic2-1-2000-" + expectedTs1,
-                        "topic2-1-2000-" + expectedTs2
-                )
-        );
-        assertThat(
-                records.get("topic2-1-2000-" + expectedTs0),
-                contains(T2P1R0)
-        );
-        assertThat(
-                records.get("topic2-1-2000-" + expectedTs1),
-                contains(T2P1R1)
-        );
-        assertThat(
-                records.get("topic2-1-2000-" + expectedTs2),
-                contains(T2P1R2, T2P1R3)
-        );
+        assertThat(records)
+            .containsOnly(
+                entry("topic2-1-2000-" + expectedTs0, list(T2P1R0)),
+                entry("topic2-1-2000-" + expectedTs1, list(T2P1R1)),
+                entry("topic2-1-2000-" + expectedTs2, list(T2P1R2, T2P1R3))
+            );
     }
 }

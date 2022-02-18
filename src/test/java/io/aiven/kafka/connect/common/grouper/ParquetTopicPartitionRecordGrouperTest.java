@@ -27,9 +27,9 @@ import io.aiven.kafka.connect.common.templating.Template;
 
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
+import static org.assertj.core.util.Lists.list;
 
 final class ParquetTopicPartitionRecordGrouperTest {
 
@@ -110,14 +110,11 @@ final class ParquetTopicPartitionRecordGrouperTest {
         grouper.put(KT0P0R5);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(
-                records.keySet(),
-                containsInAnyOrder("topic0-0-0", "topic0-0-4")
-        );
-        assertThat(records.get("topic0-0-0"),
-                contains(KT0P0R0, KT0P0R1, KT0P0R2, KT0P0R3));
-        assertThat(records.get("topic0-0-4"),
-                contains(KT0P0R4, KT0P0R5));
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-0-0", list(KT0P0R0, KT0P0R1, KT0P0R2, KT0P0R3)),
+                entry("topic0-0-4", list(KT0P0R4, KT0P0R5))
+            );
     }
 
     @Test
@@ -133,14 +130,11 @@ final class ParquetTopicPartitionRecordGrouperTest {
         grouper.put(RT0P1R3);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(
-                records.keySet(),
-                containsInAnyOrder("topic0-1-10", "topic0-1-12")
-        );
-        assertThat(records.get("topic0-1-10"),
-                contains(RT0P1R0, RT0P1R1));
-        assertThat(records.get("topic0-1-12"),
-                contains(RT0P1R2, RT0P1R3));
+        assertThat(records)
+            .containsOnly(
+                entry("topic0-1-10", list(RT0P1R0, RT0P1R1)),
+                entry("topic0-1-12", list(RT0P1R2, RT0P1R3))
+            );
     }
 
     @Test
@@ -156,16 +150,11 @@ final class ParquetTopicPartitionRecordGrouperTest {
         grouper.put(KRT1P1R3);
 
         final var records = grouper.records();
-        assertThat(
-                records.keySet(),
-                containsInAnyOrder("topic1-0-1000", "topic1-0-1002", "topic1-0-1003")
-        );
-        assertThat(records.get("topic1-0-1000"),
-                contains(KRT1P1R0, KRT1P1R1));
-        assertThat(records.get("topic1-0-1002"),
-                contains(KRT1P1R2));
-        assertThat(records.get("topic1-0-1003"),
-                contains(KRT1P1R3));
+        assertThat(records)
+            .containsOnly(
+                entry("topic1-0-1000", list(KRT1P1R0, KRT1P1R1)),
+                entry("topic1-0-1002", list(KRT1P1R2)),
+                entry("topic1-0-1003", list(KRT1P1R3))
+            );
     }
-
 }

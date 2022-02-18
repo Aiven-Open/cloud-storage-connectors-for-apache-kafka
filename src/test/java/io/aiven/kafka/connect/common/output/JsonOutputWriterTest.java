@@ -36,7 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     private final OutputFieldEncodingType noEncoding = OutputFieldEncodingType.NONE;
@@ -84,7 +84,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
             writer.writeRecord(record);
             writer.close();
 
-            assertThat(byteStream.toString()).isEqualTo("[\n{\"name\":\"John\"}\n]");
+            assertThat(byteStream).hasToString("[\n{\"name\":\"John\"}\n]");
         }
     }
 
@@ -217,7 +217,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     }
 
     @Test
-    void failedIfLastRecordIsMissing() throws IOException {
+    void failedIfLastRecordIsMissing() {
         final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding));
         sut = new JsonOutputWriter(fields, byteStream);
 
@@ -227,9 +227,8 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
         final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
         final SinkRecord record2 = createRecord("key0", level1Schema, struct2, 1, 1000L);
 
-        assertThrows(JsonParseException.class, () -> {
-            useWithWrongLastRecord(List.of(record1, record2));
-        });
+        assertThatThrownBy(() -> useWithWrongLastRecord(List.of(record1, record2)))
+            .isInstanceOf(JsonParseException.class);
     }
 
     @Override
