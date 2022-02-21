@@ -25,8 +25,7 @@ import io.aiven.kafka.connect.common.config.CompressionType;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ParquetConfigTest {
 
@@ -43,27 +42,25 @@ class ParquetConfigTest {
         final var parquetConfig = new ParquetConfig(origins);
         final var config = parquetConfig.parquetConfiguration();
 
-        assertEquals("aa", config.get("parquet.aa"));
-        assertEquals("bb", config.get("parquet.bb"));
-        assertEquals("cc", config.get("parquet.cc"));
-        assertNull(config.get("parquet.avro.schema"));
+        assertThat(config.get("parquet.aa")).isEqualTo("aa");
+        assertThat(config.get("parquet.bb")).isEqualTo("bb");
+        assertThat(config.get("parquet.cc")).isEqualTo("cc");
+        assertThat(config.get("parquet.avro.schema")).isNull();
     }
 
     @Test
     void testConvertCompressionTypeToParquetCompressorName() {
-        assertEquals(
-                CompressionCodecName.UNCOMPRESSED,
+        assertThat(
                 new ParquetConfig(
                         Map.of(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name)
-                ).compressionCodecName());
-        assertEquals(
-                CompressionCodecName.UNCOMPRESSED,
-                new ParquetConfig(Collections.emptyMap()).compressionCodecName());
-        assertEquals(
-                CompressionCodecName.ZSTD,
+                ).compressionCodecName())
+            .isEqualTo(CompressionCodecName.UNCOMPRESSED);
+        assertThat(new ParquetConfig(Collections.emptyMap()).compressionCodecName())
+            .isEqualTo(CompressionCodecName.UNCOMPRESSED);
+        assertThat(
                 new ParquetConfig(
                         Map.of(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.ZSTD.name)
-                ).compressionCodecName());
+                ).compressionCodecName())
+            .isEqualTo(CompressionCodecName.ZSTD);
     }
-
 }

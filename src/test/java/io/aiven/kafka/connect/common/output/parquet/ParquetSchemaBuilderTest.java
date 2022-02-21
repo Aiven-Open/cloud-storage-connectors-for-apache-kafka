@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.common.output.parquet;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
@@ -35,15 +34,15 @@ import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 
 import io.confluent.connect.avro.AvroData;
+import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 class ParquetSchemaBuilderTest {
 
@@ -65,9 +64,9 @@ class ParquetSchemaBuilderTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
         final var avroSchema = schemaBuilder.buildSchema(sinkRecord);
 
-        assertNotNull(avroSchema);
-        assertEquals(Type.RECORD, avroSchema.getType());
-        assertEquals(Type.STRING, avroSchema.getField(fields.get(0).getFieldType().name).schema().getType());
+        assertThat(avroSchema).isNotNull();
+        assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
+        assertThat(avroSchema.getField(fields.get(0).getFieldType().name).schema().getType()).isEqualTo(Type.STRING);
     }
 
     @Test
@@ -94,12 +93,9 @@ class ParquetSchemaBuilderTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
         final var avroSchema = schemaBuilder.buildSchema(sinkRecord);
 
-        assertNotNull(avroSchema);
-        assertEquals(Type.RECORD, avroSchema.getType());
-        assertEquals(
-                Type.RECORD,
-                avroSchema.getField("value").schema().getType()
-        );
+        assertThat(avroSchema).isNotNull();
+        assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
+        assertThat(avroSchema.getField("value").schema().getType()).isEqualTo(Type.RECORD);
     }
 
 
@@ -150,11 +146,12 @@ class ParquetSchemaBuilderTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
         final var avroSchema = schemaBuilder.buildSchema(sinkRecord);
 
-        assertNotNull(avroSchema);
-        assertEquals(Type.RECORD, avroSchema.getType());
-        assertEquals(1, avroSchema.getFields().size());
-        assertEquals(Type.MAP, avroSchema.getField(OutputFieldType.VALUE.name).schema().getType());
-        assertEquals(Type.BOOLEAN, avroSchema.getField(OutputFieldType.VALUE.name).schema().getValueType().getType());
+        assertThat(avroSchema).isNotNull();
+        assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
+        assertThat(avroSchema.getFields()).hasSize(1);
+        assertThat(avroSchema.getField(OutputFieldType.VALUE.name).schema().getType()).isEqualTo(Type.MAP);
+        assertThat(avroSchema.getField(OutputFieldType.VALUE.name).schema().getValueType().getType())
+            .isEqualTo(Type.BOOLEAN);
     }
 
     @Test
@@ -179,7 +176,7 @@ class ParquetSchemaBuilderTest {
         assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
         assertThat(avroSchema.getFields()).hasSize(3);
         assertThat(avroSchema.getFields())
-                .map(org.apache.avro.Schema.Field::name)
+                .map(Field::name)
                 .containsExactlyElementsOf(valueMap.keySet());
         assertThat(avroSchema.getFields())
                 .map(field -> field.schema().getType())
@@ -204,11 +201,12 @@ class ParquetSchemaBuilderTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
         final var avroSchema = schemaBuilder.buildSchema(sinkRecord);
 
-        assertNotNull(avroSchema);
-        assertEquals(Type.RECORD, avroSchema.getType());
-        assertEquals(1, avroSchema.getFields().size());
-        assertEquals(Type.ARRAY, avroSchema.getField(OutputFieldType.VALUE.name).schema().getType());
-        assertEquals(Type.STRING, avroSchema.getField(OutputFieldType.VALUE.name).schema().getElementType().getType());
+        assertThat(avroSchema).isNotNull();
+        assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
+        assertThat(avroSchema.getFields()).hasSize(1);
+        final var valueSchema = avroSchema.getField(OutputFieldType.VALUE.name).schema();
+        assertThat(valueSchema.getType()).isEqualTo(Type.ARRAY);
+        assertThat(valueSchema.getElementType().getType()).isEqualTo(Type.STRING);
     }
 
     @ParameterizedTest
@@ -227,13 +225,10 @@ class ParquetSchemaBuilderTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
         final var avroSchema = schemaBuilder.buildSchema(sinkRecord);
 
-        assertNotNull(avroSchema);
-        assertEquals(Type.RECORD, avroSchema.getType());
-        assertEquals(1, avroSchema.getFields().size());
-        assertEquals(
-                Type.STRING,
-                avroSchema.getField("value").schema().getType()
-        );
+        assertThat(avroSchema).isNotNull();
+        assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
+        assertThat(avroSchema.getFields()).hasSize(1);
+        assertThat(avroSchema.getField("value").schema().getType()).isEqualTo(Type.STRING);
     }
 
     @Test
@@ -259,17 +254,21 @@ class ParquetSchemaBuilderTest {
 
         final var avroSchema = schemaBuilder.buildSchema(sinkRecord);
 
-        assertNotNull(avroSchema);
-        assertEquals(Type.RECORD, avroSchema.getType());
-        assertEquals(
-                fields.stream().map(f -> f.getFieldType().name).collect(Collectors.toList()),
-                avroSchema.getFields().stream().map(org.apache.avro.Schema.Field::name).collect(Collectors.toList())
-        );
-        assertEquals(
-                List.of(Type.STRING, Type.STRING, Type.LONG, Type.LONG, Type.MAP),
-                avroSchema.getFields().stream().map(f -> f.schema().getType()).collect(Collectors.toList())
-        );
-        assertEquals(Type.STRING, avroSchema.getField(OutputFieldType.HEADERS.name).schema().getValueType().getType());
+        assertThat(avroSchema).isNotNull();
+        assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
+        assertThat(avroSchema).isNotNull();
+        assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
+        assertThat(avroSchema.getFields())
+            .extracting(Field::name, f -> f.schema().getType())
+            .containsExactly(
+                tuple(OutputFieldType.KEY.name, Type.STRING),
+                tuple(OutputFieldType.VALUE.name, Type.STRING),
+                tuple(OutputFieldType.TIMESTAMP.name, Type.LONG),
+                tuple(OutputFieldType.OFFSET.name, Type.LONG),
+                tuple(OutputFieldType.HEADERS.name, Type.MAP)
+            );
+        assertThat(avroSchema.getField(OutputFieldType.HEADERS.name).schema().getValueType().getType())
+            .isEqualTo(Type.STRING);
     }
 
     @Test
@@ -292,20 +291,17 @@ class ParquetSchemaBuilderTest {
 
         final var avroSchema = schemaBuilder.buildSchema(sinkRecord);
 
-        assertNotNull(avroSchema);
-        assertEquals(Type.RECORD, avroSchema.getType());
-        assertEquals(
-                List.of(OutputFieldType.KEY.name,
-                        OutputFieldType.VALUE.name,
-                        OutputFieldType.TIMESTAMP.name,
-                        OutputFieldType.OFFSET.name,
-                        OutputFieldType.HEADERS.name),
-                avroSchema.getFields().stream().map(org.apache.avro.Schema.Field::name).collect(Collectors.toList())
-        );
-        assertEquals(
-                List.of(Type.STRING, Type.STRING, Type.LONG, Type.LONG, Type.NULL),
-                avroSchema.getFields().stream().map(f -> f.schema().getType()).collect(Collectors.toList())
-        );
+        assertThat(avroSchema).isNotNull();
+        assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
+        assertThat(avroSchema.getFields())
+            .extracting(Field::name, f -> f.schema().getType())
+            .containsExactly(
+                tuple(OutputFieldType.KEY.name, Type.STRING),
+                tuple(OutputFieldType.VALUE.name, Type.STRING),
+                tuple(OutputFieldType.TIMESTAMP.name, Type.LONG),
+                tuple(OutputFieldType.OFFSET.name, Type.LONG),
+                tuple(OutputFieldType.HEADERS.name, Type.NULL)
+            );
     }
 
     @Test
@@ -321,10 +317,9 @@ class ParquetSchemaBuilderTest {
                         100L, 1000L,
                         TimestampType.CREATE_TIME);
 
-        final var nullKeyE = assertThrows(
-                DataException.class, () -> schemaBuilder.buildSchema(sinkRecordWithoutKeySchema));
-
-        assertEquals(nullKeyE.getMessage(), "Record key without schema");
+        assertThatThrownBy(() -> schemaBuilder.buildSchema(sinkRecordWithoutKeySchema))
+            .isInstanceOf(DataException.class)
+            .hasMessage("Record key without schema");
 
         final var sinkRecordWithoutRecordSchema =
                 new SinkRecord(
@@ -333,9 +328,10 @@ class ParquetSchemaBuilderTest {
                         null, "some-value",
                         100L, 1000L,
                         TimestampType.CREATE_TIME);
-        final var nullValueE = assertThrows(
-                DataException.class, () -> schemaBuilder.buildSchema(sinkRecordWithoutRecordSchema));
-        assertEquals(nullValueE.getMessage(), "Record value without schema");
+
+        assertThatThrownBy(() -> schemaBuilder.buildSchema(sinkRecordWithoutRecordSchema))
+            .isInstanceOf(DataException.class)
+            .hasMessage("Record value without schema");
     }
 
     @Test
@@ -357,7 +353,8 @@ class ParquetSchemaBuilderTest {
                                 .add("c", "d", null)
                 );
 
-        assertThrows(DataException.class, () -> schemaBuilder.buildSchema(sinkRecordWithHeadersWithoutSchema));
+        assertThatThrownBy(() -> schemaBuilder.buildSchema(sinkRecordWithHeadersWithoutSchema))
+            .isInstanceOf(DataException.class);
 
         final var sinkRecordWithHeadersWithDiffSchema =
                 new SinkRecord(
@@ -371,7 +368,7 @@ class ParquetSchemaBuilderTest {
                                 .add("c", "d".getBytes(StandardCharsets.UTF_8), Schema.BYTES_SCHEMA)
                 );
 
-        assertThrows(DataException.class, () -> schemaBuilder.buildSchema(sinkRecordWithHeadersWithDiffSchema));
+        assertThatThrownBy(() -> schemaBuilder.buildSchema(sinkRecordWithHeadersWithDiffSchema))
+            .isInstanceOf(DataException.class);
     }
-
 }

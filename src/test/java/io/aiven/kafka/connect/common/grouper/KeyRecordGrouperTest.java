@@ -26,10 +26,9 @@ import io.aiven.kafka.connect.common.templating.Template;
 
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anEmptyMap;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
+import static org.assertj.core.util.Lists.list;
 
 final class KeyRecordGrouperTest {
 
@@ -65,14 +64,14 @@ final class KeyRecordGrouperTest {
         new SinkRecord("topic1", 0, Schema.OPTIONAL_STRING_SCHEMA, "a", null, null, 1003);
 
     @Test
-    final void empty() {
+    void empty() {
         final Template filenameTemplate = Template.of("{{key}}");
         final KeyRecordGrouper grouper = new KeyRecordGrouper(filenameTemplate);
-        assertThat(grouper.records(), anEmptyMap());
+        assertThat(grouper.records()).isEmpty();
     }
 
     @Test
-    final void eachKeyInSinglePartition() {
+    void eachKeyInSinglePartition() {
         final Template filenameTemplate = Template.of("{{key}}");
         final KeyRecordGrouper grouper = new KeyRecordGrouper(filenameTemplate);
 
@@ -84,17 +83,16 @@ final class KeyRecordGrouperTest {
         grouper.put(T0P0R5);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder("a", "b", "null")
-        );
-        assertThat(records.get("a"), contains(T0P0R4));
-        assertThat(records.get("b"), contains(T0P0R5));
-        assertThat(records.get("null"), contains(T0P0R3));
+        assertThat(records)
+            .containsOnly(
+                entry("a", list(T0P0R4)),
+                entry("b", list(T0P0R5)),
+                entry("null", list(T0P0R3))
+            );
     }
 
     @Test
-    final void keysInMultiplePartitions() {
+    void keysInMultiplePartitions() {
         final Template filenameTemplate = Template.of("{{key}}");
         final KeyRecordGrouper grouper = new KeyRecordGrouper(filenameTemplate);
 
@@ -116,14 +114,13 @@ final class KeyRecordGrouperTest {
         grouper.put(T1P1R3);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(
-            records.keySet(),
-            containsInAnyOrder("a", "b", "c", "d", "null")
-        );
-        assertThat(records.get("a"), contains(T1P1R3));
-        assertThat(records.get("b"), contains(T0P1R1));
-        assertThat(records.get("c"), contains(T0P1R3));
-        assertThat(records.get("d"), contains(T1P1R1));
-        assertThat(records.get("null"), contains(T1P1R2));
+        assertThat(records)
+            .containsOnly(
+                entry("a", list(T1P1R3)),
+                entry("b", list(T0P1R1)),
+                entry("c", list(T0P1R3)),
+                entry("d", list(T1P1R1)),
+                entry("null", list(T1P1R2))
+            );
     }
 }

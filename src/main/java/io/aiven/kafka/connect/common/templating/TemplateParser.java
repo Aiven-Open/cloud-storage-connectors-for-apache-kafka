@@ -61,7 +61,7 @@ public final class TemplateParser {
             if (Objects.isNull(variable)) {
                 throw new IllegalArgumentException(
                     String.format(
-                        "Variable name has't been set for template: %s",
+                        "Variable name hasn't been set for template: %s",
                         template
                     )
                 );

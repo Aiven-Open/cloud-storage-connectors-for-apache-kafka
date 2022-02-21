@@ -27,7 +27,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class JsonOutputWriterTestHelper {
     protected final ObjectMapper objectMapper = new ObjectMapper();
@@ -54,8 +54,8 @@ public abstract class JsonOutputWriterTestHelper {
     }
 
     protected String useWithWrongLastRecord(final List<SinkRecord> records) throws IOException {
-        for (int i = 0; i < records.size(); i++) {
-            sut.writeRecord(records.get(i));
+        for (final SinkRecord record : records) {
+            sut.writeRecord(record);
         }
         final byte[] result = byteStream.toByteArray();
         return parseJson(result);
@@ -64,11 +64,11 @@ public abstract class JsonOutputWriterTestHelper {
     // It also makes sure that bytes represents a valid JSON
     protected void assertRecords(final List<SinkRecord> records, final String expected) throws IOException {
 
-        for (int i = 0; i < records.size(); i++) {
-            sut.writeRecord(records.get(i));
+        for (final SinkRecord record : records) {
+            sut.writeRecord(record);
         }
         sut.close();
-        assertEquals(expected, parseJson(byteStream.toByteArray()));
+        assertThat(parseJson(byteStream.toByteArray())).isEqualTo(expected);
     }
 
     abstract String parseJson(final byte[] json) throws IOException;

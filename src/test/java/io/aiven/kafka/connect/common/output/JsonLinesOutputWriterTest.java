@@ -41,7 +41,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
     private final OutputFieldEncodingType noEncoding = OutputFieldEncodingType.NONE;
@@ -53,7 +52,7 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
 
     @Test
     void jsonValueWithoutMetadataAndValue() throws IOException {
-        sut = new JsonLinesOutputWriter(Collections.EMPTY_LIST, byteStream);
+        sut = new JsonLinesOutputWriter(Collections.emptyList(), byteStream);
 
         final Struct struct1 = new Struct(level1Schema).put("name", "John");
 
@@ -66,7 +65,7 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
 
     @Test
     void jsonValueWithValue() throws IOException {
-        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding));
+        final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding));
 
         sut = new JsonLinesOutputWriter(fields, byteStream);
 
@@ -90,7 +89,7 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
 
             writer.writeRecord(record);
 
-            assertThat(byteStream.toString()).isEqualTo("{\"name\":\"John\"}");
+            assertThat(byteStream).hasToString("{\"name\":\"John\"}");
         }
     }
 
@@ -227,7 +226,7 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
     // Still, it is not recommended to use it that way, because it could change.
     @Test
     void doNotHaveToFailIfLastRecordIsMissing() throws IOException {
-        final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding));
+        final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding));
         sut = new JsonLinesOutputWriter(fields, byteStream);
 
         final Struct struct1 = new Struct(level1Schema).put("name", "John");
@@ -239,7 +238,7 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
         final String expected = "{\"value\":{\"name\":\"John\"}}\n"
             + "{\"value\":{\"name\":\"Pekka\"}}";
 
-        assertEquals(expected, useWithWrongLastRecord(Arrays.asList(record1, record2)));
+        assertThat(useWithWrongLastRecord(Arrays.asList(record1, record2))).isEqualTo(expected);
     }
 
     protected String parseJson(final byte[] json) throws IOException {

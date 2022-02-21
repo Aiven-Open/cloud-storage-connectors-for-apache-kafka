@@ -20,48 +20,39 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 final class TemplateTest {
     @Test
     void emptyString() {
         final Template te = Template.of("");
-        assertEquals("", te.instance().render());
+        assertThat(te.instance().render()).isEmpty();
     }
 
     @Test
     void noVariables() {
         final Template te = Template.of("somestring");
-        assertEquals("somestring", te.instance().render());
+        assertThat(te.instance().render()).isEqualTo("somestring");
     }
 
     @Test
     void newLine() {
         final Template te = Template.of("some\nstring");
-        assertEquals("some\nstring", te.instance().render());
+        assertThat(te.instance().render()).isEqualTo("some\nstring");
     }
 
     @Test
     void emptyVariableName() {
         final String templateStr = "foo{{ }}bar";
-        final Throwable t =
-            assertThrows(
-                IllegalArgumentException.class,
-                () -> Template.of(templateStr)
-            );
-        assertEquals(
-            "Variable name has't been set for template: foo{{ }}bar",
-            t.getMessage()
-        );
+        assertThatThrownBy(() -> Template.of(templateStr))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Variable name hasn't been set for template: foo{{ }}bar");
     }
 
     @Test
@@ -69,7 +60,7 @@ final class TemplateTest {
         final Template te = Template.of("{{foo}}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("foo", instance.render());
+        assertThat(instance.render()).isEqualTo("foo");
     }
 
     @Test
@@ -77,7 +68,7 @@ final class TemplateTest {
         final Template te = Template.of("{{ foo}}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("foo", instance.render());
+        assertThat(instance.render()).isEqualTo("foo");
     }
 
     @Test
@@ -85,7 +76,7 @@ final class TemplateTest {
         final Template te = Template.of("{{foo }}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("foo", instance.render());
+        assertThat(instance.render()).isEqualTo("foo");
     }
 
     @Test
@@ -93,7 +84,7 @@ final class TemplateTest {
         final Template te = Template.of("{{ foo }}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("foo", instance.render());
+        assertThat(instance.render()).isEqualTo("foo");
     }
 
     @Test
@@ -101,7 +92,7 @@ final class TemplateTest {
         final Template te = Template.of("{{ foo:tt=true }}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("foo", instance.render());
+        assertThat(instance.render()).isEqualTo("foo");
     }
 
     @Test
@@ -111,56 +102,39 @@ final class TemplateTest {
             .bindVariable(
                 "foo",
                 parameter -> {
-                    assertEquals("tt", parameter.name());
-                    assertEquals("true", parameter.value());
-                    assertTrue(parameter.asBoolean());
+                    assertThat(parameter.name()).isEqualTo("tt");
+                    assertThat(parameter.value()).isEqualTo("true");
+                    assertThat(parameter.asBoolean()).isTrue();
                     return "";
                 }).render();
     }
 
     @Test
     void invalidVariableWithoutParameter() {
-        final Throwable t = assertThrows(
-            IllegalArgumentException.class,
-            () -> Template.of("{{foo:}}"));
-        assertEquals(
-            "Wrong variable with parameter definition",
-            t.getMessage()
-        );
+        assertThatThrownBy(() -> Template.of("{{foo:}}"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Wrong variable with parameter definition");
     }
 
     @Test
     void invalidVariableWithEmptyVariableNameAndWithParameter() {
-        final Throwable t =
-            assertThrows(
-                IllegalArgumentException.class,
-                () -> Template.of("{{:foo=bar}}")
-            );
-        assertEquals(
-            "Variable name has't been set for template: {{:foo=bar}}",
-            t.getMessage()
-        );
+        assertThatThrownBy(() -> Template.of("{{:foo=bar}}"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Variable name hasn't been set for template: {{:foo=bar}}");
     }
 
     @Test
     void invalidVariableWithEmptyParameterValue() {
-        final Throwable t =
-            assertThrows(
-                IllegalArgumentException.class,
-                () -> Template.of("{{foo:tt=}}"));
-        assertEquals(
-            "Parameter value for variable `foo` and parameter `tt` has not been set",
-            t.getMessage()
-        );
+        assertThatThrownBy(() -> Template.of("{{foo:tt=}}"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Parameter value for variable `foo` and parameter `tt` has not been set");
     }
 
     @Test
     void invalidVariableWithoutParameterName() {
-        final Throwable t = assertThrows(IllegalArgumentException.class, () -> Template.of("{{foo:=bar}}"));
-        assertEquals(
-            "Parameter name for variable `foo` has not been set",
-            t.getMessage()
-        );
+        assertThatThrownBy(() -> Template.of("{{foo:=bar}}"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Parameter name for variable `foo` has not been set");
     }
 
     @Test
@@ -168,7 +142,7 @@ final class TemplateTest {
         final Template te = Template.of("{{   foo  }}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("foo", instance.render());
+        assertThat(instance.render()).isEqualTo("foo");
     }
 
     @Test
@@ -176,7 +150,7 @@ final class TemplateTest {
         final Template te = Template.of("{{\tfoo\t}}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("foo", instance.render());
+        assertThat(instance.render()).isEqualTo("foo");
     }
 
     @Test
@@ -184,7 +158,7 @@ final class TemplateTest {
         final Template te = Template.of("{{ _ }}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("_", () -> "foo");
-        assertEquals("foo", instance.render());
+        assertThat(instance.render()).isEqualTo("foo");
     }
 
     @Test
@@ -192,7 +166,7 @@ final class TemplateTest {
         final Template te = Template.of("{{ foo_bar }}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo_bar", () -> "foo_bar");
-        assertEquals("foo_bar", instance.render());
+        assertThat(instance.render()).isEqualTo("foo_bar");
     }
 
     @Test
@@ -201,7 +175,7 @@ final class TemplateTest {
         final Template te = Template.of(templateStr);
         final Template.Instance instance = te.instance();
         instance.bindVariable("{", () -> "foo");
-        assertEquals(templateStr, instance.render());
+        assertThat(instance.render()).isEqualTo(templateStr);
     }
 
     @Test
@@ -210,7 +184,7 @@ final class TemplateTest {
         final Template te = Template.of(templateStr);
         final Template.Instance instance = te.instance();
         instance.bindVariable("aaa", () -> "foo");
-        assertEquals(templateStr, instance.render());
+        assertThat(instance.render()).isEqualTo(templateStr);
     }
 
     @Test
@@ -218,7 +192,7 @@ final class TemplateTest {
         final Template te = Template.of("{{ foo }} END");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("foo END", instance.render());
+        assertThat(instance.render()).isEqualTo("foo END");
     }
 
     @Test
@@ -226,7 +200,7 @@ final class TemplateTest {
         final Template te = Template.of("BEGINNING {{ foo }} END");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("BEGINNING foo END", instance.render());
+        assertThat(instance.render()).isEqualTo("BEGINNING foo END");
     }
 
     @Test
@@ -234,13 +208,13 @@ final class TemplateTest {
         final Template te = Template.of("BEGINNING {{ foo }}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("BEGINNING foo", instance.render());
+        assertThat(instance.render()).isEqualTo("BEGINNING foo");
     }
 
     @Test
     void nonBoundVariable() {
         final Template te = Template.of("BEGINNING {{ foo }}");
-        assertEquals("BEGINNING {{ foo }}", te.instance().render());
+        assertThat(te.instance().render()).isEqualTo("BEGINNING {{ foo }}");
     }
 
     @Test
@@ -250,7 +224,7 @@ final class TemplateTest {
         instance.bindVariable("foo", () -> "foo");
         instance.bindVariable("bar", () -> "bar");
         instance.bindVariable("baz", () -> "baz");
-        assertEquals("1foo2bar3baz4", instance.render());
+        assertThat(instance.render()).isEqualTo("1foo2bar3baz4");
     }
 
     @Test
@@ -258,7 +232,7 @@ final class TemplateTest {
         final Template te = Template.of("{{foo}}{{foo}}{{foo}}");
         final Template.Instance instance = te.instance();
         instance.bindVariable("foo", () -> "foo");
-        assertEquals("foofoofoo", instance.render());
+        assertThat(instance.render()).isEqualTo("foofoofoo");
     }
 
     @Test
@@ -266,7 +240,7 @@ final class TemplateTest {
         for (final String line : getBigListOfNaughtyStrings()) {
             final Template te = Template.of(line);
             final Template.Instance instance = te.instance();
-            assertEquals(line, instance.render());
+            assertThat(instance.render()).isEqualTo(line);
         }
     }
 
@@ -276,7 +250,7 @@ final class TemplateTest {
             final Template te = Template.of("{{ foo }}" + line);
             final Template.Instance instance = te.instance();
             instance.bindVariable("foo", () -> "foo");
-            assertEquals("foo" + line, instance.render());
+            assertThat(instance.render()).isEqualTo("foo" + line);
         }
     }
 
@@ -286,7 +260,7 @@ final class TemplateTest {
             final Template te = Template.of(line + "{{ foo }}");
             final Template.Instance instance = te.instance();
             instance.bindVariable("foo", () -> "foo");
-            assertEquals(line + "foo", instance.render());
+            assertThat(instance.render()).isEqualTo(line + "foo");
         }
     }
 
@@ -303,6 +277,6 @@ final class TemplateTest {
     @Test
     void variables() {
         final Template te = Template.of("1{{foo}}2{{bar}}3{{baz}}4");
-        assertIterableEquals(Arrays.asList("foo", "bar", "baz"), te.variables());
+        assertThat(te.variables()).containsExactly("foo", "bar", "baz");
     }
 }

@@ -66,22 +66,18 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
         Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
         Objects.requireNonNull(tsSource, "tsSource cannot be null");
         this.filenameTemplate = filenameTemplate;
-        this.setTimestampBasedOnRecord = new Function<>() {
+        this.setTimestampBasedOnRecord = record -> new Function<>() {
+            private final Map<String, DateTimeFormatter> timestampFormatters =
+                Map.of(
+                    "yyyy", DateTimeFormatter.ofPattern("yyyy"),
+                    "MM", DateTimeFormatter.ofPattern("MM"),
+                    "dd", DateTimeFormatter.ofPattern("dd"),
+                    "HH", DateTimeFormatter.ofPattern("HH")
+                );
+
             @Override
-            public Function<Parameter, String> apply(final SinkRecord record) {
-                return new Function<Parameter, String>() {
-                    private final Map<String, DateTimeFormatter> timestampFormatters =
-                            Map.of(
-                                    "yyyy", DateTimeFormatter.ofPattern("yyyy"),
-                                    "MM", DateTimeFormatter.ofPattern("MM"),
-                                    "dd", DateTimeFormatter.ofPattern("dd"),
-                                    "HH", DateTimeFormatter.ofPattern("HH")
-                            );
-                    @Override
-                    public String apply(final Parameter parameter) {
-                        return tsSource.time(record).format(timestampFormatters.get(parameter.value()));
-                    }
-                };
+            public String apply(final Parameter parameter) {
+                return tsSource.time(record).format(timestampFormatters.get(parameter.value()));
             }
         };
         this.rotator = buffer -> {
