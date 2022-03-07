@@ -84,7 +84,7 @@ repositories {
 ext {
     kafkaVersion = "1.1.0"
     parquetVersion = "1.11.1"
-    junitVersion = "5.6.2"
+    junitVersion = "5.8.2"
     confluentPlatformVersion = "4.1.4"
 }
 
