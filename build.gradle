@@ -172,7 +172,7 @@ dependencies {
         exclude group: "org.slf4j", module: "slf4j-api"
     }
     testImplementation "org.codehaus.woodstox:stax2-api:3.1.4"
-    testImplementation "org.apache.hadoop:hadoop-mapreduce-client-core:3.3.0"
+    testImplementation "org.apache.hadoop:hadoop-mapreduce-client-core:3.3.2"
 
     testImplementation "com.fasterxml.jackson.core:jackson-databind:2.9.4"
     testImplementation "io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion"
