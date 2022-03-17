@@ -111,7 +111,7 @@ dependencies {
     implementation "io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion"
 
     implementation "org.xerial.snappy:snappy-java:1.1.8.4"
-    implementation "com.github.luben:zstd-jni:1.4.5-12"
+    implementation "com.github.luben:zstd-jni:1.5.2-2"
 
     implementation "org.slf4j:slf4j-api:1.7.36"
     implementation "com.google.guava:guava:31.1-jre"
