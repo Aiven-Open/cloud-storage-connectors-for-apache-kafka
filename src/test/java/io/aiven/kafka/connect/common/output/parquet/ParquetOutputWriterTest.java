@@ -83,7 +83,7 @@ class ParquetOutputWriterTest {
                             + "\"timestamp\": "
                             + (timestamp + counter) + ", "
                             + "\"headers\": "
-                            + "{\"a\": {\"bytes\": \"b\"}, \"c\": {\"bytes\": \"d\"}}, "
+                            + "{\"a\": \"b\", \"c\": \"d\"}, "
                             + "\"value\": \"" + values.get(counter) + "\"}";
             assertThat(r).isEqualTo(expectedString);
             counter++;
