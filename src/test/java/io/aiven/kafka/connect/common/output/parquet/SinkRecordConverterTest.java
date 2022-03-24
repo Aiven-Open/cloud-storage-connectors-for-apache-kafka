@@ -68,11 +68,11 @@ class SinkRecordConverterTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
 
         final var avroRecord = converter.convert(sinkRecord, schemaBuilder.buildSchema(sinkRecord));
-        assertThat(avroRecord.get(OutputFieldType.OFFSET.name)).isNotNull();
-        assertThat(avroRecord.get(OutputFieldType.KEY.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.TIMESTAMP.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.HEADERS.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.VALUE.name)).isNull();
+        assertThat(avroRecord.hasField(OutputFieldType.OFFSET.name)).isTrue();
+        assertThat(avroRecord.hasField(OutputFieldType.KEY.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.TIMESTAMP.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.HEADERS.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.VALUE.name)).isFalse();
 
         assertThat(avroRecord.get(OutputFieldType.OFFSET.name)).isEqualTo(100L);
     }
@@ -94,11 +94,11 @@ class SinkRecordConverterTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
 
         final var avroRecord = converter.convert(sinkRecord, schemaBuilder.buildSchema(sinkRecord));
-        assertThat(avroRecord.get(OutputFieldType.OFFSET.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.KEY.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.TIMESTAMP.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.HEADERS.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.VALUE.name)).isNotNull().isEqualTo("some-value");
+        assertThat(avroRecord.hasField(OutputFieldType.OFFSET.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.KEY.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.TIMESTAMP.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.HEADERS.name)).isFalse();
+        assertThat(avroRecord.get(OutputFieldType.VALUE.name)).isEqualTo("some-value");
     }
 
     @Test
@@ -126,11 +126,11 @@ class SinkRecordConverterTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
 
         final var avroRecord = converter.convert(sinkRecord, schemaBuilder.buildSchema(sinkRecord));
-        assertThat(avroRecord.get(OutputFieldType.OFFSET.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.KEY.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.TIMESTAMP.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.HEADERS.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.VALUE.name)).isNotNull();
+        assertThat(avroRecord.hasField(OutputFieldType.OFFSET.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.KEY.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.TIMESTAMP.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.HEADERS.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.VALUE.name)).isTrue();
 
         final var valueRecord = (GenericRecord) avroRecord.get("value");
         assertThat(valueRecord.get("foo")).hasToString("bar");
@@ -162,11 +162,11 @@ class SinkRecordConverterTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
 
         final var avroRecord = converter.convert(sinkRecord, schemaBuilder.buildSchema(sinkRecord));
-        assertThat(avroRecord.get(OutputFieldType.OFFSET.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.KEY.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.TIMESTAMP.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.HEADERS.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.VALUE.name)).isNotNull();
+        assertThat(avroRecord.hasField(OutputFieldType.OFFSET.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.KEY.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.TIMESTAMP.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.HEADERS.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.VALUE.name)).isTrue();
 
         assertThat(avroRecord.getSchema().getField("value").schema().getFields())
             .map(Field::name)
@@ -203,10 +203,10 @@ class SinkRecordConverterTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
 
         final var avroRecord = converter.convert(sinkRecord, schemaBuilder.buildSchema(sinkRecord));
-        assertThat(avroRecord.get(OutputFieldType.OFFSET.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.KEY.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.TIMESTAMP.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.HEADERS.name)).isNull();
+        assertThat(avroRecord.hasField(OutputFieldType.OFFSET.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.KEY.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.TIMESTAMP.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.HEADERS.name)).isFalse();
 
         assertThat(avroRecord.getSchema().getFields()).map(Field::name)
                 .containsExactly("user_name", "user_ip", "blocked");
@@ -405,16 +405,11 @@ class SinkRecordConverterTest {
                         100L, 1000L, TimestampType.CREATE_TIME);
 
         final var avroRecord = converter.convert(sinkRecord, schemaBuilder.buildSchema(sinkRecord));
-        assertThat(avroRecord.get(OutputFieldType.KEY.name)).isNotNull();
-        assertThat(avroRecord.get(OutputFieldType.OFFSET.name)).isNotNull();
-        assertThat(avroRecord.get(OutputFieldType.TIMESTAMP.name)).isNotNull();
-        assertThat(avroRecord.get(OutputFieldType.HEADERS.name)).isNull();
-        assertThat(avroRecord.get(OutputFieldType.VALUE.name)).isNull();
-
+        assertThat(avroRecord.get(OutputFieldType.KEY.name)).isEqualTo("some-key");
         assertThat(avroRecord.get(OutputFieldType.OFFSET.name)).isEqualTo(100L);
         assertThat(avroRecord.get(OutputFieldType.TIMESTAMP.name)).isEqualTo(1000L);
-
-        assertThat(avroRecord.get(OutputFieldType.KEY.name)).isEqualTo("some-key");
+        assertThat(avroRecord.hasField(OutputFieldType.HEADERS.name)).isFalse();
+        assertThat(avroRecord.hasField(OutputFieldType.VALUE.name)).isFalse();
     }
 
 }
