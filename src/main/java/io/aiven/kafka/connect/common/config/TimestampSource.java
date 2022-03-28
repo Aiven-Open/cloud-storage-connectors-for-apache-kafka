@@ -16,8 +16,7 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -89,8 +88,10 @@ public interface TimestampSource {
 
         @Override
         public ZonedDateTime time(final SinkRecord record) {
-            final LocalDateTime localDateTime = new Timestamp(record.timestamp()).toLocalDateTime();
-            return ZonedDateTime.of(localDateTime, zoneId);
+            return ZonedDateTime.ofInstant(
+                    Instant.ofEpochMilli(record.timestamp()),
+                    zoneId
+            );
         }
 
         public Type type() {
