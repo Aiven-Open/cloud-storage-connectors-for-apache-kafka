@@ -43,6 +43,14 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
  */
 class TopicPartitionRecordGrouper implements RecordGrouper {
 
+    private static final Map<String, DateTimeFormatter> TIMESTAMP_FORMATTERS =
+            Map.of(
+                    "yyyy", DateTimeFormatter.ofPattern("yyyy"),
+                    "MM", DateTimeFormatter.ofPattern("MM"),
+                    "dd", DateTimeFormatter.ofPattern("dd"),
+                    "HH", DateTimeFormatter.ofPattern("HH")
+            );
+
     private final Template filenameTemplate;
 
     private final Map<TopicPartition, SinkRecord> currentHeadRecords = new HashMap<>();
@@ -66,20 +74,10 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
         Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
         Objects.requireNonNull(tsSource, "tsSource cannot be null");
         this.filenameTemplate = filenameTemplate;
-        this.setTimestampBasedOnRecord = record -> new Function<>() {
-            private final Map<String, DateTimeFormatter> timestampFormatters =
-                Map.of(
-                    "yyyy", DateTimeFormatter.ofPattern("yyyy"),
-                    "MM", DateTimeFormatter.ofPattern("MM"),
-                    "dd", DateTimeFormatter.ofPattern("dd"),
-                    "HH", DateTimeFormatter.ofPattern("HH")
-                );
 
-            @Override
-            public String apply(final Parameter parameter) {
-                return tsSource.time(record).format(timestampFormatters.get(parameter.value()));
-            }
-        };
+        this.setTimestampBasedOnRecord =
+                record -> parameter -> tsSource.time(record).format(TIMESTAMP_FORMATTERS.get(parameter.value()));
+
         this.rotator = buffer -> {
             final var unlimited = maxRecordsPerFile == null;
             if (unlimited) {
