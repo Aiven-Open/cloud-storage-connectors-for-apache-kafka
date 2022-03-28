@@ -106,8 +106,8 @@ distributions {
 dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
     compileOnly "org.apache.kafka:connect-runtime:$kafkaVersion"
+    compileOnly "org.apache.kafka:connect-json:$kafkaVersion"
 
-    implementation "org.apache.kafka:connect-json:$kafkaVersion"
     implementation "io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion"
 
     implementation "org.xerial.snappy:snappy-java:1.1.8.4"
