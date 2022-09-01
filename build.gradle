@@ -125,7 +125,7 @@ dependencies {
         exclude group: "org.slf4j", module: "slf4j-api"
         exclude group: "org.apache.avro", module: "avro"
     }
-    implementation( "org.apache.hadoop:hadoop-common:3.3.3") {
+    implementation( "org.apache.hadoop:hadoop-common:3.3.4") {
         exclude group: "org.apache.hadoop.thirdparty", module: "hadoop-shaded-protobuf_3_7"
         exclude group: "com.google.guava", module: "guava"
         exclude group: "commons-cli", module: "commons-cli"
