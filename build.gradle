@@ -82,7 +82,7 @@ repositories {
 }
 
 ext {
-    kafkaVersion = "1.1.0"
+    kafkaVersion = "3.3.0"
     parquetVersion = "1.11.1"
     junitVersion = "5.9.0"
     confluentPlatformVersion = "7.2.1"
@@ -103,13 +103,44 @@ distributions {
     }
 }
 
+def featureTestingVersions = [
+        '0101' : '0.10.1.0',
+        '0102' : '0.10.2.0',
+        '250' : '2.5.0',
+        '260' : '2.6.0',
+        '320' : '3.2.0',
+        '330' : '3.3.0'
+]
+
+configurations {
+    featureTestingVersions.keySet().forEach(name -> {
+        configurations.create("kafka$name")
+        configurations.getByName("kafka$name").extendsFrom(testImplementation)
+    })
+
+    kafkaLatest.extendsFrom(testImplementation)
+}
+
 dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
     compileOnly "org.apache.kafka:connect-runtime:$kafkaVersion"
     compileOnly "org.apache.kafka:connect-json:$kafkaVersion"
+    // Make sure not to include the API artifact by default at runtime for tests, since we test against different
+    // versions of it
+    testCompileOnly "org.apache.kafka:connect-api:$kafkaVersion"
+
+    featureTestingVersions.forEach((name, version) -> {
+        add("kafka$name", "org.apache.kafka:connect-api:$version")
+    })
+
+    kafkaLatest "org.apache.kafka:connect-api:$kafkaVersion"
+    kafkaLatest "org.apache.kafka:connect-runtime:$kafkaVersion"
+    kafkaLatest "org.apache.kafka:connect-json:$kafkaVersion"
+    kafkaLatest "org.apache.kafka:kafka-clients:$kafkaVersion"
 
     implementation("io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion") {
         exclude group: "org.apache.kafka", module: "kafka-clients"
+        exclude group: "org.apache.kafka", module: "connect-api"
     }
 
     implementation "org.xerial.snappy:snappy-java:1.1.8.4"
@@ -162,9 +193,6 @@ dependencies {
         exclude group: "io.netty", module: "netty"
     }
 
-    testImplementation "org.apache.kafka:connect-api:$kafkaVersion"
-    testImplementation "org.apache.kafka:connect-runtime:$kafkaVersion"
-    testImplementation "org.apache.kafka:connect-json:$kafkaVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
     testImplementation "org.apache.parquet:parquet-tools:$parquetVersion"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:2.13.3"
@@ -177,15 +205,39 @@ dependencies {
     testImplementation "org.apache.hadoop:hadoop-mapreduce-client-core:3.3.4"
 
     testImplementation "com.fasterxml.jackson.core:jackson-databind:2.13.3"
-    testImplementation "io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion"
+    testImplementation("io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion") {
+        exclude group: "org.apache.kafka", module: "kafka-clients"
+        exclude group: "org.apache.kafka", module: "connect-api"
+    }
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
     testImplementation 'org.assertj:assertj-core:3.23.1'
 }
 
 test {
+    filter {
+        exclude "io/aiven/kafka/connect/common/compatibility/features/**"
+    }
+    classpath += configurations.kafkaLatest
     useJUnitPlatform()
 }
+
+featureTestingVersions.keySet().forEach(name -> {
+    tasks.create(name: "testFeatures$name", type: Test) {
+        filter {
+            includeTestsMatching "FeaturesTest.testFeatures$name"
+        }
+        classpath += configurations.getByName("kafka$name")
+        useJUnitPlatform()
+    }
+
+})
+
+task allTests {
+    dependsOn tasks.withType(Test)
+}
+
+build.dependsOn(allTests)
 
 publishing {
     publications {
