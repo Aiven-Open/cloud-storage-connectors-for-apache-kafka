@@ -113,7 +113,7 @@ dependencies {
     }
 
     implementation "org.xerial.snappy:snappy-java:1.1.8.4"
-    implementation "com.github.luben:zstd-jni:1.5.2-3"
+    implementation "com.github.luben:zstd-jni:1.5.2-4"
 
     implementation "org.slf4j:slf4j-api:1.7.36"
     implementation "com.google.guava:guava:31.1-jre"
