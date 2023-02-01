@@ -112,7 +112,7 @@ dependencies {
         exclude group: "org.apache.kafka", module: "kafka-clients"
     }
 
-    implementation "org.xerial.snappy:snappy-java:1.1.8.4"
+    implementation "org.xerial.snappy:snappy-java:1.1.9.1"
     implementation "com.github.luben:zstd-jni:1.5.2-5"
 
     implementation "org.slf4j:slf4j-api:1.7.36"
