@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.output.parquet;
+package io.aiven.kafka.connect.common.output;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -35,7 +35,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class SinkRecordConverter {
+public class SinkRecordConverter {
 
     private final Logger logger = LoggerFactory.getLogger(SinkRecordConverter.class);
 
@@ -45,13 +45,14 @@ class SinkRecordConverter {
 
     private final boolean envelopeEnabled;
 
-    SinkRecordConverter(final Collection<OutputField> fields, final AvroData avroData, final boolean envelopeEnabled) {
+    public SinkRecordConverter(final Collection<OutputField> fields,
+                               final AvroData avroData, final boolean envelopeEnabled) {
         this.fields = fields;
         this.avroData = avroData;
         this.envelopeEnabled = envelopeEnabled;
     }
 
-    SinkRecordConverter(final Collection<OutputField> fields, final AvroData avroData) {
+    public SinkRecordConverter(final Collection<OutputField> fields, final AvroData avroData) {
         this.fields = fields;
         this.avroData = avroData;
         this.envelopeEnabled = true;

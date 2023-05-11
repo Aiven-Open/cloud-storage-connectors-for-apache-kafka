@@ -62,4 +62,12 @@ public class OutputField {
         return Objects.equal(this.fieldType, that.fieldType)
             && Objects.equal(this.encodingType, that.encodingType);
     }
+
+    @Override
+    public String toString() {
+        return "OutputField{"
+            + "fieldType=" + fieldType
+            + ", encodingType=" + encodingType
+            + '}';
+    }
 }

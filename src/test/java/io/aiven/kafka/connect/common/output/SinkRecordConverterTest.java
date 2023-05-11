@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.output.parquet;
+package io.aiven.kafka.connect.common.output;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +31,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.output.parquet.ParquetSchemaBuilder;
 
 import io.confluent.connect.avro.AvroData;
 import org.apache.avro.generic.GenericData;

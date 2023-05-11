@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.util.Lists.list;
 
-final class ParquetTopicPartitionRecordGrouperTest {
+final class SchemaBasedTopicPartitionRecordGrouperTest {
 
     static final SinkRecord KT0P0R0 = new SinkRecord(
             "topic0", 0,
@@ -99,7 +99,7 @@ final class ParquetTopicPartitionRecordGrouperTest {
     void rotateOnKeySchemaChanged() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final RecordGrouper grouper =
-                new ParquetTopicPartitionRecordGrouper(
+                new SchemaBasedTopicPartitionRecordGrouper(
                         filenameTemplate, null, DEFAULT_TS_SOURCE);
 
         grouper.put(KT0P0R0);
@@ -121,7 +121,7 @@ final class ParquetTopicPartitionRecordGrouperTest {
     void rotateOnValueSchemaChanged() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final RecordGrouper grouper =
-                new ParquetTopicPartitionRecordGrouper(
+                new SchemaBasedTopicPartitionRecordGrouper(
                         filenameTemplate, null, DEFAULT_TS_SOURCE);
 
         grouper.put(RT0P1R0);
@@ -141,7 +141,7 @@ final class ParquetTopicPartitionRecordGrouperTest {
     void rotateOnValueSchemaChangedAndButchSize() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
         final RecordGrouper grouper =
-                new ParquetTopicPartitionRecordGrouper(
+                new SchemaBasedTopicPartitionRecordGrouper(
                         filenameTemplate, 2, DEFAULT_TS_SOURCE);
 
         grouper.put(KRT1P1R0);
