@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2023 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.output.parquet;
+package io.aiven.kafka.connect.common.output.avro;
 
 import java.util.Collection;
 
@@ -23,20 +23,19 @@ import io.aiven.kafka.connect.common.output.SinkSchemaBuilder;
 
 import io.confluent.connect.avro.AvroData;
 
-public final class ParquetSchemaBuilder extends SinkSchemaBuilder {
+public final class AvroSchemaBuilder extends SinkSchemaBuilder {
 
-    public ParquetSchemaBuilder(final Collection<OutputField> fields,
-                                final AvroData avroData, final boolean envelopeEnabled) {
+    public AvroSchemaBuilder(final Collection<OutputField> fields,
+                             final AvroData avroData, final boolean envelopeEnabled) {
         super(fields, avroData, envelopeEnabled);
     }
 
-    public ParquetSchemaBuilder(final Collection<OutputField> fields,
-                         final AvroData avroData) {
+    public AvroSchemaBuilder(final Collection<OutputField> fields, final AvroData avroData) {
         super(fields, avroData);
     }
 
     @Override
     protected String getNamespace() {
-        return "io.aiven.parquet.output.schema";
+        return "io.aiven.avro.output.schema";
     }
 }

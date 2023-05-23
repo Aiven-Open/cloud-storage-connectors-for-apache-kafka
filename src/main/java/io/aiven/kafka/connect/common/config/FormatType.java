@@ -23,11 +23,11 @@ import java.util.stream.Collectors;
 
 public enum FormatType {
 
+    AVRO("avro"),
     CSV("csv"),
     JSON("json"),
     JSONL("jsonl"),
     PARQUET("parquet");
-
     public static final String SUPPORTED_FORMAT_TYPES =
             FormatType.names().stream()
                     .map(c -> String.format("'%s'", c))
@@ -46,7 +46,7 @@ public enum FormatType {
                 return ct;
             }
         }
-        throw new IllegalArgumentException("Unknown compression type: " + name);
+        throw new IllegalArgumentException("Unknown format type: " + name);
     }
 
     public static Collection<String> names() {

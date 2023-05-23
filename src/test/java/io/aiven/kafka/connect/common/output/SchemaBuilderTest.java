@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.output.parquet;
+package io.aiven.kafka.connect.common.output;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
@@ -32,30 +33,41 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.output.avro.AvroSchemaBuilder;
+import io.aiven.kafka.connect.common.output.parquet.ParquetSchemaBuilder;
 
 import io.confluent.connect.avro.AvroData;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
-class ParquetSchemaBuilderTest {
+class SchemaBuilderTest {
 
     static final int AVRO_CACHE_SIZE = 10;
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void testSchemaForSimpleType(final boolean envelopeEnabled) {
+    private static Stream<Arguments> schemaBuilderTestParameters() {
         final var fields =
-                List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
+            List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
 
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), envelopeEnabled);
+        return Stream.of(
+            Arguments.of(new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), true)),
+            Arguments.of(new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), false)),
 
+            Arguments.of(new AvroSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), true)),
+            Arguments.of(new AvroSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), false))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("schemaBuilderTestParameters")
+    void testSchemaForSimpleType(final SinkSchemaBuilder schemaBuilder) {
+        final List<OutputField> fields = List.copyOf(schemaBuilder.getFields());
         final var sinkRecord =
                 new SinkRecord(
                         "some-topic", 1,
@@ -69,13 +81,20 @@ class ParquetSchemaBuilderTest {
         assertThat(avroSchema.getField(fields.get(0).getFieldType().name).schema().getType()).isEqualTo(Type.STRING);
     }
 
-    @Test
-    void testSchemaForRecordValueStruct() {
+    private static Stream<Arguments> valueOutputFieldWithEnvelopeTestParameters() {
         final var fields =
-                List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
+            List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
 
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE));
+        return Stream.of(
+            Arguments.of(new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE))),
 
+            Arguments.of(new AvroSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE)))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("valueOutputFieldWithEnvelopeTestParameters")
+    void testSchemaForRecordValueStruct(final SinkSchemaBuilder schemaBuilder) {
         final var recordSchema = SchemaBuilder.struct()
                 .field("user_name", Schema.STRING_SCHEMA)
                 .field("user_ip", Schema.STRING_SCHEMA)
@@ -99,14 +118,20 @@ class ParquetSchemaBuilderTest {
     }
 
 
-    @Test
-    void testSchemaForRecordValueStructWithoutEnvelope() {
+    private static Stream<Arguments> valueOutputFieldWithoutEnvelopeTestParameters() {
         final var fields =
-                List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
+            List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
 
-        final AvroData avroData = new AvroData(AVRO_CACHE_SIZE);
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, avroData, false);
+        return Stream.of(
+            Arguments.of(new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), false)),
 
+            Arguments.of(new AvroSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), false))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("valueOutputFieldWithoutEnvelopeTestParameters")
+    void testSchemaForRecordValueStructWithoutEnvelope(final SinkSchemaBuilder schemaBuilder) {
         final var recordSchema = SchemaBuilder.struct()
                 .field("user_name", Schema.STRING_SCHEMA)
                 .field("user_ip", Schema.STRING_SCHEMA)
@@ -126,16 +151,12 @@ class ParquetSchemaBuilderTest {
 
         assertThat(avroSchema).isNotNull();
         assertThat(avroSchema.getType()).isEqualTo(Type.RECORD);
-        assertThat(avroSchema).isEqualTo(avroData.fromConnectSchema(recordSchema));
+        assertThat(avroSchema).isEqualTo(schemaBuilder.getAvroData().fromConnectSchema(recordSchema));
     }
 
-    @Test
-    void testSchemaForRecordValueMap() {
-        final var fields =
-                List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
-
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE));
-
+    @ParameterizedTest
+    @MethodSource("valueOutputFieldWithEnvelopeTestParameters")
+    void testSchemaForRecordValueMap(final SinkSchemaBuilder schemaBuilder) {
         final var recordSchema =
                 SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.BOOLEAN_SCHEMA).build();
         final var sinkRecord =
@@ -154,13 +175,9 @@ class ParquetSchemaBuilderTest {
             .isEqualTo(Type.BOOLEAN);
     }
 
-    @Test
-    void testSchemaForRecordValueMapWithoutEnvelope() {
-        final var fields =
-                List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
-
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), false);
-
+    @ParameterizedTest
+    @MethodSource("valueOutputFieldWithoutEnvelopeTestParameters")
+    void testSchemaForRecordValueMapWithoutEnvelope(final SinkSchemaBuilder schemaBuilder) {
         final var recordSchema =
                 SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.BOOLEAN_SCHEMA).build();
         final Map<String, Boolean> valueMap = Map.of("any", true, "beny", false, "raba", true);
@@ -184,13 +201,8 @@ class ParquetSchemaBuilderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void testSchemaForRecordValueArray(final boolean envelopeEnabled) {
-        final var fields =
-                List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
-
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), envelopeEnabled);
-
+    @MethodSource("schemaBuilderTestParameters")
+    void testSchemaForRecordValueArray(final SinkSchemaBuilder schemaBuilder) {
         final var recordSchema =
                 SchemaBuilder.array(Schema.STRING_SCHEMA).build();
         final var sinkRecord =
@@ -210,13 +222,8 @@ class ParquetSchemaBuilderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void testSchemaForRecordValueSimpleType(final boolean envelopeEnabled) {
-        final var fields =
-                List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
-
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE), envelopeEnabled);
-
+    @MethodSource("schemaBuilderTestParameters")
+    void testSchemaForRecordValueSimpleType(final SinkSchemaBuilder schemaBuilder) {
         final var sinkRecord =
                 new SinkRecord(
                         "some-topic", 1,
@@ -231,16 +238,25 @@ class ParquetSchemaBuilderTest {
         assertThat(avroSchema.getField("value").schema().getType()).isEqualTo(Type.STRING);
     }
 
-    @Test
-    void testBuildAivenCustomSchemaForMultipleFields() {
+    private static Stream<Arguments> multipleFieldsWithoutHeadersTestParameters() {
         final var fields = List.of(
-                new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
-                new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE),
-                new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE),
-                new OutputField(OutputFieldType.OFFSET, OutputFieldEncodingType.NONE),
-                new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE)
+            new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
+            new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE),
+            new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE),
+            new OutputField(OutputFieldType.OFFSET, OutputFieldEncodingType.NONE),
+            new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE)
         );
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE));
+
+        return Stream.of(
+            Arguments.of(new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE))),
+
+            Arguments.of(new AvroSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE)))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("multipleFieldsWithoutHeadersTestParameters")
+    void testBuildAivenCustomSchemaForMultipleFields(final SinkSchemaBuilder schemaBuilder) {
         final Headers headers = new ConnectHeaders();
         headers.add("a", "b", Schema.STRING_SCHEMA);
         headers.add("c", "d", Schema.STRING_SCHEMA);
@@ -271,16 +287,9 @@ class ParquetSchemaBuilderTest {
             .isEqualTo(Type.STRING);
     }
 
-    @Test
-    void testBuildSchemaForMultipleFieldsWithoutHeaders() {
-        final var fields = List.of(
-                new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
-                new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE),
-                new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE),
-                new OutputField(OutputFieldType.OFFSET, OutputFieldEncodingType.NONE),
-                new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE)
-        );
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE));
+    @ParameterizedTest
+    @MethodSource("multipleFieldsWithoutHeadersTestParameters")
+    void testBuildSchemaForMultipleFieldsWithoutHeaders(final SinkSchemaBuilder schemaBuilder) {
         final var sinkRecord =
                 new SinkRecord(
                         "some-topic", 1,
@@ -304,11 +313,20 @@ class ParquetSchemaBuilderTest {
             );
     }
 
-    @Test
-    void testThrowsDataExceptionForWrongNoSchemaData() {
+    private static Stream<Arguments> keyOutputFieldTestParameters() {
         final var fields =
-                List.of(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE));
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(10));
+            List.of(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE));
+
+        return Stream.of(
+            Arguments.of(new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE))),
+
+            Arguments.of(new AvroSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE)))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("keyOutputFieldTestParameters")
+    void testThrowsDataExceptionForWrongNoSchemaData(final SinkSchemaBuilder schemaBuilder) {
         final var sinkRecordWithoutKeySchema =
                 new SinkRecord(
                         "some-topic", 1,
@@ -334,13 +352,20 @@ class ParquetSchemaBuilderTest {
             .hasMessage("Record value without schema");
     }
 
-    @Test
-    void testThrowsDataExceptionForWrongHeaders() {
+    private static Stream<Arguments> headersOutputFieldTestParameters() {
         final var fields =
-                List.of(new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE));
+            List.of(new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE));
 
-        final var schemaBuilder = new ParquetSchemaBuilder(fields, new AvroData(10));
+        return Stream.of(
+            Arguments.of(new ParquetSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE))),
 
+            Arguments.of(new AvroSchemaBuilder(fields, new AvroData(AVRO_CACHE_SIZE)))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("headersOutputFieldTestParameters")
+    void testThrowsDataExceptionForWrongHeaders(final SinkSchemaBuilder schemaBuilder) {
         final var sinkRecordWithHeadersWithoutSchema =
                 new SinkRecord(
                         "some-topic", 1,

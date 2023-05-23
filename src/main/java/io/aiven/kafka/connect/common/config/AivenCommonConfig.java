@@ -239,7 +239,9 @@ public class AivenCommonConfig extends AbstractConfig {
     private String resolveFilenameTemplate() {
         String fileNameTemplate = getString(FILE_NAME_TEMPLATE_CONFIG);
         if (fileNameTemplate == null) {
-            fileNameTemplate = DEFAULT_FILENAME_TEMPLATE + getCompressionType().extension();
+            fileNameTemplate = !FormatType.AVRO.equals(getFormatType())
+                ? DEFAULT_FILENAME_TEMPLATE + getCompressionType().extension()
+                : DEFAULT_FILENAME_TEMPLATE + ".avro" + getCompressionType().extension();
         }
         return fileNameTemplate;
     }

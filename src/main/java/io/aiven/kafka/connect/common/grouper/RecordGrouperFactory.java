@@ -108,8 +108,8 @@ public final class RecordGrouperFactory {
                 config.getMaxRecordsPerFile() != 0
                     ? config.getMaxRecordsPerFile()
                     : null;
-            return config.getFormatType() == FormatType.PARQUET
-                    ? new ParquetTopicPartitionRecordGrouper(
+            return config.getFormatType() == FormatType.PARQUET || config.getFormatType() == FormatType.AVRO
+                    ? new SchemaBasedTopicPartitionRecordGrouper(
                             fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource())
                     : new TopicPartitionRecordGrouper(
                             fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource());

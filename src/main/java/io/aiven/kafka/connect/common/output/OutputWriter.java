@@ -30,6 +30,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputField;
+import io.aiven.kafka.connect.common.output.avro.AvroOutputWriter;
 import io.aiven.kafka.connect.common.output.jsonwriter.JsonLinesOutputWriter;
 import io.aiven.kafka.connect.common.output.jsonwriter.JsonOutputWriter;
 import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
@@ -143,6 +144,12 @@ public abstract class OutputWriter implements AutoCloseable {
             Objects.requireNonNull(outputFields, "Output fields haven't been set");
             Objects.requireNonNull(out, "Output stream hasn't been set");
             switch (formatType) {
+                case AVRO:
+                    if (Objects.isNull(externalProperties)) {
+                        externalProperties = Collections.emptyMap();
+                    }
+                    return new AvroOutputWriter(outputFields, getCompressedStream(out),
+                        externalProperties, envelopeEnabled);
                 case CSV:
                     return new PlainOutputWriter(outputFields, getCompressedStream(out));
                 case JSONL:

@@ -28,13 +28,13 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
 
-class ParquetTopicPartitionRecordGrouper extends TopicPartitionRecordGrouper {
+final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordGrouper {
 
     private final SchemaBasedRotator schemaBasedRotator = new SchemaBasedRotator();
 
-    ParquetTopicPartitionRecordGrouper(final Template filenameTemplate,
-                                       final Integer maxRecordsPerFile,
-                                       final TimestampSource tsSource) {
+    SchemaBasedTopicPartitionRecordGrouper(final Template filenameTemplate,
+                                           final Integer maxRecordsPerFile,
+                                           final TimestampSource tsSource) {
         super(filenameTemplate, maxRecordsPerFile, tsSource);
     }
 

@@ -27,6 +27,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.output.OutputStreamWriter;
 import io.aiven.kafka.connect.common.output.OutputWriter;
+import io.aiven.kafka.connect.common.output.SinkRecordConverter;
 
 import io.confluent.connect.avro.AvroData;
 import io.confluent.connect.avro.AvroDataConfig;
@@ -37,9 +38,9 @@ import org.apache.parquet.io.PositionOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ParquetOutputWriter extends OutputWriter {
+public final class ParquetOutputWriter extends OutputWriter {
 
-    private final Logger logger = LoggerFactory.getLogger(ParquetOutputWriter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ParquetOutputWriter.class);
 
     private final SinkRecordConverter sinkRecordConverter;
 
@@ -59,7 +60,7 @@ public class ParquetOutputWriter extends OutputWriter {
     public void writeRecords(final Collection<SinkRecord> sinkRecords) throws IOException {
         final var parquetConfig = new ParquetConfig(externalConfiguration);
         final var parquetSchema = parquetSchemaBuilder.buildSchema(sinkRecords.iterator().next());
-        logger.debug("Record schema is: {}", parquetSchema);
+        LOGGER.debug("Record schema is: {}", parquetSchema);
         try (final var parquetWriter =
                      AvroParquetWriter.builder(new ParquetOutputFile())
                              .withSchema(parquetSchema)
