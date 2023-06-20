@@ -108,9 +108,7 @@ dependencies {
     compileOnly "org.apache.kafka:connect-runtime:$kafkaVersion"
     compileOnly "org.apache.kafka:connect-json:$kafkaVersion"
 
-    compileOnly("io.confluent:kafka-connect-avro-data:$confluentPlatformVersion") {
-        exclude group: "org.apache.kafka", module: "kafka-clients"
-    }
+    implementation("io.confluent:kafka-connect-avro-data:$confluentPlatformVersion")
 
     implementation "org.xerial.snappy:snappy-java:1.1.10.0"
     implementation "com.github.luben:zstd-jni:1.5.5-3"
