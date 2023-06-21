@@ -22,13 +22,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
 import io.aiven.kafka.connect.common.templating.Template;
+import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
 /**
  * A {@link RecordGrouper} that groups records by key.
@@ -79,8 +82,20 @@ public final class KeyRecordGrouper implements RecordGrouper {
             }
         };
 
+        final Function<Parameter, String> setKafkaPartition =
+            usePaddingParameter -> usePaddingParameter.asBoolean()
+                ? String.format("%010d", record.kafkaPartition())
+                : Long.toString(record.kafkaPartition());
+
+        final TopicPartition tp = new TopicPartition(record.topic(), record.kafkaPartition());
+
         return filenameTemplate.instance()
             .bindVariable(FilenameTemplateVariable.KEY.name, setKey)
+            .bindVariable(FilenameTemplateVariable.TOPIC.name, tp::topic)
+            .bindVariable(
+                    FilenameTemplateVariable.PARTITION.name,
+                    setKafkaPartition
+            )
             .render();
     }
 
