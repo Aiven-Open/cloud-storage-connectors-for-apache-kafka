@@ -8,6 +8,10 @@ Shared common functionality among Aiven's connectors for Apache Kafka:
 - [Aiven GCS Connector](https://github.com/aiven/gcs-connector-for-apache-kafka)
 - [Aiven S3 Connector](https://github.com/aiven/s3-connector-for-apache-kafka)
 
+# Usage
+
+When installing this library on Kafka Connect, use a specific plugin path, and **avoid placing them on the same path as the Kafka Connect binaries**, as some libraries may have conflicting versions.
+
 # Development
 
 To use this library for development, you need to build and publish it in your local Maven repository using command:
