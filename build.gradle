@@ -110,7 +110,7 @@ dependencies {
 
     implementation("io.confluent:kafka-connect-avro-data:$confluentPlatformVersion")
 
-    implementation "org.xerial.snappy:snappy-java:1.1.10.0"
+    implementation "org.xerial.snappy:snappy-java:1.1.10.1"
     implementation "com.github.luben:zstd-jni:1.5.5-3"
 
     implementation "org.slf4j:slf4j-api:1.7.36"
