@@ -158,7 +158,7 @@ dependencies {
     testImplementation "org.xerial.snappy:snappy-java:1.1.8.4"
     testImplementation "com.github.luben:zstd-jni:1.4.5-4"
 
-    integrationTestImplementation "org.xerial.snappy:snappy-java:1.1.9.1"
+    integrationTestImplementation "org.xerial.snappy:snappy-java:1.1.10.1"
     integrationTestImplementation "com.github.luben:zstd-jni:1.5.5-4"
 
     integrationTestImplementation "org.apache.kafka:connect-api:$kafkaVersion"
