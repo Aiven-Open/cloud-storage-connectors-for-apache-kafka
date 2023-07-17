@@ -223,7 +223,8 @@ public class AivenCommonConfig extends AbstractConfig {
     protected final void validateKeyFilenameTemplate() {
         // Special checks for {{key}} filename template.
         final Template filenameTemplate = getFilenameTemplate();
-        if (RecordGrouperFactory.KEY_RECORD.equals(RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate))) {
+        if (RecordGrouperFactory.KEY_RECORD.equals(RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate)) 
+                || RecordGrouperFactory.TOPIC_PARTITION_KEY_RECORD.equals(RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate))) {
             if (getMaxRecordsPerFile() > 1) {
                 final String msg = String.format("When %s is %s, %s must be either 1 or not set",
                         FILE_NAME_TEMPLATE_CONFIG, filenameTemplate, FILE_MAX_RECORDS);
