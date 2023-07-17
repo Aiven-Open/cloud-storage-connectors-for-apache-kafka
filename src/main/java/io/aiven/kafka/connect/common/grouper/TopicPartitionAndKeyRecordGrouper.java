@@ -36,9 +36,9 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 /**
  * A {@link RecordGrouper} that groups records by topic, parition and key.
  *
- * <p>The class requires a filename template with {@code key} variable declared and .
  * <p>The class requires a filename template with {@code key} variable declared and supports
  * optional {@code topic} and {@code partition} variables declared.
+ * 
  * <p>The class supports one record per file.
  */
 public final class TopicPartitionAndKeyRecordGrouper implements RecordGrouper {

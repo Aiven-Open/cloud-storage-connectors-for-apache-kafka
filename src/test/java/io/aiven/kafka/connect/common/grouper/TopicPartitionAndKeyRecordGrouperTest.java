@@ -16,13 +16,15 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
-import io.aiven.kafka.connect.common.templating.Template;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.sink.SinkRecord;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Map;
+
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.sink.SinkRecord;
+
+import io.aiven.kafka.connect.common.templating.Template;
+
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
@@ -139,13 +141,13 @@ final class TopicPartitionAndKeyRecordGrouperTest {
 
         final Map<String, List<SinkRecord>> records = grouper.records();
         assertThat(records)
-                .containsOnly(
-                        entry("topic0-0-a", list(T0P0R4)),
-                        entry("topic0-0-b", list(T0P0R5)),
-                        entry("topic0-0-null", list(T0P0R3)),
-                        entry("topic1-0-a", list(T1P1R3)),
-                        entry("topic0-1-b", list(T0P1R1))
-                );
+            .containsOnly(
+                entry("topic0-0-a", list(T0P0R4)),
+                entry("topic0-0-b", list(T0P0R5)),
+                entry("topic0-0-null", list(T0P0R3)),
+                entry("topic1-0-a", list(T1P1R3)),
+                entry("topic0-1-b", list(T0P1R1))
+            );
     }
 
     @Test
@@ -165,12 +167,12 @@ final class TopicPartitionAndKeyRecordGrouperTest {
 
         final Map<String, List<SinkRecord>> records = grouper.records();
         assertThat(records)
-                .containsOnly(
-                        entry("topic0-0000000000-a", list(T0P0R4)),
-                        entry("topic0-0000000000-b", list(T0P0R5)),
-                        entry("topic0-0000000000-null", list(T0P0R3)),
-                        entry("topic1-0000000000-a", list(T1P1R3)),
-                        entry("topic0-0000000001-b", list(T0P1R1))
-                );
+            .containsOnly(
+                entry("topic0-0000000000-a", list(T0P0R4)),
+                entry("topic0-0000000000-b", list(T0P0R5)),
+                entry("topic0-0000000000-null", list(T0P0R3)),
+                entry("topic1-0000000000-a", list(T1P1R3)),
+                entry("topic0-0000000001-b", list(T0P1R1))
+            );
     }
 }

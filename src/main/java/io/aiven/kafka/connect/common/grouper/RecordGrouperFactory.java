@@ -162,6 +162,6 @@ public final class RecordGrouperFactory {
         final boolean containsRequiredVars = TOPIC_PARTITION_KEY_RECORD_REQUIRED_VARS.equals(requiredVars);
         final boolean containsOptionalVars =
             vars.isEmpty() || !Collections.disjoint(TOPIC_PARTITION_KEY_RECORD_OPT_VARS, vars);
-       return containsRequiredVars && containsOptionalVars;
+        return containsRequiredVars && containsOptionalVars;
     }
 }

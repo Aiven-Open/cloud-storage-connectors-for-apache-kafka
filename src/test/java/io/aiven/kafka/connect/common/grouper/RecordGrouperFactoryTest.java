@@ -16,19 +16,14 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
-import io.aiven.kafka.connect.common.config.AivenCommonConfig;
-import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.common.templating.Template;
-import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
+
+import io.aiven.kafka.connect.common.templating.Template;
+
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class RecordGrouperFactoryTest {
 
