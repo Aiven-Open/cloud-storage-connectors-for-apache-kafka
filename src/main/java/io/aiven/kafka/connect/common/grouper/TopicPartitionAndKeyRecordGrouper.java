@@ -54,8 +54,7 @@ public final class TopicPartitionAndKeyRecordGrouper implements RecordGrouper {
      * @param filenameTemplate the filename template.
      */
     public TopicPartitionAndKeyRecordGrouper(final Template filenameTemplate) {
-        Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
-        this.filenameTemplate = filenameTemplate;
+        this.filenameTemplate = Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
     }
 
     @Override
