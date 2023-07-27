@@ -27,36 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 final class RecordGrouperFactoryTest {
 
-    private static final SinkRecord T0P0R0 =
-        new SinkRecord("topic0", 0, Schema.OPTIONAL_STRING_SCHEMA, "a", null, null, 0);
-    private static final SinkRecord T0P0R1 =
-        new SinkRecord("topic0", 0, Schema.OPTIONAL_STRING_SCHEMA, "b", null, null, 1);
-    private static final SinkRecord T0P0R2 =
-        new SinkRecord("topic0", 0, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 2);
-    private static final SinkRecord T0P0R3 =
-        new SinkRecord("topic0", 0, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 3);
-    private static final SinkRecord T0P0R4 =
-        new SinkRecord("topic0", 0, Schema.OPTIONAL_STRING_SCHEMA, "a", null, null, 4);
-    private static final SinkRecord T0P0R5 =
-        new SinkRecord("topic0", 0, Schema.OPTIONAL_STRING_SCHEMA, "b", null, null, 5);
-
-    private static final SinkRecord T0P1R0 =
-        new SinkRecord("topic0", 1, Schema.OPTIONAL_STRING_SCHEMA, "c", null, null, 10);
-    private static final SinkRecord T0P1R1 =
-        new SinkRecord("topic0", 1, Schema.OPTIONAL_STRING_SCHEMA, "b", null, null, 11);
-    private static final SinkRecord T0P1R2 =
-        new SinkRecord("topic0", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 12);
-    private static final SinkRecord T0P1R3 =
-        new SinkRecord("topic0", 1, Schema.OPTIONAL_STRING_SCHEMA, "c", null, null, 13);
-
-    private static final SinkRecord T1P1R0 =
-        new SinkRecord("topic1", 0, Schema.OPTIONAL_STRING_SCHEMA, "d", null, null, 1000);
-    private static final SinkRecord T1P1R1 =
-        new SinkRecord("topic1", 0, Schema.OPTIONAL_STRING_SCHEMA, "d", null, null, 1001);
-    private static final SinkRecord T1P1R2 =
-        new SinkRecord("topic1", 0, Schema.OPTIONAL_STRING_SCHEMA, null, null, null, 1002);
-    private static final SinkRecord T1P1R3 =
-        new SinkRecord("topic1", 0, Schema.OPTIONAL_STRING_SCHEMA, "a", null, null, 1003);
 
     @Test
     void keyOnly() {
