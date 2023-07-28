@@ -225,7 +225,7 @@ public class AivenCommonConfig extends AbstractConfig {
         final Template filenameTemplate = getFilenameTemplate();
         final String groupType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
         if (RecordGrouperFactory.KEY_RECORD.equals(groupType) 
-                || RecordGrouperFactory.TOPIC_PARTITION_KEY_RECORD.equals(groupType)) {
+                || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType)) {
             if (getMaxRecordsPerFile() > 1) {
                 final String msg = String.format("When %s is %s, %s must be either 1 or not set",
                         FILE_NAME_TEMPLATE_CONFIG, filenameTemplate, FILE_MAX_RECORDS);

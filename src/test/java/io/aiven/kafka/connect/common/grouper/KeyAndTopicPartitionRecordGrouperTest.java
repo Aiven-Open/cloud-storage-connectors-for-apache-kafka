@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.util.Lists.list;
 
-final class TopicPartitionAndKeyRecordGrouperTest {
+final class KeyAndTopicPartitionRecordGrouperTest {
 
     private static final SinkRecord T0P0R0 =
         new SinkRecord("topic0", 0, Schema.OPTIONAL_STRING_SCHEMA, "a", null, null, 0);
@@ -66,14 +66,14 @@ final class TopicPartitionAndKeyRecordGrouperTest {
     @Test
     void empty() {
         final Template filenameTemplate = Template.of("{{key}}");
-        final TopicPartitionAndKeyRecordGrouper grouper = new TopicPartitionAndKeyRecordGrouper(filenameTemplate);
+        final KeyAndTopicPartitionRecordGrouper grouper = new KeyAndTopicPartitionRecordGrouper(filenameTemplate);
         assertThat(grouper.records()).isEmpty();
     }
 
     @Test
     void eachKeyInSinglePartition() {
         final Template filenameTemplate = Template.of("{{key}}");
-        final TopicPartitionAndKeyRecordGrouper grouper = new TopicPartitionAndKeyRecordGrouper(filenameTemplate);
+        final KeyAndTopicPartitionRecordGrouper grouper = new KeyAndTopicPartitionRecordGrouper(filenameTemplate);
 
         grouper.put(T0P0R0);
         grouper.put(T0P0R1);
@@ -94,7 +94,7 @@ final class TopicPartitionAndKeyRecordGrouperTest {
     @Test
     void keysInMultiplePartitions() {
         final Template filenameTemplate = Template.of("{{key}}");
-        final TopicPartitionAndKeyRecordGrouper grouper = new TopicPartitionAndKeyRecordGrouper(filenameTemplate);
+        final KeyAndTopicPartitionRecordGrouper grouper = new KeyAndTopicPartitionRecordGrouper(filenameTemplate);
 
         grouper.put(T0P0R0);
         grouper.put(T0P0R1);
@@ -127,7 +127,7 @@ final class TopicPartitionAndKeyRecordGrouperTest {
     @Test
     void templateIncludesTopicPartition() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{key}}");
-        final TopicPartitionAndKeyRecordGrouper grouper = new TopicPartitionAndKeyRecordGrouper(filenameTemplate);
+        final KeyAndTopicPartitionRecordGrouper grouper = new KeyAndTopicPartitionRecordGrouper(filenameTemplate);
 
         grouper.put(T0P0R0);
         grouper.put(T0P0R1);
@@ -153,7 +153,7 @@ final class TopicPartitionAndKeyRecordGrouperTest {
     @Test
     void templateIncludesTopicPaddedPartition() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition:padding=true}}-{{key}}");
-        final TopicPartitionAndKeyRecordGrouper grouper = new TopicPartitionAndKeyRecordGrouper(filenameTemplate);
+        final KeyAndTopicPartitionRecordGrouper grouper = new KeyAndTopicPartitionRecordGrouper(filenameTemplate);
 
         grouper.put(T0P0R0);
         grouper.put(T0P0R1);

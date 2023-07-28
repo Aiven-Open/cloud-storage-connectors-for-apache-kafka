@@ -41,7 +41,7 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
  * 
  * <p>The class supports one record per file.
  */
-public final class TopicPartitionAndKeyRecordGrouper implements RecordGrouper {
+public final class KeyAndTopicPartitionRecordGrouper implements RecordGrouper {
 
     private final Template filenameTemplate;
 
@@ -53,7 +53,7 @@ public final class TopicPartitionAndKeyRecordGrouper implements RecordGrouper {
      *
      * @param filenameTemplate the filename template.
      */
-    public TopicPartitionAndKeyRecordGrouper(final Template filenameTemplate) {
+    public KeyAndTopicPartitionRecordGrouper(final Template filenameTemplate) {
         this.filenameTemplate = Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
     }
 

@@ -16,9 +16,6 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.sink.SinkRecord;
-
 import io.aiven.kafka.connect.common.templating.Template;
 
 import org.junit.jupiter.api.Test;
@@ -39,7 +36,7 @@ final class RecordGrouperFactoryTest {
     void topicPartitionAndKey() {
         final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{key}}");
         final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        assertEquals(RecordGrouperFactory.TOPIC_PARTITION_KEY_RECORD, grType);
+        assertEquals(RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD, grType);
     }
 
     @Test
