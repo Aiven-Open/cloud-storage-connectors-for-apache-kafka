@@ -224,8 +224,7 @@ public class AivenCommonConfig extends AbstractConfig {
         // Special checks for {{key}} filename template.
         final Template filenameTemplate = getFilenameTemplate();
         final String groupType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        if (RecordGrouperFactory.KEY_RECORD.equals(groupType) 
-                || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType)) {
+        if (isKeyBased(groupType)) {
             if (getMaxRecordsPerFile() > 1) {
                 final String msg = String.format("When %s is %s, %s must be either 1 or not set",
                         FILE_NAME_TEMPLATE_CONFIG, filenameTemplate, FILE_MAX_RECORDS);
@@ -276,5 +275,10 @@ public class AivenCommonConfig extends AbstractConfig {
             result.add(new OutputField(fieldType, encodingType));
         }
         return result;
+    }
+
+    private Boolean isKeyBased(final String groupType) {
+        return RecordGrouperFactory.KEY_RECORD.equals(groupType) 
+                || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
     }
 }
