@@ -20,7 +20,7 @@ import io.aiven.kafka.connect.common.templating.Template;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 final class RecordGrouperFactoryTest {
 
@@ -29,14 +29,14 @@ final class RecordGrouperFactoryTest {
     void keyOnly() {
         final Template filenameTemplate = Template.of("{{key}}");
         final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        assertEquals(RecordGrouperFactory.KEY_RECORD, grType);
+        assertThat(RecordGrouperFactory.KEY_RECORD).isEqualTo(grType);
     }
 
     @Test
     void topicPartitionAndKey() {
         final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{key}}");
         final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        assertEquals(RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD, grType);
+        assertThat(RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD).isEqualTo(grType);
     }
 
     @Test
@@ -44,6 +44,6 @@ final class RecordGrouperFactoryTest {
         final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{start_offset}}");
         final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
         System.out.println(grType);
-        assertEquals(RecordGrouperFactory.TOPIC_PARTITION_RECORD, grType);
+        assertThat(RecordGrouperFactory.TOPIC_PARTITION_RECORD).isEqualTo(grType);
     }
 }
