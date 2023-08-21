@@ -37,6 +37,8 @@ public final class RecordGrouperFactory {
 
     public static final String TOPIC_PARTITION_RECORD = TopicPartitionRecordGrouper.class.getName();
 
+    public static final String KEY_TOPIC_PARTITION_RECORD = KeyAndTopicPartitionRecordGrouper.class.getName();
+
     public static final Map<String, List<Pair<String, Boolean>>> SUPPORTED_VARIABLES = new LinkedHashMap<>() {{
             put(TOPIC_PARTITION_RECORD, List.of(
                 Pair.of(FilenameTemplateVariable.TOPIC.name, true),
@@ -45,6 +47,11 @@ public final class RecordGrouperFactory {
                 Pair.of(FilenameTemplateVariable.TIMESTAMP.name, false)
             ));
             put(KEY_RECORD, List.of(Pair.of(FilenameTemplateVariable.KEY.name, true)));
+            put(KEY_TOPIC_PARTITION_RECORD, List.of(
+                Pair.of(FilenameTemplateVariable.KEY.name, true),    
+                Pair.of(FilenameTemplateVariable.TOPIC.name, false),
+                Pair.of(FilenameTemplateVariable.PARTITION.name, false)    
+            ));
         }};
 
     public static final List<String> ALL_SUPPORTED_VARIABLES =
@@ -66,8 +73,20 @@ public final class RecordGrouperFactory {
             .map(Pair::getLeft)
             .collect(Collectors.toSet());
 
+    private static final Set<String> KEY_TOPIC_PARTITION_RECORD_REQUIRED_VARS =
+        SUPPORTED_VARIABLES.get(KEY_TOPIC_PARTITION_RECORD).stream()
+            .filter(Pair::getRight)
+            .map(Pair::getLeft)
+            .collect(Collectors.toSet());
+
     private static final Set<String> TOPIC_PARTITION_RECORD_OPT_VARS =
         SUPPORTED_VARIABLES.get(TOPIC_PARTITION_RECORD).stream()
+            .filter(p -> !p.getRight())
+            .map(Pair::getLeft)
+            .collect(Collectors.toSet());
+
+    private static final Set<String> KEY_TOPIC_PARTITION_RECORD_OPT_VARS =
+        SUPPORTED_VARIABLES.get(KEY_TOPIC_PARTITION_RECORD).stream()
             .filter(p -> !p.getRight())
             .map(Pair::getLeft)
             .collect(Collectors.toSet());
@@ -86,6 +105,8 @@ public final class RecordGrouperFactory {
         final Set<String> variables = template.variablesSet();
         if (isByKeyRecord(variables)) {
             return KEY_RECORD;
+        } else if (isByTopicPartitionKeyRecord(variables)) {
+            return KEY_TOPIC_PARTITION_RECORD;
         } else if (isByTopicPartitionRecord(variables)) {
             return TOPIC_PARTITION_RECORD;
         } else {
@@ -103,6 +124,8 @@ public final class RecordGrouperFactory {
         final String grType = resolveRecordGrouperType(fileNameTemplate);
         if (KEY_RECORD.equals(grType)) {
             return new KeyRecordGrouper(fileNameTemplate);
+        } else if (KEY_TOPIC_PARTITION_RECORD.equals(grType)) {
+            return new KeyAndTopicPartitionRecordGrouper(fileNameTemplate);
         } else {
             final Integer maxRecordsPerFile =
                 config.getMaxRecordsPerFile() != 0
@@ -131,4 +154,14 @@ public final class RecordGrouperFactory {
         return containsRequiredVars && containsOptionalVars;
     }
 
+    private static boolean isByTopicPartitionKeyRecord(final Set<String> vars) {
+        final Set<String> requiredVars =
+            Sets.intersection(KEY_TOPIC_PARTITION_RECORD_REQUIRED_VARS, vars)
+                .immutableCopy();
+        vars.removeAll(requiredVars);
+        final boolean containsRequiredVars = KEY_TOPIC_PARTITION_RECORD_REQUIRED_VARS.equals(requiredVars);
+        final boolean containsOptionalVars =
+            vars.isEmpty() || !Collections.disjoint(KEY_TOPIC_PARTITION_RECORD_OPT_VARS, vars);
+        return containsRequiredVars && containsOptionalVars;
+    }
 }
