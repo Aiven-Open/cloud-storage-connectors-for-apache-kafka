@@ -67,6 +67,7 @@ public class AivenCommonConfig extends AbstractConfig {
                 FORMAT_OUTPUT_ENVELOPE_CONFIG, false, FORMAT_OUTPUT_FIELDS_CONFIG);
             throw new ConfigException(msg);
         }
+        validateKeyFilenameTemplate();
     }
 
     protected static void addKafkaBackoffPolicy(final ConfigDef configDef) {
