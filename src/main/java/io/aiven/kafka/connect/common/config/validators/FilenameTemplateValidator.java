@@ -54,7 +54,7 @@ public final class FilenameTemplateValidator implements ConfigDef.Validator {
     }
 
     @Override
-    public final void ensureValid(final String name, final Object value) {
+    public void ensureValid(final String name, final Object value) {
         if (value == null) {
             return;
         }
@@ -77,8 +77,6 @@ public final class FilenameTemplateValidator implements ConfigDef.Validator {
         } catch (final IllegalArgumentException e) {
             throw new ConfigException(configName, value, e.getMessage());
         }
-
-
     }
 
     private static void validateVariables(final Set<String> variables) {

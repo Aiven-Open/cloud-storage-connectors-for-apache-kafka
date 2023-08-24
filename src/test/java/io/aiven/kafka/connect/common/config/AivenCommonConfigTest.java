@@ -33,15 +33,20 @@ class AivenCommonConfigTest {
         final ConfigDef definition = new ConfigDef();
         addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
 
-        definition.define(AivenCommonConfig.FILE_NAME_TEMPLATE_CONFIG,
-            ConfigDef.Type.STRING, null, ConfigDef.Importance.MEDIUM,
-            "File name template", "File", 1, ConfigDef.Width.LONG,
-            "FILE_NAME_TEMPLATE_CONFIG");
-        definition.define(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG,
-            ConfigDef.Type.STRING, CompressionType.NONE.name, ConfigDef.Importance.MEDIUM,
-            "File compression", "File", 2, ConfigDef.Width.NONE,
-            "FILE_COMPRESSION_TYPE_CONFIG");
-
+        definition.define(
+            AivenCommonConfig.FILE_NAME_TEMPLATE_CONFIG,
+            ConfigDef.Type.STRING,
+            null,
+            ConfigDef.Importance.MEDIUM,
+            "File name template"
+        );
+        definition.define(
+            AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG,
+            ConfigDef.Type.STRING,
+            CompressionType.NONE.name,
+            ConfigDef.Importance.MEDIUM,
+            "File compression"
+        );
         return definition;
     }
 
@@ -90,7 +95,6 @@ class AivenCommonConfigTest {
 
         final ConfigDef definition = new ConfigDef();
         addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
-
 
         assertThatThrownBy(() -> new AivenCommonConfig(definition, properties))
             .isInstanceOf(ConfigException.class)

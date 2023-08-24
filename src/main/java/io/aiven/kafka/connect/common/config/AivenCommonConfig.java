@@ -46,10 +46,8 @@ public class AivenCommonConfig extends AbstractConfig {
     public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
 
-    private static final String GROUP_AWS = "AWS";
-    private static final String GROUP_FILE = "File";
-    private static final String GROUP_FORMAT = "Format";
     private static final String GROUP_COMPRESSION = "File Compression";
+    private static final String GROUP_FORMAT = "Format";
     private static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
 
     private static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
