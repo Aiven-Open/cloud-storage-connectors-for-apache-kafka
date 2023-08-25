@@ -16,6 +16,7 @@ jobs:
     name: Create release PR (job)
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       pull-requests: write
     steps:
       - name: Check versions
