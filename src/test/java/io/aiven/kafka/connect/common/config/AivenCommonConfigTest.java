@@ -33,15 +33,29 @@ class AivenCommonConfigTest {
         final ConfigDef definition = new ConfigDef();
         addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
 
-        definition.define(AivenCommonConfig.FILE_NAME_TEMPLATE_CONFIG,
-            ConfigDef.Type.STRING, null, ConfigDef.Importance.MEDIUM,
-            "File name template", "File", 1, ConfigDef.Width.LONG,
-            "FILE_NAME_TEMPLATE_CONFIG");
-        definition.define(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG,
-            ConfigDef.Type.STRING, CompressionType.NONE.name, ConfigDef.Importance.MEDIUM,
-            "File compression", "File", 2, ConfigDef.Width.NONE,
-            "FILE_COMPRESSION_TYPE_CONFIG");
-
+        definition.define(
+            AivenCommonConfig.FILE_NAME_TEMPLATE_CONFIG,
+            ConfigDef.Type.STRING,
+            null,
+            ConfigDef.Importance.MEDIUM,
+            "File name template"
+        );
+        definition.define(
+            AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG,
+            ConfigDef.Type.STRING,
+            CompressionType.NONE.name,
+            ConfigDef.Importance.MEDIUM,
+            "File compression"
+        );
+        definition.define(
+            AivenCommonConfig.FILE_MAX_RECORDS,
+            ConfigDef.Type.INT,
+            0,
+            ConfigDef.Importance.MEDIUM,
+            "The maximum number of records to put in a single file. "
+                + "Must be a non-negative integer number. "
+                + "0 is interpreted as \"unlimited\", which is the default."
+        );
         return definition;
     }
 
@@ -91,9 +105,41 @@ class AivenCommonConfigTest {
         final ConfigDef definition = new ConfigDef();
         addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
 
-
         assertThatThrownBy(() -> new AivenCommonConfig(definition, properties))
             .isInstanceOf(ConfigException.class)
             .hasMessage("When format.output.envelope is false, format.output.fields must contain only one field");
+    }
+
+    @Test
+    void invalidMaxRecordsForKeyBasedGrouper() {
+        final ConfigDef definition = getBaseConfigDefinition();
+
+        final Map<String, String> propertiesWithKey = Map.of(
+            "file.name.template", "{{key}}.gz",
+            "file.max.records", "10"
+        );
+
+        assertThatThrownBy(() -> new AivenCommonConfig(definition, propertiesWithKey))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("When file.name.template is {{key}}.gz, "
+                + "file.max.records must be either 1 or not set");
+
+        final Map<String, String> propertiesWithTopicPartitionKey = Map.of(
+            "file.name.template", "{{topic}}-{{partition}}-{{key}}.gz",
+            "file.max.records", "10"
+        );
+
+        assertThatThrownBy(() -> new AivenCommonConfig(definition, propertiesWithTopicPartitionKey))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("When file.name.template is {{topic}}-{{partition}}-{{key}}.gz, "
+                + "file.max.records must be either 1 or not set");
+
+        final Map<String, String> propertiesWithoutKey = Map.of(
+            "file.max.records", "10"
+        );
+
+        final AivenCommonConfig config = new AivenCommonConfig(definition, propertiesWithoutKey);
+        assertThat(config.getFilename()).isEqualTo("{{topic}}-{{partition}}-{{start_offset}}");
+        assertThat(config.getMaxRecordsPerFile()).isEqualTo(10);
     }
 }
