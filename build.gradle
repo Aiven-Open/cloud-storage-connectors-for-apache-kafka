@@ -204,7 +204,7 @@ publishing {
             pom {
                 name = "Avien's Common Module for Apache Kafka connectors"
                 description = "Avien's Common Module for Apache Kafka connectors"
-                url = "https://github.com/aiven/commons-for-apache-kafka-connect"
+                url = "https://github.com/aiven-open/commons-for-apache-kafka-connect"
                 organization {
                     name = "Aiven Oy"
                     url = "https://aiven.io"
@@ -227,9 +227,9 @@ publishing {
                 }
 
                 scm {
-                    connection = 'scm:git:git://github.com:aiven/commons-for-apache-kafka-connect.git'
-                    developerConnection = 'scm:git:ssh://github.com:aiven/commons-for-apache-kafka-connect.git'
-                    url = 'https://github.com/aiven/commons-for-apache-kafka-connect'
+                    connection = 'scm:git:git://github.com:aiven-open/commons-for-apache-kafka-connect.git'
+                    developerConnection = 'scm:git:ssh://github.com:aiven-open/commons-for-apache-kafka-connect.git'
+                    url = 'https://github.com/aiven-open/commons-for-apache-kafka-connect'
                 }
             }
         }
