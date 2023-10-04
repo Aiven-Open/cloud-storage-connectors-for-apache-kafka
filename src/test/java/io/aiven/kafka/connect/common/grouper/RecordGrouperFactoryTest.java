@@ -28,7 +28,6 @@ final class RecordGrouperFactoryTest {
     void topicPartition() {
         final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{start_offset}}");
         final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        System.out.println(grType);
         assertThat(RecordGrouperFactory.TOPIC_PARTITION_RECORD).isEqualTo(grType);
     }
 
@@ -36,7 +35,6 @@ final class RecordGrouperFactoryTest {
     void topicPartitionAndKey() {
         final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{key}}/{{start_offset}}");
         final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        System.out.println(grType);
         assertThat(RecordGrouperFactory.TOPIC_PARTITION_KEY_RECORD).isEqualTo(grType);
     }
 
