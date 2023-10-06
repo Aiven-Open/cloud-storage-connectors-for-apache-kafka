@@ -24,6 +24,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 final class RecordGrouperFactoryTest {
 
+    @Test
+    void topicPartition() {
+        final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{start_offset}}");
+        final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
+        assertThat(RecordGrouperFactory.TOPIC_PARTITION_RECORD).isEqualTo(grType);
+    }
+
+    @Test
+    void topicPartitionAndKey() {
+        final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{key}}/{{start_offset}}");
+        final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
+        assertThat(RecordGrouperFactory.TOPIC_PARTITION_KEY_RECORD).isEqualTo(grType);
+    }
 
     @Test
     void keyOnly() {
@@ -33,17 +46,9 @@ final class RecordGrouperFactoryTest {
     }
 
     @Test
-    void topicPartitionAndKey() {
+    void keyAndTopicPartition() {
         final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{key}}");
         final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
         assertThat(RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD).isEqualTo(grType);
-    }
-
-    @Test
-    void topicPartition() {
-        final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{start_offset}}");
-        final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        System.out.println(grType);
-        assertThat(RecordGrouperFactory.TOPIC_PARTITION_RECORD).isEqualTo(grType);
     }
 }

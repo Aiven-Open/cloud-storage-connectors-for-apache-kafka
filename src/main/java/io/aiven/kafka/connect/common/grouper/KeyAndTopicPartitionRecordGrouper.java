@@ -75,7 +75,7 @@ public final class KeyAndTopicPartitionRecordGrouper implements RecordGrouper {
         final Supplier<String> setKey = () -> {
             if (record.key() == null) {
                 return "null";
-            } else if (record.keySchema().type() == Schema.Type.STRING) {
+            } else if (record.keySchema() != null && record.keySchema().type() == Schema.Type.STRING) {
                 return (String) record.key();
             } else {
                 return record.key().toString();

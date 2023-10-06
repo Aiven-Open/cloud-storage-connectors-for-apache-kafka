@@ -181,6 +181,7 @@ dependencies {
     testImplementation "io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion"
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+    testRuntimeOnly "ch.qos.logback:logback-classic:1.4.11"
 }
 
 test {
