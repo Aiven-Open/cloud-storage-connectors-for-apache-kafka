@@ -118,7 +118,7 @@ dependencies {
 
     implementation "org.slf4j:slf4j-api:1.7.36"
 
-    implementation "org.apache.commons:commons-text:1.10.0"
+    implementation "org.apache.commons:commons-text:1.11.0"
 
     implementation( "org.apache.parquet:parquet-avro:$parquetVersion") {
         exclude group: "org.xerial.snappy", module: "snappy-java"
