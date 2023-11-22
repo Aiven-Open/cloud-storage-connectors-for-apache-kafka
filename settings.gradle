@@ -1,4 +1,4 @@
 rootProject.name = "aiven-apache-kafka-connectors"
 include("commons")
+include("gcs-connector")
 include("s3-connector")
-

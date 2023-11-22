@@ -94,3 +94,13 @@ javadoc {
 test {
     useJUnitPlatform()
 }
+
+task wrapper(type: Wrapper) {
+    distributionType = 'ALL'
+    doLast {
+        def sha256Sum = new String(new URL("${distributionUrl}.sha256").bytes)
+        propertiesFile << "distributionSha256Sum=${sha256Sum}\n"
+        println "Added checksum to wrapper properties"
+    }
+}
+

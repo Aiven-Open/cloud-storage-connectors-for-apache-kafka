@@ -15,23 +15,7 @@
  */
 
 plugins {
-    // https://docs.gradle.org/current/userguide/java_library_plugin.html
-    id "java-library"
-
-    // https://docs.gradle.org/current/userguide/distribution_plugin.html
-    id "distribution"
-
-    // https://docs.gradle.org/current/userguide/idea_plugin.html
-    id "idea"
-
-    // https://docs.gradle.org/current/userguide/jacoco_plugin.html
-    id "jacoco"
-
-    // https://docs.gradle.org/current/userguide/publishing_maven.html
-    id "maven-publish"
-
-    // https://docs.gradle.org/current/userguide/signing_plugin.html
-    id "signing"
+    id("aiven-apache-kafka-connectors-all.java-conventions")
 
     // https://plugins.gradle.org/plugin/com.diffplug.spotless
     id "com.diffplug.spotless" version "6.22.0"
@@ -43,35 +27,6 @@ plugins {
 
 group = "io.aiven"
 
-repositories {
-    mavenCentral()
-    // For kafka-avro-serializer and kafka-connect-avro-converter
-    maven {
-        url "https://packages.confluent.io/maven"
-    }
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-
-    withJavadocJar()
-    withSourcesJar()
-}
-
-wrapper {
-    distributionType = 'ALL'
-    doLast {
-        def sha256Sum = new String(new URL("${distributionUrl}.sha256").bytes)
-        propertiesFile << "distributionSha256Sum=${sha256Sum}\n"
-        println "Added checksum to wrapper properties"
-    }
-}
-
-compileJava {
-    options.compilerArgs = ["-Xlint:all", "-Werror"]
-}
-
 ext {
     // TODO: document why we stick to these versions
     kafkaVersion = "1.1.0"
@@ -80,22 +35,12 @@ ext {
     confluentPlatformVersion = "4.1.4"
     // Align with version used by commons
     avroConverterVersion = "7.2.2"
-    aivenConnectCommonsVersion = "0.12.0"
 
     slf4jVersion = "1.7.36"
 
     testcontainersVersion = "1.19.1"
     wireMockVersion = "2.35.0"
     mockitoVersion = "5.2.0"
-}
-
-distributions {
-    main {
-        contents {
-            from jar
-            from configurations.runtimeClasspath
-        }
-    }
 }
 
 sourceSets {
@@ -128,7 +73,7 @@ dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
     compileOnly "org.apache.kafka:connect-runtime:$kafkaVersion"
 
-    implementation "io.aiven:commons-for-apache-kafka-connect:$aivenConnectCommonsVersion"
+    implementation project(":commons")
 
     implementation("com.google.cloud:google-cloud-storage:2.27.1") {
         exclude group: "com.google.guava", module: "guava"
@@ -312,15 +257,6 @@ tasks.register('integrationTest', Test) {
     systemProperty("fake-gcs-server-version", "1.45.2")
 }
 
-test {
-    useJUnitPlatform {
-        includeEngines 'junit-jupiter', 'jqwik'
-    }
-}
-
-jacoco {
-    toolVersion = "0.8.7"
-}
 
 processResources {
     filesMatching('gcs-connector-for-apache-kafka-version.properties') {
@@ -334,12 +270,6 @@ jar {
                 'Version': "${project.version}"
         )
     }
-}
-
-javadoc {
-    options.addBooleanOption('html5', true)
-    // disable missing javadoc lint and show only warning and error messages
-    options.addStringOption('Xdoclint:all,-missing', '-quiet')
 }
 
 publishing {
