@@ -1,1 +1,3 @@
-rootProject.name = 'commons-for-apache-kafka-connect'
+rootProject.name = "aiven-apache-kafka-connectors"
+include("commons")
+
