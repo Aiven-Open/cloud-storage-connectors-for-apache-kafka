@@ -28,4 +28,14 @@
     <suppress checks="LineLength"
               files="(FilenameTemplateValidatorTest).java" />
 
+
+    <!-- S3 Connector module -->
+    <suppress checks="(CyclomaticComplexity)"
+              files="(S3SinkConfig).java"/>
+
+    <suppress checks="(ClassFanOutComplexity)"
+              files="(S3SinkTask|S3SinkConfig|S3SinkTaskTest|IntegrationTest).java"/>
+
+    <suppress checks="ClassDataAbstractionCoupling"
+              files="(S3SinkTask|S3SinkConfig|S3SinkTaskTest).java"/>
 </suppressions>
