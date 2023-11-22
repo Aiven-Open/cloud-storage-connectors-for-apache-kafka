@@ -22,6 +22,9 @@ plugins {
     // https://docs.gradle.org/current/userguide/checkstyle_plugin.html
     id "checkstyle"
 
+    // https://docs.gradle.org/current/userguide/idea_plugin.html
+    id "idea"
+
     // https://docs.gradle.org/current/userguide/jacoco_plugin.html
     id "jacoco"
 
@@ -90,81 +93,4 @@ javadoc {
 
 test {
     useJUnitPlatform()
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = getGroup()
-            artifactId = "commons-for-apache-kafka-connect"
-            version = getVersion()
-
-            from components.java
-
-            pom {
-                name = "Aiven's Common Module for Apache Kafka connectors"
-                description = "Aiven's Common Module for Apache Kafka connectors"
-                url = "https://github.com/aiven-open/commons-for-apache-kafka-connect"
-                organization {
-                    name = "Aiven Oy"
-                    url = "https://aiven.io"
-                }
-
-                licenses {
-                    license {
-                        name = "Apache 2.0"
-                        url = "http://www.apache.org/licenses/LICENSE-2.0"
-                        distribution = "repo"
-                    }
-                }
-
-                developers {
-                    developer {
-                        id = 'aiven'
-                        name = 'Aiven Opensource'
-                        email = 'opensource@aiven.io'
-                    }
-                }
-
-                scm {
-                    connection = 'scm:git:git://github.com:aiven-open/commons-for-apache-kafka-connect.git'
-                    developerConnection = 'scm:git:ssh://github.com:aiven-open/commons-for-apache-kafka-connect.git'
-                    url = 'https://github.com/aiven-open/commons-for-apache-kafka-connect'
-                }
-            }
-        }
-    }
-
-    repositories {
-        maven {
-            name="sonatype"
-
-            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-
-            credentials(PasswordCredentials)
-        }
-    }
-}
-
-signing {
-    sign publishing.publications.maven
-    useGpgCmd()
-    // Some issue in the plugin:
-    // GPG outputs already armored signatures. The plugin also does armoring for `asc` files.
-    // This results in double armored signatures, i.e. garbage.
-    // Override the signature type provider to use unarmored output for `asc` files, which works well with GPG.
-    signatureTypes = new AbstractSignatureTypeProvider() {
-        {
-            BinarySignatureType binary = new BinarySignatureType() {
-                @Override
-                String getExtension() {
-                    return "asc";
-                }
-            }
-            register(binary);
-            setDefaultType(binary.getExtension());
-        }
-    }
 }
