@@ -23,11 +23,10 @@ import java.util.Objects;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.output.OutputWriter;
 
-
-public class JsonOutputWriter extends OutputWriter {
+public final class JsonOutputWriter extends OutputWriter {
 
     public JsonOutputWriter(final Collection<OutputField> fields, final OutputStream outputStream,
-                            final boolean envelopeEnabled) {
+            final boolean envelopeEnabled) {
         super(outputStream, new Builder().addFields(fields).withEnvelopeEnabled(envelopeEnabled).build());
     }
 
@@ -39,18 +38,18 @@ public class JsonOutputWriter extends OutputWriter {
         private final JsonOutputFieldComposer fieldsComposer = new JsonOutputFieldComposer();
         private boolean envelopeEnabled = true;
 
-        final JsonOutputWriter.Builder addFields(final Collection<OutputField> fields) {
+        JsonOutputWriter.Builder addFields(final Collection<OutputField> fields) {
             Objects.requireNonNull(fields, "fields cannot be null");
             fieldsComposer.addFields(fields);
             return this;
         }
 
-        final JsonOutputWriter.Builder withEnvelopeEnabled(final boolean envelopeEnabled) {
+        JsonOutputWriter.Builder withEnvelopeEnabled(final boolean envelopeEnabled) {
             this.envelopeEnabled = envelopeEnabled;
             return this;
         }
 
-        final JsonOutputStreamWriter build() {
+        JsonOutputStreamWriter build() {
             return new JsonOutputStreamWriter(fieldsComposer.fieldBuilders, envelopeEnabled);
         }
     }

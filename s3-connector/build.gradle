@@ -69,6 +69,7 @@ dependencies {
 
     implementation project(":commons")
 
+    implementation "com.github.spotbugs:spotbugs-annotations:4.8.1"
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
     implementation "com.amazonaws:aws-java-sdk-s3:$amazonS3Version"
     implementation "com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion"
@@ -178,6 +179,18 @@ jar {
     }
 }
 
+pmdIntegrationTest {
+    ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
+    ruleSets = [] // Clear the default rulesets
+}
+spotbugsIntegrationTest {
+    reports {
+        html {
+            stylesheet = 'fancy-hist.xsl'
+        }
+    }
+}
+
 processResources {
     filesMatching('s3-connector-for-apache-kafka-version.properties') {
         expand(version: version)
@@ -260,4 +273,3 @@ signing {
         }
     }
 }
-

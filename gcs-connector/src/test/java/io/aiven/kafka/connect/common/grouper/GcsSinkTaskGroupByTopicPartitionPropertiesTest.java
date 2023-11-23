@@ -57,6 +57,7 @@ import org.junit.jupiter.api.Disabled;
  * task, and check certain properties of the written files afterwards. Files are written virtually using the in-memory
  * GCS mock.
  */
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
 final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
 
     @Property

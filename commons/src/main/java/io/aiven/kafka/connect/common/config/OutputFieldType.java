@@ -18,15 +18,12 @@ package io.aiven.kafka.connect.common.config;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 public enum OutputFieldType {
-    KEY("key"),
-    VALUE("value"),
-    OFFSET("offset"),
-    TIMESTAMP("timestamp"),
-    HEADERS("headers");
+    KEY("key"), VALUE("value"), OFFSET("offset"), TIMESTAMP("timestamp"), HEADERS("headers");
 
     public final String name;
 
@@ -45,7 +42,7 @@ public enum OutputFieldType {
     }
 
     public static boolean isValidName(final String name) {
-        return names().contains(name.toLowerCase());
+        return names().contains(name.toLowerCase(Locale.getDefault()));
     }
 
     public static Collection<String> names() {

@@ -37,6 +37,7 @@ import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
 import io.aiven.kafka.connect.common.output.plainwriter.PlainOutputWriter;
 
 import com.github.luben.zstd.ZstdOutputStream;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.xerial.snappy.SnappyOutputStream;
 
 public abstract class OutputWriter implements AutoCloseable {
@@ -51,14 +52,12 @@ public abstract class OutputWriter implements AutoCloseable {
 
     protected final Map<String, String> externalConfiguration;
 
-    protected OutputWriter(final OutputStream outputStream,
-                           final OutputStreamWriter writer) {
+    protected OutputWriter(final OutputStream outputStream, final OutputStreamWriter writer) {
         this(outputStream, writer, Collections.emptyMap());
     }
 
-    protected OutputWriter(final OutputStream outputStream,
-                           final OutputStreamWriter writer,
-                           final Map<String, String> externalConfiguration) {
+    protected OutputWriter(final OutputStream outputStream, final OutputStreamWriter writer,
+            final Map<String, String> externalConfiguration) {
         Objects.requireNonNull(writer, "writer");
         Objects.requireNonNull(outputStream, "outputStream");
         this.writer = writer;
@@ -73,23 +72,24 @@ public abstract class OutputWriter implements AutoCloseable {
         if (sinkRecords.isEmpty()) {
             return;
         }
-        for (final var r : sinkRecords) {
-            writeRecord(r);
+        for (final var record : sinkRecords) {
+            writeRecord(record);
         }
     }
 
     public void writeRecord(final SinkRecord record) throws IOException {
         Objects.requireNonNull(record, "record cannot be null");
-        if (!this.isOutputEmpty) {
-            writer.writeRecordsSeparator(outputStream);
-        } else {
+        if (this.isOutputEmpty) {
             writer.startWriting(outputStream);
             this.isOutputEmpty = false;
+        } else {
+            writer.writeRecordsSeparator(outputStream);
         }
         writer.writeOneRecord(outputStream, record);
     }
 
-    public void close()  throws IOException {
+    @Override
+    public void close() throws IOException {
         if (!isClosed) {
             try {
                 writer.stopWriting(outputStream);
@@ -125,11 +125,13 @@ public abstract class OutputWriter implements AutoCloseable {
             return this;
         }
 
+        @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable externalProperties")
         public Builder withExternalProperties(final Map<String, String> externalProperties) {
             this.externalProperties = externalProperties;
             return this;
         }
 
+        @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable outputFields")
         public Builder withOutputFields(final Collection<OutputField> outputFields) {
             this.outputFields = outputFields;
             return this;
@@ -144,39 +146,39 @@ public abstract class OutputWriter implements AutoCloseable {
             Objects.requireNonNull(outputFields, "Output fields haven't been set");
             Objects.requireNonNull(out, "Output stream hasn't been set");
             switch (formatType) {
-                case AVRO:
+                case AVRO :
                     if (Objects.isNull(externalProperties)) {
                         externalProperties = Collections.emptyMap();
                     }
-                    return new AvroOutputWriter(outputFields, getCompressedStream(out),
-                        externalProperties, envelopeEnabled);
-                case CSV:
+                    return new AvroOutputWriter(outputFields, getCompressedStream(out), externalProperties,
+                            envelopeEnabled);
+                case CSV :
                     return new PlainOutputWriter(outputFields, getCompressedStream(out));
-                case JSONL:
+                case JSONL :
                     return new JsonLinesOutputWriter(outputFields, getCompressedStream(out), envelopeEnabled);
-                case JSON:
+                case JSON :
                     return new JsonOutputWriter(outputFields, getCompressedStream(out), envelopeEnabled);
-                case PARQUET:
+                case PARQUET :
                     if (Objects.isNull(externalProperties)) {
                         externalProperties = Collections.emptyMap();
                     }
-                    //parquet has its own way for compression,
+                    // parquet has its own way for compression,
                     // CompressionType passes by to writer and set explicitly to AvroParquetWriter
                     return new ParquetOutputWriter(outputFields, out, externalProperties, envelopeEnabled);
-                default:
+                default :
                     throw new ConnectException("Unsupported format type " + formatType);
             }
         }
 
         private OutputStream getCompressedStream(final OutputStream outputStream) throws IOException {
             switch (compressionType) {
-                case ZSTD:
+                case ZSTD :
                     return new ZstdOutputStream(outputStream);
-                case GZIP:
+                case GZIP :
                     return new GZIPOutputStream(outputStream);
-                case SNAPPY:
+                case SNAPPY :
                     return new SnappyOutputStream(outputStream);
-                default:
+                default :
                     return outputStream;
             }
         }

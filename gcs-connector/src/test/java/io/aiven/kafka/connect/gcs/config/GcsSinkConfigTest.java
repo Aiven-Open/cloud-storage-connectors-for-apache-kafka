@@ -99,9 +99,9 @@ final class GcsSinkConfigTest {
         final Template template = new GcsSinkConfig(properties).getFilenameTemplate();
         final String fileName = template.instance()
                 .bindVariable("topic", () -> "a")
-                .bindVariable("timestamp", VariableTemplatePart.Parameter::value)
+                .bindVariable("timestamp", VariableTemplatePart.Parameter::getValue)
                 .bindVariable("partition", () -> "p")
-                .bindVariable("start_offset", VariableTemplatePart.Parameter::value)
+                .bindVariable("start_offset", VariableTemplatePart.Parameter::getValue)
                 .render();
         assertEquals("a-yyyy-MM-dd-p-true.gz", fileName);
     }
@@ -119,7 +119,7 @@ final class GcsSinkConfigTest {
         final Template template = new GcsSinkConfig(properties).getFilenameTemplate();
         final String fileName = template.instance()
                 .bindVariable("topic", () -> "_")
-                .bindVariable("timestamp", VariableTemplatePart.Parameter::value)
+                .bindVariable("timestamp", VariableTemplatePart.Parameter::getValue)
                 .bindVariable("partition", () -> "_")
                 .bindVariable("start_offset", () -> "_")
                 .render();
@@ -546,7 +546,7 @@ final class GcsSinkConfigTest {
                 .bindVariable("topic", () -> "a")
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", parameter -> {
-                    assertEquals("padding", parameter.name());
+                    assertEquals("padding", parameter.getName());
                     assertTrue(parameter.asBoolean());
                     return "c";
                 })

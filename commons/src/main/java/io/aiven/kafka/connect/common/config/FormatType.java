@@ -23,19 +23,15 @@ import java.util.stream.Collectors;
 
 public enum FormatType {
 
-    AVRO("avro"),
-    CSV("csv"),
-    JSON("json"),
-    JSONL("jsonl"),
-    PARQUET("parquet");
-    public static final String SUPPORTED_FORMAT_TYPES =
-            FormatType.names().stream()
-                    .map(c -> String.format("'%s'", c))
-                    .collect(Collectors.joining(", "));
+    AVRO("avro"), CSV("csv"), JSON("json"), JSONL("jsonl"), PARQUET("parquet");
+    public static final String SUPPORTED_FORMAT_TYPES = FormatType.names()
+            .stream()
+            .map(c -> String.format("'%s'", c))
+            .collect(Collectors.joining(", "));
 
     public final String name;
 
-    private FormatType(final String name) {
+    FormatType(final String name) {
         this.name = name;
     }
 

@@ -42,12 +42,16 @@ class KeyBuilder implements OutputFieldBuilder {
     /**
      * Takes the {@link SinkRecord}'s key as a JSON.
      *
-     * <p>If the key is {@code null}, it outputs nothing.
+     * <p>
+     * If the key is {@code null}, it outputs nothing.
      *
-     * <p>If the key is not {@code null}, it assumes the key <b>is</b> a JSON
+     * <p>
+     * If the key is not {@code null}, it assumes the key <b>is</b> a JSON
      *
-     * @param record       the record to get the key from
-     * @throws DataException when the key is not convertible to Json
+     * @param record
+     *            the record to get the key from
+     * @throws DataException
+     *             when the key is not convertible to Json
      */
     @Override
     public JsonNode build(final SinkRecord record) throws IOException {

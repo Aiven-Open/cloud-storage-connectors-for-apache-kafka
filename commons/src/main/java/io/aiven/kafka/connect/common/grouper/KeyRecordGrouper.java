@@ -33,9 +33,11 @@ import io.aiven.kafka.connect.common.templating.Template;
 /**
  * A {@link RecordGrouper} that groups records by key.
  *
- * <p>The class requires a filename template with {@code key} variable declared.
+ * <p>
+ * The class requires a filename template with {@code key} variable declared.
  *
- * <p>The class supports one record per file.
+ * <p>
+ * The class supports one record per file.
  */
 public final class KeyRecordGrouper implements RecordGrouper {
 
@@ -47,7 +49,8 @@ public final class KeyRecordGrouper implements RecordGrouper {
     /**
      * A constructor.
      *
-     * @param filenameTemplate the filename template.
+     * @param filenameTemplate
+     *            the filename template.
      */
     public KeyRecordGrouper(final Template filenameTemplate) {
         Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
@@ -79,9 +82,7 @@ public final class KeyRecordGrouper implements RecordGrouper {
             }
         };
 
-        return filenameTemplate.instance()
-            .bindVariable(FilenameTemplateVariable.KEY.name, setKey)
-            .render();
+        return filenameTemplate.instance().bindVariable(FilenameTemplateVariable.KEY.name, setKey).render();
     }
 
     @Override

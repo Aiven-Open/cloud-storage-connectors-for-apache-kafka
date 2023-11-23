@@ -46,10 +46,8 @@ public final class ParquetOutputWriter extends OutputWriter {
 
     private final ParquetSchemaBuilder parquetSchemaBuilder;
 
-    public ParquetOutputWriter(final Collection<OutputField> fields,
-                               final OutputStream out,
-                               final Map<String, String> externalConfig,
-                               final boolean envelopeEnabled) {
+    public ParquetOutputWriter(final Collection<OutputField> fields, final OutputStream out,
+            final Map<String, String> externalConfig, final boolean envelopeEnabled) {
         super(new ParquetPositionOutputStream(out), new OutputStreamWriterStub(), externalConfig);
         final var avroData = new AvroData(new AvroDataConfig(externalConfig));
         this.sinkRecordConverter = new SinkRecordConverter(fields, avroData, envelopeEnabled);
@@ -61,14 +59,13 @@ public final class ParquetOutputWriter extends OutputWriter {
         final var parquetConfig = new ParquetConfig(externalConfiguration);
         final var parquetSchema = parquetSchemaBuilder.buildSchema(sinkRecords.iterator().next());
         LOGGER.debug("Record schema is: {}", parquetSchema);
-        try (final var parquetWriter =
-                     AvroParquetWriter.builder(new ParquetOutputFile())
-                             .withSchema(parquetSchema)
-                             .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
-                             .withDictionaryEncoding(true)
-                             .withConf(parquetConfig.parquetConfiguration())
-                             .withCompressionCodec(parquetConfig.compressionCodecName())
-                             .build()) {
+        try (var parquetWriter = AvroParquetWriter.builder(new ParquetOutputFile())
+                .withSchema(parquetSchema)
+                .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
+                .withDictionaryEncoding(true)
+                .withConf(parquetConfig.parquetConfiguration())
+                .withCompressionCodec(parquetConfig.compressionCodecName())
+                .build()) {
             for (final var record : sinkRecords) {
                 parquetWriter.write(sinkRecordConverter.convert(record, parquetSchema));
             }

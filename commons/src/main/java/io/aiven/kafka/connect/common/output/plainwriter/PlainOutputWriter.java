@@ -27,54 +27,52 @@ import org.apache.kafka.connect.errors.ConnectException;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.output.OutputWriter;
 
+public final class PlainOutputWriter extends OutputWriter {
 
-public class PlainOutputWriter extends OutputWriter {
-
-    public PlainOutputWriter(final Collection<OutputField> fields,
-                             final OutputStream outputStream) {
+    public PlainOutputWriter(final Collection<OutputField> fields, final OutputStream outputStream) {
         super(outputStream, new Builder().addFields(fields).build());
     }
 
     static final class Builder {
         private final List<OutputFieldPlainWriter> writers = new ArrayList<>();
 
-        final Builder addFields(final Collection<OutputField> fields) {
+        Builder addFields(final Collection<OutputField> fields) {
             Objects.requireNonNull(fields, "fields cannot be null");
             for (final OutputField field : fields) {
                 switch (field.getFieldType()) {
-                    case KEY:
+                    case KEY :
                         writers.add(new KeyPlainWriter());
                         break;
 
-                    case VALUE:
+                    case VALUE :
                         switch (field.getEncodingType()) {
-                            case NONE:
+                            case NONE :
                                 writers.add(new ValuePlainWriter());
                                 break;
 
-                            case BASE64:
+                            case BASE64 :
                                 writers.add(new Base64ValuePlainWriter());
                                 break;
 
-                            default:
-                                throw new ConnectException("Unknown output field encoding type "
-                                    + field.getEncodingType());
+                            default :
+                                throw new ConnectException(
+                                        "Unknown output field encoding type " + field.getEncodingType());
                         }
                         break;
 
-                    case OFFSET:
+                    case OFFSET :
                         writers.add(new OffsetPlainWriter());
                         break;
 
-                    case TIMESTAMP:
+                    case TIMESTAMP :
                         writers.add(new TimestampPlainWriter());
                         break;
 
-                    case HEADERS:
+                    case HEADERS :
                         writers.add(new HeadersPlainWriter());
                         break;
 
-                    default:
+                    default :
                         throw new ConnectException("Unknown output field type " + field);
                 }
             }
@@ -82,7 +80,7 @@ public class PlainOutputWriter extends OutputWriter {
             return this;
         }
 
-        final PlainOutputStreamWriter build() {
+        PlainOutputStreamWriter build() {
             return new PlainOutputStreamWriter(writers);
         }
     }

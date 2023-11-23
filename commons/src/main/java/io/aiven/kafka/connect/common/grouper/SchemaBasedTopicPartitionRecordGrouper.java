@@ -32,9 +32,8 @@ final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordG
 
     private final SchemaBasedRotator schemaBasedRotator = new SchemaBasedRotator();
 
-    SchemaBasedTopicPartitionRecordGrouper(final Template filenameTemplate,
-                                           final Integer maxRecordsPerFile,
-                                           final TimestampSource tsSource) {
+    SchemaBasedTopicPartitionRecordGrouper(final Template filenameTemplate, final Integer maxRecordsPerFile,
+            final TimestampSource tsSource) {
         super(filenameTemplate, maxRecordsPerFile, tsSource);
     }
 
@@ -62,18 +61,13 @@ final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordG
             if (Objects.isNull(record.valueSchema()) || Objects.isNull(record.keySchema())) {
                 throw new SchemaProjectorException("Record must have schemas for key and value");
             }
-            final var tp = new TopicPartition(record.topic(), record.kafkaPartition());
-            final var keyValueVersion =
-                    keyValueSchemas.computeIfAbsent(tp, ignored -> new KeyValueSchema(
-                            record.keySchema(),
-                            record.valueSchema()));
-            final var schemaChanged =
-                    !keyValueVersion.keySchema.equals(record.keySchema())
-                            || !keyValueVersion.valueSchema.equals(record.valueSchema());
+            final var topicPartition = new TopicPartition(record.topic(), record.kafkaPartition());
+            final var keyValueVersion = keyValueSchemas.computeIfAbsent(topicPartition,
+                    ignored -> new KeyValueSchema(record.keySchema(), record.valueSchema()));
+            final var schemaChanged = !keyValueVersion.keySchema.equals(record.keySchema())
+                    || !keyValueVersion.valueSchema.equals(record.valueSchema());
             if (schemaChanged) {
-                keyValueSchemas.put(tp,
-                        new KeyValueSchema(record.keySchema(), record.valueSchema())
-                );
+                keyValueSchemas.put(topicPartition, new KeyValueSchema(record.keySchema(), record.valueSchema()));
             }
             return schemaChanged;
         }
@@ -90,14 +84,14 @@ final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordG
             }
 
             @Override
-            public boolean equals(final Object o) {
-                if (this == o) {
+            public boolean equals(final Object other) {
+                if (this == other) {
                     return true;
                 }
-                if (o == null || getClass() != o.getClass()) {
+                if (other == null || getClass() != other.getClass()) {
                     return false;
                 }
-                final var that = (KeyValueSchema) o;
+                final var that = (KeyValueSchema) other;
                 return keySchema.equals(that.keySchema) && valueSchema.equals(that.valueSchema);
             }
 

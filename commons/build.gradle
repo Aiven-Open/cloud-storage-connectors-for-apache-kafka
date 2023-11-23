@@ -28,6 +28,7 @@ dependencies {
         exclude group: "org.apache.kafka", module: "kafka-clients"
     }
 
+    implementation "com.github.spotbugs:spotbugs-annotations:4.8.1"
     implementation "org.xerial.snappy:snappy-java:1.1.10.5"
     implementation "com.github.luben:zstd-jni:1.5.5-10"
 

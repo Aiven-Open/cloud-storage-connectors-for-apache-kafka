@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.common.output;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -27,29 +29,15 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 public abstract class JsonOutputWriterTestHelper {
     protected final ObjectMapper objectMapper = new ObjectMapper();
     protected final Schema level1Schema = SchemaBuilder.struct().field("name", Schema.STRING_SCHEMA);
     protected ByteArrayOutputStream byteStream;
     protected OutputWriter sut;
 
-    protected SinkRecord createRecord(final String key,
-                                      final Schema valueSchema,
-                                      final Object value,
-                                      final int offset,
-                                      final Long timestamp
-    ) {
-        return new SinkRecord(
-                "anyTopic",
-                0,
-                Schema.STRING_SCHEMA,
-                key,
-                valueSchema,
-                value,
-                offset,
-                timestamp,
+    protected SinkRecord createRecord(final String key, final Schema valueSchema, final Object value, final int offset,
+            final Long timestamp) {
+        return new SinkRecord("anyTopic", 0, Schema.STRING_SCHEMA, key, valueSchema, value, offset, timestamp,
                 TimestampType.CREATE_TIME);
     }
 
@@ -71,6 +59,5 @@ public abstract class JsonOutputWriterTestHelper {
         assertThat(parseJson(byteStream.toByteArray())).isEqualTo(expected);
     }
 
-    abstract String parseJson(final byte[] json) throws IOException;
+    abstract String parseJson(byte[] json) throws IOException;
 }
-

@@ -27,7 +27,7 @@ import io.aiven.kafka.connect.common.config.CompressionType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 
-class ParquetConfig extends AbstractConfig {
+final class ParquetConfig extends AbstractConfig {
 
     public ParquetConfig(final Map<?, ?> originals) {
         super(new ConfigDef(), originals);
@@ -41,7 +41,7 @@ class ParquetConfig extends AbstractConfig {
             }
             // ParquetSchemaBuilder builds schema explicitly for ParquetWriter,
             // parquet.avro.schema property is excluded, all others are accepted
-            if (e.getKey().equals("parquet.avro.schema")) {
+            if ("parquet.avro.schema".equals(e.getKey())) {
                 continue;
             }
             config.set(e.getKey(), e.getValue().toString());
@@ -50,20 +50,17 @@ class ParquetConfig extends AbstractConfig {
     }
 
     public CompressionCodecName compressionCodecName() {
-        final var connectorCompressionType =
-                CompressionType.forName(
-                        originals().getOrDefault(
-                                AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG,
-                                CompressionType.NONE.name
-                        ).toString());
+        final var connectorCompressionType = CompressionType.forName(
+                originals().getOrDefault(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name)
+                        .toString());
         switch (connectorCompressionType) {
-            case GZIP:
+            case GZIP :
                 return CompressionCodecName.GZIP;
-            case SNAPPY:
+            case SNAPPY :
                 return CompressionCodecName.SNAPPY;
-            case ZSTD:
+            case ZSTD :
                 return CompressionCodecName.ZSTD;
-            default:
+            default :
                 return CompressionCodecName.UNCOMPRESSED;
         }
     }

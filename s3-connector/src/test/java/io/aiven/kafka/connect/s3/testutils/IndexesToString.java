@@ -18,7 +18,5 @@ package io.aiven.kafka.connect.s3.testutils;
 
 @FunctionalInterface
 public interface IndexesToString {
-    String generate(final int partition,
-                    final int epoch,
-                    final int currIdx);
+    String generate(int partition, int epoch, int currIdx);
 }

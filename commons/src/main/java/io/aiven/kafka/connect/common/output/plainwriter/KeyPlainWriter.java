@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.common.output.plainwriter;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Objects;
 
@@ -29,25 +30,28 @@ public final class KeyPlainWriter implements OutputFieldPlainWriter {
     /**
      * Takes the {@link SinkRecord}'s key as a byte array.
      *
-     * <p>If the key is {@code null}, it outputs nothing.
+     * <p>
+     * If the key is {@code null}, it outputs nothing.
      *
-     * <p>If the key is not {@code null}, it assumes the key <b>is</b> a byte array.
+     * <p>
+     * If the key is not {@code null}, it assumes the key <b>is</b> a byte array.
      *
-     * @param record       the record to get the key from
-     * @param outputStream the stream to write to
-     * @throws DataException when the key is not actually a byte array
+     * @param record
+     *            the record to get the key from
+     * @param outputStream
+     *            the stream to write to
+     * @throws DataException
+     *             when the key is not actually a byte array
      */
     @Override
-    public void write(final SinkRecord record,
-                      final OutputStream outputStream) throws IOException {
+    public void write(final SinkRecord record, final OutputStream outputStream) throws IOException {
         Objects.requireNonNull(record, "record cannot be null");
         Objects.requireNonNull(record.keySchema(), "key schema cannot be null");
         Objects.requireNonNull(outputStream, "outputStream cannot be null");
 
-        if (record.keySchema().type() != Schema.Type.BYTES
-            && record.keySchema().type() != Schema.Type.STRING) {
-            final String msg = String.format("Record key schema type must be %s or %s, %s given",
-                Schema.Type.BYTES, Schema.Type.STRING, record.keySchema().type());
+        if (record.keySchema().type() != Schema.Type.BYTES && record.keySchema().type() != Schema.Type.STRING) {
+            final String msg = String.format("Record key schema type must be %s or %s, %s given", Schema.Type.BYTES,
+                    Schema.Type.STRING, record.keySchema().type());
             throw new DataException(msg);
         }
 
@@ -59,7 +63,7 @@ public final class KeyPlainWriter implements OutputFieldPlainWriter {
         if (record.key() instanceof byte[]) {
             outputStream.write(Base64.getEncoder().encode((byte[]) record.key()));
         } else if (record.key() instanceof String) {
-            outputStream.write(Base64.getEncoder().encode(((String) record.key()).getBytes()));
+            outputStream.write(Base64.getEncoder().encode(((String) record.key()).getBytes(StandardCharsets.UTF_8)));
         } else {
             throw new DataException("Key is not byte[] or String");
         }

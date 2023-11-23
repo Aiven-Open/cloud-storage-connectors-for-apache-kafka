@@ -45,10 +45,8 @@ public final class AvroOutputWriter extends OutputWriter {
     private final AvroSchemaBuilder avroSchemaBuilder;
     private final SinkRecordConverter sinkRecordConverter;
 
-    public AvroOutputWriter(final Collection<OutputField> fields,
-                            final OutputStream out,
-                            final Map<String, String> externalConfig,
-                            final boolean envelopeEnabled) {
+    public AvroOutputWriter(final Collection<OutputField> fields, final OutputStream out,
+            final Map<String, String> externalConfig, final boolean envelopeEnabled) {
         super(out, new OutputStreamWriterStub(), externalConfig);
         final AvroData avroData = new AvroData(new AvroDataConfig(externalConfig));
         this.sinkRecordConverter = new SinkRecordConverter(fields, avroData, envelopeEnabled);
@@ -62,7 +60,7 @@ public final class AvroOutputWriter extends OutputWriter {
         LOGGER.debug("Record schema is: {}", avroSchema);
 
         final GenericDatumWriter<GenericRecord> writer = new GenericDatumWriter<>(avroSchema);
-        try (final DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(writer)) {
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(writer)) {
             dataFileWriter.setCodec(avroConfiguration.codecFactory());
             dataFileWriter.create(avroSchema, outputStream);
             for (final SinkRecord record : sinkRecords) {

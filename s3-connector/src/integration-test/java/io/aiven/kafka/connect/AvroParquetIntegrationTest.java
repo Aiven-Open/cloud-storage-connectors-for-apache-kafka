@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -58,8 +60,6 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 @Testcontainers
 class AvroParquetIntegrationTest implements IntegrationBase {
     private static final String S3_ACCESS_KEY_ID = "test-key-id0";
@@ -87,12 +87,11 @@ class AvroParquetIntegrationTest implements IntegrationBase {
 
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
-        s3Prefix = COMMON_PREFIX
-            + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
+        s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
-        final AmazonS3 s3 = IntegrationBase.createS3Client(LOCALSTACK);
+        final AmazonS3 s3Client = IntegrationBase.createS3Client(LOCALSTACK);
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
-        testBucketAccessor = new BucketAccessor(s3, TEST_BUCKET_NAME);
+        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
         testBucketAccessor.createBucket();
 
         pluginDir = IntegrationBase.getPluginDir();
@@ -124,7 +123,7 @@ class AvroParquetIntegrationTest implements IntegrationBase {
 
     @Test
     final void allOutputFields(@TempDir final Path tmpDir, final TestInfo testInfo)
-        throws ExecutionException, InterruptedException, IOException {
+            throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final String compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
@@ -132,19 +131,25 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectRunner.createConnector(connectorConfig);
 
-        final Schema valueSchema =
-            SchemaBuilder.record("value")
-                        .fields()
-                        .name("name").type().stringType().noDefault()
-                        .name("value").type().stringType().noDefault()
-                        .endRecord();
+        final Schema valueSchema = SchemaBuilder.record("value")
+                .fields()
+                .name("name")
+                .type()
+                .stringType()
+                .noDefault()
+                .name("value")
+                .type()
+                .stringType()
+                .noDefault()
+                .endRecord();
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         int cnt = 0;
         for (int i = 0; i < 10; i++) {
             for (int partition = 0; partition < 4; partition++) {
                 final var key = "key-" + cnt;
-                final GenericRecord value = new GenericData.Record(valueSchema);
+                final GenericRecord value = new GenericData.Record(valueSchema); // NOPMD
+                                                                                 // AvoidInstantiatingObjectsInLoops
                 value.put("name", "user-" + cnt);
                 value.put("value", "value-" + cnt);
                 cnt += 1;
@@ -159,19 +164,14 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         // TODO more robust way to detect that Connect finished processing
         Thread.sleep(OFFSET_FLUSH_INTERVAL_MS * 2);
 
-        final List<String> expectedBlobs = List.of(
-            getBlobName(topicName, 0, 0, compression),
-            getBlobName(topicName, 1, 0, compression),
-            getBlobName(topicName, 2, 0, compression),
-            getBlobName(topicName, 3, 0, compression));
+        final List<String> expectedBlobs = List.of(getBlobName(topicName, 0, 0, compression),
+                getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
+                getBlobName(topicName, 3, 0, compression));
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
-            final var records =
-                    ParquetUtils.readRecords(
-                            tmpDir.resolve(Paths.get(blobName)),
-                            testBucketAccessor.readBytes(blobName)
-                    );
+            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName));
             blobContents.put(blobName, records);
         }
 
@@ -198,7 +198,7 @@ class AvroParquetIntegrationTest implements IntegrationBase {
 
     @Test
     final void valueComplexType(@TempDir final Path tmpDir, final TestInfo testInfo)
-        throws ExecutionException, InterruptedException, IOException {
+            throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final String compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
@@ -206,19 +206,25 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectRunner.createConnector(connectorConfig);
 
-        final Schema valueSchema =
-            SchemaBuilder.record("value")
-                        .fields()
-                        .name("name").type().stringType().noDefault()
-                        .name("value").type().stringType().noDefault()
-                        .endRecord();
+        final Schema valueSchema = SchemaBuilder.record("value")
+                .fields()
+                .name("name")
+                .type()
+                .stringType()
+                .noDefault()
+                .name("value")
+                .type()
+                .stringType()
+                .noDefault()
+                .endRecord();
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         int cnt = 0;
         for (int i = 0; i < 10; i++) {
             for (int partition = 0; partition < 4; partition++) {
                 final var key = "key-" + cnt;
-                final GenericRecord value = new GenericData.Record(valueSchema);
+                final GenericRecord value = new GenericData.Record(valueSchema); // NOPMD
+                                                                                 // AvoidInstantiatingObjectsInLoops
                 value.put("name", "user-" + cnt);
                 value.put("value", "value-" + cnt);
                 cnt += 1;
@@ -233,18 +239,13 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         // TODO more robust way to detect that Connect finished processing
         Thread.sleep(OFFSET_FLUSH_INTERVAL_MS * 2);
 
-        final List<String> expectedBlobs = List.of(
-            getBlobName(topicName, 0, 0, compression),
-            getBlobName(topicName, 1, 0, compression),
-            getBlobName(topicName, 2, 0, compression),
-            getBlobName(topicName, 3, 0, compression));
+        final List<String> expectedBlobs = List.of(getBlobName(topicName, 0, 0, compression),
+                getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
+                getBlobName(topicName, 3, 0, compression));
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final var records =
-                    ParquetUtils.readRecords(
-                            tmpDir.resolve(Paths.get(blobName)),
-                            testBucketAccessor.readBytes(blobName)
-                    );
+            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName));
             blobContents.put(blobName, records);
         }
         cnt = 0;
@@ -266,7 +267,7 @@ class AvroParquetIntegrationTest implements IntegrationBase {
 
     @Test
     final void schemaChanged(@TempDir final Path tmpDir, final TestInfo testInfo)
-        throws ExecutionException, InterruptedException, IOException {
+            throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final String compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
@@ -274,34 +275,48 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectRunner.createConnector(connectorConfig);
 
-        final Schema valueSchema =
-            SchemaBuilder.record("value")
-                        .fields()
-                        .name("name").type().stringType().noDefault()
-                        .name("value").type().stringType().noDefault()
-                        .endRecord();
+        final Schema valueSchema = SchemaBuilder.record("value")
+                .fields()
+                .name("name")
+                .type()
+                .stringType()
+                .noDefault()
+                .name("value")
+                .type()
+                .stringType()
+                .noDefault()
+                .endRecord();
 
-        final Schema newValueSchema =
-                SchemaBuilder.record("value")
-                        .fields()
-                        .name("name").type().stringType().noDefault()
-                        .name("value").type().stringType().noDefault()
-                        .name("blocked").type().booleanType().booleanDefault(false)
-                        .endRecord();
+        final Schema newValueSchema = SchemaBuilder.record("value")
+                .fields()
+                .name("name")
+                .type()
+                .stringType()
+                .noDefault()
+                .name("value")
+                .type()
+                .stringType()
+                .noDefault()
+                .name("blocked")
+                .type()
+                .booleanType()
+                .booleanDefault(false)
+                .endRecord();
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
+        final int recordsBeforeSchemaChange = 5;
         int cnt = 0;
         final var expectedRecords = new ArrayList<String>();
         for (int i = 0; i < 10; i++) {
             for (int partition = 0; partition < 4; partition++) {
                 final var key = "key-" + cnt;
                 final GenericRecord value;
-                if (i < 5) {
-                    value = new GenericData.Record(valueSchema);
+                if (i < recordsBeforeSchemaChange) {
+                    value = new GenericData.Record(valueSchema); // NOPMD AvoidInstantiatingObjectsInLoops
                     value.put("name", "user-" + cnt);
                     value.put("value", "value-" + cnt);
                 } else {
-                    value = new GenericData.Record(newValueSchema);
+                    value = new GenericData.Record(newValueSchema); // NOPMD AvoidInstantiatingObjectsInLoops
                     value.put("name", "user-" + cnt);
                     value.put("value", "value-" + cnt);
                     value.put("blocked", true);
@@ -319,47 +334,35 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         // TODO more robust way to detect that Connect finished processing
         Thread.sleep(OFFSET_FLUSH_INTERVAL_MS * 2);
 
-        final List<String> expectedBlobs = Arrays.asList(
-            getBlobName(topicName, 0, 0, compression),
-            getBlobName(topicName, 0, 5, compression),
-            getBlobName(topicName, 1, 0, compression),
-            getBlobName(topicName, 1, 5, compression),
-            getBlobName(topicName, 2, 0, compression),
-            getBlobName(topicName, 2, 5, compression),
-            getBlobName(topicName, 3, 0, compression),
-            getBlobName(topicName, 3, 5, compression)
-        );
+        final List<String> expectedBlobs = Arrays.asList(getBlobName(topicName, 0, 0, compression),
+                getBlobName(topicName, 0, 5, compression), getBlobName(topicName, 1, 0, compression),
+                getBlobName(topicName, 1, 5, compression), getBlobName(topicName, 2, 0, compression),
+                getBlobName(topicName, 2, 5, compression), getBlobName(topicName, 3, 0, compression),
+                getBlobName(topicName, 3, 5, compression));
         final var blobContents = new ArrayList<String>();
         for (final String blobName : expectedBlobs) {
-            final var records =
-                    ParquetUtils.readRecords(
-                            tmpDir.resolve(Paths.get(blobName)),
-                            testBucketAccessor.readBytes(blobName)
-                    );
+            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName));
             blobContents.addAll(records.stream().map(r -> r.get("value").toString()).collect(Collectors.toList()));
         }
 
-        assertThat(blobContents)
-            .containsExactlyInAnyOrderElementsOf(expectedRecords);
+        assertThat(blobContents).containsExactlyInAnyOrderElementsOf(expectedRecords);
     }
 
     private KafkaProducer<String, GenericRecord> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-            "io.confluent.kafka.serializers.KafkaAvroSerializer");
+                "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-            "io.confluent.kafka.serializers.KafkaAvroSerializer");
+                "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put("schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
         return new KafkaProducer<>(producerProps);
     }
 
-    private Future<RecordMetadata> sendMessageAsync(final String topicName,
-                                                    final int partition,
-                                                    final String key,
-                                                    final GenericRecord value) {
-        final ProducerRecord<String, GenericRecord> msg = new ProducerRecord<>(
-                topicName, partition, key, value);
+    private Future<RecordMetadata> sendMessageAsync(final String topicName, final int partition, final String key,
+            final GenericRecord value) {
+        final ProducerRecord<String, GenericRecord> msg = new ProducerRecord<>(topicName, partition, key, value);
         return producer.send(msg);
     }
 
@@ -392,7 +395,7 @@ class AvroParquetIntegrationTest implements IntegrationBase {
 
     // WARN: different from GCS
     private String getBlobName(final String topicName, final int partition, final int startOffset,
-                               final String compression) {
+            final String compression) {
         final String result = String.format("%s%s-%d-%020d", s3Prefix, topicName, partition, startOffset);
         return result + CompressionType.forName(compression).extension();
     }

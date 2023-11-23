@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.s3;
 
+import static com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.time.LocalDateTime;
@@ -51,9 +53,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-
-public class S3SinkTask extends SinkTask {
+@SuppressWarnings("PMD.ExcessiveImports")
+public final class S3SinkTask extends SinkTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AivenKafkaConnectS3SinkConnector.class);
 
@@ -63,10 +64,11 @@ public class S3SinkTask extends SinkTask {
 
     private AmazonS3 s3Client;
 
-    protected AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
+    AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
 
-    // required by Connect
+    @SuppressWarnings("PMD.UnnecessaryConstructor") // required by Connect
     public S3SinkTask() {
+        super();
     }
 
     @Override
@@ -76,7 +78,7 @@ public class S3SinkTask extends SinkTask {
         s3Client = createAmazonS3Client(config);
         try {
             recordGrouper = RecordGrouperFactory.newRecordGrouper(config);
-        } catch (final Exception e) {
+        } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
             throw new ConnectException("Unsupported file name template " + config.getFilename(), e);
         }
         if (Objects.nonNull(config.getKafkaRetryBackoffMs())) {
@@ -86,23 +88,15 @@ public class S3SinkTask extends SinkTask {
 
     private AmazonS3 createAmazonS3Client(final S3SinkConfig config) {
         final var awsEndpointConfig = newEndpointConfiguration(this.config);
-        final var clientConfig =
-                PredefinedClientConfigurations.defaultConfig()
-                        .withRetryPolicy(new RetryPolicy(
-                                PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
-                                new PredefinedBackoffStrategies.FullJitterBackoffStrategy(
-                                        Math.toIntExact(config.getS3RetryBackoffDelayMs()),
-                                        Math.toIntExact(config.getS3RetryBackoffMaxDelayMs())
-                                ),
-                                config.getS3RetryBackoffMaxRetries(),
-                                false)
-                        );
-        final var s3ClientBuilder =
-                AmazonS3ClientBuilder
-                        .standard()
-                        .withCredentials(
-                                credentialFactory.getProvider(config)
-                        ).withClientConfiguration(clientConfig);
+        final var clientConfig = PredefinedClientConfigurations.defaultConfig()
+                .withRetryPolicy(new RetryPolicy(PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
+                        new PredefinedBackoffStrategies.FullJitterBackoffStrategy(
+                                Math.toIntExact(config.getS3RetryBackoffDelayMs()),
+                                Math.toIntExact(config.getS3RetryBackoffMaxDelayMs())),
+                        config.getS3RetryBackoffMaxRetries(), false));
+        final var s3ClientBuilder = AmazonS3ClientBuilder.standard()
+                .withCredentials(credentialFactory.getProvider(config))
+                .withClientConfiguration(clientConfig);
         if (Objects.isNull(awsEndpointConfig)) {
             s3ClientBuilder.withRegion(config.getAwsS3Region());
         } else {
@@ -112,10 +106,10 @@ public class S3SinkTask extends SinkTask {
     }
 
     @Override
-    public void put(final Collection<SinkRecord> records) throws ConnectException {
+    public void put(final Collection<SinkRecord> records) {
         Objects.requireNonNull(records, "records cannot be null");
         LOGGER.info("Processing {} records", records.size());
-        records.forEach(recordGrouper :: put);
+        records.forEach(recordGrouper::put);
     }
 
     @Override
@@ -133,14 +127,13 @@ public class S3SinkTask extends SinkTask {
             return;
         }
         final SinkRecord sinkRecord = records.get(0);
-        try (final var out = newStreamFor(filename, sinkRecord);
-             final var outputWriter =
-                     OutputWriter.builder()
-                             .withCompressionType(config.getCompressionType())
-                             .withExternalProperties(config.originalsStrings())
-                             .withOutputFields(config.getOutputFields())
-                             .withEnvelopeEnabled(config.envelopeEnabled())
-                             .build(out, config.getFormatType())) {
+        try (var out = newStreamFor(filename, sinkRecord);
+                var outputWriter = OutputWriter.builder()
+                        .withCompressionType(config.getCompressionType())
+                        .withExternalProperties(config.originalsStrings())
+                        .withOutputFields(config.getOutputFields())
+                        .withEnvelopeEnabled(config.envelopeEnabled())
+                        .build(out, config.getFormatType())) {
             outputWriter.writeRecords(records);
         } catch (final IOException e) {
             throw new ConnectException(e);
@@ -171,40 +164,20 @@ public class S3SinkTask extends SinkTask {
     }
 
     private String oldFullKey(final SinkRecord record) {
-        final var prefix =
-            config.getPrefixTemplate()
+        final var prefix = config.getPrefixTemplate()
                 .instance()
-                .bindVariable(
-                    FilenameTemplateVariable.TIMESTAMP.name,
-                    parameter -> OldFullKeyFormatters.timestamp(record, config.getTimestampSource(), parameter)
-                )
-                .bindVariable(
-                    FilenameTemplateVariable.PARTITION.name,
-                    () -> record.kafkaPartition().toString()
-                )
-                .bindVariable(
-                    FilenameTemplateVariable.START_OFFSET.name,
-                    parameter -> OldFullKeyFormatters.KAFKA_OFFSET.apply(record, parameter)
-                )
+                .bindVariable(FilenameTemplateVariable.TIMESTAMP.name,
+                        parameter -> OldFullKeyFormatters.timestamp(record, config.getTimestampSource(), parameter))
+                .bindVariable(FilenameTemplateVariable.PARTITION.name, () -> record.kafkaPartition().toString())
+                .bindVariable(FilenameTemplateVariable.START_OFFSET.name,
+                        parameter -> OldFullKeyFormatters.KAFKA_OFFSET.apply(record, parameter))
                 .bindVariable(FilenameTemplateVariable.TOPIC.name, record::topic)
-                .bindVariable(
-                    "utc_date",
-                    () -> ZonedDateTime.now(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_LOCAL_DATE)
-                )
-                .bindVariable(
-                    "local_date",
-                    () -> LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-                )
+                .bindVariable("utc_date",
+                        () -> ZonedDateTime.now(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_LOCAL_DATE))
+                .bindVariable("local_date", () -> LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
                 .render();
-        final var key =
-            String.format(
-                "%s-%s-%s",
-                record.topic(),
-                record.kafkaPartition(),
-                OldFullKeyFormatters.KAFKA_OFFSET.apply(
-                    record, VariableTemplatePart.Parameter.of("padding", "true")
-                )
-            );
+        final var key = String.format("%s-%s-%s", record.topic(), record.kafkaPartition(),
+                OldFullKeyFormatters.KAFKA_OFFSET.apply(record, VariableTemplatePart.Parameter.of("padding", "true")));
         // Keep this in line with io.aiven.kafka.connect.common.config.AivenCommonConfig#getFilename
         final String formatSuffix = FormatType.AVRO.equals(config.getFormatType()) ? ".avro" : "";
         return prefix + key + formatSuffix + config.getCompressionType().extension();

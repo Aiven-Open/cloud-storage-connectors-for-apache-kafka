@@ -27,7 +27,9 @@ import org.apache.kafka.connect.sink.SinkRecord;
 public interface RecordGrouper {
     /**
      * Associate the record with the appropriate file.
-     * @param record - record to group
+     *
+     * @param record
+     *            - record to group
      */
     void put(SinkRecord record);
 
@@ -38,13 +40,14 @@ public interface RecordGrouper {
 
     /**
      * Get all records associated with files, grouped by the file name.
+     *
      * @return map of records assotiated with files
      */
     Map<String, List<SinkRecord>> records();
 
     interface Rotator<T> {
 
-        boolean rotate(T t);
+        boolean rotate(T target);
 
     }
 

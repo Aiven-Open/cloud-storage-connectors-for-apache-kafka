@@ -27,6 +27,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.confluent.connect.avro.AvroData;
 import io.confluent.kafka.serializers.NonRecordContainer;
 import org.apache.avro.Schema;
@@ -35,7 +36,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SinkRecordConverter {
+final public class SinkRecordConverter {
 
     private final Logger logger = LoggerFactory.getLogger(SinkRecordConverter.class);
 
@@ -45,13 +46,15 @@ public class SinkRecordConverter {
 
     private final boolean envelopeEnabled;
 
-    public SinkRecordConverter(final Collection<OutputField> fields,
-                               final AvroData avroData, final boolean envelopeEnabled) {
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields and avroData")
+    public SinkRecordConverter(final Collection<OutputField> fields, final AvroData avroData,
+            final boolean envelopeEnabled) {
         this.fields = fields;
         this.avroData = avroData;
         this.envelopeEnabled = envelopeEnabled;
     }
 
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields and avroData")
     public SinkRecordConverter(final Collection<OutputField> fields, final AvroData avroData) {
         this.fields = fields;
         this.avroData = avroData;
@@ -82,8 +85,8 @@ public class SinkRecordConverter {
         final var fieldValue = getRecordValueFor(field.getFieldType(), record);
         final Schema.Type originalValueSchemaType = avroData.fromConnectSchema(record.valueSchema()).getType();
         if (originalValueSchemaType == Schema.Type.MAP) {
-            @SuppressWarnings("unchecked") final Set<Map.Entry<String, Object>> entries =
-                ((Map<String, Object>) fieldValue).entrySet();
+            @SuppressWarnings("unchecked")
+            final Set<Map.Entry<String, Object>> entries = ((Map<String, Object>) fieldValue).entrySet();
             final var avroRecord = new GenericData.Record(schema);
             for (final Map.Entry<String, Object> entry : entries) {
                 avroRecord.put(entry.getKey(), entry.getValue());
@@ -98,26 +101,25 @@ public class SinkRecordConverter {
         }
     }
 
-
     private Object getRecordValueFor(final OutputFieldType fieldType, final SinkRecord record) {
         switch (fieldType) {
-            case KEY:
+            case KEY :
                 return fromConnectData(record.keySchema(), record.key());
-            case VALUE:
+            case VALUE :
                 return fromConnectData(record.valueSchema(), record.value());
-            case OFFSET:
+            case OFFSET :
                 return record.kafkaOffset();
-            case TIMESTAMP:
+            case TIMESTAMP :
                 return record.timestamp();
-            case HEADERS:
+            case HEADERS :
                 final var headers = new HashMap<String, Object>();
                 for (final var h : record.headers()) {
-                    final var k = h.key();
-                    final var v = fromConnectData(h.schema(), h.value());
-                    headers.put(k, v);
+                    final var key = h.key();
+                    final var value = fromConnectData(h.schema(), h.value());
+                    headers.put(key, value);
                 }
                 return headers;
-            default:
+            default :
                 throw new ConnectException("Unsupported output field: " + fieldType);
         }
     }
@@ -130,6 +132,5 @@ public class SinkRecordConverter {
             return avroDataValue;
         }
     }
-
 
 }

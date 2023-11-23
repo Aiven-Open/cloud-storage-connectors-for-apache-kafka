@@ -30,7 +30,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-class HeaderBuilder implements OutputFieldBuilder {
+final class HeaderBuilder implements OutputFieldBuilder {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -46,14 +46,13 @@ class HeaderBuilder implements OutputFieldBuilder {
     public JsonNode build(final SinkRecord record) throws IOException {
         Objects.requireNonNull(record, "record cannot be null");
 
-        final String topic = record.topic();
-
         if (record.headers() == null) {
             return null;
         }
 
         final ArrayNode root = JsonNodeFactory.instance.arrayNode();
 
+        final String topic = record.topic();
         for (final Header header : record.headers()) {
             final ObjectNode headerRoot = JsonNodeFactory.instance.objectNode();
             final String key = header.key();
@@ -66,10 +65,7 @@ class HeaderBuilder implements OutputFieldBuilder {
     }
 
     private JsonNode nodeFromHeader(final Header header, final String topic) throws IOException {
-        return objectMapper.readTree(converter.fromConnectHeader(topic,
-                                                                 header.key(),
-                                                                 header.schema(),
-                                                                 header.value()));
+        return objectMapper.readTree(converter.fromConnectHeader(topic, header.key(), header.schema(), header.value()));
 
     }
 }

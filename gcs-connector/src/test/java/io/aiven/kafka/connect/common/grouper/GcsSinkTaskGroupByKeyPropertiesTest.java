@@ -48,6 +48,7 @@ import net.jqwik.api.Property;
  * task, and check certain properties of the written files afterwards. Files are written virtually using the in-memory
  * GCS mock.
  */
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
 final class GcsSinkTaskGroupByKeyPropertiesTest extends PbtBase {
 
     @Property

@@ -27,7 +27,7 @@ public class TimeZoneValidator implements ConfigDef.Validator {
     public void ensureValid(final String name, final Object value) {
         try {
             ZoneId.of(value.toString());
-        } catch (final Exception e) {
+        } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
             throw new ConfigException(name, value, e.getMessage());
         }
     }

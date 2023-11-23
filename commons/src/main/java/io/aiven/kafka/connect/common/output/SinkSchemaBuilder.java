@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.output;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
@@ -27,6 +28,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.OutputField;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.confluent.connect.avro.AvroData;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
@@ -55,16 +57,16 @@ public abstract class SinkSchemaBuilder {
 
     private final boolean envelopeEnabled;
 
-    public SinkSchemaBuilder(final Collection<OutputField> fields,
-                      final AvroData avroData,
-                      final boolean envelopeEnabled) {
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields and avroData")
+    public SinkSchemaBuilder(final Collection<OutputField> fields, final AvroData avroData,
+            final boolean envelopeEnabled) {
         this.fields = fields;
         this.avroData = avroData;
         this.envelopeEnabled = envelopeEnabled;
     }
 
-    public SinkSchemaBuilder(final Collection<OutputField> fields,
-                                final AvroData avroData) {
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields and avroData")
+    public SinkSchemaBuilder(final Collection<OutputField> fields, final AvroData avroData) {
         this.fields = fields;
         this.avroData = avroData;
         this.envelopeEnabled = true;
@@ -88,9 +90,7 @@ public abstract class SinkSchemaBuilder {
 
     protected Schema avroSchemaFor(final SinkRecord record) {
         if (envelopeEnabled) {
-            final SchemaBuilder.FieldAssembler<Schema> schemaFields =
-                SchemaBuilder
-                    .builder(getNamespace())
+            final SchemaBuilder.FieldAssembler<Schema> schemaFields = SchemaBuilder.builder(getNamespace())
                     .record("connector_records")
                     .fields();
             for (final OutputField f : fields) {
@@ -109,11 +109,9 @@ public abstract class SinkSchemaBuilder {
 
         final Schema schema = outputFieldSchema(field, record);
         if (schema.getType() == Schema.Type.MAP) {
-            @SuppressWarnings("unchecked") final Map<String, Object> value =
-                (Map<String, Object>) record.value();
-            final SchemaBuilder.FieldAssembler<Schema> schemaFields =
-                SchemaBuilder
-                    .builder(getNamespace())
+            @SuppressWarnings("unchecked")
+            final Map<String, Object> value = (Map<String, Object>) record.value();
+            final SchemaBuilder.FieldAssembler<Schema> schemaFields = SchemaBuilder.builder(getNamespace())
                     .record("connector_records")
                     .fields();
             for (final Map.Entry<String, Object> entry : value.entrySet()) {
@@ -123,14 +121,13 @@ public abstract class SinkSchemaBuilder {
         } else if (schema.getType() == Schema.Type.RECORD) {
             return getAvroData().fromConnectSchema(record.valueSchema());
         } else {
-            return SchemaBuilder
-                .builder(getNamespace())
-                .record("connector_records")
-                .fields()
-                .name(field.getFieldType().name)
-                .type(schema)
-                .noDefault()
-                .endRecord();
+            return SchemaBuilder.builder(getNamespace())
+                    .record("connector_records")
+                    .fields()
+                    .name(field.getFieldType().name)
+                    .type(schema)
+                    .noDefault()
+                    .endRecord();
         }
     }
 
@@ -146,8 +143,7 @@ public abstract class SinkSchemaBuilder {
             if (Objects.isNull(headerSchema)) {
                 headerSchema = h.schema();
             } else if (headerSchema.type() != h.schema().type()) {
-                throw new DataException("Header schema " + h.schema()
-                    + " is not the same as " + headerSchema);
+                throw new DataException("Header schema " + h.schema() + " is not the same as " + headerSchema);
             }
         }
         return SchemaBuilder.map().values(avroData.fromConnectSchema(headerSchema));
@@ -155,24 +151,25 @@ public abstract class SinkSchemaBuilder {
 
     protected Schema outputFieldSchema(final OutputField field, final SinkRecord record) {
         switch (field.getFieldType()) {
-            case KEY:
+            case KEY :
                 return avroData.fromConnectSchema(record.keySchema());
-            case OFFSET:
-            case TIMESTAMP:
+            case OFFSET :
+            case TIMESTAMP :
                 return SchemaBuilder.builder().longType();
-            case VALUE:
+            case VALUE :
                 return avroData.fromConnectSchema(record.valueSchema());
-            case HEADERS:
+            case HEADERS :
                 return headersSchema(record);
-            default:
+            default :
                 throw new ConnectException("Unknown field type " + field);
         }
     }
 
     public Collection<OutputField> getFields() {
-        return fields;
+        return Collections.unmodifiableCollection(fields);
     }
 
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "returns internal mutable state")
     public AvroData getAvroData() {
         return avroData;
     }

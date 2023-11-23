@@ -25,22 +25,23 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 public interface TimestampSource {
 
-    ZonedDateTime time(final SinkRecord record);
+    ZonedDateTime time(SinkRecord record);
 
+    @SuppressWarnings("PMD.ShortMethodName")
     static TimestampSource of(final Type extractorType) {
         return of(ZoneOffset.UTC, extractorType);
     }
 
+    @SuppressWarnings("PMD.ShortMethodName")
     static TimestampSource of(final ZoneId zoneId, final Type extractorType) {
         switch (extractorType) {
-            case WALLCLOCK:
+            case WALLCLOCK :
                 return new WallclockTimestampSource(zoneId);
-            case EVENT:
+            case EVENT :
                 return new EventTimestampSource(zoneId);
-            default:
+            default :
                 throw new IllegalArgumentException(
-                    String.format("Unsupported timestamp extractor type: %s", extractorType)
-                );
+                        String.format("Unsupported timestamp extractor type: %s", extractorType));
         }
     }
 
@@ -48,9 +49,9 @@ public interface TimestampSource {
 
     enum Type {
 
-        WALLCLOCK,
-        EVENT;
+        WALLCLOCK, EVENT;
 
+        @SuppressWarnings("PMD.ShortMethodName")
         public static Type of(final String name) {
             for (final Type t : Type.values()) {
                 if (t.name().equalsIgnoreCase(name)) {
@@ -74,6 +75,7 @@ public interface TimestampSource {
             return ZonedDateTime.now(zoneId);
         }
 
+        @Override
         public Type type() {
             return Type.WALLCLOCK;
         }
@@ -88,12 +90,10 @@ public interface TimestampSource {
 
         @Override
         public ZonedDateTime time(final SinkRecord record) {
-            return ZonedDateTime.ofInstant(
-                    Instant.ofEpochMilli(record.timestamp()),
-                    zoneId
-            );
+            return ZonedDateTime.ofInstant(Instant.ofEpochMilli(record.timestamp()), zoneId);
         }
 
+        @Override
         public Type type() {
             return Type.EVENT;
         }

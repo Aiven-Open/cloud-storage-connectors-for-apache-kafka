@@ -30,15 +30,15 @@ public class OutputFieldsValidator implements ConfigDef.Validator {
     @Override
     public void ensureValid(final String name, final Object value) {
         if (Objects.nonNull(value)) {
-            @SuppressWarnings("unchecked") final List<String> valueList = (List<String>) value;
+            @SuppressWarnings("unchecked")
+            final List<String> valueList = (List<String>) value;
             if (valueList.isEmpty()) {
                 throw new ConfigException(name, valueList, "cannot be empty");
             }
             for (final String fieldName : valueList) {
                 if (!OutputFieldType.isValidName(fieldName)) {
-                    throw new ConfigException(
-                        name, value,
-                        "supported values are: " + OutputField.SUPPORTED_OUTPUT_FIELDS);
+                    throw new ConfigException(name, value,
+                            "supported values are: " + OutputField.SUPPORTED_OUTPUT_FIELDS);
                 }
             }
         }
