@@ -36,13 +36,9 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
 public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
 
-    private static final Map<String, DateTimeFormatter> TIMESTAMP_FORMATTERS =
-        Map.of(
-            "yyyy", DateTimeFormatter.ofPattern("yyyy"),
-            "MM", DateTimeFormatter.ofPattern("MM"),
-            "dd", DateTimeFormatter.ofPattern("dd"),
-            "HH", DateTimeFormatter.ofPattern("HH")
-        );
+    private static final Map<String, DateTimeFormatter> TIMESTAMP_FORMATTERS = Map.of("yyyy",
+            DateTimeFormatter.ofPattern("yyyy"), "MM", DateTimeFormatter.ofPattern("MM"), "dd",
+            DateTimeFormatter.ofPattern("dd"), "HH", DateTimeFormatter.ofPattern("HH"));
 
     private final Template filenameTemplate;
 
@@ -54,15 +50,14 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
 
     private final Rotator<List<SinkRecord>> rotator;
 
-    TopicPartitionKeyRecordGrouper(final Template filenameTemplate,
-                                   final Integer maxRecordsPerFile,
-                                   final TimestampSource tsSource) {
+    TopicPartitionKeyRecordGrouper(final Template filenameTemplate, final Integer maxRecordsPerFile,
+            final TimestampSource tsSource) {
         Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
         Objects.requireNonNull(tsSource, "tsSource cannot be null");
         this.filenameTemplate = filenameTemplate;
 
-        this.setTimestampBasedOnRecord =
-            record -> parameter -> tsSource.time(record).format(TIMESTAMP_FORMATTERS.get(parameter.value()));
+        this.setTimestampBasedOnRecord = record -> parameter -> tsSource.time(record)
+                .format(TIMESTAMP_FORMATTERS.get(parameter.getValue()));
 
         this.rotator = buffer -> {
             final var unlimited = maxRecordsPerFile == null;
@@ -84,8 +79,8 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
     protected String resolveRecordKeyFor(final SinkRecord record) {
         final var key = recordKey(record);
 
-        final TopicPartitionKey tpk =
-            new TopicPartitionKey(new TopicPartition(record.topic(), record.kafkaPartition()), key);
+        final TopicPartitionKey tpk = new TopicPartitionKey(new TopicPartition(record.topic(), record.kafkaPartition()),
+                key);
         final SinkRecord currentHeadRecord = currentHeadRecords.computeIfAbsent(tpk, ignored -> record);
         String objectKey = generateObjectKey(tpk, currentHeadRecord, record);
         if (rotator.rotate(fileBuffers.get(objectKey))) {
@@ -107,33 +102,22 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
         return key;
     }
 
-    public String generateObjectKey(
-        final TopicPartitionKey tpk,
-        final SinkRecord headRecord,
-        final SinkRecord currentRecord) {
-        final Function<Parameter, String> setKafkaOffset =
-            usePaddingParameter -> usePaddingParameter.asBoolean()
+    public String generateObjectKey(final TopicPartitionKey tpk, final SinkRecord headRecord,
+            final SinkRecord currentRecord) {
+        final Function<Parameter, String> setKafkaOffset = usePaddingParameter -> usePaddingParameter.asBoolean()
                 ? String.format("%020d", headRecord.kafkaOffset())
                 : Long.toString(headRecord.kafkaOffset());
-        final Function<Parameter, String> setKafkaPartition =
-            usePaddingParameter -> usePaddingParameter.asBoolean()
+        final Function<Parameter, String> setKafkaPartition = usePaddingParameter -> usePaddingParameter.asBoolean()
                 ? String.format("%010d", headRecord.kafkaPartition())
                 : Long.toString(headRecord.kafkaPartition());
 
-
         return filenameTemplate.instance()
-            .bindVariable(FilenameTemplateVariable.TOPIC.name, tpk.topicPartition::topic)
-            .bindVariable(
-                FilenameTemplateVariable.PARTITION.name,
-                setKafkaPartition)
-            .bindVariable(FilenameTemplateVariable.KEY.name, tpk::key)
-            .bindVariable(
-                FilenameTemplateVariable.START_OFFSET.name,
-                setKafkaOffset)
-            .bindVariable(
-                FilenameTemplateVariable.TIMESTAMP.name,
-                setTimestampBasedOnRecord.apply(currentRecord))
-            .render();
+                .bindVariable(FilenameTemplateVariable.TOPIC.name, tpk.topicPartition::topic)
+                .bindVariable(FilenameTemplateVariable.PARTITION.name, setKafkaPartition)
+                .bindVariable(FilenameTemplateVariable.KEY.name, tpk::getKey)
+                .bindVariable(FilenameTemplateVariable.START_OFFSET.name, setKafkaOffset)
+                .bindVariable(FilenameTemplateVariable.TIMESTAMP.name, setTimestampBasedOnRecord.apply(currentRecord))
+                .render();
     }
 
     protected String generateNewRecordKey(final SinkRecord record) {
@@ -163,19 +147,19 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
             this.key = key;
         }
 
-        public String key() {
+        public String getKey() {
             return key;
         }
 
         @Override
-        public boolean equals(final Object o) {
-            if (this == o) {
+        public boolean equals(final Object other) {
+            if (this == other) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            if (other == null || getClass() != other.getClass()) {
                 return false;
             }
-            final TopicPartitionKey that = (TopicPartitionKey) o;
+            final TopicPartitionKey that = (TopicPartitionKey) other;
             return Objects.equals(topicPartition, that.topicPartition) && Objects.equals(key, that.key);
         }
 

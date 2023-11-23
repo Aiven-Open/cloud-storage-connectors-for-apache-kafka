@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.common.output;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -40,9 +42,7 @@ import io.aiven.kafka.connect.common.output.jsonwriter.JsonLinesOutputWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
+final class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
     private final OutputFieldEncodingType noEncoding = OutputFieldEncodingType.NONE;
 
     @BeforeEach
@@ -84,8 +84,8 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
         final Struct struct = new Struct(level1Schema).put("name", "John");
         final SinkRecord record = createRecord("key0", level1Schema, struct, 1, 1000L);
 
-        try (final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            final JsonLinesOutputWriter writer = new JsonLinesOutputWriter(fields, byteStream, false)) {
+        try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+                JsonLinesOutputWriter writer = new JsonLinesOutputWriter(fields, byteStream, false)) {
 
             writer.writeRecord(record);
 
@@ -120,7 +120,7 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
         final SinkRecord record2 = createRecord("key0", level1Schema, struct2, 1, 1000L);
 
         final String expected = "{\"value\":{\"name\":\"John\"},\"key\":\"key0\"}\n"
-                              + "{\"value\":{\"name\":\"Pekka\"},\"key\":\"key0\"}";
+                + "{\"value\":{\"name\":\"Pekka\"},\"key\":\"key0\"}";
 
         assertRecords(Arrays.asList(record1, record2), expected);
     }
@@ -128,8 +128,7 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
     @Test
     void jsonValueWithAllMetadata() throws IOException {
         final List<OutputField> fields = Arrays.asList(new OutputField(OutputFieldType.VALUE, noEncoding),
-                new OutputField(OutputFieldType.KEY, noEncoding),
-                new OutputField(OutputFieldType.OFFSET, noEncoding),
+                new OutputField(OutputFieldType.KEY, noEncoding), new OutputField(OutputFieldType.OFFSET, noEncoding),
                 new OutputField(OutputFieldType.TIMESTAMP, noEncoding),
                 new OutputField(OutputFieldType.HEADERS, noEncoding));
         sut = new JsonLinesOutputWriter(fields, byteStream);
@@ -138,11 +137,8 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
         final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
         record1.headers().add("headerKey", "headerValue", Schema.STRING_SCHEMA);
 
-        final String expected = "{\"headers\":[{\"key\":\"headerKey\",\"value\":\"headerValue\"}],"
-                + "\"offset\":1,"
-                + "\"value\":{\"name\":\"John\"},"
-                + "\"key\":\"key0\","
-                + "\"timestamp\":\"1970-01-01T00:00:01Z\"}";
+        final String expected = "{\"headers\":[{\"key\":\"headerKey\",\"value\":\"headerValue\"}]," + "\"offset\":1,"
+                + "\"value\":{\"name\":\"John\"}," + "\"key\":\"key0\"," + "\"timestamp\":\"1970-01-01T00:00:01Z\"}";
 
         assertRecords(Collections.singletonList(record1), expected);
     }
@@ -158,10 +154,8 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
         record1.headers().add("headerKey1", "headerValue1", Schema.STRING_SCHEMA);
         record1.headers().add("headerKey2", "headerValue2", Schema.STRING_SCHEMA);
 
-        final String expected = "{\"headers\":"
-                + "[{\"key\":\"headerKey1\",\"value\":\"headerValue1\"},"
-                + "{\"key\":\"headerKey2\",\"value\":\"headerValue2\"}],"
-                                + "\"value\":{\"name\":\"John\"}}";
+        final String expected = "{\"headers\":" + "[{\"key\":\"headerKey1\",\"value\":\"headerValue1\"},"
+                + "{\"key\":\"headerKey2\",\"value\":\"headerValue2\"}]," + "\"value\":{\"name\":\"John\"}}";
 
         assertRecords(Collections.singletonList(record1), expected);
     }
@@ -235,28 +229,28 @@ class JsonLinesOutputWriterTest extends JsonOutputWriterTestHelper {
         final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
         final SinkRecord record2 = createRecord("key0", level1Schema, struct2, 1, 1000L);
 
-        final String expected = "{\"value\":{\"name\":\"John\"}}\n"
-            + "{\"value\":{\"name\":\"Pekka\"}}";
+        final String expected = "{\"value\":{\"name\":\"John\"}}\n" + "{\"value\":{\"name\":\"Pekka\"}}";
 
         assertThat(useWithWrongLastRecord(Arrays.asList(record1, record2))).isEqualTo(expected);
     }
 
+    @Override
     protected String parseJson(final byte[] json) throws IOException {
         final Charset utf8 = StandardCharsets.UTF_8;
-        final ByteArrayInputStream stream = new ByteArrayInputStream(json);
-        final InputStreamReader streamReader = new InputStreamReader(stream, utf8);
-        final BufferedReader bufferedReader = new BufferedReader(streamReader);
-        final StringBuilder stringBuilder = new StringBuilder();
-
-        String jsonLine = bufferedReader.readLine();
-        while (jsonLine != null) {
-            stringBuilder.append(objectMapper.readTree(jsonLine.getBytes(utf8)).toString());
-            jsonLine = bufferedReader.readLine();
-            if (jsonLine != null) {
-                stringBuilder.append("\n");
+        try (ByteArrayInputStream stream = new ByteArrayInputStream(json);
+                InputStreamReader streamReader = new InputStreamReader(stream, utf8);
+                BufferedReader bufferedReader = new BufferedReader(streamReader);) {
+            final StringBuilder stringBuilder = new StringBuilder();
+            String jsonLine = bufferedReader.readLine();
+            while (jsonLine != null) {
+                stringBuilder.append(objectMapper.readTree(jsonLine.getBytes(utf8)).toString());
+                jsonLine = bufferedReader.readLine();
+                if (jsonLine != null) {
+                    stringBuilder.append('\n');
+                }
             }
+            return stringBuilder.toString();
         }
-        return stringBuilder.toString();
     }
 
 }

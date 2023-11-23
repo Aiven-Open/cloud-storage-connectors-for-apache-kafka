@@ -16,11 +16,11 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.aiven.kafka.connect.common.templating.Template;
 
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 final class RecordGrouperFactoryTest {
 

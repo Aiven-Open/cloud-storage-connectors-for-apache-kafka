@@ -28,24 +28,28 @@ public abstract class AbstractValuePlainWriter implements OutputFieldPlainWriter
     /**
      * Takes the {@link SinkRecord}'s value as a byte array.
      *
-     * <p>If the value is {@code null}, it outputs nothing.
+     * <p>
+     * If the value is {@code null}, it outputs nothing.
      *
-     * <p>If the value is not {@code null}, it assumes the value <b>is</b> a byte array.
+     * <p>
+     * If the value is not {@code null}, it assumes the value <b>is</b> a byte array.
      *
-     * @param record       the record to get the value from
-     * @param outputStream the stream to write to
-     * @throws DataException when the value is not actually a byte array
+     * @param record
+     *            the record to get the value from
+     * @param outputStream
+     *            the stream to write to
+     * @throws DataException
+     *             when the value is not actually a byte array
      */
     @Override
-    public void write(final SinkRecord record,
-                      final OutputStream outputStream) throws IOException {
+    public void write(final SinkRecord record, final OutputStream outputStream) throws IOException {
         Objects.requireNonNull(record, "record cannot be null");
         Objects.requireNonNull(record.valueSchema(), "value schema cannot be null");
         Objects.requireNonNull(outputStream, "outputStream cannot be null");
 
         if (record.valueSchema().type() != Schema.Type.BYTES) {
-            final String msg = String.format("Record value schema type must be %s, %s given",
-                Schema.Type.BYTES, record.valueSchema().type());
+            final String msg = String.format("Record value schema type must be %s, %s given", Schema.Type.BYTES,
+                    record.valueSchema().type());
             throw new DataException(msg);
         }
 
@@ -61,5 +65,5 @@ public abstract class AbstractValuePlainWriter implements OutputFieldPlainWriter
         outputStream.write(getOutputBytes((byte[]) record.value()));
     }
 
-    protected abstract byte[] getOutputBytes(final byte[] value);
+    protected abstract byte[] getOutputBytes(byte[] value);
 }

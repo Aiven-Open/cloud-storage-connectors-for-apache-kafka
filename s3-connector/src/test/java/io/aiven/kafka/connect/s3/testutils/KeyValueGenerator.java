@@ -25,10 +25,8 @@ public class KeyValueGenerator implements Iterable<KeyValueMessage> {
     public final IndexesToString keyGenerator;
     public final IndexesToString valueGenerator;
 
-    public KeyValueGenerator(final int numPartitions,
-                             final int numEpochs,
-                             final IndexesToString keyGenerator,
-                             final IndexesToString valueGenerator) {
+    public KeyValueGenerator(final int numPartitions, final int numEpochs, final IndexesToString keyGenerator,
+            final IndexesToString valueGenerator) {
         this.numPartitions = numPartitions;
         this.numEpochs = numEpochs;
         this.keyGenerator = keyGenerator;
@@ -38,9 +36,9 @@ public class KeyValueGenerator implements Iterable<KeyValueMessage> {
     @Override
     public Iterator<KeyValueMessage> iterator() {
         return new Iterator<>() {
-            int partition = 0;
-            int epoch = 0;
-            int currIdx = 0;
+            int partition;
+            int epoch;
+            int currIdx;
 
             @Override
             public boolean hasNext() {
@@ -49,13 +47,8 @@ public class KeyValueGenerator implements Iterable<KeyValueMessage> {
 
             @Override
             public KeyValueMessage next() {
-                final KeyValueMessage msg =
-                    new KeyValueMessage(keyGenerator.generate(partition, epoch, currIdx),
-                                         valueGenerator.generate(partition, epoch, currIdx),
-                                         partition,
-                                         currIdx,
-                                         epoch
-                    );
+                final KeyValueMessage msg = new KeyValueMessage(keyGenerator.generate(partition, epoch, currIdx),
+                        valueGenerator.generate(partition, epoch, currIdx), partition, currIdx, epoch);
                 currIdx += 1;
                 partition += 1;
                 if (partition >= numPartitions) {

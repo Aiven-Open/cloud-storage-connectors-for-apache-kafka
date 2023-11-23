@@ -42,84 +42,84 @@ public final class RecordGrouperFactory {
 
     public static final String KEY_TOPIC_PARTITION_RECORD = KeyAndTopicPartitionRecordGrouper.class.getName();
 
-    public static final Map<String, List<Pair<String, Boolean>>> SUPPORTED_VARIABLES = new LinkedHashMap<>() {{
-                put(TOPIC_PARTITION_RECORD, List.of(
-                    Pair.of(FilenameTemplateVariable.TOPIC.name, true),
-                    Pair.of(FilenameTemplateVariable.PARTITION.name, true),
-                    Pair.of(FilenameTemplateVariable.START_OFFSET.name, true),
-                    Pair.of(FilenameTemplateVariable.TIMESTAMP.name, false)
-                ));
-                put(TOPIC_PARTITION_KEY_RECORD, List.of(
-                    Pair.of(FilenameTemplateVariable.TOPIC.name, true),
-                    Pair.of(FilenameTemplateVariable.PARTITION.name, true),
-                    Pair.of(FilenameTemplateVariable.KEY.name, true),
-                    Pair.of(FilenameTemplateVariable.START_OFFSET.name, true),
-                    Pair.of(FilenameTemplateVariable.TIMESTAMP.name, false)
-                ));
-                put(KEY_RECORD, List.of(Pair.of(FilenameTemplateVariable.KEY.name, true)));
-                put(KEY_TOPIC_PARTITION_RECORD, List.of(
-                    Pair.of(FilenameTemplateVariable.KEY.name, true),
-                    Pair.of(FilenameTemplateVariable.TOPIC.name, false),
-                    Pair.of(FilenameTemplateVariable.PARTITION.name, false)
-                ));
-            }};
+    private static final Map<String, List<Pair<String, Boolean>>> SUPPORTED_VARIABLES = new LinkedHashMap<>();
 
-    public static final List<String> ALL_SUPPORTED_VARIABLES =
-        SUPPORTED_VARIABLES.values()
+    static {
+        SUPPORTED_VARIABLES.put(TOPIC_PARTITION_RECORD,
+                List.of(Pair.of(FilenameTemplateVariable.TOPIC.name, true),
+                        Pair.of(FilenameTemplateVariable.PARTITION.name, true),
+                        Pair.of(FilenameTemplateVariable.START_OFFSET.name, true),
+                        Pair.of(FilenameTemplateVariable.TIMESTAMP.name, false)));
+        SUPPORTED_VARIABLES.put(TOPIC_PARTITION_KEY_RECORD,
+                List.of(Pair.of(FilenameTemplateVariable.TOPIC.name, true),
+                        Pair.of(FilenameTemplateVariable.PARTITION.name, true),
+                        Pair.of(FilenameTemplateVariable.KEY.name, true),
+                        Pair.of(FilenameTemplateVariable.START_OFFSET.name, true),
+                        Pair.of(FilenameTemplateVariable.TIMESTAMP.name, false)));
+        SUPPORTED_VARIABLES.put(KEY_RECORD, List.of(Pair.of(FilenameTemplateVariable.KEY.name, true)));
+        SUPPORTED_VARIABLES.put(KEY_TOPIC_PARTITION_RECORD,
+                List.of(Pair.of(FilenameTemplateVariable.KEY.name, true),
+                        Pair.of(FilenameTemplateVariable.TOPIC.name, false),
+                        Pair.of(FilenameTemplateVariable.PARTITION.name, false)));
+    }
+
+    public static final List<String> ALL_SUPPORTED_VARIABLES = SUPPORTED_VARIABLES.values()
             .stream()
             .flatMap(List::stream)
             .map(Pair::getLeft)
             .collect(Collectors.toList());
 
-    private static final Set<String> KEY_RECORD_REQUIRED_VARS =
-        SUPPORTED_VARIABLES.get(KEY_RECORD).stream()
+    private static final Set<String> KEY_RECORD_REQUIRED_VARS = SUPPORTED_VARIABLES.get(KEY_RECORD)
+            .stream()
             .filter(Pair::getRight)
             .map(Pair::getLeft)
             .collect(Collectors.toSet());
 
-    private static final Set<String> TOPIC_PARTITION_RECORD_REQUIRED_VARS =
-        SUPPORTED_VARIABLES.get(TOPIC_PARTITION_RECORD).stream()
+    private static final Set<String> TOPIC_PARTITION_RECORD_REQUIRED_VARS = SUPPORTED_VARIABLES
+            .get(TOPIC_PARTITION_RECORD)
+            .stream()
             .filter(Pair::getRight)
             .map(Pair::getLeft)
             .collect(Collectors.toSet());
 
-
-    private static final Set<String> TOPIC_PARTITION_KEY_RECORD_REQUIRED_VARS =
-        SUPPORTED_VARIABLES.get(TOPIC_PARTITION_KEY_RECORD).stream()
+    private static final Set<String> TOPIC_PARTITION_KEY_RECORD_REQUIRED_VARS = SUPPORTED_VARIABLES
+            .get(TOPIC_PARTITION_KEY_RECORD)
+            .stream()
             .filter(Pair::getRight)
             .map(Pair::getLeft)
             .collect(Collectors.toSet());
 
-    private static final Set<String> KEY_TOPIC_PARTITION_RECORD_REQUIRED_VARS =
-        SUPPORTED_VARIABLES.get(KEY_TOPIC_PARTITION_RECORD).stream()
+    private static final Set<String> KEY_TOPIC_PARTITION_RECORD_REQUIRED_VARS = SUPPORTED_VARIABLES
+            .get(KEY_TOPIC_PARTITION_RECORD)
+            .stream()
             .filter(Pair::getRight)
             .map(Pair::getLeft)
             .collect(Collectors.toSet());
 
-    private static final Set<String> TOPIC_PARTITION_RECORD_OPT_VARS =
-        SUPPORTED_VARIABLES.get(TOPIC_PARTITION_RECORD).stream()
+    private static final Set<String> TOPIC_PARTITION_RECORD_OPT_VARS = SUPPORTED_VARIABLES.get(TOPIC_PARTITION_RECORD)
+            .stream()
             .filter(p -> !p.getRight())
             .map(Pair::getLeft)
             .collect(Collectors.toSet());
 
-    private static final Set<String> TOPIC_PARTITION_KEY_RECORD_OPT_VARS =
-        SUPPORTED_VARIABLES.get(TOPIC_PARTITION_KEY_RECORD).stream()
+    private static final Set<String> TOPIC_PARTITION_KEY_RECORD_OPT_VARS = SUPPORTED_VARIABLES
+            .get(TOPIC_PARTITION_KEY_RECORD)
+            .stream()
             .filter(p -> !p.getRight())
             .map(Pair::getLeft)
             .collect(Collectors.toSet());
 
-    private static final Set<String> KEY_TOPIC_PARTITION_RECORD_OPT_VARS =
-        SUPPORTED_VARIABLES.get(KEY_TOPIC_PARTITION_RECORD).stream()
+    private static final Set<String> KEY_TOPIC_PARTITION_RECORD_OPT_VARS = SUPPORTED_VARIABLES
+            .get(KEY_TOPIC_PARTITION_RECORD)
+            .stream()
             .filter(p -> !p.getRight())
             .map(Pair::getLeft)
             .collect(Collectors.toSet());
 
-    public static final String SUPPORTED_VARIABLES_LIST =
-        SUPPORTED_VARIABLES
-            .values().stream()
+    public static final String SUPPORTED_VARIABLES_LIST = SUPPORTED_VARIABLES.values()
+            .stream()
             .map(v -> v.stream().map(Pair::getLeft).collect(Collectors.joining(",")))
             .collect(Collectors.joining("; "));
-
 
     private RecordGrouperFactory() {
     }
@@ -135,15 +135,12 @@ public final class RecordGrouperFactory {
         } else if (isByKeyTopicPartitionRecord(variables.get())) {
             return KEY_TOPIC_PARTITION_RECORD;
         } else {
-            throw new IllegalArgumentException(
-                String.format(
-                    "unsupported set of template variables, supported sets are: %s",
-                    SUPPORTED_VARIABLES_LIST
-                )
-            );
+            throw new IllegalArgumentException(String
+                    .format("unsupported set of template variables, supported sets are: %s", SUPPORTED_VARIABLES_LIST));
         }
     }
 
+    @SuppressWarnings("PMD.CognitiveComplexity")
     public static RecordGrouper newRecordGrouper(final AivenCommonConfig config) {
         final Template fileNameTemplate = config.getFilenameTemplate();
         final String grType = resolveRecordGrouperType(fileNameTemplate);
@@ -152,22 +149,19 @@ public final class RecordGrouperFactory {
         } else if (KEY_TOPIC_PARTITION_RECORD.equals(grType)) {
             return new KeyAndTopicPartitionRecordGrouper(fileNameTemplate);
         } else {
-            final Integer maxRecordsPerFile =
-                config.getMaxRecordsPerFile() != 0
-                    ? config.getMaxRecordsPerFile()
-                    : null;
+            final Integer maxRecordsPerFile = config.getMaxRecordsPerFile() == 0 ? null : config.getMaxRecordsPerFile();
             if (TOPIC_PARTITION_KEY_RECORD.equals(grType)) {
                 return config.getFormatType() == FormatType.PARQUET || config.getFormatType() == FormatType.AVRO
-                    ? new SchemaBasedTopicPartitionKeyRecordGrouper(
-                    fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource())
-                    : new TopicPartitionKeyRecordGrouper(
-                    fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource());
+                        ? new SchemaBasedTopicPartitionKeyRecordGrouper(fileNameTemplate, maxRecordsPerFile,
+                                config.getFilenameTimestampSource())
+                        : new TopicPartitionKeyRecordGrouper(fileNameTemplate, maxRecordsPerFile,
+                                config.getFilenameTimestampSource());
             } else {
                 return config.getFormatType() == FormatType.PARQUET || config.getFormatType() == FormatType.AVRO
-                    ? new SchemaBasedTopicPartitionRecordGrouper(
-                    fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource())
-                    : new TopicPartitionRecordGrouper(
-                    fileNameTemplate, maxRecordsPerFile, config.getFilenameTimestampSource());
+                        ? new SchemaBasedTopicPartitionRecordGrouper(fileNameTemplate, maxRecordsPerFile,
+                                config.getFilenameTimestampSource())
+                        : new TopicPartitionRecordGrouper(fileNameTemplate, maxRecordsPerFile,
+                                config.getFilenameTimestampSource());
             }
         }
     }
@@ -177,35 +171,31 @@ public final class RecordGrouperFactory {
     }
 
     private static boolean isByTopicPartitionRecord(final Set<String> vars) {
-        final Set<String> requiredVars =
-            Sets.intersection(TOPIC_PARTITION_RECORD_REQUIRED_VARS, vars)
-                .immutableCopy();
+        final Set<String> requiredVars = Sets.intersection(TOPIC_PARTITION_RECORD_REQUIRED_VARS, vars).immutableCopy();
         vars.removeAll(requiredVars);
         final boolean containsRequiredVars = TOPIC_PARTITION_RECORD_REQUIRED_VARS.equals(requiredVars);
-        final boolean containsOptionalVars =
-            vars.isEmpty() || !Collections.disjoint(TOPIC_PARTITION_RECORD_OPT_VARS, vars);
+        final boolean containsOptionalVars = vars.isEmpty()
+                || !Collections.disjoint(TOPIC_PARTITION_RECORD_OPT_VARS, vars);
         return containsRequiredVars && containsOptionalVars;
     }
 
     private static boolean isByTopicPartitionKeyRecord(final Set<String> vars) {
-        final Set<String> requiredVars =
-            Sets.intersection(TOPIC_PARTITION_KEY_RECORD_REQUIRED_VARS, vars)
+        final Set<String> requiredVars = Sets.intersection(TOPIC_PARTITION_KEY_RECORD_REQUIRED_VARS, vars)
                 .immutableCopy();
         vars.removeAll(requiredVars);
         final boolean containsRequiredVars = TOPIC_PARTITION_KEY_RECORD_REQUIRED_VARS.equals(requiredVars);
-        final boolean containsOptionalVars =
-            vars.isEmpty() || !Collections.disjoint(TOPIC_PARTITION_KEY_RECORD_OPT_VARS, vars);
+        final boolean containsOptionalVars = vars.isEmpty()
+                || !Collections.disjoint(TOPIC_PARTITION_KEY_RECORD_OPT_VARS, vars);
         return containsRequiredVars && containsOptionalVars;
     }
 
     private static boolean isByKeyTopicPartitionRecord(final Set<String> vars) {
-        final Set<String> requiredVars =
-            Sets.intersection(KEY_TOPIC_PARTITION_RECORD_REQUIRED_VARS, vars)
+        final Set<String> requiredVars = Sets.intersection(KEY_TOPIC_PARTITION_RECORD_REQUIRED_VARS, vars)
                 .immutableCopy();
         vars.removeAll(requiredVars);
         final boolean containsRequiredVars = KEY_TOPIC_PARTITION_RECORD_REQUIRED_VARS.equals(requiredVars);
-        final boolean containsOptionalVars =
-            vars.isEmpty() || !Collections.disjoint(KEY_TOPIC_PARTITION_RECORD_OPT_VARS, vars);
+        final boolean containsOptionalVars = vars.isEmpty()
+                || !Collections.disjoint(KEY_TOPIC_PARTITION_RECORD_OPT_VARS, vars);
         return containsRequiredVars && containsOptionalVars;
     }
 }

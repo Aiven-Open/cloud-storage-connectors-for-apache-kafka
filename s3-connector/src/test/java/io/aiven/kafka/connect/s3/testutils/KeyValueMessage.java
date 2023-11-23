@@ -23,11 +23,7 @@ public class KeyValueMessage {
     public final int idx;
     public final int epoch;
 
-    public KeyValueMessage(final String key,
-                           final String value,
-                           final int partition,
-                           final int idx,
-                           final int epoch) {
+    public KeyValueMessage(final String key, final String value, final int partition, final int idx, final int epoch) {
         this.key = key;
         this.value = value;
         this.partition = partition;

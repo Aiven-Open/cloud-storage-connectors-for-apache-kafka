@@ -45,7 +45,7 @@ There are two ways to specify AWS credentials in this connector:
    The connector will request a temporary token from the AWS STS service and assume a role from another AWS account.
    It requires `aws.sts.role.arn`, `aws.sts.role.session.name` to be specified.
 3) Use default provider chain or custom provider
-   
+
     If you prefer to use AWS default provider chain, you can leave {`aws.access.key.id` and `aws.secret.access.key`} and
     {`aws.sts.role.arn`, `aws.sts.role.session.name`} blank. In case you prefer to build your own custom
     provider, pass the custom provider class as a parameter to `aws.credential.provider`
@@ -64,9 +64,9 @@ The connector uses the following format for output files (blobs):
 `<prefix><filename>`.
 
 `<prefix>`is the optional prefix that can be used, for example, for
-subdirectories in the bucket. 
+subdirectories in the bucket.
 `<filename>` is the file name. The connector has the configurable
-template for file names. 
+template for file names.
 
     Configuration property `file.name.template`. If not set, default template is used: `{{topic}}-{{partition}}-{{start_offset}}`
 
@@ -80,13 +80,13 @@ It supports placeholders with variable names:
      - `yyyy` - year, e.g. `2020` (please note that `YYYY` is deprecated and is interpreted as `yyyy`)
      - `MM` - month, e.g. `03`
      - `dd` - day, e.g. `01`
-     - `HH` - hour, e.g. `24` 
+     - `HH` - hour, e.g. `24`
 - `key` - the Kafka key.
 
 
-To add zero padding to Kafka offsets, you need to add additional parameter `padding` in the `start_offset` variable, 
-which value can be `true` or `false` (the default). 
-For example: `{{topic}}-{{partition}}-{{start_offset:padding=true}}.gz` 
+To add zero padding to Kafka offsets, you need to add additional parameter `padding` in the `start_offset` variable,
+which value can be `true` or `false` (the default).
+For example: `{{topic}}-{{partition}}-{{start_offset:padding=true}}.gz`
 will produce file names like `mytopic-1-00000000000000000001.gz`.
 
 To add zero padding to partition number, you need to add additional parameter `padding` in the `partition` variable,
@@ -95,11 +95,11 @@ For example: `{{topic}}-{{partition:padding=true}}-{{start_offset}}.gz`
 will produce file names like `mytopic-0000000001-1.gz`.
 
 To add formatted timestamps, use `timestamp` variable.<br/>
-For example: `{{topic}}-{{partition}}-{{start_offset}}-{{timestamp:unit=yyyy}}{{timestamp:unit=MM}}{{timestamp:unit=dd}}.gz` 
+For example: `{{topic}}-{{partition}}-{{start_offset}}-{{timestamp:unit=yyyy}}{{timestamp:unit=MM}}{{timestamp:unit=dd}}.gz`
 will produce file names like `mytopic-2-1-20200301.gz`.
 
 To configure the time zone for the `timestamp` variable,
-use `file.name.timestamp.timezone` property. 
+use `file.name.timestamp.timezone` property.
 Please see the description of properties in the "Configuration" section.
 
 Only the certain combinations of variables and parameters are allowed in the file name
@@ -239,8 +239,8 @@ Connector class name, in this case: `io.aiven.kafka.connect.s3.AivenKafkaConnect
 
 ### S3 Object Names
 
-S3 connector stores series of files in the specified bucket. 
-Each object is named using pattern `[<aws.s3.prefix>]<topic>-<partition>-<startoffset>[.gz]` (see [#file-name-format](File name format section) for more patterns). 
+S3 connector stores series of files in the specified bucket.
+Each object is named using pattern `[<aws.s3.prefix>]<topic>-<partition>-<startoffset>[.gz]` (see [#file-name-format](File name format section) for more patterns).
 The `.gz` extension is used if gzip compression is used, see `file.compression.type` below.
 
 ### Data File Format
@@ -248,20 +248,20 @@ The `.gz` extension is used if gzip compression is used, see `file.compression.t
 Output files are text files that contain one record per line (i.e.,
 they're separated by `\n`) except `PARQUET` format.
 
-There are four types of data format available: 
+There are four types of data format available:
  - **[Default]** Flat structure, where field values are separated by comma (`csv`)
 
-    Configuration: ```format.output.type=csv```. 
+    Configuration: ```format.output.type=csv```.
     Also, this is the default if the property is not present in the configuration.
 
- - Complex structure, where file is in format of [JSON lines](https://jsonlines.org/). 
+ - Complex structure, where file is in format of [JSON lines](https://jsonlines.org/).
     It contains one record per line and each line is a valid JSON object(`jsonl`)
 
-    Configuration: ```format.output.type=jsonl```. 
-    
- - Complex structure, where file is a valid JSON array of record objects. 
-  
-     Configuration: ```format.output.type=json```. 
+    Configuration: ```format.output.type=jsonl```.
+
+ - Complex structure, where file is a valid JSON array of record objects.
+
+     Configuration: ```format.output.type=json```.
 
  - Complex structure, where file is in Apache Parquet file format.
 
@@ -301,7 +301,7 @@ A comma separated list of fields to include in output. Supported values are: `ke
 or `org.apache.kafka.connect.storage.StringConverter` for this data format.
 
  - The `value.converter` property must be set to `org.apache.kafka.connect.converters.ByteArrayConverter` for this data format.
- 
+
 #### JSONL Format example
 
 For example, if we output `key,value,offset,timestamp`, a record line might look like:
@@ -317,7 +317,7 @@ OR
 ```
 
 It is recommended to use
-- `org.apache.kafka.connect.storage.StringConverter` or 
+- `org.apache.kafka.connect.storage.StringConverter` or
 - `org.apache.kafka.connect.json.JsonConverter` or
 - `io.confluent.connect.avro.AvroConverter`.
 
@@ -327,15 +327,15 @@ as `key.converter` and/or `value.converter` to make output files human-readable.
 
  - The value of the `format.output.fields.value.encoding` property is ignored for this data format.
  - Value/Key schema will not be presented in output file, even if `value.converter.schemas.enable` property is `true`.
- But, it is still important to set this property correctly, so that connector could read records correctly. 
- 
+ But, it is still important to set this property correctly, so that connector could read records correctly.
+
 #### JSON Format example
 
 For example, if we output `key,value,offset,timestamp`, an output file might look like:
 
 ```json
 [
-  { "key": "k1", "value": "v0", "offset": 1232155, "timestamp":"2020-01-01T00:00:01Z" }, 
+  { "key": "k1", "value": "v0", "offset": 1232155, "timestamp":"2020-01-01T00:00:01Z" },
   { "key": "k2", "value": "v1", "offset": 1232156, "timestamp":"2020-01-01T00:00:05Z" }
 ]
 ```
@@ -349,17 +349,17 @@ OR
 ```
 
 It is recommended to use
-- `org.apache.kafka.connect.storage.StringConverter`, 
+- `org.apache.kafka.connect.storage.StringConverter`,
 - `org.apache.kafka.connect.json.JsonConverter`, or
 - `io.confluent.connect.avro.AvroConverter`.
- 
+
 as `key.converter` and/or `value.converter` to make output files human-readable.
 
 **NB!**
 
  - The value of the `format.output.fields.value.encoding` property is ignored for this data format.
  - Value/Key schema will not be presented in output file, even if `value.converter.schemas.enable` property is `true`.
- But, it is still important to set this property correctly, so that connector could read records correctly. 
+ But, it is still important to set this property correctly, so that connector could read records correctly.
 
 
 ##### NB!
@@ -430,8 +430,8 @@ the final `Avro` schema for `Parquet` is:
       {"name": "offset", "type": "long"},
       {"name": "timestamp", "type": "long"},
       {"name": "headers", "type": "map", "values": "long"},
-      { "name": "value", 
-        "type": "record", 
+      { "name": "value",
+        "type": "record",
         "fields": [
           {"name": "foo", "type": "string"},
           {"name": "bar", "type": "long"}
@@ -462,7 +462,7 @@ Having `format.output.envelope=false` can produce the following output:
     ```json
     {
       "schema": {
-        "type": "struct", 
+        "type": "struct",
         "fields": [
           {"type":"string", "field": "name"}
         ]
@@ -499,7 +499,7 @@ List of new configuration parameters:
 - `aws.sts.role.arn` - AWS role ARN, for cross-account access role instead of `aws.access.key.id` and `aws.secret.access.key`
 - `aws.sts.role.external.id` - AWS ExternalId for cross-account access role
 - `aws.sts.role.session.name` - AWS session name for cross-account access role
-- `aws.sts.role.session.duration` - Session duration for cross-account access role in Seconds. Minimum value - 900. 
+- `aws.sts.role.session.duration` - Session duration for cross-account access role in Seconds. Minimum value - 900.
 - `aws.sts.config.endpoint` - AWS STS endpoint for cross-account access role.
 - `file.name.template` - The file name. The connector has the configurable template for file names. Constant string prefix could be added to the file name to put output files into a subdirectory.
 - `file.compression.type` - Compression type for output files. Supported algorithms are `gzip`, `snappy`, `zstd` and `none`. Defaults to `gzip`.
@@ -581,7 +581,7 @@ file.compression.type=gzip
 
 # The time zone in which timestamps are represented.
 # Accepts short and long standard names like: `UTC`, `PST`, `ECT`,
-# `Europe/Berlin`, `Europe/Helsinki`, or `America/New_York`. 
+# `Europe/Berlin`, `Europe/Helsinki`, or `America/New_York`.
 # For more information please refer to https://docs.oracle.com/javase/tutorial/datetime/iso/timezones.html.
 # The default is `UTC`.
 timestamp.timezone=Europe/Berlin

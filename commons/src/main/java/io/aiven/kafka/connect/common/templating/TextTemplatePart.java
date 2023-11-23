@@ -18,13 +18,13 @@ package io.aiven.kafka.connect.common.templating;
 
 public class TextTemplatePart implements TemplatePart {
 
+    private final String text;
+
     protected TextTemplatePart(final String text) {
         this.text = text;
     }
 
-    private final String text;
-
-    public final String text() {
+    public final String getText() {
         return text;
     }
 

@@ -25,8 +25,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 public final class OffsetPlainWriter implements OutputFieldPlainWriter {
     @Override
-    public void write(final SinkRecord record,
-                      final OutputStream outputStream) throws IOException {
+    public void write(final SinkRecord record, final OutputStream outputStream) throws IOException {
         Objects.requireNonNull(record, "record cannot be null");
         Objects.requireNonNull(outputStream, "outputStream cannot be null");
 

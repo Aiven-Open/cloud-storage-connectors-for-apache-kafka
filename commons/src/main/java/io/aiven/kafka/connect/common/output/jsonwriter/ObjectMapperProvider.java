@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 /**
  * Wraps an object mapper for reuse. There should be only a single object mapper created for the whole application.
  */
-public class ObjectMapperProvider {
+public final class ObjectMapperProvider {
 
     private static final ObjectMapper OBJECT_MAPPER;
 
@@ -30,6 +30,9 @@ public class ObjectMapperProvider {
         OBJECT_MAPPER = new ObjectMapper();
         OBJECT_MAPPER.setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
     }
+
+    private ObjectMapperProvider() {
+        /* hide constructor */ }
 
     public static ObjectMapper get() {
         return OBJECT_MAPPER;

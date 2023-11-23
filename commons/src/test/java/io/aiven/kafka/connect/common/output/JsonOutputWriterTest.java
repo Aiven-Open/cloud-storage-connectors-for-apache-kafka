@@ -16,6 +16,9 @@
 
 package io.aiven.kafka.connect.common.output;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
@@ -35,16 +38,13 @@ import com.fasterxml.jackson.core.JsonParseException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
+final class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     private final OutputFieldEncodingType noEncoding = OutputFieldEncodingType.NONE;
 
     @BeforeEach
     void setUp() {
         byteStream = new ByteArrayOutputStream();
-        sut = null;
+        sut = null; // NOPMD NullAssignment
     }
 
     @Test
@@ -78,9 +78,10 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
         final Struct struct = new Struct(level1Schema).put("name", "John");
         final SinkRecord record = createRecord("key0", level1Schema, struct, 1, 1000L);
 
-        try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-            final JsonOutputWriter writer = new JsonOutputWriter(fields, byteStream, false)) {
-
+        try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
+            // The JsonOutputWriter is Closeable, the test fails if writer is not closed before
+            // asserting byte stream content.
+            final JsonOutputWriter writer = new JsonOutputWriter(fields, byteStream, false); // NOPMD
             writer.writeRecord(record);
             writer.close();
 
@@ -91,7 +92,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     @Test
     void jsonValueWithOneFieldAndValue() throws IOException {
         final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding),
-            new OutputField(OutputFieldType.KEY, noEncoding));
+                new OutputField(OutputFieldType.KEY, noEncoding));
         sut = new JsonOutputWriter(fields, byteStream);
         final Struct struct1 = new Struct(level1Schema).put("name", "John");
 
@@ -105,7 +106,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     @Test
     void multiStringJsonValueWithOneFieldAndValue() throws IOException {
         final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding),
-            new OutputField(OutputFieldType.KEY, noEncoding));
+                new OutputField(OutputFieldType.KEY, noEncoding));
         sut = new JsonOutputWriter(fields, byteStream);
         final Struct struct1 = new Struct(level1Schema).put("name", "John");
         final Struct struct2 = new Struct(level1Schema).put("name", "Pekka");
@@ -114,7 +115,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
         final SinkRecord record2 = createRecord("key0", level1Schema, struct2, 1, 1000L);
 
         final String expected = "[{\"value\":{\"name\":\"John\"},\"key\":\"key0\"},"
-            + "{\"value\":{\"name\":\"Pekka\"},\"key\":\"key0\"}]";
+                + "{\"value\":{\"name\":\"Pekka\"},\"key\":\"key0\"}]";
 
         assertRecords(List.of(record1, record2), expected);
     }
@@ -122,21 +123,17 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     @Test
     void jsonValueWithAllMetadata() throws IOException {
         final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding),
-            new OutputField(OutputFieldType.KEY, noEncoding),
-            new OutputField(OutputFieldType.OFFSET, noEncoding),
-            new OutputField(OutputFieldType.TIMESTAMP, noEncoding),
-            new OutputField(OutputFieldType.HEADERS, noEncoding));
+                new OutputField(OutputFieldType.KEY, noEncoding), new OutputField(OutputFieldType.OFFSET, noEncoding),
+                new OutputField(OutputFieldType.TIMESTAMP, noEncoding),
+                new OutputField(OutputFieldType.HEADERS, noEncoding));
         sut = new JsonOutputWriter(fields, byteStream);
         final Struct struct1 = new Struct(level1Schema).put("name", "John");
 
         final SinkRecord record1 = createRecord("key0", level1Schema, struct1, 1, 1000L);
         record1.headers().add("headerKey", "headerValue", Schema.STRING_SCHEMA);
 
-        final String expected = "[{\"headers\":[{\"key\":\"headerKey\",\"value\":\"headerValue\"}],"
-            + "\"offset\":1,"
-            + "\"value\":{\"name\":\"John\"},"
-            + "\"key\":\"key0\","
-            + "\"timestamp\":\"1970-01-01T00:00:01Z\"}]";
+        final String expected = "[{\"headers\":[{\"key\":\"headerKey\",\"value\":\"headerValue\"}]," + "\"offset\":1,"
+                + "\"value\":{\"name\":\"John\"}," + "\"key\":\"key0\"," + "\"timestamp\":\"1970-01-01T00:00:01Z\"}]";
 
         assertRecords(Collections.singletonList(record1), expected);
     }
@@ -144,7 +141,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     @Test
     void jsonValueWithMultipleHeaders() throws IOException {
         final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding),
-            new OutputField(OutputFieldType.HEADERS, noEncoding));
+                new OutputField(OutputFieldType.HEADERS, noEncoding));
         sut = new JsonOutputWriter(fields, byteStream);
         final Struct struct1 = new Struct(level1Schema).put("name", "John");
 
@@ -152,10 +149,8 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
         record1.headers().add("headerKey1", "headerValue1", Schema.STRING_SCHEMA);
         record1.headers().add("headerKey2", "headerValue2", Schema.STRING_SCHEMA);
 
-        final String expected = "[{\"headers\":"
-            + "[{\"key\":\"headerKey1\",\"value\":\"headerValue1\"},"
-            + "{\"key\":\"headerKey2\",\"value\":\"headerValue2\"}],"
-            + "\"value\":{\"name\":\"John\"}}]";
+        final String expected = "[{\"headers\":" + "[{\"key\":\"headerKey1\",\"value\":\"headerValue1\"},"
+                + "{\"key\":\"headerKey2\",\"value\":\"headerValue2\"}]," + "\"value\":{\"name\":\"John\"}}]";
 
         assertRecords(Collections.singletonList(record1), expected);
     }
@@ -175,7 +170,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     @Test
     void jsonValueWithMissingKey() throws IOException {
         final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding),
-            new OutputField(OutputFieldType.KEY, noEncoding));
+                new OutputField(OutputFieldType.KEY, noEncoding));
         sut = new JsonOutputWriter(fields, byteStream);
         final Schema level1Schema = SchemaBuilder.struct().field("name", Schema.STRING_SCHEMA);
         final Struct struct1 = new Struct(level1Schema).put("name", "John");
@@ -190,7 +185,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     @Test
     void jsonValueWithMissingTimestamp() throws IOException {
         final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding),
-            new OutputField(OutputFieldType.TIMESTAMP, noEncoding));
+                new OutputField(OutputFieldType.TIMESTAMP, noEncoding));
         sut = new JsonOutputWriter(fields, byteStream);
         final Schema level1Schema = SchemaBuilder.struct().field("name", Schema.STRING_SCHEMA);
         final Struct struct1 = new Struct(level1Schema).put("name", "John");
@@ -205,7 +200,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
     @Test
     void jsonValueWithMissingHeader() throws IOException {
         final List<OutputField> fields = List.of(new OutputField(OutputFieldType.VALUE, noEncoding),
-            new OutputField(OutputFieldType.HEADERS, noEncoding));
+                new OutputField(OutputFieldType.HEADERS, noEncoding));
         sut = new JsonOutputWriter(fields, byteStream);
         final Struct struct1 = new Struct(level1Schema).put("name", "John");
 
@@ -228,7 +223,7 @@ public class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
         final SinkRecord record2 = createRecord("key0", level1Schema, struct2, 1, 1000L);
 
         assertThatThrownBy(() -> useWithWrongLastRecord(List.of(record1, record2)))
-            .isInstanceOf(JsonParseException.class);
+                .isInstanceOf(JsonParseException.class);
     }
 
     @Override

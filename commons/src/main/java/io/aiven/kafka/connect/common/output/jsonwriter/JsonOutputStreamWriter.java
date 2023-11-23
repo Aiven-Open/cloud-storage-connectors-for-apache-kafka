@@ -26,9 +26,7 @@ class JsonOutputStreamWriter extends AbstractJsonOutputStreamWriter {
     private static final byte[] RECORD_SEPARATOR = ",\n".getBytes(StandardCharsets.UTF_8);
     private static final byte[] BATCH_END = "\n]".getBytes(StandardCharsets.UTF_8);
 
-
-    JsonOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders,
-                           final boolean envelopeEnabled) {
+    JsonOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders, final boolean envelopeEnabled) {
         super(fieldBuilders, envelopeEnabled);
     }
 

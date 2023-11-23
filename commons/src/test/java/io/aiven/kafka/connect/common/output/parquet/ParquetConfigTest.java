@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.common.output.parquet;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.Collections;
 import java.util.Map;
 
@@ -25,19 +27,13 @@ import io.aiven.kafka.connect.common.config.CompressionType;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 class ParquetConfigTest {
 
     @Test
     void testGenerateParquetConfig() {
 
-        final var origins = Map.of(
-                "connect.parquet.aa", "aa",
-                "connect.parquet.bb", "bb",
-                "connect.parquet.cc", "cc",
-                "connect.parquet.avro.schema", "aa"
-        );
+        final var origins = Map.of("connect.parquet.aa", "aa", "connect.parquet.bb", "bb", "connect.parquet.cc", "cc",
+                "connect.parquet.avro.schema", "aa");
 
         final var parquetConfig = new ParquetConfig(origins);
         final var config = parquetConfig.parquetConfiguration();
@@ -50,17 +46,11 @@ class ParquetConfigTest {
 
     @Test
     void testConvertCompressionTypeToParquetCompressorName() {
-        assertThat(
-                new ParquetConfig(
-                        Map.of(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name)
-                ).compressionCodecName())
-            .isEqualTo(CompressionCodecName.UNCOMPRESSED);
+        assertThat(new ParquetConfig(Map.of(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name))
+                .compressionCodecName()).isEqualTo(CompressionCodecName.UNCOMPRESSED);
         assertThat(new ParquetConfig(Collections.emptyMap()).compressionCodecName())
-            .isEqualTo(CompressionCodecName.UNCOMPRESSED);
-        assertThat(
-                new ParquetConfig(
-                        Map.of(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.ZSTD.name)
-                ).compressionCodecName())
-            .isEqualTo(CompressionCodecName.ZSTD);
+                .isEqualTo(CompressionCodecName.UNCOMPRESSED);
+        assertThat(new ParquetConfig(Map.of(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.ZSTD.name))
+                .compressionCodecName()).isEqualTo(CompressionCodecName.ZSTD);
     }
 }

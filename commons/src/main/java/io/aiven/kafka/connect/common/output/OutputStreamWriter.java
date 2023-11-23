@@ -29,7 +29,7 @@ public interface OutputStreamWriter {
     default void writeRecordsSeparator(final OutputStream outputStream) throws IOException {
     }
 
-    void writeOneRecord(final OutputStream outputStream, final SinkRecord record) throws IOException;
+    void writeOneRecord(OutputStream outputStream, SinkRecord record) throws IOException;
 
     default void stopWriting(final OutputStream outputStream) throws IOException {
     }

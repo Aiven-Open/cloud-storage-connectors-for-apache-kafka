@@ -30,14 +30,17 @@ import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
 import org.testcontainers.shaded.org.apache.commons.io.FileUtils;
 
-class ParquetUtils {
+final class ParquetUtils {
+
+    private ParquetUtils() {
+        /* hide constructor */ }
 
     static List<GenericRecord> readRecords(final Path tmpDir, final byte[] bytes) throws IOException {
         final var records = new ArrayList<GenericRecord>();
         final var parquetFile = tmpDir.resolve("parquet.file");
         FileUtils.writeByteArrayToFile(parquetFile.toFile(), bytes);
         final var seekableByteChannel = Files.newByteChannel(parquetFile);
-        try (final var r = AvroParquetReader.<GenericRecord>builder(new InputFile() {
+        try (var parquetReader = AvroParquetReader.<GenericRecord>builder(new InputFile() {
             @Override
             public long getLength() throws IOException {
                 return seekableByteChannel.size();
@@ -52,17 +55,17 @@ class ParquetUtils {
                     }
 
                     @Override
-                    public void seek(final long l) throws IOException {
-                        seekableByteChannel.position(l);
+                    public void seek(final long position) throws IOException {
+                        seekableByteChannel.position(position);
                     }
                 };
             }
 
         }).withCompatibility(false).build()) {
-            var record = r.read();
+            var record = parquetReader.read();
             while (record != null) {
                 records.add(record);
-                record = r.read();
+                record = parquetReader.read();
             }
         }
         return records;

@@ -24,8 +24,7 @@ import java.util.Map;
 public class JsonLinesOutputStreamWriter extends AbstractJsonOutputStreamWriter {
     private static final byte[] RECORD_SEPARATOR = "\n".getBytes(StandardCharsets.UTF_8);
 
-    JsonLinesOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders,
-                                       final boolean envelopeEnabled) {
+    JsonLinesOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders, final boolean envelopeEnabled) {
         super(fieldBuilders, envelopeEnabled);
     }
 

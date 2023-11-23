@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.templating;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,19 +28,20 @@ import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * A simple templating engine that allows to bind variables to supplier functions.
  *
- * <p>Variable syntax: {@code {{ variable_name:parameter_name=parameter_value }}}.
- * Only alphanumeric characters and {@code _} are
- * allowed as a variable name.
- * Any number of spaces/tabs inside the braces is allowed.
- * Parameters for variable name are optional, same as for variable only alphanumeric characters
- * are allowed as a parameter name or a parameter value.
+ * <p>
+ * Variable syntax: {@code {{ variable_name:parameter_name=parameter_value }}}. Only alphanumeric characters and
+ * {@code _} are allowed as a variable name. Any number of spaces/tabs inside the braces is allowed. Parameters for
+ * variable name are optional, same as for variable only alphanumeric characters are allowed as a parameter name or a
+ * parameter value.
  *
- * <p>Non-bound variables are left as is.
+ * <p>
+ * Non-bound variables are left as is.
  */
 public final class Template {
     private final List<Pair<String, Parameter>> variablesAndParameters;
@@ -48,9 +50,8 @@ public final class Template {
 
     private final String originalTemplateString;
 
-    private Template(final String template,
-                     final List<Pair<String, Parameter>> variablesAndParameters,
-                     final List<TemplatePart> templateParts) {
+    private Template(final String template, final List<Pair<String, Parameter>> variablesAndParameters,
+            final List<TemplatePart> templateParts) {
         this.originalTemplateString = template;
         this.variablesAndParameters = variablesAndParameters;
         this.templateParts = templateParts;
@@ -60,34 +61,30 @@ public final class Template {
         return originalTemplateString;
     }
 
-    public final List<String> variables() {
-        return variablesAndParameters.stream()
-            .map(Pair::getLeft)
-            .collect(Collectors.toList());
+    public List<String> variables() {
+        return variablesAndParameters.stream().map(Pair::getLeft).collect(Collectors.toList());
     }
 
-    public final Set<String> variablesSet() {
+    public Set<String> variablesSet() {
         return variablesAndParameters.stream().map(Pair::getLeft).collect(Collectors.toSet());
     }
 
-    public final List<Pair<String, Parameter>> variablesWithParameters() {
-        return variablesAndParameters;
+    public List<Pair<String, Parameter>> variablesWithParameters() {
+        return Collections.unmodifiableList(variablesAndParameters);
     }
 
-    public final List<Pair<String, Parameter>>  variablesWithNonEmptyParameters() {
-        return variablesAndParameters.stream()
-            .filter(e -> !e.getRight().isEmpty())
-            .collect(Collectors.toList());
+    public List<Pair<String, Parameter>> variablesWithNonEmptyParameters() {
+        return variablesAndParameters.stream().filter(e -> !e.getRight().isEmpty()).collect(Collectors.toList());
     }
 
-    public final Instance instance() {
+    public Instance instance() {
         return new Instance();
     }
 
+    @SuppressWarnings("PMD.ShortMethodName")
     public static Template of(final String template) {
 
-        final Pair<List<Pair<String, Parameter>>, List<TemplatePart>>
-            parsingResult = TemplateParser.parse(template);
+        final Pair<List<Pair<String, Parameter>>, List<TemplatePart>> parsingResult = TemplateParser.parse(template);
 
         return new Template(template, parsingResult.getLeft(), parsingResult.getRight());
     }
@@ -98,47 +95,44 @@ public final class Template {
     }
 
     public final class Instance {
-        private final Map<String, Function<Parameter, String>> bindings =
-            new HashMap<>();
+        private final Map<String, Function<Parameter, String>> bindings = new HashMap<>();
 
         private Instance() {
         }
 
-        public final Instance bindVariable(final String name,
-                                           final Supplier<String> binding) {
+        public Instance bindVariable(final String name, final Supplier<String> binding) {
             return bindVariable(name, x -> binding.get());
         }
 
-        public final Instance bindVariable(final String name,
-                                           final Function<Parameter, String> binding) {
+        public Instance bindVariable(final String name, final Function<Parameter, String> binding) {
             Objects.requireNonNull(name, "name cannot be null");
             Objects.requireNonNull(binding, "binding cannot be null");
-            if (name.trim().isEmpty()) {
+
+            if (StringUtils.isBlank(name)) {
                 throw new IllegalArgumentException("name must not be empty");
             }
             bindings.put(name, binding);
             return this;
         }
 
-        public final String render() {
-            final StringBuilder sb = new StringBuilder();
-            //FIXME we need better solution instead of instanceof
+        public String render() {
+            final StringBuilder stringBuilder = new StringBuilder();
+            // FIXME we need better solution instead of instanceof
             for (final TemplatePart templatePart : templateParts) {
                 if (templatePart instanceof TextTemplatePart) {
-                    sb.append(((TextTemplatePart) templatePart).text());
+                    stringBuilder.append(((TextTemplatePart) templatePart).getText());
                 } else if (templatePart instanceof VariableTemplatePart) {
                     final VariableTemplatePart variableTemplatePart = (VariableTemplatePart) templatePart;
-                    final Function<Parameter, String> binding =
-                        bindings.get(variableTemplatePart.variableName());
+                    final Function<Parameter, String> binding = bindings.get(variableTemplatePart.getVariableName());
                     // Substitute for bound variables, pass the variable pattern as is for non-bound.
                     if (Objects.nonNull(binding)) {
-                        sb.append(binding.apply(variableTemplatePart.parameter()));
+                        stringBuilder.append(binding.apply(variableTemplatePart.getParameter()));
                     } else {
-                        sb.append(variableTemplatePart.originalPlaceholder());
+                        stringBuilder.append(variableTemplatePart.getOriginalPlaceholder());
                     }
                 }
             }
-            return sb.toString();
+            return stringBuilder.toString();
         }
     }
 }

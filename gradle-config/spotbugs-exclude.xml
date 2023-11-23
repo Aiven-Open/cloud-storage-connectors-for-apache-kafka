@@ -6,6 +6,21 @@
         <Class name="io.aiven.kafka.connect.gcs.GcsSinkTask" />
         <Bug pattern="EI_EXPOSE_REP2" />
     </Match>
+    <Match>
+        <Class name="io.aiven.kafka.connect.common.output.jsonwriter.ObjectMapperProvider" />
+        <Bug pattern="MS_EXPOSE_REP" />
+    </Match>
+
+    <Match>
+        <Class name="io.aiven.kafka.connect.common.config.AivenCommonConfig" />
+        <Bug pattern="CT_CONSTRUCTOR_THROW" />
+    </Match>
+    <Match>
+        <Class name="io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriterTest$ParquetInputFile" />
+        <Bug pattern="CT_CONSTRUCTOR_THROW" />
+    </Match>
+
+
 
     <!-- Test classes -->
     <Match>

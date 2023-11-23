@@ -19,9 +19,6 @@ plugins {
     // https://docs.gradle.org/current/userguide/java_library_plugin.html
     id "java-library"
 
-    // https://docs.gradle.org/current/userguide/checkstyle_plugin.html
-    id "checkstyle"
-
     // https://docs.gradle.org/current/userguide/idea_plugin.html
     id "idea"
 
@@ -36,6 +33,13 @@ plugins {
 
     // https://docs.gradle.org/current/userguide/signing_plugin.html
     id "signing"
+
+    // https://plugins.gradle.org/plugin/com.diffplug.spotless
+    id "com.diffplug.spotless"
+
+    id "pmd"
+
+    id "com.github.spotbugs"
 }
 
 java {
@@ -52,11 +56,6 @@ compileJava {
 
 javadoc {
     options.addBooleanOption('html5', true)
-}
-
-checkstyle {
-    toolVersion "9.2.1"
-    getConfigDirectory().set(rootProject.file("checkstyle/"))
 }
 
 jacoco {
@@ -104,3 +103,59 @@ task wrapper(type: Wrapper) {
     }
 }
 
+pmd {
+    consoleOutput = true
+    toolVersion = "6.55.0"
+    rulesMinimumPriority = 5
+}
+pmdMain {
+    ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-ruleset.xml")
+    ruleSets = [] // Clear the default rulesets
+}
+pmdTest {
+    ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
+    ruleSets = [] // Clear the default rulesets
+}
+
+spotbugs {
+    toolVersion = "4.7.3"
+    excludeFilter = file("${project.rootDir}/gradle-config/spotbugs-exclude.xml")
+}
+spotbugsMain {
+    reports {
+        html {
+            stylesheet = 'fancy-hist.xsl'
+        }
+    }
+}
+spotbugsTest {
+    reports {
+        html {
+            stylesheet = 'fancy-hist.xsl'
+        }
+    }
+}
+
+spotless {
+    format 'misc', {
+        // define the files to apply `misc` to
+        target '*.gradle', '*.md', '.gitignore'
+        targetExclude ".*/**", "**/build/**", "**/.gradle/**"
+
+        // define the steps to apply to those files
+        trimTrailingWhitespace()
+        indentWithSpaces()
+        endWithNewline()
+    }
+
+    java {
+        licenseHeaderFile file("${project.rootDir}/gradle-config/java.header")
+        importOrder("javax", "java", "org.apache.kafka", "io.aiven", "")
+        removeUnusedImports()
+        replaceRegex("No wildcard imports.", "import(?:\\s+static)?\\s+[^\\*\\s]+\\*;(\r\n|\r|\n)", '$1')
+        eclipse().configFile("${project.rootDir}/gradle-config/aiven-eclipse-formatter.xml")
+        indentWithSpaces()
+        endWithNewline()
+        trimTrailingWhitespace()
+    }
+}

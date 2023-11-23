@@ -38,17 +38,16 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
         withNetworkAliases("schema-registry-" + Base58.randomString(6));
 
         withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS",
-            String.format("PLAINTEXT://%s:%s", kafka.getNetworkAliases().get(0), 9092));
+                String.format("PLAINTEXT://%s:%s", kafka.getNetworkAliases().get(0), 9092));
 
         withExposedPorts(SCHEMA_REGISTRY_PORT);
         withEnv("SCHEMA_REGISTRY_HOST_NAME", "localhost");
 
-        withCreateContainerCmdModifier(cmd ->
-            cmd.getHostConfig().withUlimits(List.of(new Ulimit("nofile", 30000L, 30000L)))
-        );
+        withCreateContainerCmdModifier(
+                cmd -> cmd.getHostConfig().withUlimits(List.of(new Ulimit("nofile", 30_000L, 30_000L))));
     }
 
     public String getSchemaRegistryUrl() {
-        return String.format("http://%s:%s", getContainerIpAddress(), getMappedPort(SCHEMA_REGISTRY_PORT));
+        return String.format("http://%s:%s", getHost(), getMappedPort(SCHEMA_REGISTRY_PORT));
     }
 }

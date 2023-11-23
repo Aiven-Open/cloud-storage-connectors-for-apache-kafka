@@ -42,7 +42,7 @@ public class HeadersPlainWriter implements OutputFieldPlainWriter {
             final String key = header.key();
             final Object value = header.value();
             final Schema schema = header.schema();
-            outputStream.write(Base64.getEncoder().encode(key.getBytes()));
+            outputStream.write(Base64.getEncoder().encode(key.getBytes(StandardCharsets.UTF_8)));
             outputStream.write(HEADER_KEY_VALUE_SEPARATOR);
             final byte[] bytes = byteArrayConverter.fromConnectHeader(topic, key, schema, value);
             outputStream.write(Base64.getEncoder().encode(bytes));

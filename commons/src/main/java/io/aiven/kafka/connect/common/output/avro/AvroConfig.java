@@ -38,26 +38,15 @@ final class AvroConfig extends AbstractConfig {
     }
 
     CodecFactory codecFactory() {
-        final String codecName = originals()
-            .getOrDefault(AVRO_CODEC_CONFIG, DEFAULT_AVRO_CODEC)
-            .toString();
+        final String codecName = originals().getOrDefault(AVRO_CODEC_CONFIG, DEFAULT_AVRO_CODEC).toString();
         return CodecFactory.fromString(codecName);
     }
 
     private static ConfigDef createAvroConfigDefinition() {
         final ConfigDef configDef = new ConfigDef();
-        configDef.define(
-            AVRO_CODEC_CONFIG,
-            ConfigDef.Type.STRING,
-            DEFAULT_AVRO_CODEC,
-            new CodecValidator(),
-            ConfigDef.Importance.MEDIUM,
-            "Avro Container File codec.",
-            GROUP_AVRO,
-            0,
-            ConfigDef.Width.NONE,
-            AVRO_CODEC_CONFIG
-        );
+        configDef.define(AVRO_CODEC_CONFIG, ConfigDef.Type.STRING, DEFAULT_AVRO_CODEC, new CodecValidator(),
+                ConfigDef.Importance.MEDIUM, "Avro Container File codec.", GROUP_AVRO, 0, ConfigDef.Width.NONE,
+                AVRO_CODEC_CONFIG);
         return configDef;
     }
 
@@ -69,15 +58,15 @@ final class AvroConfig extends AbstractConfig {
         @Override
         public void ensureValid(final String name, final Object value) {
             Objects.requireNonNull(name, "Avro codec cannot be null.");
-            @SuppressWarnings("unchecked") final String proposedCodecName = (String) value;
+            @SuppressWarnings("unchecked")
+            final String proposedCodecName = (String) value;
             if (((String) value).isEmpty()) {
                 throw new ConfigException(name, proposedCodecName, "cannot be empty");
             }
             try {
                 CodecFactory.fromString(proposedCodecName);
             } catch (final AvroRuntimeException exception) {
-                throw new ConfigException(
-                    name, value, "Unknown or not supported codec " + proposedCodecName);
+                throw new ConfigException(name, value, "Unknown or not supported codec " + proposedCodecName);
             }
         }
     }

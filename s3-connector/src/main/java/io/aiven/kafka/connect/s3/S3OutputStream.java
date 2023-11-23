@@ -32,6 +32,7 @@ import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,20 +56,17 @@ public class S3OutputStream extends OutputStream {
 
     private final String serverSideEncryptionAlgorithm;
 
-    private boolean closed = false;
+    private boolean closed;
 
-    public S3OutputStream(final String bucketName,
-                          final String key,
-                          final int partSize,
-                          final AmazonS3 client) {
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "AmazonS3 client is mutable")
+    public S3OutputStream(final String bucketName, final String key, final int partSize, final AmazonS3 client) {
         this(bucketName, key, partSize, client, null);
     }
 
-    public S3OutputStream(final String bucketName,
-                          final String key,
-                          final int partSize,
-                          final AmazonS3 client,
-                          final String serverSideEncryptionAlgorithm) {
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "AmazonS3 client is mutable")
+    public S3OutputStream(final String bucketName, final String key, final int partSize, final AmazonS3 client,
+            final String serverSideEncryptionAlgorithm) {
+        super();
         this.bucketName = bucketName;
         this.key = key;
         this.client = client;
@@ -78,19 +76,19 @@ public class S3OutputStream extends OutputStream {
     }
 
     @Override
-    public void write(final int b) throws IOException {
-        write(new byte[]{(byte) b}, 0, 1);
+    public void write(final int singleByte) throws IOException {
+        write(new byte[] { (byte) singleByte }, 0, 1);
     }
 
     @Override
-    public void write(final byte[] b, final int off, final int len) throws IOException {
-        if (Objects.isNull(b) || b.length == 0) {
+    public void write(final byte[] bytes, final int off, final int len) throws IOException {
+        if (Objects.isNull(bytes) || bytes.length == 0) {
             return;
         }
         if (Objects.isNull(multipartUpload)) {
             multipartUpload = newMultipartUpload();
         }
-        final var source = ByteBuffer.wrap(b, off, len);
+        final var source = ByteBuffer.wrap(bytes, off, len);
         while (source.hasRemaining()) {
             final var transferred = Math.min(byteBuffer.remaining(), source.remaining());
             final var offset = source.arrayOffset() + source.position();
@@ -131,7 +129,7 @@ public class S3OutputStream extends OutputStream {
         }
         if (Objects.nonNull(multipartUpload)) {
             multipartUpload.complete();
-            multipartUpload = null;
+            multipartUpload = null; // NOPMD NullAssignment
         }
         closed = true;
         super.close();
@@ -139,17 +137,11 @@ public class S3OutputStream extends OutputStream {
 
     private void flushBuffer(final int offset, final int length, final int partSize) throws IOException {
         try {
-            multipartUpload.uploadPart(
-                    new ByteArrayInputStream(
-                            byteBuffer.array(),
-                            offset,
-                            length),
-                    partSize
-            );
+            multipartUpload.uploadPart(new ByteArrayInputStream(byteBuffer.array(), offset, length), partSize);
             byteBuffer.clear();
-        } catch (final Exception e) {
+        } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
             multipartUpload.abort();
-            multipartUpload = null;
+            multipartUpload = null; // NOPMD NullAssignment
             throw new IOException(e);
         }
     }
@@ -164,16 +156,14 @@ public class S3OutputStream extends OutputStream {
             this.uploadId = uploadId;
         }
 
-        public void uploadPart(final InputStream in, final int partSize) throws IOException {
+        public void uploadPart(final InputStream inputStream, final int partSize) throws IOException {
             final var partNumber = partETags.size() + 1;
-            final var uploadPartRequest =
-                    new UploadPartRequest()
-                            .withBucketName(bucketName)
-                            .withKey(key)
-                            .withUploadId(uploadId)
-                            .withPartSize(partSize)
-                            .withPartNumber(partNumber)
-                            .withInputStream(in);
+            final var uploadPartRequest = new UploadPartRequest().withBucketName(bucketName)
+                    .withKey(key)
+                    .withUploadId(uploadId)
+                    .withPartSize(partSize)
+                    .withPartNumber(partNumber)
+                    .withInputStream(inputStream);
             final var uploadResult = client.uploadPart(uploadPartRequest);
             partETags.add(uploadResult.getPartETag());
         }

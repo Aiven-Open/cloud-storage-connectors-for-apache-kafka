@@ -16,12 +16,15 @@
 
 package io.aiven.kafka.connect;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.File;
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,10 +65,8 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 @Testcontainers
-public class AvroIntegrationTest implements IntegrationBase {
+final class AvroIntegrationTest implements IntegrationBase {
     private static final String S3_ACCESS_KEY_ID = "test-key-id0";
     private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
     private static final String TEST_BUCKET_NAME = "test-bucket0";
@@ -90,16 +91,15 @@ public class AvroIntegrationTest implements IntegrationBase {
     private ConnectRunner connectRunner;
 
     private final Schema avroInputDataSchema = new Schema.Parser().parse(
-        "{\"type\":\"record\",\"name\":\"input_data\",\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
+            "{\"type\":\"record\",\"name\":\"input_data\",\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
 
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
-        s3Prefix = COMMON_PREFIX
-            + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
+        s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
-        final AmazonS3 s3 = IntegrationBase.createS3Client(LOCALSTACK);
+        final AmazonS3 s3Client = IntegrationBase.createS3Client(LOCALSTACK);
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
-        testBucketAccessor = new BucketAccessor(s3, TEST_BUCKET_NAME);
+        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
         testBucketAccessor.createBucket();
 
         pluginDir = IntegrationBase.getPluginDir();
@@ -107,7 +107,6 @@ public class AvroIntegrationTest implements IntegrationBase {
 
         IntegrationBase.waitForRunningContainer(KAFKA);
     }
-
 
     @BeforeEach
     void setUp(final TestInfo testInfo) throws ExecutionException, InterruptedException {
@@ -122,7 +121,7 @@ public class AvroIntegrationTest implements IntegrationBase {
     }
 
     @AfterEach
-    final void tearDown() {
+    void tearDown() {
         connectRunner.stop();
         adminClient.close();
         producer.close();
@@ -132,14 +131,14 @@ public class AvroIntegrationTest implements IntegrationBase {
 
     private static Stream<Arguments> compressionAndCodecTestParameters() {
         return Stream.of(Arguments.of("bzip2", "none"), Arguments.of("deflate", "none"), Arguments.of("null", "none"),
-            Arguments.of("snappy", "gzip"), // single test for codec and compression when both set.
-            Arguments.of("zstandard", "none"));
+                Arguments.of("snappy", "gzip"), // single test for codec and compression when both set.
+                Arguments.of("zstandard", "none"));
     }
 
     @ParameterizedTest
     @MethodSource("compressionAndCodecTestParameters")
     void avroOutput(final String avroCodec, final String compression, final TestInfo testInfo)
-        throws ExecutionException, InterruptedException, IOException {
+            throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put("file.compression.type", compression);
@@ -153,11 +152,9 @@ public class AvroIntegrationTest implements IntegrationBase {
 
         waitForConnectToFinishProcessing();
 
-        final List<String> expectedBlobs = Arrays.asList(
-            getAvroBlobName(topicName, 0, 0, compression),
-            getAvroBlobName(topicName, 1, 0, compression),
-            getAvroBlobName(topicName, 2, 0, compression),
-            getAvroBlobName(topicName, 3, 0, compression));
+        final List<String> expectedBlobs = Arrays.asList(getAvroBlobName(topicName, 0, 0, compression),
+                getAvroBlobName(topicName, 1, 0, compression), getAvroBlobName(topicName, 2, 0, compression),
+                getAvroBlobName(topicName, 3, 0, compression));
 
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
@@ -167,10 +164,12 @@ public class AvroIntegrationTest implements IntegrationBase {
         final Map<String, Schema> gcsOutputAvroSchemas = new HashMap<>();
         for (final String blobName : expectedBlobs) {
             final byte[] blobBytes = testBucketAccessor.readBytes(blobName, compression);
-            try (SeekableInput sin = new SeekableByteArrayInput(blobBytes)) {
-                final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-                try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
-                    final List<GenericRecord> items = new ArrayList<>();
+            try (SeekableInput sin = new SeekableByteArrayInput(blobBytes)) { // NOPMD AvoidInstantiatingObjectsInLoops
+                final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>(); // NOPMD
+                                                                                                  // AvoidInstantiatingObjectsInLoops
+                try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) { // NOPMD
+                                                                                                      // AvoidInstantiatingObjectsInLoops
+                    final List<GenericRecord> items = new ArrayList<>(); // NOPMD AvoidInstantiatingObjectsInLoops
                     reader.forEach(items::add);
                     blobContents.put(blobName, items);
                     gcsOutputAvroSchemas.put(blobName, reader.getSchema());
@@ -183,11 +182,13 @@ public class AvroIntegrationTest implements IntegrationBase {
             for (int partition = 0; partition < 4; partition++) {
                 final String blobName = getAvroBlobName(topicName, partition, 0, compression);
                 final Schema gcsOutputAvroSchema = gcsOutputAvroSchemas.get(blobName);
-                final GenericData.Record expectedRecord = new GenericData.Record(gcsOutputAvroSchema);
-                expectedRecord.put("key", new Utf8("key-" + cnt));
-                final GenericData.Record valueRecord = new GenericData.Record(
-                    gcsOutputAvroSchema.getField("value").schema());
-                valueRecord.put("name", new Utf8("user-" + cnt));
+                final GenericData.Record expectedRecord = new GenericData.Record(gcsOutputAvroSchema); // NOPMD
+                                                                                                       // AvoidInstantiatingObjectsInLoops
+                expectedRecord.put("key", new Utf8("key-" + cnt)); // NOPMD AvoidInstantiatingObjectsInLoops
+                final GenericData.Record valueRecord = new GenericData.Record( // NOPMD
+                                                                               // AvoidInstantiatingObjectsInLoops
+                        gcsOutputAvroSchema.getField("value").schema());
+                valueRecord.put("name", new Utf8("user-" + cnt)); // NOPMD AvoidInstantiatingObjectsInLoops
                 expectedRecord.put("value", valueRecord);
                 cnt += 1;
 
@@ -198,8 +199,7 @@ public class AvroIntegrationTest implements IntegrationBase {
     }
 
     @Test
-    final void jsonlAvroOutputTest(final TestInfo testInfo)
-        throws ExecutionException, InterruptedException, IOException {
+    void jsonlAvroOutputTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         final String compression = "none";
@@ -217,11 +217,9 @@ public class AvroIntegrationTest implements IntegrationBase {
         produceRecords(recordCountPerPartition, topicName);
         waitForConnectToFinishProcessing();
 
-        final List<String> expectedBlobs = Arrays.asList(
-            getBlobName(topicName, 0, 0, compression),
-            getBlobName(topicName, 1, 0, compression),
-            getBlobName(topicName, 2, 0, compression),
-            getBlobName(topicName, 3, 0, compression));
+        final List<String> expectedBlobs = Arrays.asList(getBlobName(topicName, 0, 0, compression),
+                getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
+                getBlobName(topicName, 3, 0, compression));
 
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
@@ -229,7 +227,8 @@ public class AvroIntegrationTest implements IntegrationBase {
 
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final List<String> items = new ArrayList<>(testBucketAccessor.readLines(blobName, compression));
+            final List<String> items = Collections
+                    .unmodifiableList(testBucketAccessor.readLines(blobName, compression));
             blobContents.put(blobName, items);
         }
 
@@ -254,13 +253,14 @@ public class AvroIntegrationTest implements IntegrationBase {
     }
 
     private void produceRecords(final int recordCountPerPartition, final String topicName)
-        throws ExecutionException, InterruptedException {
+            throws ExecutionException, InterruptedException {
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         int cnt = 0;
         for (int i = 0; i < recordCountPerPartition; i++) {
             for (int partition = 0; partition < 4; partition++) {
                 final String key = "key-" + cnt;
-                final GenericRecord value = new GenericData.Record(avroInputDataSchema);
+                final GenericRecord value = new GenericData.Record(avroInputDataSchema); // NOPMD
+                                                                                         // AvoidInstantiatingObjectsInLoops
                 value.put("name", "user-" + cnt);
                 cnt += 1;
 
@@ -277,20 +277,16 @@ public class AvroIntegrationTest implements IntegrationBase {
         final Map<String, Object> producerProps = new HashMap<>();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-            "io.confluent.kafka.serializers.KafkaAvroSerializer");
+                "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-            "io.confluent.kafka.serializers.KafkaAvroSerializer");
+                "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put("schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
         return new KafkaProducer<>(producerProps);
     }
 
     private Future<RecordMetadata> sendMessageAsync(final KafkaProducer<String, GenericRecord> producer,
-                                                    final String topicName,
-                                                    final int partition,
-                                                    final String key,
-                                                    final GenericRecord value) {
-        final ProducerRecord<String, GenericRecord> msg = new ProducerRecord<>(
-            topicName, partition, key, value);
+            final String topicName, final int partition, final String key, final GenericRecord value) {
+        final ProducerRecord<String, GenericRecord> msg = new ProducerRecord<>(topicName, partition, key, value);
         return producer.send(msg);
     }
 
@@ -320,14 +316,14 @@ public class AvroIntegrationTest implements IntegrationBase {
     }
 
     private String getAvroBlobName(final String topicName, final int partition, final int startOffset,
-                                   final String compression) {
+            final String compression) {
         final String result = String.format("%s%s-%d-%020d.avro", s3Prefix, topicName, partition, startOffset);
         return result + CompressionType.forName(compression).extension();
     }
 
     // WARN: different from GCS
     private String getBlobName(final String topicName, final int partition, final int startOffset,
-                               final String compression) {
+            final String compression) {
         final String result = String.format("%s%s-%d-%020d", s3Prefix, topicName, partition, startOffset);
         return result + CompressionType.forName(compression).extension();
     }

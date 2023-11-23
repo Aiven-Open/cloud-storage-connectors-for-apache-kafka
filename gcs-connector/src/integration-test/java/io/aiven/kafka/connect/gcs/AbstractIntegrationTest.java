@@ -59,7 +59,7 @@ import org.testcontainers.containers.Network;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SuppressWarnings("deprecation")
+@SuppressWarnings({ "deprecation", "PMD.TestClassWithoutTestCases" })
 @Testcontainers
 class AbstractIntegrationTest<K, V> {
     protected final String testTopic0;
@@ -90,6 +90,7 @@ class AbstractIntegrationTest<K, V> {
 
     private static final String FAKE_GCS_SERVER_VERSION = System.getProperty("fake-gcs-server-version", "latest");
     @Container
+    @SuppressWarnings("rawtypes")
     private static final GenericContainer<?> FAKE_GCS_CONTAINER = new FixedHostPortGenericContainer(
             String.format("fsouza/fake-gcs-server:%s", FAKE_GCS_SERVER_VERSION))
             .withFixedExposedPort(GCS_PORT, GCS_PORT)

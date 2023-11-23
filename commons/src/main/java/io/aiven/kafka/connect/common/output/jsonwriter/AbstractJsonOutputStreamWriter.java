@@ -31,12 +31,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public abstract class AbstractJsonOutputStreamWriter implements OutputStreamWriter {
 
-
     private final Map<String, OutputFieldBuilder> fieldBuilders;
     private final boolean envelopeEnabled;
 
-    AbstractJsonOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders,
-                                   final boolean envelopeEnabled) {
+    AbstractJsonOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders, final boolean envelopeEnabled) {
         this.fieldBuilders = fieldBuilders;
         this.envelopeEnabled = envelopeEnabled;
     }
