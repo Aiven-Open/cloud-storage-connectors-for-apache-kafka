@@ -38,8 +38,7 @@ public class JsonLinesOutputStreamWriter implements OutputStreamWriter {
     private final boolean envelopeEnabled;
     private final ObjectMapper objectMapper;
 
-    JsonLinesOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders,
-                                       final boolean envelopeEnabled) {
+    JsonLinesOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders, final boolean envelopeEnabled) {
         this.fieldBuilders = fieldBuilders;
         this.envelopeEnabled = envelopeEnabled;
         this.objectMapper = new ObjectMapper();

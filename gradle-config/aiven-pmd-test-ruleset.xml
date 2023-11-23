@@ -19,10 +19,10 @@
     </rule>
 
     <rule ref="category/java/errorprone.xml">
-        <exclude name="BeanMembersShouldSerialize" />
         <exclude name="DataflowAnomalyAnalysis" />
         <exclude name="DoNotTerminateVM" />
         <exclude name="MissingSerialVersionUID" />
+        <exclude name="NonSerializableClass" />
     </rule>
     <rule ref="category/java/errorprone.xml/AvoidDuplicateLiterals">
         <properties>

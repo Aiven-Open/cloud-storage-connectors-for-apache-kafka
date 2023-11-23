@@ -25,8 +25,8 @@ import io.confluent.connect.avro.AvroData;
 
 public final class AvroSchemaBuilder extends SinkSchemaBuilder {
 
-    public AvroSchemaBuilder(final Collection<OutputField> fields,
-                             final AvroData avroData, final boolean envelopeEnabled) {
+    public AvroSchemaBuilder(final Collection<OutputField> fields, final AvroData avroData,
+            final boolean envelopeEnabled) {
         super(fields, avroData, envelopeEnabled);
     }
 

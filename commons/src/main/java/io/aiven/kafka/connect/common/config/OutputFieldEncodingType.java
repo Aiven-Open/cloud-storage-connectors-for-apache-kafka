@@ -18,15 +18,15 @@ package io.aiven.kafka.connect.common.config;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 public enum OutputFieldEncodingType {
-    NONE("none"),
-    BASE64("base64");
+    NONE("none"), BASE64("base64");
 
-    public static final String SUPPORTED_FIELD_ENCODING_TYPES =
-        OutputFieldEncodingType.names().stream()
+    public static final String SUPPORTED_FIELD_ENCODING_TYPES = OutputFieldEncodingType.names()
+            .stream()
             .map(c -> String.format("'%s'", c))
             .collect(Collectors.joining(", "));
 
@@ -47,7 +47,7 @@ public enum OutputFieldEncodingType {
     }
 
     public static boolean isValidName(final String name) {
-        return names().contains(name.toLowerCase());
+        return names().contains(name.toLowerCase(Locale.getDefault()));
     }
 
     public static Collection<String> names() {

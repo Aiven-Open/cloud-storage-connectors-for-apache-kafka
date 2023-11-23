@@ -45,11 +45,9 @@ public class AwsCredentialProviderFactory {
     private AWSSecurityTokenService securityTokenService(final S3SinkConfig config) {
         if (config.hasStsEndpointConfig()) {
             final AwsStsEndpointConfig endpointConfig = config.getStsEndpointConfig();
-            final AwsClientBuilder.EndpointConfiguration stsConfig =
-                    new AwsClientBuilder.EndpointConfiguration(endpointConfig.getServiceEndpoint(),
-                                                               endpointConfig.getSigningRegion());
-            final AWSSecurityTokenServiceClientBuilder stsBuilder =
-                    AWSSecurityTokenServiceClientBuilder.standard();
+            final AwsClientBuilder.EndpointConfiguration stsConfig = new AwsClientBuilder.EndpointConfiguration(
+                    endpointConfig.getServiceEndpoint(), endpointConfig.getSigningRegion());
+            final AWSSecurityTokenServiceClientBuilder stsBuilder = AWSSecurityTokenServiceClientBuilder.standard();
             stsBuilder.setEndpointConfiguration(stsConfig);
             return stsBuilder.build();
         }
@@ -58,12 +56,8 @@ public class AwsCredentialProviderFactory {
 
     private AWSCredentialsProvider getBasicAwsCredentialsProvider(final S3SinkConfig config) {
         final AwsAccessSecret awsCredentials = config.getAwsCredentials();
-        return new AWSStaticCredentialsProvider(
-                new BasicAWSCredentials(
-                        awsCredentials.getAccessKeyId().value(),
-                        awsCredentials.getSecretAccessKey().value()
-                )
-        );
+        return new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsCredentials.getAccessKeyId().value(),
+                awsCredentials.getSecretAccessKey().value()));
     }
 
 }

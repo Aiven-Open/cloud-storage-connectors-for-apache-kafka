@@ -20,14 +20,14 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Objects;
 
-public class OutputField {
-    public static final String SUPPORTED_OUTPUT_FIELDS =
-        OutputFieldType.names().stream()
+final public class OutputField {
+    public static final String SUPPORTED_OUTPUT_FIELDS = OutputFieldType.names()
+            .stream()
             .map(f -> "'" + f + "'")
             .collect(Collectors.joining(", "));
 
-    private OutputFieldType fieldType;
-    private OutputFieldEncodingType encodingType;
+    private final OutputFieldType fieldType;
+    private final OutputFieldEncodingType encodingType;
 
     public OutputField(final OutputFieldType fieldType, final OutputFieldEncodingType encodingType) {
         this.fieldType = fieldType;
@@ -59,15 +59,11 @@ public class OutputField {
 
         final OutputField that = (OutputField) obj;
 
-        return Objects.equal(this.fieldType, that.fieldType)
-            && Objects.equal(this.encodingType, that.encodingType);
+        return Objects.equal(this.fieldType, that.fieldType) && Objects.equal(this.encodingType, that.encodingType);
     }
 
     @Override
     public String toString() {
-        return "OutputField{"
-            + "fieldType=" + fieldType
-            + ", encodingType=" + encodingType
-            + '}';
+        return "OutputField{" + "fieldType=" + fieldType + ", encodingType=" + encodingType + '}';
     }
 }

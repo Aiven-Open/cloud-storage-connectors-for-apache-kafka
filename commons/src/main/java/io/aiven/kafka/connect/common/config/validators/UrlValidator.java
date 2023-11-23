@@ -41,9 +41,7 @@ public class UrlValidator implements ConfigDef.Validator {
             try {
                 new URL(valueStr);
             } catch (final MalformedURLException e) {
-                throw new ConfigException(
-                    name, value,
-                    "should be valid URL");
+                throw new ConfigException(name, value, "should be valid URL");
             }
         }
     }

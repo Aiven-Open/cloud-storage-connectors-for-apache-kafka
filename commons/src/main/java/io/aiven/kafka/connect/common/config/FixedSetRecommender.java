@@ -26,10 +26,10 @@ import java.util.Objects;
 import org.apache.kafka.common.config.ConfigDef;
 
 /**
- * A {@link ConfigDef.Recommender} that always supports only
- * the predefined set of values. {@link #visible(String, Map)} is always {@code true}.
+ * A {@link ConfigDef.Recommender} that always supports only the predefined set of values. {@link #visible(String, Map)}
+ * is always {@code true}.
  */
-public class FixedSetRecommender implements ConfigDef.Recommender {
+public final class FixedSetRecommender implements ConfigDef.Recommender {
 
     private final List<Object> supportedValues;
 

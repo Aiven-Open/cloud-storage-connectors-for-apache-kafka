@@ -28,10 +28,8 @@ public class OutputFieldsEncodingValidator implements ConfigDef.Validator {
         assert value instanceof String;
         final String valueStr = (String) value;
         if (!OutputFieldEncodingType.names().contains(valueStr)) {
-            throw new ConfigException(
-                name,
-                valueStr,
-                "supported values are: " + OutputFieldEncodingType.SUPPORTED_FIELD_ENCODING_TYPES);
+            throw new ConfigException(name, valueStr,
+                    "supported values are: " + OutputFieldEncodingType.SUPPORTED_FIELD_ENCODING_TYPES);
         }
     }
 

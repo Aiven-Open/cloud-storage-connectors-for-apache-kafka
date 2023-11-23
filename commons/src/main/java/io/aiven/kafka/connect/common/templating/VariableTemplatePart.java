@@ -28,37 +28,32 @@ public class VariableTemplatePart implements TemplatePart {
 
     private final String originalPlaceholder;
 
-    protected VariableTemplatePart(
-        final String variableName,
-        final String originalPlaceholder) {
+    protected VariableTemplatePart(final String variableName, final String originalPlaceholder) {
         this(variableName, Parameter.EMPTY, originalPlaceholder);
     }
 
-    protected VariableTemplatePart(
-        final String variableName,
-        final Parameter parameter,
-        final String originalPlaceholder) {
+    protected VariableTemplatePart(final String variableName, final Parameter parameter,
+            final String originalPlaceholder) {
         this.variableName = variableName;
         this.parameter = parameter;
         this.originalPlaceholder = originalPlaceholder;
     }
 
-    public final String variableName() {
+    public final String getVariableName() {
         return variableName;
     }
 
-    public final Parameter parameter() {
+    public final Parameter getParameter() {
         return parameter;
     }
 
-    public final String originalPlaceholder() {
+    public final String getOriginalPlaceholder() {
         return originalPlaceholder;
     }
 
     public static final class Parameter {
 
-        public static final Parameter EMPTY =
-            new Parameter("__EMPTY__", "__NO_VALUE__");
+        public static final Parameter EMPTY = new Parameter("__EMPTY__", "__NO_VALUE__");
 
         private final String name;
 
@@ -73,18 +68,19 @@ public class VariableTemplatePart implements TemplatePart {
             return this == EMPTY;
         }
 
-        public String name() {
+        public String getName() {
             return name;
         }
 
-        public String value() {
+        public String getValue() {
             return value;
         }
 
-        public final Boolean asBoolean() {
+        public Boolean asBoolean() {
             return Boolean.parseBoolean(value);
         }
 
+        @SuppressWarnings("PMD.ShortMethodName")
         public static Parameter of(final String name, final String value) {
             if (Objects.isNull(name) && Objects.isNull(value)) {
                 return Parameter.EMPTY;
@@ -101,16 +97,15 @@ public class VariableTemplatePart implements TemplatePart {
         }
 
         @Override
-        public boolean equals(final Object o) {
-            if (this == o) {
+        public boolean equals(final Object other) {
+            if (this == other) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            if (other == null || getClass() != other.getClass()) {
                 return false;
             }
-            final Parameter parameter = (Parameter) o;
-            return Objects.equals(name, parameter.name)
-                    && Objects.equals(value, parameter.value);
+            final Parameter parameter = (Parameter) other;
+            return Objects.equals(name, parameter.name) && Objects.equals(value, parameter.value);
         }
 
         @Override

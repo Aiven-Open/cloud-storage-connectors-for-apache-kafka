@@ -26,7 +26,6 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
-
 class TimestampBuilder implements OutputFieldBuilder {
 
     @Override
@@ -37,7 +36,7 @@ class TimestampBuilder implements OutputFieldBuilder {
             return null;
         }
         final Instant date = Instant.ofEpochMilli(record.timestamp());
-        final DateTimeFormatter formatter =  DateTimeFormatter.ISO_INSTANT;
+        final DateTimeFormatter formatter = DateTimeFormatter.ISO_INSTANT;
         final String timestampAsISO = formatter.format(date);
 
         return JsonNodeFactory.instance.textNode(timestampAsISO);

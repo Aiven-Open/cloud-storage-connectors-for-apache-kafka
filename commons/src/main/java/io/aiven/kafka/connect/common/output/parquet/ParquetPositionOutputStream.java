@@ -21,13 +21,14 @@ import java.io.OutputStream;
 
 import org.apache.parquet.io.PositionOutputStream;
 
-class ParquetPositionOutputStream extends PositionOutputStream {
+final class ParquetPositionOutputStream extends PositionOutputStream {
 
     private final OutputStream out;
 
     private int position;
 
     public ParquetPositionOutputStream(final OutputStream out) {
+        super();
         this.out = out;
     }
 
@@ -37,14 +38,14 @@ class ParquetPositionOutputStream extends PositionOutputStream {
     }
 
     @Override
-    public void write(final int b) throws IOException {
-        out.write(b);
+    public void write(final int singleByte) throws IOException {
+        out.write(singleByte);
         position += 1;
     }
 
     @Override
-    public void write(final byte[] b, final int off, final int len) throws IOException {
-        out.write(b, off, len);
+    public void write(final byte[] bytes, final int off, final int len) throws IOException {
+        out.write(bytes, off, len);
         position += len;
     }
 

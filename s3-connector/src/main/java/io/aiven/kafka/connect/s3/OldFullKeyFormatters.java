@@ -26,23 +26,20 @@ import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
 
 public final class OldFullKeyFormatters {
-    public static final BiFunction<SinkRecord, VariableTemplatePart.Parameter, String> KAFKA_OFFSET =
-        (sinkRecord, usePaddingParameter) ->
-            usePaddingParameter.asBoolean()
-                ? String.format("%020d", sinkRecord.kafkaOffset())
-                : Long.toString(sinkRecord.kafkaOffset());
+    public static final BiFunction<SinkRecord, VariableTemplatePart.Parameter, String> KAFKA_OFFSET = (sinkRecord,
+            usePaddingParameter) -> usePaddingParameter.asBoolean()
+                    ? String.format("%020d", sinkRecord.kafkaOffset())
+                    : Long.toString(sinkRecord.kafkaOffset());
 
-    private static final Map<String, DateTimeFormatter> TIMESTAMP_FORMATTERS =
-            Map.of(
-                    "yyyy", DateTimeFormatter.ofPattern("yyyy"),
-                    "MM", DateTimeFormatter.ofPattern("MM"),
-                    "dd", DateTimeFormatter.ofPattern("dd"),
-                    "HH", DateTimeFormatter.ofPattern("HH")
-            );
+    private static final Map<String, DateTimeFormatter> TIMESTAMP_FORMATTERS = Map.of("yyyy",
+            DateTimeFormatter.ofPattern("yyyy"), "MM", DateTimeFormatter.ofPattern("MM"), "dd",
+            DateTimeFormatter.ofPattern("dd"), "HH", DateTimeFormatter.ofPattern("HH"));
 
-    public static String timestamp(final SinkRecord record,
-                                   final TimestampSource tsSource,
-                                   final VariableTemplatePart.Parameter parameter) {
-        return tsSource.time(record).format(TIMESTAMP_FORMATTERS.get(parameter.value()));
+    private OldFullKeyFormatters() {
+        /* hide constructor */ }
+
+    public static String timestamp(final SinkRecord record, final TimestampSource tsSource,
+            final VariableTemplatePart.Parameter parameter) {
+        return tsSource.time(record).format(TIMESTAMP_FORMATTERS.get(parameter.getValue()));
     }
 }

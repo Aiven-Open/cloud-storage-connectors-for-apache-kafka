@@ -16,7 +16,10 @@
 
 package io.aiven.kafka.connect.s3;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.HashMap;
+import java.util.Map;
 
 import io.aiven.kafka.connect.s3.config.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.config.S3SinkConfig;
@@ -27,12 +30,10 @@ import com.amazonaws.regions.Regions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-public class AwsCredentialProviderFactoryTest {
+final class AwsCredentialProviderFactoryTest {
 
     private AwsCredentialProviderFactory factory;
-    private HashMap<String, String> props;
+    private Map<String, String> props;
 
     @BeforeEach
     public void setUp() {

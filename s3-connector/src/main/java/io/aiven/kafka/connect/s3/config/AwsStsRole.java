@@ -25,17 +25,15 @@ final class AwsStsRole {
     // AssumeRole request limit details here:
     // https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
     public static final int MIN_SESSION_DURATION = STSAssumeRoleSessionCredentialsProvider.DEFAULT_DURATION_SECONDS;
-    public static final int MAX_SESSION_DURATION = 43200;
+    public static final int MAX_SESSION_DURATION = 43_200;
 
     private final String arn;
     private final String externalId;
     private final String sessionName;
     private final int sessionDurationSeconds;
 
-    public AwsStsRole(final String arn,
-                      final String externalId,
-                      final String sessionName,
-                      final int sessionDurationSeconds) {
+    public AwsStsRole(final String arn, final String externalId, final String sessionName,
+            final int sessionDurationSeconds) {
         this.arn = arn;
         this.externalId = externalId;
         this.sessionName = sessionName;

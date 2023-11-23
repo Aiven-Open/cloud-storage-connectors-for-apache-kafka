@@ -22,7 +22,6 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-
 interface OutputFieldBuilder {
 
     JsonNode build(SinkRecord record) throws IOException;

@@ -36,10 +36,12 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 /**
  * A {@link RecordGrouper} that groups records by topic, parition and key.
  *
- * <p>The class requires a filename template with {@code key} variable declared and supports
- * optional {@code topic} and {@code partition} variables declared.
- * 
- * <p>The class supports one record per file.
+ * <p>
+ * The class requires a filename template with {@code key} variable declared and supports optional {@code topic} and
+ * {@code partition} variables declared.
+ *
+ * <p>
+ * The class supports one record per file.
  */
 public final class KeyAndTopicPartitionRecordGrouper implements RecordGrouper {
 
@@ -51,7 +53,8 @@ public final class KeyAndTopicPartitionRecordGrouper implements RecordGrouper {
     /**
      * A constructor.
      *
-     * @param filenameTemplate the filename template.
+     * @param filenameTemplate
+     *            the filename template.
      */
     public KeyAndTopicPartitionRecordGrouper(final Template filenameTemplate) {
         this.filenameTemplate = Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
@@ -82,21 +85,17 @@ public final class KeyAndTopicPartitionRecordGrouper implements RecordGrouper {
             }
         };
 
-        final Function<Parameter, String> setKafkaPartition =
-            usePaddingParameter -> usePaddingParameter.asBoolean()
+        final Function<Parameter, String> setKafkaPartition = usePaddingParameter -> usePaddingParameter.asBoolean()
                 ? String.format("%010d", record.kafkaPartition())
                 : Long.toString(record.kafkaPartition());
 
-        final TopicPartition tp = new TopicPartition(record.topic(), record.kafkaPartition());
+        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.kafkaPartition());
 
         return filenameTemplate.instance()
-            .bindVariable(FilenameTemplateVariable.KEY.name, setKey)
-            .bindVariable(FilenameTemplateVariable.TOPIC.name, tp::topic)
-            .bindVariable(
-                    FilenameTemplateVariable.PARTITION.name,
-                    setKafkaPartition
-            )
-            .render();
+                .bindVariable(FilenameTemplateVariable.KEY.name, setKey)
+                .bindVariable(FilenameTemplateVariable.TOPIC.name, topicPartition::topic)
+                .bindVariable(FilenameTemplateVariable.PARTITION.name, setKafkaPartition)
+                .render();
     }
 
     @Override

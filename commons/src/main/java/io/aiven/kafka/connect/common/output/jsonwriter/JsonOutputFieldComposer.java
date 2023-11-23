@@ -41,22 +41,22 @@ public class JsonOutputFieldComposer {
 
     private OutputFieldBuilder resolveBuilderFor(final OutputFieldType fieldType) {
         switch (fieldType) {
-            case KEY:
+            case KEY :
                 return new KeyBuilder();
 
-            case VALUE:
+            case VALUE :
                 return new ValueBuilder();
 
-            case OFFSET:
+            case OFFSET :
                 return new OffsetBuilder();
 
-            case TIMESTAMP:
+            case TIMESTAMP :
                 return new TimestampBuilder();
 
-            case HEADERS:
+            case HEADERS :
                 return new HeaderBuilder();
 
-            default:
+            default :
                 throw new ConnectException("Unknown output field type " + fieldType);
         }
     }

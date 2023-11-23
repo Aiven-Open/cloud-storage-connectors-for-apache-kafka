@@ -32,9 +32,8 @@ final class SchemaBasedTopicPartitionKeyRecordGrouper extends TopicPartitionKeyR
 
     private final SchemaBasedRotator schemaBasedRotator = new SchemaBasedRotator();
 
-    SchemaBasedTopicPartitionKeyRecordGrouper(final Template filenameTemplate,
-                                              final Integer maxRecordsPerFile,
-                                              final TimestampSource tsSource) {
+    SchemaBasedTopicPartitionKeyRecordGrouper(final Template filenameTemplate, final Integer maxRecordsPerFile,
+            final TimestampSource tsSource) {
         super(filenameTemplate, maxRecordsPerFile, tsSource);
     }
 
@@ -64,17 +63,12 @@ final class SchemaBasedTopicPartitionKeyRecordGrouper extends TopicPartitionKeyR
             }
             final var key = recordKey(record);
             final var tpk = new TopicPartitionKey(new TopicPartition(record.topic(), record.kafkaPartition()), key);
-            final var keyValueVersion =
-                keyValueSchemas.computeIfAbsent(tpk, ignored -> new KeyValueSchema(
-                    record.keySchema(),
-                    record.valueSchema()));
-            final var schemaChanged =
-                !keyValueVersion.keySchema.equals(record.keySchema())
+            final var keyValueVersion = keyValueSchemas.computeIfAbsent(tpk,
+                    ignored -> new KeyValueSchema(record.keySchema(), record.valueSchema()));
+            final var schemaChanged = !keyValueVersion.keySchema.equals(record.keySchema())
                     || !keyValueVersion.valueSchema.equals(record.valueSchema());
             if (schemaChanged) {
-                keyValueSchemas.put(tpk,
-                    new KeyValueSchema(record.keySchema(), record.valueSchema())
-                );
+                keyValueSchemas.put(tpk, new KeyValueSchema(record.keySchema(), record.valueSchema()));
             }
             return schemaChanged;
         }
@@ -91,7 +85,6 @@ final class SchemaBasedTopicPartitionKeyRecordGrouper extends TopicPartitionKeyR
             return key;
         }
 
-
         private static class KeyValueSchema {
 
             final Schema keySchema;
@@ -104,14 +97,14 @@ final class SchemaBasedTopicPartitionKeyRecordGrouper extends TopicPartitionKeyR
             }
 
             @Override
-            public boolean equals(final Object o) {
-                if (this == o) {
+            public boolean equals(final Object other) {
+                if (this == other) {
                     return true;
                 }
-                if (o == null || getClass() != o.getClass()) {
+                if (other == null || getClass() != other.getClass()) {
                     return false;
                 }
-                final var that = (KeyValueSchema) o;
+                final var that = (KeyValueSchema) other;
                 return keySchema.equals(that.keySchema) && valueSchema.equals(that.valueSchema);
             }
 

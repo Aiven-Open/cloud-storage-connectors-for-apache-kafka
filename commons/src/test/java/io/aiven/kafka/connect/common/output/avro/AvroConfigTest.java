@@ -16,6 +16,9 @@
 
 package io.aiven.kafka.connect.common.output.avro;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
@@ -24,27 +27,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-public class AvroConfigTest {
+final class AvroConfigTest {
 
     @ParameterizedTest
     @MethodSource("io.aiven.kafka.connect.common.output.avro.AvroCodecParameters#avroCodecTestParameters")
     void avroNullCodec(final String codecKey, final String codecToString) {
-        final Map<String, String> properties = Map.of(
-            "avro.codec", codecKey
-        );
+        final Map<String, String> properties = Map.of("avro.codec", codecKey);
         final AvroConfig avroConfig = AvroConfig.createAvroConfiguration(properties);
         assertThat(avroConfig.codecFactory()).hasToString(codecToString);
     }
 
     @Test
     void invalidCodec() {
-        final Map<String, String> properties = Map.of(
-            "avro.codec", "invalidCodec"
-        );
-        assertThatThrownBy(() -> AvroConfig.createAvroConfiguration(properties))
-            .isInstanceOf(ConfigException.class);
+        final Map<String, String> properties = Map.of("avro.codec", "invalidCodec");
+        assertThatThrownBy(() -> AvroConfig.createAvroConfiguration(properties)).isInstanceOf(ConfigException.class);
     }
 }

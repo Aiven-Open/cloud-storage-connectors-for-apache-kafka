@@ -25,13 +25,12 @@ import io.confluent.connect.avro.AvroData;
 
 public final class ParquetSchemaBuilder extends SinkSchemaBuilder {
 
-    public ParquetSchemaBuilder(final Collection<OutputField> fields,
-                                final AvroData avroData, final boolean envelopeEnabled) {
+    public ParquetSchemaBuilder(final Collection<OutputField> fields, final AvroData avroData,
+            final boolean envelopeEnabled) {
         super(fields, avroData, envelopeEnabled);
     }
 
-    public ParquetSchemaBuilder(final Collection<OutputField> fields,
-                         final AvroData avroData) {
+    public ParquetSchemaBuilder(final Collection<OutputField> fields, final AvroData avroData) {
         super(fields, avroData);
     }
 

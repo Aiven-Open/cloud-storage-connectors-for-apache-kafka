@@ -23,14 +23,14 @@ import org.junit.jupiter.params.provider.Arguments;
 
 final class AvroCodecParameters {
 
+    private AvroCodecParameters() {
+        /* hide constructor */ }
+
     static Stream<Arguments> avroCodecTestParameters() {
-        return Stream.of(
-            Arguments.of("bzip2", "bzip2"),
-            Arguments.of("deflate", "deflate-" + CodecFactory.DEFAULT_DEFLATE_LEVEL),
-            Arguments.of("null", "null"),
-            Arguments.of("snappy", "snappy"),
-            Arguments.of("zstandard", "zstandard[" + CodecFactory.DEFAULT_ZSTANDARD_LEVEL + "]")
-        );
+        return Stream.of(Arguments.of("bzip2", "bzip2"),
+                Arguments.of("deflate", "deflate-" + CodecFactory.DEFAULT_DEFLATE_LEVEL), Arguments.of("null", "null"),
+                Arguments.of("snappy", "snappy"),
+                Arguments.of("zstandard", "zstandard[" + CodecFactory.DEFAULT_ZSTANDARD_LEVEL + "]"));
     }
 
 }

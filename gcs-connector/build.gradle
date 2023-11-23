@@ -16,13 +16,6 @@
 
 plugins {
     id("aiven-apache-kafka-connectors-all.java-conventions")
-
-    // https://plugins.gradle.org/plugin/com.diffplug.spotless
-    id "com.diffplug.spotless" version "6.22.0"
-
-    id "pmd"
-
-    id "com.github.spotbugs" version "5.1.3"
 }
 
 group = "io.aiven"
@@ -81,7 +74,7 @@ dependencies {
     // TODO: document why specific version of guava is required
     implementation "com.google.guava:guava:32.1.3-jre"
 
-    implementation "com.github.spotbugs:spotbugs-annotations:4.7.3"
+    implementation "com.github.spotbugs:spotbugs-annotations:4.8.1"
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
@@ -158,74 +151,6 @@ dependencies {
     integrationTestImplementation sourceSets.test.output
 }
 
-spotless {
-  format 'misc', {
-    // define the files to apply `misc` to
-    target '*.gradle', '*.md', '.gitignore'
-    targetExclude ".*/**", "**/build/**", "**/.gradle/**"
-
-    // define the steps to apply to those files
-    trimTrailingWhitespace()
-    indentWithSpaces()
-    endWithNewline()
-  }
-
-  java {
-    licenseHeaderFile file("${project.rootDir}/gradle-config/java.header")
-    importOrder("javax", "java", "org.apache.kafka", "io.aiven", "")
-    removeUnusedImports()
-    replaceRegex("No wildcard imports.", "import(?:\\s+static)?\\s+[^\\*\\s]+\\*;(\r\n|\r|\n)", '$1')
-    eclipse().configFile("${project.rootDir}/gradle-config/aiven-eclipse-formatter.xml")
-    indentWithSpaces()
-    endWithNewline()
-    trimTrailingWhitespace()
-  }
-}
-
-pmd {
-    consoleOutput = true
-    toolVersion = "6.40.0"
-    rulesMinimumPriority = 5
-}
-pmdMain {
-    ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-ruleset.xml")
-    ruleSets = [] // Clear the default rulesets
-}
-pmdTest {
-    ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
-    ruleSets = [] // Clear the default rulesets
-}
-pmdIntegrationTest {
-    ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
-    ruleSets = [] // Clear the default rulesets
-}
-
-spotbugs {
-    toolVersion = "4.7.3"
-    excludeFilter = file("${project.rootDir}/gradle-config/spotbugs-exclude.xml")
-}
-spotbugsMain {
-    reports {
-        html {
-            stylesheet = 'fancy-hist.xsl'
-        }
-    }
-}
-spotbugsTest {
-    reports {
-        html {
-            stylesheet = 'fancy-hist.xsl'
-        }
-    }
-}
-spotbugsIntegrationTest {
-    reports {
-        html {
-            stylesheet = 'fancy-hist.xsl'
-        }
-    }
-}
-
 tasks.register('integrationTest', Test) {
     description = 'Runs the integration tests.'
     group = 'verification'
@@ -255,6 +180,17 @@ tasks.register('integrationTest', Test) {
     // Pass the distribution file path to the tests.
     systemProperty("integration-test.distribution.file.path", distTar.archiveFile.get().asFile.path)
     systemProperty("fake-gcs-server-version", "1.45.2")
+}
+pmdIntegrationTest {
+    ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
+    ruleSets = [] // Clear the default rulesets
+}
+spotbugsIntegrationTest {
+    reports {
+        html {
+            stylesheet = 'fancy-hist.xsl'
+        }
+    }
 }
 
 

@@ -16,6 +16,10 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
+import static org.assertj.core.util.Lists.list;
+
 import java.util.List;
 import java.util.Map;
 
@@ -27,80 +31,46 @@ import io.aiven.kafka.connect.common.templating.Template;
 
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.entry;
-import static org.assertj.core.util.Lists.list;
-
 final class SchemaBasedTopicPartitionRecordGrouperTest {
 
-    static final SinkRecord KT0P0R0 = new SinkRecord(
-            "topic0", 0,
-            SchemaBuilder.string().optional().version(1).build(), null,
-            SchemaBuilder.string().optional().version(1).build(), null, 0);
-    static final SinkRecord KT0P0R1 = new SinkRecord(
-            "topic0", 0,
-            SchemaBuilder.string().optional().version(1).build(), "some_key",
-            SchemaBuilder.string().optional().version(1).build(), null, 1);
-    static final SinkRecord KT0P0R2 = new SinkRecord(
-            "topic0", 0,
-            SchemaBuilder.string().optional().version(1).build(), null,
-            SchemaBuilder.string().optional().version(1).build(), null, 2);
-    static final SinkRecord KT0P0R3 = new SinkRecord(
-            "topic0", 0,
-            SchemaBuilder.string().optional().version(1).build(), null,
-            SchemaBuilder.string().optional().version(1).build(), null, 3);
-    static final SinkRecord KT0P0R4 = new SinkRecord(
-            "topic0", 0,
-            SchemaBuilder.string().optional().version(2).build(), "some_key",
-            SchemaBuilder.string().optional().version(1).build(), null, 4);
-    static final SinkRecord KT0P0R5 = new SinkRecord(
-            "topic0", 0,
-            SchemaBuilder.string().optional().version(2).build(), "some_key",
-            SchemaBuilder.string().optional().version(1).build(), null, 5);
+    static final SinkRecord KT0P0R0 = new SinkRecord("topic0", 0, SchemaBuilder.string().optional().version(1).build(),
+            null, SchemaBuilder.string().optional().version(1).build(), null, 0);
+    static final SinkRecord KT0P0R1 = new SinkRecord("topic0", 0, SchemaBuilder.string().optional().version(1).build(),
+            "some_key", SchemaBuilder.string().optional().version(1).build(), null, 1);
+    static final SinkRecord KT0P0R2 = new SinkRecord("topic0", 0, SchemaBuilder.string().optional().version(1).build(),
+            null, SchemaBuilder.string().optional().version(1).build(), null, 2);
+    static final SinkRecord KT0P0R3 = new SinkRecord("topic0", 0, SchemaBuilder.string().optional().version(1).build(),
+            null, SchemaBuilder.string().optional().version(1).build(), null, 3);
+    static final SinkRecord KT0P0R4 = new SinkRecord("topic0", 0, SchemaBuilder.string().optional().version(2).build(),
+            "some_key", SchemaBuilder.string().optional().version(1).build(), null, 4);
+    static final SinkRecord KT0P0R5 = new SinkRecord("topic0", 0, SchemaBuilder.string().optional().version(2).build(),
+            "some_key", SchemaBuilder.string().optional().version(1).build(), null, 5);
 
-    static final SinkRecord RT0P1R0 = new SinkRecord(
-            "topic0", 1,
-            SchemaBuilder.string().optional().version(1).build(), null,
-            SchemaBuilder.string().optional().version(1).build(), null, 10);
-    static final SinkRecord RT0P1R1 = new SinkRecord(
-            "topic0", 1,
-            SchemaBuilder.string().optional().version(1).build(), null,
-            SchemaBuilder.string().optional().version(1).build(), null, 11);
-    static final SinkRecord RT0P1R2 = new SinkRecord(
-            "topic0", 1,
-            SchemaBuilder.string().optional().version(1).build(), null,
-            SchemaBuilder.string().optional().version(2).build(), null, 12);
-    static final SinkRecord RT0P1R3 = new SinkRecord(
-            "topic0", 1,
-            SchemaBuilder.string().optional().version(1).build(), "some_key",
-            SchemaBuilder.string().optional().version(2).build(), null, 13);
+    static final SinkRecord RT0P1R0 = new SinkRecord("topic0", 1, SchemaBuilder.string().optional().version(1).build(),
+            null, SchemaBuilder.string().optional().version(1).build(), null, 10);
+    static final SinkRecord RT0P1R1 = new SinkRecord("topic0", 1, SchemaBuilder.string().optional().version(1).build(),
+            null, SchemaBuilder.string().optional().version(1).build(), null, 11);
+    static final SinkRecord RT0P1R2 = new SinkRecord("topic0", 1, SchemaBuilder.string().optional().version(1).build(),
+            null, SchemaBuilder.string().optional().version(2).build(), null, 12);
+    static final SinkRecord RT0P1R3 = new SinkRecord("topic0", 1, SchemaBuilder.string().optional().version(1).build(),
+            "some_key", SchemaBuilder.string().optional().version(2).build(), null, 13);
 
-    static final SinkRecord KRT1P1R0 = new SinkRecord(
-            "topic1", 0,
-            SchemaBuilder.string().optional().version(1).build(), "some_key",
-            SchemaBuilder.string().optional().version(1).build(), null, 1000);
-    static final SinkRecord KRT1P1R1 = new SinkRecord(
-            "topic1", 0,
-            SchemaBuilder.string().optional().version(1).build(), null,
-            SchemaBuilder.string().optional().version(1).build(), null, 1001);
-    static final SinkRecord KRT1P1R2 = new SinkRecord(
-            "topic1", 0,
-            SchemaBuilder.string().optional().version(1).build(), null,
-            SchemaBuilder.string().optional().version(1).build(), null, 1002);
-    static final SinkRecord KRT1P1R3 = new SinkRecord(
-            "topic1", 0,
-            SchemaBuilder.string().optional().version(2).build(), "some_key",
-            SchemaBuilder.string().optional().version(2).build(), null, 1003);
+    static final SinkRecord KRT1P1R0 = new SinkRecord("topic1", 0, SchemaBuilder.string().optional().version(1).build(),
+            "some_key", SchemaBuilder.string().optional().version(1).build(), null, 1000);
+    static final SinkRecord KRT1P1R1 = new SinkRecord("topic1", 0, SchemaBuilder.string().optional().version(1).build(),
+            null, SchemaBuilder.string().optional().version(1).build(), null, 1001);
+    static final SinkRecord KRT1P1R2 = new SinkRecord("topic1", 0, SchemaBuilder.string().optional().version(1).build(),
+            null, SchemaBuilder.string().optional().version(1).build(), null, 1002);
+    static final SinkRecord KRT1P1R3 = new SinkRecord("topic1", 0, SchemaBuilder.string().optional().version(2).build(),
+            "some_key", SchemaBuilder.string().optional().version(2).build(), null, 1003);
 
-    static final TimestampSource DEFAULT_TS_SOURCE =
-            TimestampSource.of(TimestampSource.Type.WALLCLOCK);
+    static final TimestampSource DEFAULT_TS_SOURCE = TimestampSource.of(TimestampSource.Type.WALLCLOCK);
 
     @Test
     void rotateOnKeySchemaChanged() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
-        final RecordGrouper grouper =
-                new SchemaBasedTopicPartitionRecordGrouper(
-                        filenameTemplate, null, DEFAULT_TS_SOURCE);
+        final RecordGrouper grouper = new SchemaBasedTopicPartitionRecordGrouper(filenameTemplate, null,
+                DEFAULT_TS_SOURCE);
 
         grouper.put(KT0P0R0);
         grouper.put(KT0P0R1);
@@ -110,19 +80,15 @@ final class SchemaBasedTopicPartitionRecordGrouperTest {
         grouper.put(KT0P0R5);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(records)
-            .containsOnly(
-                entry("topic0-0-0", list(KT0P0R0, KT0P0R1, KT0P0R2, KT0P0R3)),
-                entry("topic0-0-4", list(KT0P0R4, KT0P0R5))
-            );
+        assertThat(records).containsOnly(entry("topic0-0-0", list(KT0P0R0, KT0P0R1, KT0P0R2, KT0P0R3)),
+                entry("topic0-0-4", list(KT0P0R4, KT0P0R5)));
     }
 
     @Test
     void rotateOnValueSchemaChanged() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
-        final RecordGrouper grouper =
-                new SchemaBasedTopicPartitionRecordGrouper(
-                        filenameTemplate, null, DEFAULT_TS_SOURCE);
+        final RecordGrouper grouper = new SchemaBasedTopicPartitionRecordGrouper(filenameTemplate, null,
+                DEFAULT_TS_SOURCE);
 
         grouper.put(RT0P1R0);
         grouper.put(RT0P1R1);
@@ -130,19 +96,15 @@ final class SchemaBasedTopicPartitionRecordGrouperTest {
         grouper.put(RT0P1R3);
 
         final Map<String, List<SinkRecord>> records = grouper.records();
-        assertThat(records)
-            .containsOnly(
-                entry("topic0-1-10", list(RT0P1R0, RT0P1R1)),
-                entry("topic0-1-12", list(RT0P1R2, RT0P1R3))
-            );
+        assertThat(records).containsOnly(entry("topic0-1-10", list(RT0P1R0, RT0P1R1)),
+                entry("topic0-1-12", list(RT0P1R2, RT0P1R3)));
     }
 
     @Test
     void rotateOnValueSchemaChangedAndButchSize() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{start_offset}}");
-        final RecordGrouper grouper =
-                new SchemaBasedTopicPartitionRecordGrouper(
-                        filenameTemplate, 2, DEFAULT_TS_SOURCE);
+        final RecordGrouper grouper = new SchemaBasedTopicPartitionRecordGrouper(filenameTemplate, 2,
+                DEFAULT_TS_SOURCE);
 
         grouper.put(KRT1P1R0);
         grouper.put(KRT1P1R1);
@@ -150,11 +112,7 @@ final class SchemaBasedTopicPartitionRecordGrouperTest {
         grouper.put(KRT1P1R3);
 
         final var records = grouper.records();
-        assertThat(records)
-            .containsOnly(
-                entry("topic1-0-1000", list(KRT1P1R0, KRT1P1R1)),
-                entry("topic1-0-1002", list(KRT1P1R2)),
-                entry("topic1-0-1003", list(KRT1P1R3))
-            );
+        assertThat(records).containsOnly(entry("topic1-0-1000", list(KRT1P1R0, KRT1P1R1)),
+                entry("topic1-0-1002", list(KRT1P1R2)), entry("topic1-0-1003", list(KRT1P1R3)));
     }
 }

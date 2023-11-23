@@ -40,8 +40,7 @@ class JsonOutputStreamWriter implements OutputStreamWriter {
     private final boolean envelopeEnabled;
     private final ObjectMapper objectMapper;
 
-    JsonOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders,
-                           final boolean envelopeEnabled) {
+    JsonOutputStreamWriter(final Map<String, OutputFieldBuilder> fieldBuilders, final boolean envelopeEnabled) {
         this.fieldBuilders = fieldBuilders;
         this.envelopeEnabled = envelopeEnabled;
         this.objectMapper = new ObjectMapper();
