@@ -33,16 +33,17 @@ To send us a pull request, please:
 2. Modify the source; please focus on the specific change you are contributing. If you also reformat all the code, it will be hard for us to focus on your change.
 3. Ensure local tests pass.
 4. Commit to your fork using clear commit messages.
-5. Send us a pull request, answering any default questions in the pull request interface.
-6. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
-7. Before merging, clean up the commit history for the PR. Each commit should be self-contained with an informative message, since each commit will be added to the history for this project.
+5. Be compliant with our formatting style by running `./gradlew spotlessApply`
+6. Send us a pull request, answering any default questions in the pull request interface.
+7. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
+8. Before merging, clean up the commit history for the PR. Each commit should be self-contained with an informative message, since each commit will be added to the history for this project.
 
 GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and
 [creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
 ## Developer Certificate of Origin
 
-Aiven's Common Module for Apache Kafka connectors is an open source product released under the Apache 2.0 license (see either [the Apache site](https://www.apache.org/licenses/LICENSE-2.0) or the [LICENSE.txt file](LICENSE.txt)). The Apache 2.0 license allows you to freely use, modify, distribute, and sell your own products that include Apache 2.0 licensed software.
+Aiven's Apache Kafka Connectors Module for Apache Kafka connectors is an open source product released under the Apache 2.0 license (see either [the Apache site](https://www.apache.org/licenses/LICENSE-2.0) or the [LICENSE.txt file](LICENSE.txt)). The Apache 2.0 license allows you to freely use, modify, distribute, and sell your own products that include Apache 2.0 licensed software.
 
 We respect intellectual property rights of others and we want to make sure all incoming contributions are correctly attributed and licensed. A Developer Certificate of Origin (DCO) is a lightweight mechanism to do that.
 
