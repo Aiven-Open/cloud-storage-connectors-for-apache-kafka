@@ -1,7 +1,5 @@
 # Aiven's GCS Sink Connector for Apache Kafka®
 
-![Pull Request Workflow](https://github.com/aiven/gcs-connector-for-apache-kafka/workflows/Pull%20Request%20Workflow/badge.svg)
-
 This is a sink
 [Apache Kafka Connect](https://kafka.apache.org/documentation/#connect)
 connector that stores Kafka messages in a
@@ -649,19 +647,7 @@ Release JARs are available in Maven Central:
 
 ### Developing together with Common Module for Apache Kafka Connect library
 
-This project depends on [Common Module for Apache Kafka Connect](https://github.com/aiven/commons-for-apache-kafka-connect). Normally, an artifact from a globally accessible repository is used. However, if you need to introduce changes to both this connector and Common Module for Apache Kafka Connect library at the same time, you should short-circuit the development loop via locally published artifacts. Please follow these steps:
-1. Checkout the `main` `HEAD` of Common Module for Apache Kafka Connect.
-2. Ensure the version [here](https://github.com/aiven/commons-for-apache-kafka-connect/blob/main/gradle.properties) is with `-SNAPSHOT` prefix.
-3. Make changes to Common Module for Apache Kafka Connect.
-4. Publish it locally with `./gradlew publishToMavenLocal`.
-5. Change the version in the connector's [`build.gradle`](build.gradle.kts) (`ext.aivenConnectCommonsVersion`) to match the published snapshot version of Common Module for Apache Kafka Connect.
-
-After that, the latest changes you've done to Common Module for Apache Kafka Connect will be used.
-
-When you finish developing the feature and is sure Common Module for Apacha Kafka Connect won't need to change:
-1. Make a proper release of Common Module for Apache Kafka Connect.
-2. Publish the artifact to the currently used globally accessible repository.
-3. Change the version of Common Module for Apache Kafka Connect in the connector to the published one.
+This project depends on [Common Module for Apache Kafka Connect](../commons/README.md).
 
 ### Integration testing
 
