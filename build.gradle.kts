@@ -1,3 +1,4 @@
+import com.diffplug.gradle.spotless.SpotlessExtension
 import java.net.URI
 
 /*
@@ -40,3 +41,14 @@ val parquetVersion by extra ("1.11.2")
 val junitVersion by extra ("5.10.0")
 val confluentPlatformVersion by extra ("7.2.2")
 val hadoopVersion by extra ("3.3.6")
+
+
+configure<SpotlessExtension> {
+    format("misc") {
+        target("*.gradle", "*.md", ".gitignore")
+        targetExclude(".*/**", "**/build/**", "**/.gradle/**")
+        trimTrailingWhitespace()
+        indentWithSpaces()
+        endWithNewline()
+    }
+}
