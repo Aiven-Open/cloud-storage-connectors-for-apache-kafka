@@ -636,7 +636,7 @@ This project depends on [Common Module for Apache Kafka Connect](https://github.
 2. Ensure the version [here](https://github.com/aiven-open/commons-for-apache-kafka-connect/blob/main/gradle.properties) is with `-SNAPSHOT` prefix.
 3. Make changes to Commons.
 4. Publish it locally with `./gradlew publishToMavenLocal`.
-5. Change the version in the connector's [`build.gradle`](build.gradle) (`ext.aivenConnectCommonsVersion`) to match the published snapshot version of Commons.
+5. Change the version in the connector's [`build.gradle`](build.gradle.kts) (`ext.aivenConnectCommonsVersion`) to match the published snapshot version of Commons.
 
 After that, the latest changes you've done to Commons will be used.
 
