@@ -1,7 +1,5 @@
 # Aiven's S3 Sink Connector for Apache Kafka
 
-![Pull Request Workflow](https://github.com/Aiven-Open/s3-connector-for-apache-kafka/actions/workflows/main_push_and_pull_request_workflow.yml/badge.svg)
-
 This is a sink Apache Kafka Connect connector that stores Apache Kafka messages in an AWS S3 bucket.
 
 **Table of Contents**
@@ -631,19 +629,7 @@ There are four configuration properties to configure retry strategy exists.
 
 ### Developing together with Commons library
 
-This project depends on [Common Module for Apache Kafka Connect](https://github.com/aiven-open/commons-for-apache-kafka-connect). Normally, an artifact of it published to a globally accessible repository is used. However, if you need to introduce changes to both this connector and Commons library at the same time, you should short-circuit the development loop via locally published artifacts. Please follow this steps:
-1. Checkout the `main` `HEAD` of Commons.
-2. Ensure the version [here](https://github.com/aiven-open/commons-for-apache-kafka-connect/blob/main/gradle.properties) is with `-SNAPSHOT` prefix.
-3. Make changes to Commons.
-4. Publish it locally with `./gradlew publishToMavenLocal`.
-5. Change the version in the connector's [`build.gradle`](build.gradle.kts) (`ext.aivenConnectCommonsVersion`) to match the published snapshot version of Commons.
-
-After that, the latest changes you've done to Commons will be used.
-
-When you finish developing the feature and is sure Commons won't need to change:
-1. Make a proper release of Commons.
-2. Publish the artifact to the currently used globally accessible repository.
-3. Change the version of Commons in the connector to the published one.
+This project depends on [Common Module for Apache Kafka Connect](../commons/README.md).
 
 ### Integration testing
 
