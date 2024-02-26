@@ -288,7 +288,27 @@ class SchemaBuilderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("multipleFieldsWithoutHeadersTestParameters")
+    @MethodSource("schemaBuilders")
+    void testBuildAivenCustomSchemaForMultipleFieldsWithDiffTypes(final SinkSchemaBuilder schemaBuilder) {
+        final Headers headers = new ConnectHeaders();
+        headers.add("a", "b", Schema.STRING_SCHEMA);
+        headers.add("c", 1, Schema.INT32_SCHEMA);
+        final var sinkRecord =
+                new SinkRecord(
+                        "some-topic", 1,
+                        Schema.STRING_SCHEMA, "some-key",
+                        Schema.STRING_SCHEMA, "some-value",
+                        100L, 1000L,
+                        TimestampType.CREATE_TIME, headers);
+
+        assertThatThrownBy(() -> schemaBuilder.buildSchema(sinkRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage("Header schema Schema{INT32} for 'c' "
+                + "is not the same as the already defined map type: Schema{STRING}. "
+                + "To force the same type, consider using StringConverter or similar.");
+    }
+
+    @ParameterizedTest
     @MethodSource("schemaBuilders")
     void testBuildSchemaForMultipleFieldsWithoutHeaders(final SinkSchemaBuilder schemaBuilder) {
         final var sinkRecord =

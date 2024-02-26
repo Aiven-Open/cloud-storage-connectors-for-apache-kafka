@@ -147,7 +147,9 @@ public abstract class SinkSchemaBuilder {
                 headerSchema = h.schema();
             } else if (headerSchema.type() != h.schema().type()) {
                 throw new DataException("Header schema " + h.schema()
-                    + " is not the same as " + headerSchema);
+                    + " for '" + h.key() + "' "
+                    + "is not the same as the already defined map type: " + headerSchema + ". "
+                    + "To force the same type, consider using StringConverter or similar.");
             }
         }
         return SchemaBuilder.map().values(avroData.fromConnectSchema(headerSchema));
