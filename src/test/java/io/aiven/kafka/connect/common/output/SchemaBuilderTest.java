@@ -238,7 +238,7 @@ class SchemaBuilderTest {
         assertThat(avroSchema.getField("value").schema().getType()).isEqualTo(Type.STRING);
     }
 
-    private static Stream<Arguments> multipleFieldsWithoutHeadersTestParameters() {
+    private static Stream<Arguments> schemaBuilders() {
         final var fields = List.of(
             new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
             new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE),
@@ -255,7 +255,7 @@ class SchemaBuilderTest {
     }
 
     @ParameterizedTest
-    @MethodSource("multipleFieldsWithoutHeadersTestParameters")
+    @MethodSource("schemaBuilders")
     void testBuildAivenCustomSchemaForMultipleFields(final SinkSchemaBuilder schemaBuilder) {
         final Headers headers = new ConnectHeaders();
         headers.add("a", "b", Schema.STRING_SCHEMA);
@@ -289,6 +289,7 @@ class SchemaBuilderTest {
 
     @ParameterizedTest
     @MethodSource("multipleFieldsWithoutHeadersTestParameters")
+    @MethodSource("schemaBuilders")
     void testBuildSchemaForMultipleFieldsWithoutHeaders(final SinkSchemaBuilder schemaBuilder) {
         final var sinkRecord =
                 new SinkRecord(
