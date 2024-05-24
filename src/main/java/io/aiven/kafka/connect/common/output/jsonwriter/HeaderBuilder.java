@@ -25,14 +25,11 @@ import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 class HeaderBuilder implements OutputFieldBuilder {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final JsonConverter converter;
 
@@ -66,10 +63,8 @@ class HeaderBuilder implements OutputFieldBuilder {
     }
 
     private JsonNode nodeFromHeader(final Header header, final String topic) throws IOException {
-        return objectMapper.readTree(converter.fromConnectHeader(topic,
-                                                                 header.key(),
-                                                                 header.schema(),
-                                                                 header.value()));
+        return ObjectMapperProvider.get()
+            .readTree(converter.fromConnectHeader(topic, header.key(), header.schema(), header.value()));
 
     }
 }

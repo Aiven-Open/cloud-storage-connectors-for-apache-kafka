@@ -25,11 +25,8 @@ import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ValueBuilder implements OutputFieldBuilder {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final JsonConverter converter;
 
@@ -54,8 +51,7 @@ class ValueBuilder implements OutputFieldBuilder {
             return null;
         }
 
-        return objectMapper.readTree(converter.fromConnectData(record.topic(),
-                                                               record.valueSchema(),
-                                                               record.value()));
+        return ObjectMapperProvider.get()
+            .readTree(converter.fromConnectData(record.topic(), record.valueSchema(), record.value()));
     }
 }
