@@ -169,7 +169,7 @@ dependencies {
     testImplementation "org.apache.parquet:parquet-tools:$parquetVersion"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:2.17.0"
     testImplementation "org.mockito:mockito-core:5.11.0"
-    testImplementation 'org.assertj:assertj-core:3.25.3'
+    testImplementation 'org.assertj:assertj-core:3.26.0'
 
     testImplementation ("org.apache.parquet:parquet-tools:$parquetVersion") {
         exclude group: "org.slf4j", module: "slf4j-api"
