@@ -20,7 +20,14 @@ jobs:
         uses: actions/setup-java@v2
         with:
           java-version: ${{ matrix.java-version }}
-          distribution: 'temurin'
+          distribution: "temurin"
           cache: gradle
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Build in Windows
+        if: runner.os == 'Windows'
+        run: ./gradlew build test
+      - name: Build in MacOS
+        if: runner.os == 'macOS'
+        run: ./gradlew build test
+      - name: Build in Linux
+        if: runner.os == 'Linux'
+        run: ./gradlew build check test integrationTest
