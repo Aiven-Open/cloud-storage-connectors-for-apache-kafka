@@ -1,10 +1,19 @@
-target
-docs/_build
+# IDE files
 .idea
-*.iml
 *.DS_Store
+
+# Package files
+*.jar
+*.war
+*.ear
+*.class
+
+# Gradle files
 .gradle
+gradlew
+gradlew.bat
+gradle-wrapper.properties
 .gradletasknamecache
+
+# Build files
 build/
-rpm/
-rpmbuild/
