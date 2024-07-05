@@ -1,0 +1,19 @@
+# IDE files
+.idea
+*.DS_Store
+
+# Package files
+*.jar
+*.war
+*.ear
+*.class
+
+# Gradle files
+.gradle
+gradlew
+gradlew.bat
+gradle-wrapper.properties
+.gradletasknamecache
+
+# Build files
+build/
