@@ -27,4 +27,8 @@
         <Class name="io.aiven.kafka.connect.gcs.testutils.BucketAccessor" />
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
     </Match>
+    <Match>
+        <Class name="io.aiven.kafka.connect.azure.sink.testutils.AzureBlobAccessor" />
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
+    </Match>
 </FindBugsFilter>

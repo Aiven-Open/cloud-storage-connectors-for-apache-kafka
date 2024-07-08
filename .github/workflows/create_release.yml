@@ -61,6 +61,13 @@ jobs:
           echo s3_zip_file=${s3_zip_file} >> $GITHUB_ENV
           echo s3_tar_path=`realpath ./s3-sink-connector/build/distributions/${s3_tar_file}` >> $GITHUB_ENV
           echo s3_zip_path=`realpath ./s3-sink-connector/build/distributions/${s3_tar_file}` >> $GITHUB_ENV
+          
+          export azure_tar_file=$(ls ./azure-sink-connector/build/distributions/ | grep tar)
+          export azure_zip_file=$(ls ./azure-sink-connector/build/distributions/ | grep zip)
+          echo azure_tar_file=${s3_tar_file} >> $GITHUB_ENV
+          echo azure_zip_file=${s3_zip_file} >> $GITHUB_ENV
+          echo azure_tar_path=`realpath ./azure-sink-connector/build/distributions/${azure_tar_file}` >> $GITHUB_ENV
+          echo azure_zip_path=`realpath ./azure-sink-connector/build/distributions/${azure_tar_file}` >> $GITHUB_ENV
 
       - name: Create tag
         run: |
@@ -121,4 +128,24 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.s3_zip_path }}
           asset_name: ${{ env.s3_zip_file }}
+          asset_content_type: application/zip
+
+      - name: Upload tar Azure
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.azure_tar_path }}
+          asset_name: ${{ env.azure_tar_file }}}
+          asset_content_type: application/tar
+
+      - name: Upload zip Azure
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.azure_zip_path }}
+          asset_name: ${{ env.azure_zip_file }}
           asset_content_type: application/zip
