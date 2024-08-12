@@ -100,7 +100,7 @@ dependencies {
     implementation("com.github.spotbugs:spotbugs-annotations:4.8.4")
     implementation("org.slf4j:slf4j-api:$slf4jVersion")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
     testImplementation("org.hamcrest:hamcrest:2.2")
     testImplementation("org.assertj:assertj-core:3.25.3")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
