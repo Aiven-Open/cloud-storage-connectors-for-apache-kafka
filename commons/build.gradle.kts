@@ -89,7 +89,7 @@ dependencies {
     testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
     testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
     testImplementation("org.apache.parquet:parquet-tools:$parquetVersion")
-    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.15.3")
+    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
     testImplementation("org.mockito:mockito-core:5.8.0")
     testImplementation("org.assertj:assertj-core:3.24.2")
 
@@ -99,7 +99,7 @@ dependencies {
     testImplementation("org.codehaus.woodstox:stax2-api:4.2.2")
     testImplementation("org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion")
 
-    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.15.3")
+    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
     testImplementation("io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion")
 
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
