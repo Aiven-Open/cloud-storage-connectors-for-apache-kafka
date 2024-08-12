@@ -84,7 +84,7 @@ dependencies {
 
     implementation(project(":commons"))
 
-    implementation("com.github.spotbugs:spotbugs-annotations:4.8.1")
+    implementation("com.github.spotbugs:spotbugs-annotations:4.8.6")
     implementation("org.slf4j:slf4j-api:$slf4jVersion")
     implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
     implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
