@@ -105,7 +105,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.25.3")
     testImplementation("org.mockito:mockito-core:$mockitoVersion")
     testImplementation("org.mockito:mockito-inline:$mockitoVersion")
-    testImplementation("net.jqwik:jqwik:1.8.4")
+    testImplementation("net.jqwik:jqwik:1.9.0")
     // is provided by "jqwik", but need this in testImplementation scope
     testImplementation("net.jqwik:jqwik-engine:1.8.3")
 
