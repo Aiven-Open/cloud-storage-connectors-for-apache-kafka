@@ -20,21 +20,9 @@ plugins {
     id("aiven-apache-kafka-connectors-all.java-conventions")
 }
 
-val kafkaVersion by extra ("1.1.0")
-// Compatible with Kafka version:
-// https://docs.confluent.io/current/installation/versions-interoperability.html
-val confluentPlatformVersion by extra ("4.1.4")
-// Align with version used by commons
-val avroConverterVersion by extra ("7.2.2")
-val aivenConnectCommonsVersion by extra ("0.12.0")
 val amazonS3Version by extra ("1.12.729")
 val amazonSTSVersion by extra ("1.12.729")
-val slf4jVersion by extra ("1.7.36")
-val junitVersion by extra ("5.10.2")
-val testcontainersVersion by extra ("1.19.8")
-val localstackVersion by extra ("0.2.23")
-val wireMockVersion by extra ("2.35.0")
-val mockitoVersion by extra ("5.12.0")
+val s3mockVersion by extra ("0.2.6")
 
 val integrationTest: SourceSet = sourceSets.create("integrationTest") {
     java {
@@ -79,53 +67,52 @@ idea {
 }
 
 dependencies {
-    compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
-    compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
+    compileOnly(apache.kafka.connect.api)
+    compileOnly(apache.kafka.connect.runtime)
 
     implementation(project(":commons"))
 
-    implementation("com.github.spotbugs:spotbugs-annotations:4.8.1")
-    implementation("org.slf4j:slf4j-api:$slf4jVersion")
+    implementation(tools.spotbugs.annotations)
+    implementation(logginglibs.slf4j)
     implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
     implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
 
-    testImplementation("org.xerial.snappy:snappy-java:1.1.10.5")
-    testImplementation("com.github.luben:zstd-jni:1.5.6-3")
+    testImplementation(compressionlibs.snappy)
+    testImplementation(compressionlibs.zstd.jni)
 
-    testImplementation("org.apache.kafka:connect-api:$kafkaVersion")
-    testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
-    testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
-    testImplementation("org.slf4j:slf4j-simple:$slf4jVersion")
+    testImplementation(apache.kafka.connect.api)
+    testImplementation(apache.kafka.connect.runtime)
+    testImplementation(apache.kafka.connect.json)
 
-    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
-    testImplementation("org.assertj:assertj-core:3.26.0")
+    testImplementation(testinglibs.junit.jupiter)
+    testImplementation(testinglibs.assertj.core)
 
-    testImplementation("io.findify:s3mock_2.11:0.2.6")
+    testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
 
-    testImplementation("org.mockito:mockito-core:$mockitoVersion")
+    testImplementation(testinglibs.mockito.core)
 
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
-    testImplementation("org.mockito:mockito-junit-jupiter:$mockitoVersion")
+    testRuntimeOnly(testinglibs.junit.jupiter.engine)
+    testImplementation(testinglibs.mockito.junit.jupiter)
 
-    testRuntimeOnly("ch.qos.logback:logback-classic:1.5.6")
+    testRuntimeOnly(logginglibs.logback.classic)
 
-    integrationTestImplementation("cloud.localstack:localstack-utils:$localstackVersion")
-    integrationTestImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
-    integrationTestImplementation("org.testcontainers:kafka:$testcontainersVersion") // this is not Kafka version
-    integrationTestImplementation("org.testcontainers:localstack:$testcontainersVersion")
-    integrationTestImplementation("com.github.tomakehurst:wiremock-jre8:$wireMockVersion")
+    integrationTestImplementation(testinglibs.localstack)
+    integrationTestImplementation(testcontainers.junit.jupiter)
+    integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
+    integrationTestImplementation(testcontainers.localstack)
+    integrationTestImplementation(testinglibs.wiremock)
 
     // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
-    integrationTestImplementation("io.confluent:kafka-connect-avro-converter:$avroConverterVersion") {
+    integrationTestImplementation(confluent.kafka.connect.avro.converter) {
         exclude(group = "org.apache.kafka", module = "kafka-clients")
     }
 
-    integrationTestImplementation("org.apache.avro:avro:1.11.3")
+    integrationTestImplementation(apache.avro)
 
-    testImplementation ("org.apache.parquet:parquet-tools:1.11.2") {
+    testImplementation (apache.parquet.tools) {
         exclude(group = "org.slf4j", module = "slf4j-api")
     }
-    testImplementation("org.apache.hadoop:hadoop-mapreduce-client-core:3.4.0") {
+    testImplementation(apache.hadoop.mapreduce.client.core) {
         exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
         exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")
         exclude(group = "com.google.guava", module = "guava")
@@ -165,7 +152,7 @@ dependencies {
 
     // Make test utils from 'test' available in 'integration-test'
     integrationTestImplementation(sourceSets["test"].output)
-    integrationTestImplementation("org.awaitility:awaitility:4.2.1")
+    integrationTestImplementation(testinglibs.awaitility)
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {
