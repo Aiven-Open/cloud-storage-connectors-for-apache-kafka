@@ -22,14 +22,7 @@ plugins {
 
 group = "io.aiven"
 
-// TODO: document why we stick to these versions
 val kafkaVersion by extra ("1.1.0")
-val confluentPlatformVersion by extra ("4.1.4")
-val avroConverterVersion by extra ("7.2.2")
-val slf4jVersion by extra ("1.7.36")
-val testcontainersVersion by extra("1.19.8")
-val wireMockVersion by extra("2.35.0")
-val mockitoVersion by extra("5.2.0")
 
 val integrationTest: SourceSet = sourceSets.create("integrationTest") {
     java {
@@ -86,8 +79,8 @@ idea {
 }
 
 dependencies {
-    compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
-    compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
+    compileOnly(apache.kafka.connect.api)
+    compileOnly(apache.kafka.connect.runtime)
 
     implementation(project(":commons"))
 
@@ -97,29 +90,28 @@ dependencies {
     // TODO: document why specific version of guava is required
     implementation("com.google.guava:guava:33.0.0-jre")
 
-    implementation("com.github.spotbugs:spotbugs-annotations:4.8.4")
-    implementation("org.slf4j:slf4j-api:$slf4jVersion")
+    implementation(tools.spotbugs.annotations)
+    implementation(logginglibs.slf4j)
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testImplementation("org.hamcrest:hamcrest:2.2")
-    testImplementation("org.assertj:assertj-core:3.25.3")
-    testImplementation("org.mockito:mockito-core:$mockitoVersion")
-    testImplementation("org.mockito:mockito-inline:$mockitoVersion")
-    testImplementation("net.jqwik:jqwik:1.8.4")
+    testImplementation(testinglibs.junit.jupiter)
+    testImplementation(testinglibs.hamcrest)
+    testImplementation(testinglibs.assertj.core)
+    testImplementation(testinglibs.mockito.core)
+    testImplementation(testinglibs.jqwik)
     // is provided by "jqwik", but need this in testImplementation scope
-    testImplementation("net.jqwik:jqwik-engine:1.8.3")
+    testImplementation(testinglibs.jqwik.engine)
 
-    testImplementation("org.apache.kafka:connect-api:$kafkaVersion")
-    testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
-    testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
+    testImplementation(apache.kafka.connect.api)
+    testImplementation(apache.kafka.connect.runtime)
+    testImplementation(apache.kafka.connect.json)
     testImplementation("com.google.cloud:google-cloud-nio:0.127.16")
 
-    testImplementation("org.xerial.snappy:snappy-java:1.1.10.5")
-    testImplementation("com.github.luben:zstd-jni:1.5.6-1")
-    testImplementation ("org.apache.parquet:parquet-tools:1.11.2") {
+    testImplementation(compressionlibs.snappy)
+    testImplementation(compressionlibs.zstd.jni)
+    testImplementation (apache.parquet.tools) {
         exclude(group = "org.slf4j", module = "slf4j-api")
     }
-    testImplementation("org.apache.hadoop:hadoop-mapreduce-client-core:3.3.6") {
+    testImplementation(apache.hadoop.mapreduce.client.core) {
         exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
         exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")
         exclude(group = "com.google.guava", module = "guava")
@@ -157,16 +149,16 @@ dependencies {
         exclude(group = "io.netty", module = "netty")
     }
 
-    testRuntimeOnly("org.slf4j:slf4j-log4j12:$slf4jVersion")
+    testRuntimeOnly(logginglibs.slf4j.log4j12)
 
-    integrationTestImplementation("com.github.tomakehurst:wiremock-jre8:$wireMockVersion")
-    integrationTestImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
-    integrationTestImplementation("org.testcontainers:kafka:$testcontainersVersion") // this is not Kafka version
-    integrationTestImplementation("org.awaitility:awaitility:4.2.0")
+    integrationTestImplementation(testinglibs.wiremock)
+    integrationTestImplementation(testcontainers.junit.jupiter)
+    integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
+    integrationTestImplementation(testinglibs.awaitility)
 
-    integrationTestImplementation("org.apache.kafka:connect-transforms:$kafkaVersion")
+    integrationTestImplementation(apache.kafka.connect.transforms)
     // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
-    integrationTestImplementation("io.confluent:kafka-connect-avro-converter:$avroConverterVersion") {
+    integrationTestImplementation(confluent.kafka.connect.avro.converter) {
         exclude(group = "org.apache.kafka", module = "kafka-clients")
     }
 

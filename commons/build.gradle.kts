@@ -19,35 +19,29 @@ plugins {
     id("aiven-apache-kafka-connectors-all.java-conventions")
 }
 
-val kafkaVersion by extra ("1.1.0")
-val parquetVersion by extra ("1.11.2")
-val junitVersion by extra ("5.10.2")
-val confluentPlatformVersion by extra ("7.2.2")
-val hadoopVersion by extra ("3.3.6")
-
 dependencies {
-    compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
-    compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
-    compileOnly("org.apache.kafka:connect-json:$kafkaVersion")
+    compileOnly(apache.kafka.connect.api)
+    compileOnly(apache.kafka.connect.runtime)
+    compileOnly(apache.kafka.connect.json)
 
-    implementation("io.confluent:kafka-connect-avro-data:$confluentPlatformVersion") {
+    implementation(confluent.kafka.connect.avro.data) {
         exclude(group = "org.apache.kafka", module = "kafka-clients")
     }
 
-    implementation("com.github.spotbugs:spotbugs-annotations:4.8.1")
-    implementation("org.xerial.snappy:snappy-java:1.1.10.5")
-    implementation("com.github.luben:zstd-jni:1.5.5-10")
+    implementation(tools.spotbugs.annotations)
+    implementation(compressionlibs.snappy)
+    implementation(compressionlibs.zstd.jni)
 
-    implementation("org.slf4j:slf4j-api:1.7.36")
+    implementation(logginglibs.slf4j)
 
-    implementation("org.apache.commons:commons-text:1.11.0")
+    implementation(apache.commons.text)
 
-    implementation("org.apache.parquet:parquet-avro:$parquetVersion") {
+    implementation(apache.parquet.avro) {
         exclude(group = "org.xerial.snappy", module = "snappy-java")
         exclude(group = "org.slf4j", module = "slf4j-api")
         exclude(group = "org.apache.avro", module = "avro")
     }
-    implementation("org.apache.hadoop:hadoop-common:$hadoopVersion") {
+    implementation(apache.hadoop.common) {
         exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")
         exclude(group = "com.google.guava", module = "guava")
         exclude(group = "commons-cli", module = "commons-cli")
@@ -84,26 +78,23 @@ dependencies {
         exclude(group = "io.netty", module = "netty")
     }
 
-    testImplementation("org.apache.kafka:connect-api:$kafkaVersion")
-    testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
-    testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
-    testImplementation("org.apache.parquet:parquet-tools:$parquetVersion")
-    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.15.3")
-    testImplementation("org.mockito:mockito-core:5.8.0")
-    testImplementation("org.assertj:assertj-core:3.24.2")
-
-    testImplementation("org.apache.parquet:parquet-tools:$parquetVersion") {
+    testImplementation(apache.kafka.connect.api)
+    testImplementation(apache.kafka.connect.runtime)
+    testImplementation(apache.kafka.connect.json)
+    testImplementation(testinglibs.junit.jupiter)
+    testImplementation(apache.parquet.tools) {
         exclude(group = "org.slf4j", module = "slf4j-api")
     }
-    testImplementation("org.codehaus.woodstox:stax2-api:4.2.2")
-    testImplementation("org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion")
+    testImplementation(jackson.databind)
+    testImplementation(testinglibs.mockito.core)
+    testImplementation(testinglibs.assertj.core)
 
-    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.15.3")
-    testImplementation("io.confluent:kafka-connect-avro-converter:$confluentPlatformVersion")
+    testImplementation(testinglibs.woodstox.stax2.api)
+    testImplementation(apache.hadoop.mapreduce.client.core)
+    testImplementation(confluent.kafka.connect.avro.converter)
 
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
-    testRuntimeOnly("ch.qos.logback:logback-classic:1.4.11")
+    testRuntimeOnly(testinglibs.junit.jupiter.engine)
+    testRuntimeOnly(logginglibs.logback.classic)
 }
 
 distributions {
