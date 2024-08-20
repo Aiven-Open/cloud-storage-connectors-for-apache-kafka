@@ -133,6 +133,11 @@ spotless {
         endWithNewline()
     }
 
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktfmt()
+    }
+
     java {
         licenseHeaderFile(file("${project.rootDir}/gradle-config/java.header"))
         importOrder("javax", "java", "org.apache.kafka", "io.aiven", "")
