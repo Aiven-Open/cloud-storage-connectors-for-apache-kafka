@@ -186,11 +186,13 @@ tasks.distZip { dependsOn(":commons:jar") }
 distributions {
   main {
     contents {
-      from("jar")
-      from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+      from(tasks.jar)
+      from(configurations.runtimeClasspath.get())
     }
   }
 }
+
+tasks.installDist { dependsOn(":commons:jar") }
 
 publishing {
   publications {

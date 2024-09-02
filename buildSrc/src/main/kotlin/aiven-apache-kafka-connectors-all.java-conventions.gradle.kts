@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.diffplug.spotless.LineEnding
 import java.net.URI
 
 plugins {
@@ -124,13 +125,14 @@ spotbugs {
 spotless {
     format("misc") {
         // define the files to apply `misc` to
-        target("*.gradle", "*.md", ".gitignore")
+        target("*.gradle", "*.md", ".gitignore", "**/META-INF/services/**")
         targetExclude(".*/**", "**/build/**", "**/.gradle/**")
 
         // define the steps to apply to those files
         trimTrailingWhitespace()
         indentWithSpaces()
         endWithNewline()
+        // lineEndings = LineEnding.UNIX -> if we want to unify line endings we should set this
     }
 
     kotlinGradle {
