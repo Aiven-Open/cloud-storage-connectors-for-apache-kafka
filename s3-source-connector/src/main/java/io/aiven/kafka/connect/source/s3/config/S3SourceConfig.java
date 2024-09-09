@@ -17,30 +17,23 @@
 package io.aiven.kafka.connect.source.s3.config;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
-
-import io.aiven.kafka.connect.common.config.AivenCommonConfig;
-import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.config.OutputField;
-import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports" })
-final public class S3SourceConfig extends AivenCommonConfig {
+final public class S3SourceConfig {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConfig.class);
 
-    public S3SourceConfig(final Map<String, String> properties) {
-        super(configDef(), preprocessProperties(properties));
+    public S3SourceConfig() {
         validate();
     }
 
-    static Map<String, String> preprocessProperties(final Map<String, String> properties) {
+    static Map<String, String> preprocessProperties() {
         return Collections.emptyMap();
     }
 
@@ -50,19 +43,5 @@ final public class S3SourceConfig extends AivenCommonConfig {
 
     private void validate() {
         LOGGER.debug("Validating config.");
-    }
-    @Override
-    public CompressionType getCompressionType() {
-        return CompressionType.GZIP;
-    }
-
-    @Override
-    public List<OutputField> getOutputFields() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public OutputFieldEncodingType getOutputFieldEncodingType() {
-        return null;
     }
 }
