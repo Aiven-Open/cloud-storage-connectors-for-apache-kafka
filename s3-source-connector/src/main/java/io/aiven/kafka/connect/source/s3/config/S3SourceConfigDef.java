@@ -25,6 +25,6 @@ import org.apache.kafka.common.config.ConfigValue;
 public class S3SourceConfigDef extends ConfigDef {
     @Override
     public List<ConfigValue> validate(final Map<String, String> props) {
-        return super.validate(S3SourceConfig.preprocessProperties(props));
+        return super.validate(S3SourceConfig.preprocessProperties());
     }
 }
