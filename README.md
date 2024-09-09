@@ -5,6 +5,7 @@
 - [Aiven Connector Commons](./commons/README.md)
 - [Aiven GCS Connector](./gcs-connector/README.md)
 - [Aiven S3 Connector](./s3-connector/README.md)
+- [Aiven S3 Source Connector](./s3-source-connector/README.md)
 
 # Development
 

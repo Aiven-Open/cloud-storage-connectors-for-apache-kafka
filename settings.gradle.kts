@@ -85,3 +85,4 @@ dependencyResolutionManagement {
 include("commons")
 include("gcs-connector")
 include("s3-connector")
+include("s3-source-connector")
