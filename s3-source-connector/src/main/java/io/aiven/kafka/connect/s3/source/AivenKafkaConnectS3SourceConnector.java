@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.source.s3;
+package io.aiven.kafka.connect.s3.source;
 
 import java.util.Collections;
 import java.util.List;
@@ -24,7 +24,7 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
-import io.aiven.kafka.connect.source.s3.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
