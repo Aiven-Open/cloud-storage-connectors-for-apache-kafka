@@ -14,34 +14,17 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.source.s3.config;
+package io.aiven.kafka.connect.s3.source.config;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigValue;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-@SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports" })
-final public class S3SourceConfig {
-
-    public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConfig.class);
-
-    public S3SourceConfig() {
-        validate();
-    }
-
-    static Map<String, String> preprocessProperties() {
-        return Collections.emptyMap();
-    }
-
-    public static ConfigDef configDef() {
-        return new S3SourceConfigDef();
-    }
-
-    private void validate() {
-        LOGGER.debug("Validating config.");
+public class S3SourceConfigDef extends ConfigDef {
+    @Override
+    public List<ConfigValue> validate(final Map<String, String> props) {
+        return super.validate(S3SourceConfig.preprocessProperties());
     }
 }
