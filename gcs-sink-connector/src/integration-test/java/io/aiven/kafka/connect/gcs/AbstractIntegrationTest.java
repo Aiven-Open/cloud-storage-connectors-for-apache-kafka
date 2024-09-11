@@ -145,12 +145,12 @@ class AbstractIntegrationTest<K, V> {
         testBucketAccessor = new BucketAccessor(storage, testBucketName);
         testBucketAccessor.ensureWorking();
 
-        gcsPrefix = "gcs-connector-for-apache-kafka-test-"
+        gcsPrefix = "gcs-sink-connector-for-apache-kafka-test-"
                 + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
-        final File testDir = Files.createTempDirectory("gcs-connector-for-apache-kafka-test-").toFile();
+        final File testDir = Files.createTempDirectory("gcs-sink-connector-for-apache-kafka-test-").toFile();
 
-        pluginDir = new File(testDir, "plugins/gcs-connector-for-apache-kafka/");
+        pluginDir = new File(testDir, "plugins/gcs-sink-connector-for-apache-kafka/");
         assert pluginDir.mkdirs();
 
         final File distFile = new File(System.getProperty("integration-test.distribution.file.path"));

@@ -90,6 +90,6 @@ dependencyResolutionManagement {
 
 include("commons")
 
-include("gcs-connector")
+include("gcs-sink-connector")
 
-include("s3-connector")
+include("s3-sink-connector")

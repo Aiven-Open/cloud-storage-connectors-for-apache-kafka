@@ -533,7 +533,7 @@ Here is an example connector configuration with descriptions:
 
 # Unique name for the connector.
 # Attempting to register again with the same name will fail.
-name=my-gcs-connector
+name=my-gcs-sink-connector
 
 ## These must have exactly these values:
 
@@ -643,7 +643,7 @@ Release JARs are available in Maven Central:
 ```xml
 <dependency>
   <groupId>io.aiven</groupId>
-  <artifactId>gcs-connector-for-apache-kafka</artifactId>
+  <artifactId>gcs-sink-connector-for-apache-kafka</artifactId>
   <version>x.y.z</version>
 </dependency>
 ```

@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 final class Version {
     private static final Logger LOGGER = LoggerFactory.getLogger(Version.class);
 
-    private static final String PROPERTIES_FILENAME = "s3-connector-for-apache-kafka-version.properties";
+    private static final String PROPERTIES_FILENAME = "s3-sink-connector-for-apache-kafka-version.properties";
 
     static final String VERSION; // NOPMD AvoidFieldNameMatchingTypeName
 

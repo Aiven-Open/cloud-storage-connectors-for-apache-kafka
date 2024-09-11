@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 class Version {
     private static final Logger LOG = LoggerFactory.getLogger(Version.class);
 
-    private static final String PROPERTIES_FILENAME = "gcs-connector-for-apache-kafka-version.properties";
+    private static final String PROPERTIES_FILENAME = "gcs-sink-connector-for-apache-kafka-version.properties";
 
     static final String VERSION; // NOPMD field name matches class name
 

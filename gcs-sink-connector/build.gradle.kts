@@ -172,7 +172,7 @@ tasks.named<SpotBugsTask>("spotbugsIntegrationTest") {
 }
 
 tasks.processResources {
-  filesMatching("gcs-connector-for-apache-kafka-version.properties") {
+  filesMatching("gcs-sink-connector-for-apache-kafka-version.properties") {
     expand(mapOf("version" to version))
   }
 }
@@ -198,7 +198,7 @@ publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {
       groupId = group.toString()
-      artifactId = "gcs-connector-for-apache-kafka"
+      artifactId = "gcs-sink-connector-for-apache-kafka"
       version = version.toString()
 
       from(components["java"])
@@ -206,7 +206,7 @@ publishing {
       pom {
         name = "Aiven's GCS Sink Connector for Apache Kafka"
         description = "Aiven's GCS Sink Connector for Apache Kafka"
-        url = "https://github.com/aiven/gcs-connector-for-apache-kafka"
+        url = "https://github.com/aiven/gcs-sink-connector-for-apache-kafka"
         organization {
           name = "Aiven Oy"
           url = "https://aiven.io"
@@ -229,9 +229,9 @@ publishing {
         }
 
         scm {
-          connection = "scm:git:git://github.com:aiven/gcs-connector-for-apache-kafka.git"
-          developerConnection = "scm:git:ssh://github.com:aiven/gcs-connector-for-apache-kafka.git"
-          url = "https://github.com/aiven/gcs-connector-for-apache-kafka"
+          connection = "scm:git:git://github.com:aiven/gcs-sink-connector-for-apache-kafka.git"
+          developerConnection = "scm:git:ssh://github.com:aiven/gcs-sink-connector-for-apache-kafka.git"
+          url = "https://github.com/aiven/gcs-sink-connector-for-apache-kafka"
         }
       }
     }
