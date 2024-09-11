@@ -95,8 +95,8 @@ dependencies {
 distributions {
   main {
     contents {
-      from("jar")
-      from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+      from(tasks.jar)
+      from(configurations.runtimeClasspath.get())
 
       into("/") {
         from("$projectDir")
