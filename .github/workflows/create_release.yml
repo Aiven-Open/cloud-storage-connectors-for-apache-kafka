@@ -48,13 +48,19 @@ jobs:
         run: |
           ./gradlew distTar distZip
 
-          export tar_file=$(ls ./build/distributions/ | grep tar)
-          export zip_file=$(ls ./build/distributions/ | grep zip)
-          echo tar_file=${tar_file} >> $GITHUB_ENV
-          echo zip_file=${zip_file} >> $GITHUB_ENV
+          export gcs_tar_file=$(ls ./gcs-sink-connector/build/distributions/ | grep tar)
+          export gcs_zip_file=$(ls ./gcs-sink-connector/build/distributions/ | grep zip)
+          echo gcs_tar_file=${gcs_tar_file} >> $GITHUB_ENV
+          echo gcs_zip_file=${gcs_zip_file} >> $GITHUB_ENV
+          echo gcs_tar_path=`realpath ./gcs-sink-connector/build/distributions/${gcs_tar_file}` >> $GITHUB_ENV
+          echo gcs_zip_path=`realpath ./gcs-sink-connector/build/distributions/${gcs_zip_file}` >> $GITHUB_ENV
 
-          echo tar_path=`realpath ./build/distributions/${tar_file}` >> $GITHUB_ENV
-          echo zip_path=`realpath ./build/distributions/${zip_file}` >> $GITHUB_ENV
+          export s3_tar_file=$(ls ./s3-sink-connector/build/distributions/ | grep tar)
+          export s3_zip_file=$(ls ./s3-sink-connector/build/distributions/ | grep zip)
+          echo s3_tar_file=${s3_tar_file} >> $GITHUB_ENV
+          echo s3_zip_file=${s3_zip_file} >> $GITHUB_ENV
+          echo s3_tar_path=`realpath ./s3-sink-connector/build/distributions/${s3_tar_file}` >> $GITHUB_ENV
+          echo s3_zip_path=`realpath ./s3-sink-connector/build/distributions/${s3_tar_file}` >> $GITHUB_ENV
 
       - name: Create tag
         run: |
@@ -77,22 +83,42 @@ jobs:
           draft: true
           prerelease: false
 
-      - name: Upload tar
+      - name: Upload tar GCS
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.tar_path }}
-          asset_name: ${{ env.tar_file }}
+          asset_path: ${{ env.gcs_tar_path }}
+          asset_name: ${{ env.gcs_tar_file }}
           asset_content_type: application/tar
 
-      - name: Upload zip
+      - name: Upload zip GCS
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.zip_path }}
-          asset_name: ${{ env.zip_file }}
+          asset_path: ${{ env.gcs_zip_path }}
+          asset_name: ${{ env.gcs_zip_file }}
+          asset_content_type: application/zip
+
+      - name: Upload tar S3
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.s3_tar_path }}
+          asset_name: ${{ env.s3_tar_file }}
+          asset_content_type: application/tar
+
+      - name: Upload zip S3
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.s3_zip_path }}
+          asset_name: ${{ env.s3_zip_file }}
           asset_content_type: application/zip
