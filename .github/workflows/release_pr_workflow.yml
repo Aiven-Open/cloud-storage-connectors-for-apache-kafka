@@ -43,6 +43,7 @@ jobs:
         run: |
           git config --local user.name "GitHub Action"
           git config --local user.email "action@github.com"
+          ls -la
           sed -i -e "s/^version=.\+$/version=${{ github.event.inputs.release_version }}/g" gradle.properties
           git add gradle.properties
           git commit -m "Release version ${{ github.event.inputs.release_version }}"
