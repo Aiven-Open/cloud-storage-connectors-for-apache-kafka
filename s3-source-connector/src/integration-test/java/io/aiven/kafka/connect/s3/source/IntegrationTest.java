@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +29,9 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.admin.AdminClient;
 
+import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+
+import com.amazonaws.services.s3.AmazonS3;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -34,6 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -41,9 +47,19 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 final class IntegrationTest implements IntegrationBase {
     private static final String CONNECTOR_NAME = "aiven-s3-source-connector";
+    private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-test-";
     private static final int OFFSET_FLUSH_INTERVAL_MS = 5000;
 
+    private static final String TEST_BUCKET_NAME = "test-bucket0";
+
+    private static String s3Endpoint;
+    private static String s3Prefix;
+    private static BucketAccessor testBucketAccessor;
+
     private static File pluginDir;
+
+    @Container
+    public static final LocalStackContainer LOCALSTACK = IntegrationBase.createS3Container();
 
     @Container
     private static final KafkaContainer KAFKA = IntegrationBase.createKafkaContainer();
@@ -52,6 +68,12 @@ final class IntegrationTest implements IntegrationBase {
 
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
+        s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
+
+        final AmazonS3 s3Client = IntegrationBase.createS3Client(LOCALSTACK);
+        s3Endpoint = LOCALSTACK.getEndpoint().toString();
+        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
+
         pluginDir = IntegrationBase.getPluginDir();
         IntegrationBase.extractConnectorPlugin(pluginDir);
         IntegrationBase.waitForRunningContainer(KAFKA);
@@ -59,6 +81,7 @@ final class IntegrationTest implements IntegrationBase {
 
     @BeforeEach
     void setUp(final TestInfo testInfo) throws ExecutionException, InterruptedException {
+        testBucketAccessor.createBucket();
         adminClient = newAdminClient(KAFKA);
 
         final var topicName = IntegrationBase.topicName(testInfo);
@@ -71,6 +94,7 @@ final class IntegrationTest implements IntegrationBase {
 
     @AfterEach
     void tearDown() {
+        testBucketAccessor.removeBucket();
         connectRunner.stop();
         adminClient.close();
 
