@@ -48,7 +48,7 @@ tasks.register<Test>("integrationTest") {
   // Run always.
   outputs.upToDateWhen { false }
 
-  val distTarTask = tasks.get("distTar") as Tar
+  val distTarTask = tasks["distTar"] as Tar
   val distributionFilePath = distTarTask.archiveFile.get().asFile.path
   systemProperty("integration-test.distribution.file.path", distributionFilePath)
 }
@@ -157,39 +157,18 @@ tasks.named<SpotBugsTask>("spotbugsIntegrationTest") {
 }
 
 tasks.processResources {
-  filesMatching("s3-connector-for-apache-kafka-version.properties") {
+  filesMatching("s3-sink-connector-for-apache-kafka-version.properties") {
     expand(mapOf("version" to version))
   }
 }
 
 tasks.jar { manifest { attributes(mapOf("Version" to project.version)) } }
 
-tasks.distTar { dependsOn(":commons:jar") }
-
-tasks.distZip { dependsOn(":commons:jar") }
-
-tasks.installDist { dependsOn(":commons:jar") }
-
-distributions {
-  main {
-    contents {
-      from(tasks.jar)
-      from(configurations.runtimeClasspath.get())
-
-      into("/") {
-        from("$projectDir")
-        include("version.txt", "README*", "LICENSE*", "NOTICE*", "licenses/")
-        include("config/")
-      }
-    }
-  }
-}
-
 publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {
       groupId = group.toString()
-      artifactId = "s3-connector-for-apache-kafka"
+      artifactId = "s3-sink-connector-for-apache-kafka"
       version = version.toString()
 
       from(components["java"])
@@ -197,7 +176,7 @@ publishing {
       pom {
         name = "Aiven's S3 Sink Connector for Apache Kafka"
         description = "Aiven's S3 Sink Connector for Apache Kafka"
-        url = "https://github.com/aiven-open/s3-connector-for-apache-kafka"
+        url = "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         organization {
           name = "Aiven Oy"
           url = "https://aiven.io"
@@ -220,9 +199,9 @@ publishing {
         }
 
         scm {
-          connection = "scm:git:git://github.com:aiven/s3-connector-for-apache-kafka.git"
-          developerConnection = "scm:git:ssh://github.com:aiven/s3-connector-for-apache-kafka.git"
-          url = "https://github.com/aiven-open/s3-connector-for-apache-kafka"
+          connection = "scm:git:git://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
+          developerConnection = "scm:git:ssh://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
+          url = "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         }
       }
     }
@@ -249,7 +228,7 @@ signing {
   // This results in double armored signatures, i.e. garbage.
   // Override the signature type provider to use unarmored output for `asc` files, which works well
   // with GPG.
-  class ASCSignatureProvider() : AbstractSignatureTypeProvider() {
+  class ASCSignatureProvider : AbstractSignatureTypeProvider() {
     val binary =
         object : BinarySignatureType() {
           override fun getExtension(): String {

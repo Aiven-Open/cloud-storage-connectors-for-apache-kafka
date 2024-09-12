@@ -18,8 +18,6 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-group = "io.aiven"
-
 val kafkaVersion by extra("1.1.0")
 
 val integrationTest: SourceSet =
@@ -63,7 +61,7 @@ tasks.register<Test>("integrationTest") {
   // Pass the GCS bucket name to the tests.
   systemProperty("integration-test.gcs.bucket", project.findProperty("testGcsBucket").toString())
   // Pass the distribution file path to the tests.
-  val distTarTask = tasks.get("distTar") as Tar
+  val distTarTask = tasks["distTar"] as Tar
   val distributionFilePath = distTarTask.archiveFile.get().asFile.path
   systemProperty("integration-test.distribution.file.path", distributionFilePath)
   systemProperty("fake-gcs-server-version", "1.45.2")
@@ -179,21 +177,6 @@ tasks.processResources {
 
 tasks.jar { manifest { attributes(mapOf("Version" to project.version)) } }
 
-tasks.distTar { dependsOn(":commons:jar") }
-
-tasks.distZip { dependsOn(":commons:jar") }
-
-distributions {
-  main {
-    contents {
-      from(tasks.jar)
-      from(configurations.runtimeClasspath.get())
-    }
-  }
-}
-
-tasks.installDist { dependsOn(":commons:jar") }
-
 publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {
@@ -206,7 +189,7 @@ publishing {
       pom {
         name = "Aiven's GCS Sink Connector for Apache Kafka"
         description = "Aiven's GCS Sink Connector for Apache Kafka"
-        url = "https://github.com/aiven/gcs-sink-connector-for-apache-kafka"
+        url = "https://github.com/Aiven-Open/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         organization {
           name = "Aiven Oy"
           url = "https://aiven.io"
@@ -229,10 +212,9 @@ publishing {
         }
 
         scm {
-          connection = "scm:git:git://github.com:aiven/gcs-sink-connector-for-apache-kafka.git"
-          developerConnection =
-              "scm:git:ssh://github.com:aiven/gcs-sink-connector-for-apache-kafka.git"
-          url = "https://github.com/aiven/gcs-sink-connector-for-apache-kafka"
+          connection = "scm:git:git://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
+          developerConnection = "scm:git:ssh://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
+          url = "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         }
       }
     }
@@ -259,7 +241,7 @@ signing {
   // This results in double armored signatures, i.e. garbage.
   // Override the signature type provider to use unarmored output for `asc` files, which works well
   // with GPG.
-  class ASCSignatureProvider() : AbstractSignatureTypeProvider() {
+  class ASCSignatureProvider : AbstractSignatureTypeProvider() {
     val binary =
         object : BinarySignatureType() {
           override fun getExtension(): String {

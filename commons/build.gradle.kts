@@ -92,21 +92,6 @@ dependencies {
   testRuntimeOnly(logginglibs.logback.classic)
 }
 
-distributions {
-  main {
-    contents {
-      from(tasks.jar)
-      from(configurations.runtimeClasspath.get())
-
-      into("/") {
-        from("$projectDir")
-        include("version.txt", "README*", "LICENSE*", "NOTICE*", "licenses/")
-        include("config/")
-      }
-    }
-  }
-}
-
 publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {
@@ -142,10 +127,9 @@ publishing {
         }
 
         scm {
-          connection = "scm:git:git://github.com:aiven-open/commons-for-apache-kafka-connect.git"
-          developerConnection =
-              "scm:git:ssh://github.com:aiven-open/commons-for-apache-kafka-connect.git"
-          url = "https://github.com/aiven-open/commons-for-apache-kafka-connect"
+          connection = "scm:git:git://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
+          developerConnection = "scm:git:ssh://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
+          url = "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         }
       }
     }
@@ -172,7 +156,7 @@ signing {
   // This results in double armored signatures, i.e. garbage.
   // Override the signature type provider to use unarmored output for `asc` files, which works well
   // with GPG.
-  class ASCSignatureProvider() : AbstractSignatureTypeProvider() {
+  class ASCSignatureProvider : AbstractSignatureTypeProvider() {
     val binary =
         object : BinarySignatureType() {
           override fun getExtension(): String {

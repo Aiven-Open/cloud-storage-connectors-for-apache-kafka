@@ -16,7 +16,7 @@ When installing this library on Kafka Connect, use a specific plugin path, and *
 
 # License
 
-This project is licensed under the [Apache License, Version 2.0](LICENSE).
+This project is licensed under the [Apache License, Version 2.0](../LICENSE).
 
 # Trademarks
 

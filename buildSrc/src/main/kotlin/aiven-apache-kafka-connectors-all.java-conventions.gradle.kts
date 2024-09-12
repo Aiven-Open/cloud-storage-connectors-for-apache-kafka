@@ -152,9 +152,21 @@ spotless {
     }
 }
 
-val distTar by tasks.getting(Tar::class) {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-val distZip by tasks.getting(Zip::class) {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+distributions {
+    main {
+        contents {
+            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            from(tasks.jar)
+            from(configurations.runtimeClasspath.get())
+
+            into("/") {
+                from("$projectDir")
+                include("README*", "notices/", "licenses/")
+                include("config/")
+                from("$rootDir") {
+                    include("LICENSE*")
+                }
+            }
+        }
+    }
 }
