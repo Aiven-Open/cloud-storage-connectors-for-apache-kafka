@@ -44,10 +44,10 @@ jobs:
           git config --local user.name "GitHub Action"
           git config --local user.email "action@github.com"
           sed -i -e "s/^version=.\+$/version=${{ github.event.inputs.release_version }}/g" gradle.properties
-          git add gradle.properties 
+          git add gradle.properties
           git commit -m "Release version ${{ github.event.inputs.release_version }}"
           sed -i -e "s/^version=.\+$/version=${{ github.event.inputs.snapshot_version }}/g" gradle.properties
-          git add gcs-sink-connector/gradle.properties gradle.properties
+          git add gradle.properties
           git commit -m "Bump version to ${{ github.event.inputs.snapshot_version }}"
 
       - name: Create Pull Request
