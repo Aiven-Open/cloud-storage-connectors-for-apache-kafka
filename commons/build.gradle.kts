@@ -127,8 +127,10 @@ publishing {
         }
 
         scm {
-          connection = "scm:git:git://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
-          developerConnection = "scm:git:ssh://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
+          connection =
+              "scm:git:git://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
+          developerConnection =
+              "scm:git:ssh://github.com:Aiven-Open/cloud-storage-connectors-for-apache-kafka.git"
           url = "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         }
       }
