@@ -230,7 +230,8 @@ publishing {
 
         scm {
           connection = "scm:git:git://github.com:aiven/gcs-sink-connector-for-apache-kafka.git"
-          developerConnection = "scm:git:ssh://github.com:aiven/gcs-sink-connector-for-apache-kafka.git"
+          developerConnection =
+              "scm:git:ssh://github.com:aiven/gcs-sink-connector-for-apache-kafka.git"
           url = "https://github.com/aiven/gcs-sink-connector-for-apache-kafka"
         }
       }
