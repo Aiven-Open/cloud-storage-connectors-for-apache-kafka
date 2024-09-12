@@ -33,17 +33,16 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
+#      - name: Checkout main
+#        uses: actions/checkout@v4
+#        with:
+#          ref: main
+#          fetch-depth: 0
 
       - name: Create release commits
         run: |
           git config --local user.name "GitHub Action"
           git config --local user.email "action@github.com"
-          ls -la
           sed -i -e "s/^version=.\+$/version=${{ github.event.inputs.release_version }}/g" gradle.properties
           git add gradle.properties
           git commit -m "Release version ${{ github.event.inputs.release_version }}"
