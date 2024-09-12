@@ -1,8 +1,8 @@
 # Aiven's Common Module for Apache Kafka® connectors
 
 Shared common functionality among Aiven's connectors for Apache Kafka:
-- [Aiven GCS Connector](../gcs-connector/README.md)
-- [Aiven S3 Connector](../s3-connector/README.md)
+- [Aiven GCS Sink Connector](../gcs-sink-connector/README.md)
+- [Aiven S3 Sink Connector](../s3-sink-connector/README.md)
 
 # Usage
 
@@ -16,7 +16,7 @@ When installing this library on Kafka Connect, use a specific plugin path, and *
 
 # License
 
-This project is licensed under the [Apache License, Version 2.0](LICENSE).
+This project is licensed under the [Apache License, Version 2.0](../LICENSE).
 
 # Trademarks
 
