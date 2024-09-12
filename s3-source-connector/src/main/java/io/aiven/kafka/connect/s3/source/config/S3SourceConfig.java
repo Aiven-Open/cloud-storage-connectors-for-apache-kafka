@@ -70,6 +70,14 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static final String AWS_CREDENTIALS_PROVIDER_CONFIG = "aws.credentials.provider";
 
+    public static final String TOPIC_PARTITIONS_KEY = "topic.assigned.partitions";
+    public static final String TOPICS_KEY = "topics";
+
+    public static final String START_MARKER_KEY = "aws.s3.start.marker";
+    public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
+
+    public static final String MAX_POLL_RECORDS = "max.poll.records";
+
     public S3SourceConfig(final Map<String, String> properties) {
         super(configDef(), preprocessProperties(properties));
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
