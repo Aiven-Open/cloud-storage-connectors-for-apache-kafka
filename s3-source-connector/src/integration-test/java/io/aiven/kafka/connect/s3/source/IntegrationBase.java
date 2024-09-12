@@ -29,12 +29,18 @@ import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.github.dockerjava.api.model.Ulimit;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.Network;
+import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
 public interface IntegrationBase {
@@ -90,5 +96,20 @@ public interface IntegrationBase {
 
     static void waitForRunningContainer(final Container<?> kafka) {
         Awaitility.await().atMost(Duration.ofMinutes(1)).until(kafka::isRunning);
+    }
+
+    static AmazonS3 createS3Client(final LocalStackContainer localStackContainer) {
+        return AmazonS3ClientBuilder.standard()
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                        localStackContainer.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
+                        localStackContainer.getRegion()))
+                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(
+                        localStackContainer.getAccessKey(), localStackContainer.getSecretKey())))
+                .build();
+    }
+
+    static LocalStackContainer createS3Container() {
+        return new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
+                .withServices(LocalStackContainer.Service.S3);
     }
 }
