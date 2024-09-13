@@ -18,8 +18,11 @@ package io.aiven.kafka.connect.s3.source;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
@@ -28,6 +31,11 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -111,5 +119,32 @@ public interface IntegrationBase {
     static LocalStackContainer createS3Container() {
         return new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
                 .withServices(LocalStackContainer.Service.S3);
+    }
+
+    static List<String> consumeMessages(final String topic, final int expectedMessageCount,
+            final KafkaContainer kafka) {
+        final Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            final List<String> messages = new ArrayList<>();
+
+            // Poll messages from the topic
+            while (messages.size() < expectedMessageCount) {
+                final ConsumerRecords<byte[], byte[]> records = consumer.poll(5L);
+                for (final ConsumerRecord<byte[], byte[]> record : records) {
+                    messages.add(new String(record.value(), StandardCharsets.UTF_8)); // Convert message from bytes to
+                                                                                      // string for easy
+                    // verification
+                }
+            }
+
+            return messages;
+        }
     }
 }
