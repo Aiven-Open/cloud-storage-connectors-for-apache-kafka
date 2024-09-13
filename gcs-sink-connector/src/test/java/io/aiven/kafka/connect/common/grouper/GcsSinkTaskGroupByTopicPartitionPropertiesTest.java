@@ -66,7 +66,7 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
     }
 
     @Property
-    @Disabled("See https://github.com/Aiven-Open/commons-for-apache-kafka-connect/issues/261")
+    @Disabled("See https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/issues/261")
     void limited(@ForAll("recordBatches") final List<List<SinkRecord>> recordBatches,
             @ForAll @IntRange(min = 1, max = 100) final int maxRecordsPerFile) {
         genericTry(recordBatches, maxRecordsPerFile);

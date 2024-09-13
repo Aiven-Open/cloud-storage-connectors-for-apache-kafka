@@ -1,4 +1,4 @@
-rootProject.name = "aiven-commons-for-apache-kafka-connect"
+rootProject.name = "cloud-storage-connectors-for-apache-kafka"
 
 val assertJVersion by extra("3.26.0")
 val avroVersion by extra("1.11.3")

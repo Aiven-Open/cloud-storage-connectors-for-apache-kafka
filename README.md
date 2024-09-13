@@ -1,4 +1,4 @@
-[![Main and pull request checks](https://github.com/Aiven-Open/commons-for-apache-kafka-connect/actions/workflows/main_push_workflow.yml/badge.svg)](https://github.com/Aiven-Open/commons-for-apache-kafka-connect/actions/workflows/main_push_workflow.yml)
+[![Main and pull request checks](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml/badge.svg)](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml)
 
 # Aiven's Apache Kafka Connectors
 
