@@ -1,5 +1,7 @@
+import com.github.spotbugs.snom.SpotBugsTask
+
 /*
- * Copyright 2023 Aiven Oy
+ * Copyright 2020 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +18,94 @@
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
+val amazonS3Version by extra("1.12.729")
+val amazonSTSVersion by extra("1.12.729")
+val s3mockVersion by extra("0.2.6")
+
+val integrationTest: SourceSet =
+    sourceSets.create("integrationTest") {
+      java { srcDir("src/integration-test/java") }
+      resources { srcDir("src/integration-test/resources") }
+      compileClasspath += sourceSets.main.get().output + configurations.testRuntimeClasspath.get()
+      runtimeClasspath += output + compileClasspath
+    }
+
+val integrationTestImplementation: Configuration by
+    configurations.getting { extendsFrom(configurations.implementation.get()) }
+
+tasks.register<Test>("integrationTest") {
+  description = "Runs the integration tests."
+  group = "verification"
+  testClassesDirs = integrationTest.output.classesDirs
+  classpath = integrationTest.runtimeClasspath
+
+  // defines testing order
+  shouldRunAfter("test")
+  // requires archive for connect runner
+  dependsOn("distTar")
+  useJUnitPlatform()
+
+  // Run always.
+  outputs.upToDateWhen { false }
+
+  val distTarTask = tasks["distTar"] as Tar
+  val distributionFilePath = distTarTask.archiveFile.get().asFile.path
+  systemProperty("integration-test.distribution.file.path", distributionFilePath)
+}
+
+idea {
+  module {
+    testSources.from(integrationTest.java.srcDirs)
+    testSources.from(integrationTest.resources.srcDirs)
+  }
+}
+
 dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
-  compileOnly(apache.kafka.connect.json)
 
-  implementation(confluent.kafka.connect.avro.data) {
+  implementation(project(":commons"))
+
+  implementation(tools.spotbugs.annotations)
+  implementation(logginglibs.slf4j)
+  implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
+  implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
+
+  testImplementation(compressionlibs.snappy)
+  testImplementation(compressionlibs.zstd.jni)
+
+  testImplementation(apache.kafka.connect.api)
+  testImplementation(apache.kafka.connect.runtime)
+  testImplementation(apache.kafka.connect.json)
+
+  testImplementation(testinglibs.junit.jupiter)
+  testImplementation(testinglibs.assertj.core)
+
+  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
+
+  testImplementation(testinglibs.mockito.core)
+
+  testRuntimeOnly(testinglibs.junit.jupiter.engine)
+  testImplementation(testinglibs.mockito.junit.jupiter)
+
+  testRuntimeOnly(logginglibs.logback.classic)
+
+  integrationTestImplementation(testinglibs.localstack)
+  integrationTestImplementation(testcontainers.junit.jupiter)
+  integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
+  integrationTestImplementation(testcontainers.localstack)
+  integrationTestImplementation(testinglibs.wiremock)
+
+  // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
+  integrationTestImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
 
-  implementation(tools.spotbugs.annotations)
-  implementation(compressionlibs.snappy)
-  implementation(compressionlibs.zstd.jni)
+  integrationTestImplementation(apache.avro)
 
-  implementation(logginglibs.slf4j)
-
-  implementation(apache.commons.text)
-
-  implementation(apache.parquet.avro) {
-    exclude(group = "org.xerial.snappy", module = "snappy-java")
-    exclude(group = "org.slf4j", module = "slf4j-api")
-    exclude(group = "org.apache.avro", module = "avro")
-  }
-  implementation(apache.hadoop.common) {
+  testImplementation(apache.parquet.tools) { exclude(group = "org.slf4j", module = "slf4j-api") }
+  testImplementation(apache.hadoop.mapreduce.client.core) {
+    exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
     exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")
     exclude(group = "com.google.guava", module = "guava")
     exclude(group = "commons-cli", module = "commons-cli")
@@ -75,36 +142,41 @@ dependencies {
     exclude(group = "io.netty", module = "netty")
   }
 
-  testImplementation(apache.kafka.connect.api)
-  testImplementation(apache.kafka.connect.runtime)
-  testImplementation(apache.kafka.connect.json)
-  testImplementation(testinglibs.junit.jupiter)
-  testImplementation(apache.parquet.tools) { exclude(group = "org.slf4j", module = "slf4j-api") }
-  testImplementation(jackson.databind)
-  testImplementation(testinglibs.mockito.core)
-  testImplementation(testinglibs.assertj.core)
-
-  testImplementation(testinglibs.woodstox.stax2.api)
-  testImplementation(apache.hadoop.mapreduce.client.core)
-  testImplementation(confluent.kafka.connect.avro.converter)
-
-  testRuntimeOnly(testinglibs.junit.jupiter.engine)
-  testRuntimeOnly(logginglibs.logback.classic)
+  // Make test utils from 'test' available in 'integration-test'
+  integrationTestImplementation(sourceSets["test"].output)
+  integrationTestImplementation(testinglibs.awaitility)
 }
+
+tasks.named<Pmd>("pmdIntegrationTest") {
+  ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
+  ruleSets = emptyList() // Clear the default rulesets
+}
+
+tasks.named<SpotBugsTask>("spotbugsIntegrationTest") {
+  reports.create("html") { setStylesheet("fancy-hist.xsl") }
+}
+
+tasks.processResources {
+  filesMatching("s3-sink-connector-for-apache-kafka-version.properties") {
+    expand(mapOf("version" to version))
+  }
+}
+
+tasks.jar { manifest { attributes(mapOf("Version" to project.version)) } }
 
 publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {
       groupId = group.toString()
-      artifactId = "commons-for-apache-kafka-connect"
+      artifactId = "s3-sink-connector-for-apache-kafka"
       version = version.toString()
 
       from(components["java"])
 
       pom {
-        name = "Aiven's Common Module for Apache Kafka connectors"
-        description = "Aiven's Common Module for Apache Kafka connectors"
-        url = "https://github.com/aiven-open/commons-for-apache-kafka-connect"
+        name = "Aiven's S3 Sink Connector for Apache Kafka"
+        description = "Aiven's S3 Sink Connector for Apache Kafka"
+        url = "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         organization {
           name = "Aiven Oy"
           url = "https://aiven.io"

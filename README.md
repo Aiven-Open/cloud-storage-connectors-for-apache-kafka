@@ -3,8 +3,8 @@
 # Aiven's Apache Kafka Connectors
 
 - [Aiven Connector Commons](./commons/README.md)
-- [Aiven GCS Connector](./gcs-connector/README.md)
-- [Aiven S3 Connector](./s3-connector/README.md)
+- [Aiven GCS Sink Connector](./gcs-sink-connector/README.md)
+- [Aiven S3 Sink Connector](./s3-sink-connector/README.md)
 
 # Development
 
