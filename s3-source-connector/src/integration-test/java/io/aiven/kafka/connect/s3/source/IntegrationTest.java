@@ -16,6 +16,9 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.START_MARKER_KEY;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TOPIC_PARTITIONS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
@@ -53,7 +56,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 final class IntegrationTest implements IntegrationBase {
     private static final String CONNECTOR_NAME = "aiven-s3-source-connector";
     private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-test-";
-    private static final int OFFSET_FLUSH_INTERVAL_MS = 5000;
+    private static final int OFFSET_FLUSH_INTERVAL_MS = 500;
+
+    private static final String S3_ACCESS_KEY_ID = "test-key-id0";
+    private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
 
     private static final String TEST_BUCKET_NAME = "test-bucket0";
 
@@ -87,7 +93,7 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @BeforeEach
-    void setUp(final TestInfo testInfo) throws ExecutionException, InterruptedException {
+    void setUp(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         testBucketAccessor.createBucket();
         adminClient = newAdminClient(KAFKA_CONTAINER);
 
@@ -112,6 +118,7 @@ final class IntegrationTest implements IntegrationBase {
     void basicTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+
         connectRunner.createConnector(connectorConfig);
 
         // Create a new object on the bucket
@@ -140,6 +147,20 @@ final class IntegrationTest implements IntegrationBase {
     private Map<String, String> getConfig(final Map<String, String> config, final List<String> topicNames) {
         config.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
         config.put("topics", String.join(",", topicNames));
+        config.put("aws.access.key.id", S3_ACCESS_KEY_ID);
+        config.put("aws.secret.access.key", S3_SECRET_ACCESS_KEY);
+        config.put("aws.s3.endpoint", s3Endpoint);
+        config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
+        config.put("aws.s3.prefix", s3Prefix);
+        config.put(START_MARKER_KEY, COMMON_PREFIX);
+
+        config.put(TOPIC_PARTITIONS_KEY, "1,2");
+
+        config.put("key.delimiter", "\\t");
+        config.put("key.encoding", "UTF-8");
+        config.put("value.delimiter", "\\n");
+        config.put("value.encoding", "UTF-8");
+
         return config;
     }
 
