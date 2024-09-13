@@ -71,7 +71,7 @@ public class S3SourceTask extends SourceTask {
 
     @Override
     public String version() {
-        return null;
+        return Version.VERSION;
     }
 
     @Override

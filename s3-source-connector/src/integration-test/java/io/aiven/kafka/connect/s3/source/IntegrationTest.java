@@ -20,6 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -32,6 +36,7 @@ import org.apache.kafka.clients.admin.AdminClient;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -62,33 +67,35 @@ final class IntegrationTest implements IntegrationBase {
     public static final LocalStackContainer LOCALSTACK = IntegrationBase.createS3Container();
 
     @Container
-    private static final KafkaContainer KAFKA = IntegrationBase.createKafkaContainer();
+    private static final KafkaContainer KAFKA_CONTAINER = IntegrationBase.createKafkaContainer();
     private AdminClient adminClient;
     private ConnectRunner connectRunner;
+
+    private static AmazonS3 s3Client;
 
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
-        final AmazonS3 s3Client = IntegrationBase.createS3Client(LOCALSTACK);
+        s3Client = IntegrationBase.createS3Client(LOCALSTACK);
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
 
         pluginDir = IntegrationBase.getPluginDir();
         IntegrationBase.extractConnectorPlugin(pluginDir);
-        IntegrationBase.waitForRunningContainer(KAFKA);
+        IntegrationBase.waitForRunningContainer(KAFKA_CONTAINER);
     }
 
     @BeforeEach
     void setUp(final TestInfo testInfo) throws ExecutionException, InterruptedException {
         testBucketAccessor.createBucket();
-        adminClient = newAdminClient(KAFKA);
+        adminClient = newAdminClient(KAFKA_CONTAINER);
 
         final var topicName = IntegrationBase.topicName(testInfo);
         final var topics = List.of(topicName);
         IntegrationBase.createTopics(adminClient, topics);
 
-        connectRunner = newConnectRunner(KAFKA, pluginDir, OFFSET_FLUSH_INTERVAL_MS);
+        connectRunner = newConnectRunner(KAFKA_CONTAINER, pluginDir, OFFSET_FLUSH_INTERVAL_MS);
         connectRunner.start();
     }
 
@@ -102,12 +109,28 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Test
-    void basicTest(final TestInfo testInfo) throws ExecutionException, InterruptedException {
+    void basicTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectRunner.createConnector(connectorConfig);
 
+        // Create a new object on the bucket
+        // final String testObjectKey = s3Prefix + "test-file.txt";
+        final String testData = "Hello, Kafka Connect S3 Source!";
+
+        final Path testFilePath = Paths.get("/tmp/test-file.txt");
+        Files.write(testFilePath, testData.getBytes(StandardCharsets.UTF_8));
+
+        saveToS3(TEST_BUCKET_NAME, "", "test.txt", testFilePath.toFile());
+
+        // Verify that the connector is correctly set up
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
+
+        // Poll messages from the Kafka topic and verify the consumed data
+        final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
+
+        // Verify that the correct data is read from the S3 bucket and pushed to Kafka
+        assertThat(records).containsExactly(testData);
     }
 
     private Map<String, String> getConfig(final Map<String, String> config, final String topicName) {
@@ -127,5 +150,12 @@ final class IntegrationTest implements IntegrationBase {
         config.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put("tasks.max", "1");
         return config;
+    }
+
+    public static void saveToS3(final String bucketName, final String folderName, final String fileNameInS3,
+            final File fileToWrite) {
+        final PutObjectRequest request = new PutObjectRequest(bucketName, folderName + fileNameInS3, fileToWrite);
+        s3Client.putObject(request);
+        // assertThat(putObj.getMetadata()
     }
 }
