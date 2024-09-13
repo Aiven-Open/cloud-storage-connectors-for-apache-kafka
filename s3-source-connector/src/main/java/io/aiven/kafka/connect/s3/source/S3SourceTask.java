@@ -60,7 +60,7 @@ public class S3SourceTask extends SourceTask {
 
     private final AtomicBoolean stopped = new AtomicBoolean();
 
-    private final static long S_3_POLL_INTERVAL = 10_000L;
+    private final static long S_3_POLL_INTERVAL_MS = 10_000L;
 
     private final static long ERROR_BACKOFF = 1000L;
 
@@ -86,7 +86,7 @@ public class S3SourceTask extends SourceTask {
 
     private void prepareReaderFromOffsetStorageReader() {
         final String s3Prefix = s3SourceConfig.getString("aws.s3.prefix");
-        final String s3Bucket = s3SourceConfig.getString("aws.s3.bucket");
+        final String s3Bucket = s3SourceConfig.getString("aws.s3.bucket.name");
 
         final Set<Integer> partitionList = getPartitions();
         final Set<String> topics = getTopics();
@@ -96,9 +96,22 @@ public class S3SourceTask extends SourceTask {
                 .flatMap(p -> topics.stream().map(t -> S3Partition.from(s3Bucket, s3Prefix, t, p)))
                 .collect(toList());
 
+        // List<String> topicPartitions = Arrays.asList("1","2");
+        // List<Map<String, String>> offsetPartitions = topicPartitions.stream().map(
+        // tp -> {
+        // HashMap<String, String> offsetInfo = new HashMap<>();
+        // offsetInfo.put("source", tp);
+        // offsetInfo.put("targetPrefix", "targetTopicPrefix");
+        // return offsetInfo;
+        // }
+        // ).collect(Collectors.toList());
+        // final Map<Map<String, String>, Map<String, Object>> offsetMap =
+        // context.offsetStorageReader().offsets(offsetPartitions);
+
         // get partition offsets
+        final List<Map<String, Object>> partitions = s3Partitions.stream().map(S3Partition::asMap).collect(toList());
         final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
-                .offsets(s3Partitions.stream().map(S3Partition::asMap).collect(toList()));
+                .offsets(partitions);
 
         if (offsets == null) {
             offsets = offsetMap.entrySet()
@@ -107,8 +120,6 @@ public class S3SourceTask extends SourceTask {
                     .collect(
                             toMap(entry -> S3Partition.from(entry.getKey()), entry -> S3Offset.from(entry.getValue())));
         }
-
-        LOGGER.info("{} reading from S3 with offsets {}", s3SourceConfig.getString("name"), offsets);
 
         final byte[] valueDelimiter = Optional.ofNullable(s3SourceConfig.getString("value.delimiter"))
                 .map(Object::toString)
@@ -179,7 +190,7 @@ public class S3SourceTask extends SourceTask {
         while (!sourceRecordIterator.hasNext() && !stopped.get()) {
             LOGGER.debug("Blocking until new S3 files are available.");
             // sleep and block here until new files are available
-            Thread.sleep(S_3_POLL_INTERVAL);
+            Thread.sleep(S_3_POLL_INTERVAL_MS);
             prepareReaderFromOffsetStorageReader();
         }
 
@@ -199,5 +210,6 @@ public class S3SourceTask extends SourceTask {
 
     @Override
     public void stop() {
+        this.stopped.set(true);
     }
 }
