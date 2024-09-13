@@ -104,7 +104,7 @@ publishing {
       pom {
         name = "Aiven's Common Module for Apache Kafka connectors"
         description = "Aiven's Common Module for Apache Kafka connectors"
-        url = "https://github.com/aiven-open/commons-for-apache-kafka-connect"
+        url = "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         organization {
           name = "Aiven Oy"
           url = "https://aiven.io"
