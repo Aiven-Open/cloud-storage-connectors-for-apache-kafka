@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.s3.source;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -55,8 +56,9 @@ final class ConnectRunner {
         this.offsetFlushInterval = offsetFlushIntervalMs;
     }
 
-    void start() {
+    void start() throws IOException {
         final Map<String, String> workerProps = new HashMap<>();
+        final File tempFile = File.createTempFile("connect", "offsets");
         workerProps.put("bootstrap.servers", bootstrapServers);
 
         workerProps.put("offset.flush.interval.ms", Integer.toString(offsetFlushInterval));
@@ -65,12 +67,11 @@ final class ConnectRunner {
         workerProps.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         workerProps.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         workerProps.put("internal.key.converter", "org.apache.kafka.connect.json.JsonConverter");
-        workerProps.put("internal.key.converter.schemas.enable", "false");
+        workerProps.put("internal.key.converter.schemas.enable", "true");
         workerProps.put("internal.value.converter", "org.apache.kafka.connect.json.JsonConverter");
-        workerProps.put("internal.value.converter.schemas.enable", "false");
+        workerProps.put("internal.value.converter.schemas.enable", "true");
 
-        // Don't need it since we'll memory MemoryOffsetBackingStore.
-        workerProps.put("offset.storage.file.filename", "");
+        workerProps.put("offset.storage.file.filename", tempFile.getCanonicalPath());
 
         workerProps.put("plugin.path", pluginDir.getPath());
 
