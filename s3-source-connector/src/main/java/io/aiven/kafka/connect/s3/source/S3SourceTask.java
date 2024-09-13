@@ -38,16 +38,8 @@ import java.util.stream.Collectors;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
-import io.aiven.kafka.connect.s3.source.config.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import com.amazonaws.PredefinedClientConfigurations;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.retry.PredefinedBackoffStrategies;
-import com.amazonaws.retry.PredefinedRetryPolicies;
-import com.amazonaws.retry.RetryPolicy;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,8 +56,6 @@ public class S3SourceTask extends SourceTask {
 
     private Map<S3Partition, S3Offset> offsets;
 
-    private AmazonS3 s3Client;
-
     Iterator<S3SourceRecord> sourceRecordIterator;
 
     private final AtomicBoolean stopped = new AtomicBoolean();
@@ -73,8 +63,6 @@ public class S3SourceTask extends SourceTask {
     private final static long S_3_POLL_INTERVAL = 10_000L;
 
     private final static long ERROR_BACKOFF = 1000L;
-
-    AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
 
     @SuppressWarnings("PMD.UnnecessaryConstructor") // required by Connect
     public S3SourceTask() {
@@ -92,8 +80,7 @@ public class S3SourceTask extends SourceTask {
         Objects.requireNonNull(props, "props hasn't been set");
         s3SourceConfig = new S3SourceConfig(props);
 
-        s3Client = createAmazonS3Client(s3SourceConfig);
-        LOGGER.info("S3 client initialized " + s3Client.getBucketLocation(""));
+        LOGGER.info("S3 client initialized ");
         prepareReaderFromOffsetStorageReader();
     }
 
@@ -132,8 +119,8 @@ public class S3SourceTask extends SourceTask {
                 .map(Object::toString)
                 .map(s -> s.getBytes(parseEncoding(s3SourceConfig, "key.encoding")));
 
-        sourceRecordIterator = new S3FilesReader(s3SourceConfig, s3Client, s3Bucket, s3Prefix, offsets,
-                new DelimitedRecordReader(valueDelimiter, keyDelimiter)).readAll();
+        sourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, s3Bucket, s3Prefix, offsets,
+                new DelimitedRecordReader(valueDelimiter, keyDelimiter));
     }
 
     private Set<Integer> getPartitions() {
@@ -159,32 +146,6 @@ public class S3SourceTask extends SourceTask {
                 .map(Object::toString)
                 .map(Charset::forName)
                 .orElse(StandardCharsets.UTF_8);
-    }
-
-    private AmazonS3 createAmazonS3Client(final S3SourceConfig config) {
-        final var awsEndpointConfig = newEndpointConfiguration(this.s3SourceConfig);
-        final var clientConfig = PredefinedClientConfigurations.defaultConfig()
-                .withRetryPolicy(new RetryPolicy(PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
-                        new PredefinedBackoffStrategies.FullJitterBackoffStrategy(
-                                Math.toIntExact(config.getS3RetryBackoffDelayMs()),
-                                Math.toIntExact(config.getS3RetryBackoffMaxDelayMs())),
-                        config.getS3RetryBackoffMaxRetries(), false));
-        final var s3ClientBuilder = AmazonS3ClientBuilder.standard()
-                .withCredentials(credentialFactory.getProvider(config))
-                .withClientConfiguration(clientConfig);
-        if (Objects.isNull(awsEndpointConfig)) {
-            s3ClientBuilder.withRegion(config.getAwsS3Region().getName());
-        } else {
-            s3ClientBuilder.withEndpointConfiguration(awsEndpointConfig).withPathStyleAccessEnabled(true);
-        }
-        return s3ClientBuilder.build();
-    }
-
-    private AwsClientBuilder.EndpointConfiguration newEndpointConfiguration(final S3SourceConfig config) {
-        if (Objects.isNull(config.getAwsS3EndPoint())) {
-            return null;
-        }
-        return new AwsClientBuilder.EndpointConfiguration(config.getAwsS3EndPoint(), config.getAwsS3Region().getName());
     }
 
     @Override
