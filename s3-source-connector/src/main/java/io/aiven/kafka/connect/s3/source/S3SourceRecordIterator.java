@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.s3.source;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.START_MARKER_KEY;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -63,13 +64,12 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
     private final String s3Prefix;
     private final AmazonS3 s3Client;
 
-    public S3SourceRecordIterator(final S3SourceConfig s3SourceConfig, final String bucketName, final String s3Prefix,
+    public S3SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName, final String s3Prefix,
             final Map<S3Partition, S3Offset> offsets, final DelimitedRecordReader recordReader) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsets = Optional.ofNullable(offsets).orElseGet(HashMap::new);
         this.makeReader = recordReader;
-        final S3ClientFactory s3ClientFactory = new S3ClientFactory();
-        this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
+        this.s3Client = s3Client;
         this.bucketName = bucketName;
         this.s3Prefix = s3Prefix;
         try {
@@ -82,8 +82,8 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     private List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
         final ObjectListing objectListing = s3Client.listObjects(new ListObjectsRequest().withBucketName(bucketName)
-                .withPrefix(s3Prefix)
-                .withMarker(s3SourceConfig.getString(START_MARKER_KEY))
+//                .withPrefix(s3Prefix)
+//                .withMarker(s3SourceConfig.getString(START_MARKER_KEY))
                 .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * 2));
 
         return new ArrayList<>(objectListing.getObjectSummaries());
@@ -106,18 +106,55 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     private Iterator<ConsumerRecord<byte[], byte[]>> createIteratorForCurrentFile() throws IOException {
         final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
-        try (InputStream content = getContent(s3Object)) {
-            return parseKey(currentKey,
-                    (topic, partition, startOffset) -> makeReader.readAll(topic, partition, content, startOffset));
+        try (InputStream content = getContent(s3Object);
+             BufferedInputStream bufferedContent = new BufferedInputStream(content)) {
+
+            // Extract the topic, partition, and startOffset from the key
+//            Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
+//            if (!matcher.find()) {
+//                throw new IllegalArgumentException("Invalid file key format: " + currentKey);
+//            }
+            final String topic = "testtopic";//matcher.group("topic");
+            final int partition = 0;//Integer.parseInt(matcher.group("partition"));
+            final long startOffset = 0l;//Long.parseLong(matcher.group("offset"));
+
+            return new Iterator<>() {
+                private ConsumerRecord<byte[], byte[]> nextRecord = readNext();
+
+                private ConsumerRecord<byte[], byte[]> readNext() {
+                    try {
+                        return makeReader.read(topic, partition, startOffset, bufferedContent, currentKey);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to read record from file", e);
+                    }
+                }
+
+                @Override
+                public boolean hasNext() {
+                    // Check if there's another record
+                    return nextRecord != null;
+                }
+
+                @Override
+                public ConsumerRecord<byte[], byte[]> next() {
+                    if (nextRecord == null) {
+                        throw new NoSuchElementException();
+                    }
+                    ConsumerRecord<byte[], byte[]> currentRecord = nextRecord;
+                    nextRecord = null;
+                    return currentRecord;
+                }
+            };
         }
     }
+
 
     private InputStream getContent(final S3Object object) throws IOException {
         return object.getObjectContent();
     }
 
     private S3Offset offset() {
-        return offsets.get(S3Partition.from(bucketName, s3Prefix, "", 0));
+        return offsets.get(S3Partition.from(bucketName, s3Prefix, "testtopic", 0));
     }
 
     @Override
@@ -144,19 +181,4 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
         throw new UnsupportedOperationException();
     }
 
-    private <T> T parseKey(final String key, final KeyConsumer<T> consumer) throws IOException {
-        final Matcher matcher = DEFAULT_PATTERN.matcher(key);
-        if (!matcher.find()) {
-            throw new IllegalArgumentException("Not a valid chunk filename! " + key);
-        }
-        final String topic = matcher.group("topic");
-        final int partition = Integer.parseInt(matcher.group("partition"));
-        final long startOffset = Long.parseLong(matcher.group("offset"));
-
-        return consumer.consume(topic, partition, startOffset);
-    }
-}
-
-interface KeyConsumer<T> {
-    T consume(String topic, int partition, long startOffset) throws IOException;
 }

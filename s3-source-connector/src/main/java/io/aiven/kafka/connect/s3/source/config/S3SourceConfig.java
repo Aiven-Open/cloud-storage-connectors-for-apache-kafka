@@ -73,6 +73,7 @@ final public class S3SourceConfig extends AbstractConfig {
 
     private static final String GROUP_AWS = "AWS";
     private static final String GROUP_AWS_STS = "AWS_STS";
+    private static final String GROUP_OTHER = "OTHER_CFG";
 
     private static final String GROUP_OFFSET_TOPIC = "OFFSET_TOPIC";
 
@@ -112,6 +113,8 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static final String MAX_POLL_RECORDS = "max.poll.records";
 
+    public static final String KEY_CONVERTER = "key.converter";
+    public static final String VALUE_CONVERTER = "value.converter";
     public static final String KEY_DELIMITER = "key.delimiter";
 
     public static final String KEY_ENCODING = "key.encoding";
@@ -174,13 +177,21 @@ final public class S3SourceConfig extends AbstractConfig {
     private static void addOtherConfig(final S3SourceConfigDef configDef) {
         int awsOtherGroupCounter = 0;
         configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Fetch page size", GROUP_AWS_STS, awsOtherGroupCounter++, // NOPMD
+                ConfigDef.Importance.MEDIUM, "Fetch page size", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
                                                                                                        // UnusedAssignment
                 ConfigDef.Width.NONE, FETCH_PAGE_SIZE);
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_AWS_STS, awsOtherGroupCounter++, // NOPMD
+                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
                                                                                                         // UnusedAssignment
                 ConfigDef.Width.NONE, MAX_POLL_RECORDS);
+        configDef.define(KEY_CONVERTER, ConfigDef.Type.CLASS, "org.apache.kafka.connect.converters.ByteArrayConverter",
+            ConfigDef.Importance.MEDIUM, "Key converter", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
+            // UnusedAssignment
+            ConfigDef.Width.NONE, KEY_CONVERTER);
+        configDef.define(VALUE_CONVERTER, ConfigDef.Type.CLASS, "org.apache.kafka.connect.converters.ByteArrayConverter",
+            ConfigDef.Importance.MEDIUM, "Value converter", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
+            // UnusedAssignment
+            ConfigDef.Width.NONE, VALUE_CONVERTER);
     }
 
     private static void addAwsStsConfigGroup(final ConfigDef configDef) {

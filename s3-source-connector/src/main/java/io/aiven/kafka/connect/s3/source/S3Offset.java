@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -47,6 +48,13 @@ public class S3Offset implements Comparable<S3Offset> {
     public int compareTo(final S3Offset s3Offset) {
         final int compareTo = s3key.compareTo(s3Offset.s3key);
         return compareTo == 0 ? (int) (offset - s3Offset.offset) : compareTo;
+    }
+
+    public Map<String, ?> asMap() {
+        final Map<String, Object> map = new HashMap<>();
+        map.put("s3key", s3key);
+        map.put("originalOffset", offset);
+        return map;
     }
 
     // Overriding equals to ensure consistency with compareTo

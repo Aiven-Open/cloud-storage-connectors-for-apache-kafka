@@ -29,17 +29,24 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.admin.AdminClient;
 
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.TopicPartition;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -79,6 +86,8 @@ final class IntegrationTest implements IntegrationBase {
 
     private static AmazonS3 s3Client;
 
+    private String topicName ;
+
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
@@ -97,7 +106,7 @@ final class IntegrationTest implements IntegrationBase {
         testBucketAccessor.createBucket();
         adminClient = newAdminClient(KAFKA_CONTAINER);
 
-        final var topicName = IntegrationBase.topicName(testInfo);
+        topicName = IntegrationBase.topicName(testInfo);
         final var topics = List.of(topicName);
         IntegrationBase.createTopics(adminClient, topics);
 
@@ -125,10 +134,13 @@ final class IntegrationTest implements IntegrationBase {
         // final String testObjectKey = s3Prefix + "test-file.txt";
         final String testData = "Hello, Kafka Connect S3 Source!";
 
-        final Path testFilePath = Paths.get("/tmp/test-file.txt");
+        String fileName = topicName + "-0-0001.txt";
+
+        final Path testFilePath = Paths.get("/tmp/" + fileName);
+//        final Path testFilePath = Paths.get("/tmp/test-file.txt");
         Files.write(testFilePath, testData.getBytes(StandardCharsets.UTF_8));
 
-        saveToS3(TEST_BUCKET_NAME, "", "test.txt", testFilePath.toFile());
+        saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
 
         // Verify that the connector is correctly set up
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
@@ -177,6 +189,7 @@ final class IntegrationTest implements IntegrationBase {
             final File fileToWrite) {
         final PutObjectRequest request = new PutObjectRequest(bucketName, folderName + fileNameInS3, fileToWrite);
         s3Client.putObject(request);
-        // assertThat(putObj.getMetadata()
+        List<String> objects = testBucketAccessor.listObjects();
+        assertThat(objects.size()).isEqualTo(1);
     }
 }
