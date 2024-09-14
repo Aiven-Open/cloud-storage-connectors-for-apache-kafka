@@ -35,12 +35,16 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import com.amazonaws.services.s3.AmazonS3;
+import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import org.apache.kafka.connect.storage.Converter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,11 +62,17 @@ public class S3SourceTask extends SourceTask {
 
     Iterator<S3SourceRecord> sourceRecordIterator;
 
+    private Optional<Converter> keyConverter;
+    private Converter valueConverter;
+
     private final AtomicBoolean stopped = new AtomicBoolean();
 
     private final static long S_3_POLL_INTERVAL_MS = 10_000L;
 
     private final static long ERROR_BACKOFF = 1000L;
+
+    final S3ClientFactory s3ClientFactory = new S3ClientFactory();
+    private AmazonS3 s3Client;
 
     @SuppressWarnings("PMD.UnnecessaryConstructor") // required by Connect
     public S3SourceTask() {
@@ -79,6 +89,18 @@ public class S3SourceTask extends SourceTask {
         LOGGER.info("S3 Source task started.");
         Objects.requireNonNull(props, "props hasn't been set");
         s3SourceConfig = new S3SourceConfig(props);
+
+        try {
+            keyConverter = Optional.of((Converter) s3SourceConfig.getClass("key.converter").newInstance());
+            valueConverter = (Converter) s3SourceConfig.getClass("value.converter").newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        };
+//        keyConverter = Optional.ofNullable(Configure.buildConverter(taskConfig, "key.converter", true, null));
+//        valueConverter = Configure.buildConverter(taskConfig, "value.converter", false, AlreadyBytesConverter.class);
+
+
+        this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
 
         LOGGER.info("S3 client initialized ");
         prepareReaderFromOffsetStorageReader();
@@ -130,7 +152,7 @@ public class S3SourceTask extends SourceTask {
                 .map(Object::toString)
                 .map(s -> s.getBytes(parseEncoding(s3SourceConfig, "key.encoding")));
 
-        sourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, s3Bucket, s3Prefix, offsets,
+        sourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, s3Prefix, offsets,
                 new DelimitedRecordReader(valueDelimiter, keyDelimiter));
     }
 
@@ -202,9 +224,16 @@ public class S3SourceTask extends SourceTask {
                 && !stopped.get(); i++) {
             final S3SourceRecord record = sourceRecordIterator.next();
             LOGGER.info(record.offset() + record.getToTopic() + record.partition());
+            String topic = "testtopic";
+            Optional<SchemaAndValue> key = keyConverter.map(c -> c.toConnectData(topic, record.key()));
+            SchemaAndValue value = valueConverter.toConnectData(topic, record.value());
+            results.add(new SourceRecord(record.file().asMap(), record.offset().asMap(), topic,
+                record.partition(),
+                key.map(SchemaAndValue::schema).orElse(null), key.map(SchemaAndValue::value).orElse(null),
+                value.schema(), value.value()));
         }
 
-        LOGGER.debug("{} returning {} records.", s3SourceConfig.getString("name"), results.size());
+        LOGGER.debug("{} records.", results.size());
         return results;
     }
 
