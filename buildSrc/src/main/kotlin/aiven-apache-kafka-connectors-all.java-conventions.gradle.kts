@@ -17,6 +17,8 @@
 import com.diffplug.spotless.LineEnding
 import java.net.URI
 
+group = "io.aiven"
+
 plugins {
 
     // https://docs.gradle.org/current/userguide/java_library_plugin.html
