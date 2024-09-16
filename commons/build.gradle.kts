@@ -94,6 +94,8 @@ dependencies {
 
 tasks.withType<Jar> { archiveBaseName.set(project.name + "-for-apache-kafka-connect") }
 
+distributions { main { distributionBaseName.set(project.name + "-for-apache-kafka-connect") } }
+
 publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {

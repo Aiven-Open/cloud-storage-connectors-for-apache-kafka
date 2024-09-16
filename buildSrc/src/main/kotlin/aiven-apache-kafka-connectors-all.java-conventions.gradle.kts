@@ -162,6 +162,7 @@ spotless {
 
 distributions {
     main {
+        distributionBaseName.set(project.name + "-for-apache-kafka")
         contents {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             from(tasks.jar)
