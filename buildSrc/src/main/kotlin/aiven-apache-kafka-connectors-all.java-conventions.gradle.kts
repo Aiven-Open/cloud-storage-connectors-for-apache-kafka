@@ -65,6 +65,14 @@ tasks.withType<Javadoc> {
     (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:all,-missing", "-quiet")
 }
 
+tasks.withType<Jar> {
+    archiveBaseName.set(project.name + "-for-apache-kafka")
+    manifest { attributes(mapOf("Version" to project.version)) }
+    from("${project.rootDir}/LICENSE") {
+        into("META-INF")
+    }
+}
+
 jacoco {
     toolVersion = "0.8.7"
 }

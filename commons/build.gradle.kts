@@ -92,6 +92,8 @@ dependencies {
   testRuntimeOnly(logginglibs.logback.classic)
 }
 
+tasks.withType<Jar> { archiveBaseName.set(project.name + "-for-apache-kafka-connect") }
+
 publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {
