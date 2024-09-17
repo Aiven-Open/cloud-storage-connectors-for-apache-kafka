@@ -162,8 +162,6 @@ tasks.processResources {
   }
 }
 
-tasks.jar { manifest { attributes(mapOf("Version" to project.version)) } }
-
 publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {

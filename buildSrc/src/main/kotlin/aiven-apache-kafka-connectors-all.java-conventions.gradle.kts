@@ -17,6 +17,8 @@
 import com.diffplug.spotless.LineEnding
 import java.net.URI
 
+group = "io.aiven"
+
 plugins {
 
     // https://docs.gradle.org/current/userguide/java_library_plugin.html
@@ -63,6 +65,14 @@ tasks.withType<JavaCompile> {
 tasks.withType<Javadoc> {
     (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
     (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:all,-missing", "-quiet")
+}
+
+tasks.withType<Jar> {
+    archiveBaseName.set(project.name + "-for-apache-kafka")
+    manifest { attributes(mapOf("Version" to project.version)) }
+    from("${project.rootDir}/LICENSE") {
+        into("META-INF")
+    }
 }
 
 jacoco {
@@ -154,6 +164,7 @@ spotless {
 
 distributions {
     main {
+        distributionBaseName.set(project.name + "-for-apache-kafka")
         contents {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             from(tasks.jar)
