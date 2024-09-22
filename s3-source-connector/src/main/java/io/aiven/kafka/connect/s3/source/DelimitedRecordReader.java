@@ -21,17 +21,13 @@ import static java.util.Optional.ofNullable;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.connect.errors.DataException;
 
 /**
  * Reads records that are followed by byte delimiters.
@@ -46,30 +42,28 @@ public class DelimitedRecordReader {
         this.keyDelimiter = keyDelimiter.map(delimiter -> Arrays.copyOf(delimiter, delimiter.length));
     }
 
-    public ConsumerRecord<byte[], byte[]> read(String topic, int partition, long offset,
-                                               BufferedInputStream data, String keyData) throws IOException {
+    public ConsumerRecord<byte[], byte[]> read(String topic, int partition, long offset, BufferedInputStream data,
+            String keyData) throws IOException {
 
         Optional<byte[]> key = Optional.empty();
-        if (keyData != null){
+        if (keyData != null) {
             key = Optional.of(keyData.getBytes());
         }
-//        Optional<byte[]> key = Optional.empty();
-//        if (keyDelimiter.isPresent()) {
-//            key = Optional.ofNullable(readTo(data, keyDelimiter.get()));
-//            if (!key.isPresent()) {
-//                return null;
-//            }
-//        }
+        // Optional<byte[]> key = Optional.empty();
+        // if (keyDelimiter.isPresent()) {
+        // key = Optional.ofNullable(readTo(data, keyDelimiter.get()));
+        // if (!key.isPresent()) {
+        // return null;
+        // }
+        // }
         byte[] value = readTo(data, valueDelimiter);
         if (value == null) {
-            if(key.isPresent()) {
+            if (key.isPresent()) {
                 throw new IllegalStateException("missing value for key!" + key);
             }
             return null;
         }
-        return new ConsumerRecord<>(
-            topic, partition, offset, key.orElse(null), value
-        );
+        return new ConsumerRecord<>(topic, partition, offset, key.orElse(null), value);
     }
 
     // read up to and including the given multi-byte delimeter
@@ -77,7 +71,7 @@ public class DelimitedRecordReader {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         int lastByte = del[del.length - 1] & 0xff;
         int b;
-        while((b = data.read()) != -1) {
+        while ((b = data.read()) != -1) {
             baos.write(b);
             if (b == lastByte && baos.size() >= del.length) {
                 byte[] bytes = baos.toByteArray();
