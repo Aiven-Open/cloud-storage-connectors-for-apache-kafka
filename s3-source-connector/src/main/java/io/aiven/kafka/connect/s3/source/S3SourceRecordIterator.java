@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.START_MARKER_KEY;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -30,12 +29,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
-import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.AmazonClientException;
@@ -64,8 +61,8 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
     private final String s3Prefix;
     private final AmazonS3 s3Client;
 
-    public S3SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName, final String s3Prefix,
-            final Map<S3Partition, S3Offset> offsets, final DelimitedRecordReader recordReader) {
+    public S3SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
+            final String s3Prefix, final Map<S3Partition, S3Offset> offsets, final DelimitedRecordReader recordReader) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsets = Optional.ofNullable(offsets).orElseGet(HashMap::new);
         this.makeReader = recordReader;
@@ -82,8 +79,8 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     private List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
         final ObjectListing objectListing = s3Client.listObjects(new ListObjectsRequest().withBucketName(bucketName)
-//                .withPrefix(s3Prefix)
-//                .withMarker(s3SourceConfig.getString(START_MARKER_KEY))
+                // .withPrefix(s3Prefix)
+                // .withMarker(s3SourceConfig.getString(START_MARKER_KEY))
                 .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * 2));
 
         return new ArrayList<>(objectListing.getObjectSummaries());
@@ -107,16 +104,16 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
     private Iterator<ConsumerRecord<byte[], byte[]>> createIteratorForCurrentFile() throws IOException {
         final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
         try (InputStream content = getContent(s3Object);
-             BufferedInputStream bufferedContent = new BufferedInputStream(content)) {
+                BufferedInputStream bufferedContent = new BufferedInputStream(content)) {
 
             // Extract the topic, partition, and startOffset from the key
-//            Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
-//            if (!matcher.find()) {
-//                throw new IllegalArgumentException("Invalid file key format: " + currentKey);
-//            }
-            final String topic = "testtopic";//matcher.group("topic");
-            final int partition = 0;//Integer.parseInt(matcher.group("partition"));
-            final long startOffset = 0l;//Long.parseLong(matcher.group("offset"));
+            // Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
+            // if (!matcher.find()) {
+            // throw new IllegalArgumentException("Invalid file key format: " + currentKey);
+            // }
+            final String topic = "testtopic";// matcher.group("topic");
+            final int partition = 0;// Integer.parseInt(matcher.group("partition"));
+            final long startOffset = 0l;// Long.parseLong(matcher.group("offset"));
 
             return new Iterator<>() {
                 private ConsumerRecord<byte[], byte[]> nextRecord = readNext();
@@ -147,7 +144,6 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
             };
         }
     }
-
 
     private InputStream getContent(final S3Object object) throws IOException {
         return object.getObjectContent();

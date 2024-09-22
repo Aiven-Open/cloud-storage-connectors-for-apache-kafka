@@ -35,16 +35,16 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.AmazonS3;
-import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
+import org.apache.kafka.connect.storage.Converter;
 
+import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
-import org.apache.kafka.connect.storage.Converter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,10 +95,9 @@ public class S3SourceTask extends SourceTask {
             valueConverter = (Converter) s3SourceConfig.getClass("value.converter").newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
-        };
-//        keyConverter = Optional.ofNullable(Configure.buildConverter(taskConfig, "key.converter", true, null));
-//        valueConverter = Configure.buildConverter(taskConfig, "value.converter", false, AlreadyBytesConverter.class);
-
+        } ;
+        // keyConverter = Optional.ofNullable(Configure.buildConverter(taskConfig, "key.converter", true, null));
+        // valueConverter = Configure.buildConverter(taskConfig, "value.converter", false, AlreadyBytesConverter.class);
 
         this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
 
@@ -227,10 +226,9 @@ public class S3SourceTask extends SourceTask {
             String topic = "testtopic";
             Optional<SchemaAndValue> key = keyConverter.map(c -> c.toConnectData(topic, record.key()));
             SchemaAndValue value = valueConverter.toConnectData(topic, record.value());
-            results.add(new SourceRecord(record.file().asMap(), record.offset().asMap(), topic,
-                record.partition(),
-                key.map(SchemaAndValue::schema).orElse(null), key.map(SchemaAndValue::value).orElse(null),
-                value.schema(), value.value()));
+            results.add(new SourceRecord(record.file().asMap(), record.offset().asMap(), topic, record.partition(),
+                    key.map(SchemaAndValue::schema).orElse(null), key.map(SchemaAndValue::value).orElse(null),
+                    value.schema(), value.value()));
         }
 
         LOGGER.debug("{} records.", results.size());
