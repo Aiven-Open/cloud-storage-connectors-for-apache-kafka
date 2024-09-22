@@ -29,24 +29,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.admin.AdminClient;
 
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.TopicPartition;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -86,7 +79,7 @@ final class IntegrationTest implements IntegrationBase {
 
     private static AmazonS3 s3Client;
 
-    private String topicName ;
+    private String topicName;
 
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
@@ -137,7 +130,7 @@ final class IntegrationTest implements IntegrationBase {
         String fileName = topicName + "-0-0001.txt";
 
         final Path testFilePath = Paths.get("/tmp/" + fileName);
-//        final Path testFilePath = Paths.get("/tmp/test-file.txt");
+        // final Path testFilePath = Paths.get("/tmp/test-file.txt");
         Files.write(testFilePath, testData.getBytes(StandardCharsets.UTF_8));
 
         saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
