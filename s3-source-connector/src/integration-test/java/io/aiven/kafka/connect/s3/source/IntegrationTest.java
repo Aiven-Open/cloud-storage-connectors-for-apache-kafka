@@ -88,8 +88,6 @@ final class IntegrationTest implements IntegrationBase {
 
     private static AmazonS3 s3Client;
 
-    private String topicName;
-
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
@@ -108,7 +106,7 @@ final class IntegrationTest implements IntegrationBase {
         testBucketAccessor.createBucket();
         adminClient = newAdminClient(KAFKA_CONTAINER);
 
-        topicName = IntegrationBase.topicName(testInfo);
+        final String topicName = IntegrationBase.topicName(testInfo);
         final var topics = List.of(topicName);
         IntegrationBase.createTopics(adminClient, topics);
 
@@ -139,7 +137,7 @@ final class IntegrationTest implements IntegrationBase {
         writeToS3(topicName, testData1, 1);
         writeToS3(topicName, testData2, 2);
 
-        List<String> objects = testBucketAccessor.listObjects();
+        final List<String> objects = testBucketAccessor.listObjects();
         assertThat(objects.size()).isEqualTo(2);
 
         // Verify that the connector is correctly set up
@@ -158,19 +156,20 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME));
 
         connectRunner.createConnector(connectorConfig);
-        String partition = "00001";
-        String offset = "000000000121";
-        String key = topicName + "-" + partition + "-" + offset + ".txt";
+        final String partition = "00001";
+        final String offset = "000000000121";
+        final String key = topicName + "-" + partition + "-" + offset + ".txt";
         multipartUpload(TEST_BUCKET_NAME, key);
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
         assertThat(records.get(0)).contains("performanceeeqjz");
     }
 
-    private static void writeToS3(String topicName, String testData1, int id) throws IOException {
-        String partition = "00000";
-        String offset = "00000000012" + id;
-        String fileName = topicName + "-" + partition + "-" + offset + ".txt";
+    private static void writeToS3(final String topicName, final String testData1, final int offsetId)
+            throws IOException {
+        final String partition = "00000";
+        final String offset = "00000000012" + offsetId;
+        final String fileName = topicName + "-" + partition + "-" + offset + ".txt";
         final Path testFilePath = Paths.get("/tmp/" + fileName);
         Files.write(testFilePath, testData1.getBytes(StandardCharsets.UTF_8));
 
@@ -205,14 +204,14 @@ final class IntegrationTest implements IntegrationBase {
         s3Client.putObject(request);
     }
 
-    public void multipartUpload(String bucketName, String key) {
+    public void multipartUpload(final String bucketName, final String key) {
         try (S3OutputStream s3OutputStream = new S3OutputStream(bucketName, key, S3OutputStream.DEFAULT_PART_SIZE,
-                s3Client)) {
-            InputStream resourceStream = Thread.currentThread()
-                    .getContextClassLoader()
-                    .getResourceAsStream(S3_FILE_NAME);
+                s3Client);
+                InputStream resourceStream = Thread.currentThread()
+                        .getContextClassLoader()
+                        .getResourceAsStream(S3_FILE_NAME);) {
             assert resourceStream != null;
-            byte[] fileBytes = IOUtils.toByteArray(resourceStream);
+            final byte[] fileBytes = IOUtils.toByteArray(resourceStream);
             s3OutputStream.write(fileBytes);
         } catch (IOException e) {
             LOGGER.error(e.getMessage());

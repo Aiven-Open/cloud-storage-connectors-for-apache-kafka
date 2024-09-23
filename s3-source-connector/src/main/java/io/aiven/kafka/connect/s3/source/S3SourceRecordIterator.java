@@ -20,6 +20,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,7 +50,7 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
             .compile("(?<topic>[^/]+?)-" + "(?<partition>\\d{5})-" + "(?<offset>\\d{12})" + "\\.(?<extension>[^.]+)$");
     private String currentKey;
     private Iterator<S3ObjectSummary> nextFileIterator;
-    private Iterator<ConsumerRecord<byte[], byte[]>> recordIterator = Collections.emptyIterator();
+    private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> recordIterator = Collections.emptyIterator();
 
     private final Map<S3Partition, S3Offset> offsets;
 
@@ -97,10 +98,9 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
         }
     }
 
-    private Iterator<ConsumerRecord<byte[], byte[]>> createIteratorForCurrentFile() throws IOException {
+    private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> createIteratorForCurrentFile() throws IOException {
         final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
         try (InputStream content = getContent(s3Object)) {
-
             final Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
             String topic = null;
             int partition = 0;
@@ -114,69 +114,75 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
             final String finalTopic = topic;
             final int finalPartition = partition;
             final long finalStartOffset = startOffset;
-            return new Iterator<>() {
-                private Map<S3Partition, Long> currentOffsets = new HashMap<>(); // Track offsets for each
-                                                                                 // topic-partition
-                private ConsumerRecord<byte[], byte[]> nextRecord = readNext();
-
-                private ConsumerRecord<byte[], byte[]> readNext() {
-                    try {
-                        Optional<byte[]> key = Optional.empty();
-                        if (currentKey != null) {
-                            key = Optional.of(currentKey.getBytes());
-                        }
-                        byte[] value = IOUtils.toByteArray(content);
-
-                        if (value == null) {
-                            if (key.isPresent()) {
-                                throw new IllegalStateException("missing value for key!" + key);
-                            }
-                            return null;
-                        }
-                        S3Partition s3Partition = S3Partition.from(bucketName, s3Prefix, finalTopic, finalPartition);
-
-                        long currentOffset;
-                        if (offsets.containsKey(s3Partition)) {
-                            S3Offset s3Offset = offsets.get(s3Partition);
-                            currentOffset = s3Offset.getOffset() + 1;
-                        } else {
-                            currentOffset = currentOffsets.getOrDefault(s3Partition, finalStartOffset);
-                        }
-                        ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(finalTopic, finalPartition,
-                                currentOffset, key.orElse(null), value);
-                        currentOffsets.put(s3Partition, currentOffset + 1);
-
-                        return record;
-                    } catch (IOException e) {
-                        throw new RuntimeException("Failed to read record from file", e);
-                    }
-                }
-
-                @Override
-                public boolean hasNext() {
-                    // Check if there's another record
-                    return nextRecord != null;
-                }
-
-                @Override
-                public ConsumerRecord<byte[], byte[]> next() {
-                    if (nextRecord == null) {
-                        throw new NoSuchElementException();
-                    }
-                    ConsumerRecord<byte[], byte[]> currentRecord = nextRecord;
-                    nextRecord = null;
-                    return currentRecord;
-                }
-            };
+            return getIterator(content, finalTopic, finalPartition, finalStartOffset);
         }
+    }
+
+    private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> getIterator(final InputStream content,
+            final String finalTopic, final int finalPartition, final long finalStartOffset) {
+        return new Iterator<>() {
+            private Map<S3Partition, Long> currentOffsets = new HashMap<>();
+            private Optional<ConsumerRecord<byte[], byte[]>> nextRecord = readNext();
+
+            private Optional<ConsumerRecord<byte[], byte[]>> readNext() {
+                try {
+                    Optional<byte[]> key = Optional.empty();
+                    if (currentKey != null) {
+                        key = Optional.of(currentKey.getBytes(StandardCharsets.UTF_8));
+                    }
+                    final byte[] value = IOUtils.toByteArray(content);
+
+                    if (value == null) {
+                        if (key.isPresent()) {
+                            throw new IllegalStateException("missing value for key!" + key);
+                        }
+                        return Optional.empty();
+                    }
+
+                    return getConsumerRecord(key, value);
+                } catch (IOException e) {
+                    throw new org.apache.kafka.connect.errors.ConnectException(
+                            "Connect converters could not be instantiated.", e);
+                }
+            }
+
+            private Optional<ConsumerRecord<byte[], byte[]>> getConsumerRecord(final Optional<byte[]> key,
+                    final byte[] value) {
+                final S3Partition s3Partition = S3Partition.from(bucketName, s3Prefix, finalTopic, finalPartition);
+
+                long currentOffset;
+                if (offsets.containsKey(s3Partition)) {
+                    final S3Offset s3Offset = offsets.get(s3Partition);
+                    currentOffset = s3Offset.getOffset() + 1;
+                } else {
+                    currentOffset = currentOffsets.getOrDefault(s3Partition, finalStartOffset);
+                }
+                final Optional<ConsumerRecord<byte[], byte[]>> record = Optional
+                        .of(new ConsumerRecord<>(finalTopic, finalPartition, currentOffset, key.orElse(null), value));
+                currentOffsets.put(s3Partition, currentOffset + 1);
+                return record;
+            }
+
+            @Override
+            public boolean hasNext() {
+                // Check if there's another record
+                return nextRecord.isPresent();
+            }
+
+            @Override
+            public Optional<ConsumerRecord<byte[], byte[]>> next() {
+                if (nextRecord.isEmpty()) {
+                    throw new NoSuchElementException();
+                }
+                final Optional<ConsumerRecord<byte[], byte[]>> currentRecord = nextRecord;
+                nextRecord = Optional.empty();
+                return currentRecord;
+            }
+        };
     }
 
     private InputStream getContent(final S3Object object) throws IOException {
         return object.getObjectContent();
-    }
-
-    private S3Offset offset(String topic, int partition) {
-        return offsets.get(S3Partition.from(bucketName, s3Prefix, topic, partition));
     }
 
     @Override
@@ -192,7 +198,7 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }
-        final ConsumerRecord<byte[], byte[]> record = recordIterator.next();
+        final ConsumerRecord<byte[], byte[]> record = recordIterator.next().get();
         return new S3SourceRecord(S3Partition.from(bucketName, s3Prefix, record.topic(), record.partition()),
                 S3Offset.from(currentKey, record.offset()), record.topic(), record.partition(), record.key(),
                 record.value());
