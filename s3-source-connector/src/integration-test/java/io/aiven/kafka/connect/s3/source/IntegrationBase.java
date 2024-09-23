@@ -138,9 +138,7 @@ public interface IntegrationBase {
             while (messages.size() < expectedMessageCount) {
                 final ConsumerRecords<byte[], byte[]> records = consumer.poll(5L);
                 for (final ConsumerRecord<byte[], byte[]> record : records) {
-                    messages.add(new String(record.value(), StandardCharsets.UTF_8)); // Convert message from bytes to
-                                                                                      // string for easy
-                    // verification
+                    messages.add(new String(record.value(), StandardCharsets.UTF_8));
                 }
             }
 
