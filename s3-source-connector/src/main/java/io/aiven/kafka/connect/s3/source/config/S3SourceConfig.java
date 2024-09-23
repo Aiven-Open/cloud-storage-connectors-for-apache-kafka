@@ -163,7 +163,6 @@ final public class S3SourceConfig extends AbstractConfig {
         addAwsStsConfigGroup(configDef);
         addAwsConfigGroup(configDef);
         addDeprecatedConfiguration(configDef);
-        addFileConfiguration(configDef);
         addS3RetryPolicies(configDef);
         addOtherConfig(configDef);
         return configDef;
@@ -240,9 +239,6 @@ final public class S3SourceConfig extends AbstractConfig {
                         + S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT + ".",
                 GROUP_S3_RETRY_BACKOFF_POLICY, retryPolicyGroupCounter++, // NOPMD UnusedAssignment
                 ConfigDef.Width.NONE, AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
-    }
-
-    private static void addFileConfiguration(final S3SourceConfigDef configDef) {
     }
 
     private static void addOffsetStorageConfig(final ConfigDef configDef) {
