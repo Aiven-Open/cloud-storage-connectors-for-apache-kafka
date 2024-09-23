@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
+import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
@@ -46,6 +49,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -54,6 +59,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Ignore
 @Testcontainers
 final class IntegrationTest implements IntegrationBase {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTest.class);
+    private static final String S3_FILE_NAME = "testtopic-0-0001.txt";
     private static final String CONNECTOR_NAME = "aiven-s3-source-connector";
     private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-test-";
     private static final int OFFSET_FLUSH_INTERVAL_MS = 500;
@@ -145,6 +153,17 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(records).containsExactly(testData);
     }
 
+    @Test
+    void multiUploadTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+        final var topicName = IntegrationBase.topicName(testInfo);
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+
+        connectRunner.createConnector(connectorConfig);
+        multipartUpload(TEST_BUCKET_NAME, "testkey");
+        // Poll messages from the Kafka topic and verify the consumed data
+        final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
+    }
+
     private Map<String, String> getConfig(final Map<String, String> config, final String topicName) {
         return getConfig(config, List.of(topicName));
     }
@@ -185,4 +204,18 @@ final class IntegrationTest implements IntegrationBase {
         List<String> objects = testBucketAccessor.listObjects();
         assertThat(objects.size()).isEqualTo(1);
     }
+
+    public void multipartUpload(String bucketName, String key) {
+        try (S3OutputStream s3OutputStream = new S3OutputStream(bucketName, key, S3OutputStream.DEFAULT_PART_SIZE, s3Client)) {
+            InputStream resourceStream = Thread.currentThread()
+                .getContextClassLoader()
+                .getResourceAsStream(S3_FILE_NAME);
+            assert resourceStream != null;
+            byte [] fileBytes = IOUtils.toByteArray(resourceStream);
+            s3OutputStream.write(fileBytes);
+        } catch (IOException e) {
+            LOGGER.error(e.getMessage());
+        }
+    }
+
 }

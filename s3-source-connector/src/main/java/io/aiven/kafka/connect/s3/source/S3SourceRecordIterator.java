@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -31,6 +30,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
+import com.amazonaws.util.IOUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -41,6 +41,9 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+//import software.amazon.awssdk.core.sync.ResponseTransformer;
+//import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+//import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
 
@@ -52,8 +55,6 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
     private Iterator<S3ObjectSummary> nextFileIterator;
     private Iterator<ConsumerRecord<byte[], byte[]>> recordIterator = Collections.emptyIterator();
 
-    private final DelimitedRecordReader makeReader;
-
     private final Map<S3Partition, S3Offset> offsets;
 
     private final S3SourceConfig s3SourceConfig;
@@ -62,10 +63,9 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
     private final AmazonS3 s3Client;
 
     public S3SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
-            final String s3Prefix, final Map<S3Partition, S3Offset> offsets, final DelimitedRecordReader recordReader) {
+            final String s3Prefix, final Map<S3Partition, S3Offset> offsets) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsets = Optional.ofNullable(offsets).orElseGet(HashMap::new);
-        this.makeReader = recordReader;
         this.s3Client = s3Client;
         this.bucketName = bucketName;
         this.s3Prefix = s3Prefix;
@@ -103,8 +103,7 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     private Iterator<ConsumerRecord<byte[], byte[]>> createIteratorForCurrentFile() throws IOException {
         final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
-        try (InputStream content = getContent(s3Object);
-                BufferedInputStream bufferedContent = new BufferedInputStream(content)) {
+        try (InputStream content = getContent(s3Object)) {
 
             // Extract the topic, partition, and startOffset from the key
             // Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
@@ -120,7 +119,19 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
 
                 private ConsumerRecord<byte[], byte[]> readNext() {
                     try {
-                        return makeReader.read(topic, partition, startOffset, bufferedContent, currentKey);
+                        Optional<byte[]> key = Optional.empty();
+                        if (currentKey != null) {
+                            key = Optional.of(currentKey.getBytes());
+                        }
+                        byte[] value = IOUtils.toByteArray(content);
+
+                        if (value == null) {
+                            if (key.isPresent()) {
+                                throw new IllegalStateException("missing value for key!" + key);
+                            }
+                            return null;
+                        }
+                        return new ConsumerRecord<>(topic, partition, startOffset, key.orElse(null), value);
                     } catch (IOException e) {
                         throw new RuntimeException("Failed to read record from file", e);
                     }
