@@ -16,7 +16,11 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.START_MARKER_KEY;
@@ -176,16 +180,17 @@ final class IntegrationTest implements IntegrationBase {
         saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
     }
 
+    @Deprecated
     private Map<String, String> getConfig(final Map<String, String> config) {
         config.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
-        config.put("aws.access.key.id", S3_ACCESS_KEY_ID);
-        config.put("aws.secret.access.key", S3_SECRET_ACCESS_KEY);
-        config.put("aws.s3.endpoint", s3Endpoint);
+        config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
+        config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
+        config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);
         config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
-        config.put("aws.s3.prefix", s3Prefix);
+        config.put(AWS_S3_PREFIX_CONFIG, s3Prefix);
         config.put(START_MARKER_KEY, COMMON_PREFIX);
         config.put(OFFSET_STORAGE_TOPIC_PARTITIONS, "1,2");
-        config.put(OFFSET_STORAGE_TOPIC, "connect-offsets");
+        config.put(OFFSET_STORAGE_TOPIC, "connect-storage-offsets");
         return config;
     }
 
