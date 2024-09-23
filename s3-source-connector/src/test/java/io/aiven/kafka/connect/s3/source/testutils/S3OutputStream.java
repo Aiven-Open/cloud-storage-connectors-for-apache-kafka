@@ -16,6 +16,15 @@
 
 package io.aiven.kafka.connect.s3.source.testutils;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -26,15 +35,6 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 
 public class S3OutputStream extends OutputStream {
 
@@ -65,7 +65,7 @@ public class S3OutputStream extends OutputStream {
 
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "AmazonS3 client is mutable")
     public S3OutputStream(final String bucketName, final String key, final int partSize, final AmazonS3 client,
-                          final String serverSideEncryptionAlgorithm) {
+            final String serverSideEncryptionAlgorithm) {
         super();
         this.bucketName = bucketName;
         this.key = key;
