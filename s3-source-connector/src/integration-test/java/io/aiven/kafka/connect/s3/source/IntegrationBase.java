@@ -93,8 +93,7 @@ public interface IntegrationBase {
     }
 
     static String topicName(final TestInfo testInfo) {
-        return "testtopic";
-        // return testInfo.getTestMethod().get().getName();// + "-" + testInfo.getDisplayName().hashCode();
+        return testInfo.getTestMethod().get().getName();// + "-" + testInfo.getDisplayName().hashCode();
     }
 
     static void createTopics(final AdminClient adminClient, final List<String> topicNames)

@@ -17,7 +17,7 @@
 package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TOPICS_KEY;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TOPIC_PARTITIONS_KEY;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -110,24 +110,12 @@ public class S3SourceTask extends SourceTask {
         final String s3Bucket = s3SourceConfig.getString("aws.s3.bucket.name");
 
         final Set<Integer> partitionList = getPartitions();
-        final Set<String> topics = getTopics();
+        final Set<String> topics = getOffsetStorageTopic();
 
         // map to s3 partitions
         final List<S3Partition> s3Partitions = partitionList.stream()
                 .flatMap(p -> topics.stream().map(t -> S3Partition.from(s3Bucket, s3Prefix, t, p)))
                 .collect(toList());
-
-        // List<String> topicPartitions = Arrays.asList("1","2");
-        // List<Map<String, String>> offsetPartitions = topicPartitions.stream().map(
-        // tp -> {
-        // HashMap<String, String> offsetInfo = new HashMap<>();
-        // offsetInfo.put("source", tp);
-        // offsetInfo.put("targetPrefix", "targetTopicPrefix");
-        // return offsetInfo;
-        // }
-        // ).collect(Collectors.toList());
-        // final Map<Map<String, String>, Map<String, Object>> offsetMap =
-        // context.offsetStorageReader().offsets(offsetPartitions);
 
         // get partition offsets
         final List<Map<String, Object>> partitions = s3Partitions.stream().map(S3Partition::asMap).collect(toList());
@@ -153,12 +141,12 @@ public class S3SourceTask extends SourceTask {
         }
     }
 
-    private Set<String> getTopics() {
-        final String topicString = s3SourceConfig.getString(TOPICS_KEY);
+    private Set<String> getOffsetStorageTopic() {
+        final String topicString = s3SourceConfig.getString(OFFSET_STORAGE_TOPIC);
         if (Objects.nonNull(topicString)) {
             return Arrays.stream(topicString.split(",")).collect(Collectors.toSet());
         } else {
-            throw new IllegalStateException("Topics list is not configured.");
+            throw new IllegalStateException("Offset storage topics list is not configured.");
         }
     }
 
@@ -212,7 +200,7 @@ public class S3SourceTask extends SourceTask {
                 && !stopped.get(); i++) {
             final S3SourceRecord record = sourceRecordIterator.next();
             LOGGER.info(record.offset() + record.getToTopic() + record.partition());
-            String topic = "testtopic";
+            String topic = record.getToTopic();
             Optional<SchemaAndValue> key = keyConverter.map(c -> c.toConnectData(topic, record.key()));
             SchemaAndValue value = valueConverter.toConnectData(topic, record.value());
             results.add(new SourceRecord(record.file().asMap(), record.offset().asMap(), topic, record.partition(),
