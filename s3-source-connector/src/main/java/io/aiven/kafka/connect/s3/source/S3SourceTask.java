@@ -141,18 +141,7 @@ public class S3SourceTask extends SourceTask {
                     .collect(
                             toMap(entry -> S3Partition.from(entry.getKey()), entry -> S3Offset.from(entry.getValue())));
         }
-
-        final byte[] valueDelimiter = Optional.ofNullable(s3SourceConfig.getString("value.delimiter"))
-                .map(Object::toString)
-                .orElse("\n")
-                .getBytes(parseEncoding(s3SourceConfig, "value.encoding"));
-
-        final Optional<byte[]> keyDelimiter = Optional.ofNullable(s3SourceConfig.getString("key.delimiter"))
-                .map(Object::toString)
-                .map(s -> s.getBytes(parseEncoding(s3SourceConfig, "key.encoding")));
-
-        sourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, s3Prefix, offsets,
-                new DelimitedRecordReader(valueDelimiter, keyDelimiter));
+        sourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, s3Prefix, offsets);
     }
 
     private Set<Integer> getPartitions() {
