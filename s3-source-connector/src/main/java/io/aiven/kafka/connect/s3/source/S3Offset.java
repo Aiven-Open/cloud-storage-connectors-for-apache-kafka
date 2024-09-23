@@ -57,6 +57,10 @@ public class S3Offset implements Comparable<S3Offset> {
         return map;
     }
 
+    public long getOffset() {
+        return offset;
+    }
+
     // Overriding equals to ensure consistency with compareTo
     @Override
     public boolean equals(final Object obj) {

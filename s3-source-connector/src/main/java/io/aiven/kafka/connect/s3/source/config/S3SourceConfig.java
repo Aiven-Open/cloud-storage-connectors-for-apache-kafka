@@ -105,7 +105,7 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static final String AWS_S3_SSE_ALGORITHM_CONFIG = "aws.s3.sse.algorithm";
 
-    public static final String TOPIC_PARTITIONS_KEY = "offset.storage.topic.partitions";
+    public static final String OFFSET_STORAGE_TOPIC_PARTITIONS = "offset.storage.topic.partitions";
     public static final String OFFSET_STORAGE_TOPIC = "offset.storage.topic";
 
     public static final String OFFSET_STORAGE_TOPIC_DEFAULT = "connect-offsets";
@@ -246,9 +246,9 @@ final public class S3SourceConfig extends AbstractConfig {
     }
 
     private static void addOffsetStorageConfig(final ConfigDef configDef) {
-        configDef.define(TOPIC_PARTITIONS_KEY, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : 1,2", GROUP_OFFSET_TOPIC, 0, ConfigDef.Width.NONE,
-                TOPIC_PARTITIONS_KEY);
+        configDef.define(OFFSET_STORAGE_TOPIC_PARTITIONS, ConfigDef.Type.STRING, "0", new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.MEDIUM, "eg : 0,1", GROUP_OFFSET_TOPIC, 0, ConfigDef.Width.NONE,
+                OFFSET_STORAGE_TOPIC_PARTITIONS);
         configDef.define(OFFSET_STORAGE_TOPIC, ConfigDef.Type.STRING, OFFSET_STORAGE_TOPIC_DEFAULT,
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "eg : connect-offsets", GROUP_OFFSET_TOPIC,
                 0, ConfigDef.Width.NONE, OFFSET_STORAGE_TOPIC);
