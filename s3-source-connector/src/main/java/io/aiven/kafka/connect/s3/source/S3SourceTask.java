@@ -18,7 +18,7 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TOPIC_PARTITIONS_KEY;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC_PARTITIONS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -95,9 +95,7 @@ public class S3SourceTask extends SourceTask {
             valueConverter = (Converter) s3SourceConfig.getClass("value.converter").newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
-        } ;
-        // keyConverter = Optional.ofNullable(Configure.buildConverter(taskConfig, "key.converter", true, null));
-        // valueConverter = Configure.buildConverter(taskConfig, "value.converter", false, AlreadyBytesConverter.class);
+        }
 
         this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
 
@@ -109,12 +107,12 @@ public class S3SourceTask extends SourceTask {
         final String s3Prefix = s3SourceConfig.getString("aws.s3.prefix");
         final String s3Bucket = s3SourceConfig.getString("aws.s3.bucket.name");
 
-        final Set<Integer> partitionList = getPartitions();
-        final Set<String> topics = getOffsetStorageTopic();
+        final Set<Integer> offsetStorageTopicPartitions = getOffsetStorageTopicPartitions();
+        final Set<String> offsetStorageTopic = getOffsetStorageTopic();
 
         // map to s3 partitions
-        final List<S3Partition> s3Partitions = partitionList.stream()
-                .flatMap(p -> topics.stream().map(t -> S3Partition.from(s3Bucket, s3Prefix, t, p)))
+        final List<S3Partition> s3Partitions = offsetStorageTopicPartitions.stream()
+                .flatMap(p -> offsetStorageTopic.stream().map(t -> S3Partition.from(s3Bucket, s3Prefix, t, p)))
                 .collect(toList());
 
         // get partition offsets
@@ -132,12 +130,12 @@ public class S3SourceTask extends SourceTask {
         sourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, s3Prefix, offsets);
     }
 
-    private Set<Integer> getPartitions() {
-        final String partitionString = s3SourceConfig.getString(TOPIC_PARTITIONS_KEY);
+    private Set<Integer> getOffsetStorageTopicPartitions() {
+        final String partitionString = s3SourceConfig.getString(OFFSET_STORAGE_TOPIC_PARTITIONS);
         if (Objects.nonNull(partitionString)) {
             return Arrays.stream(partitionString.split(",")).map(Integer::parseInt).collect(Collectors.toSet());
         } else {
-            throw new IllegalStateException("Partition list is not configured.");
+            throw new IllegalStateException("Offset storage topics partition list is not configured.");
         }
     }
 

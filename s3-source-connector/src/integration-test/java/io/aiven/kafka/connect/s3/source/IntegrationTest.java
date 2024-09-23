@@ -18,8 +18,8 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.START_MARKER_KEY;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TOPIC_PARTITIONS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
@@ -152,23 +152,29 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(records).contains(testData1).contains(testData2);
     }
 
-    private static void writeToS3(String topicName, String testData1, int id) throws IOException {
-        String fileName = topicName + "-00000-00000000012" + id + ".txt";
-        final Path testFilePath = Paths.get("/tmp/" + fileName);
-        Files.write(testFilePath, testData1.getBytes(StandardCharsets.UTF_8));
-
-        saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
-    }
-
     @Test
-    void multiUploadTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+    void multiPartUploadTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME));
 
         connectRunner.createConnector(connectorConfig);
-        multipartUpload(TEST_BUCKET_NAME, "testkey");
+        String partition = "00001";
+        String offset = "000000000121";
+        String key = topicName + "-" + partition + "-" + offset + ".txt";
+        multipartUpload(TEST_BUCKET_NAME, key);
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
+        assertThat(records.get(0)).contains("performanceeeqjz");
+    }
+
+    private static void writeToS3(String topicName, String testData1, int id) throws IOException {
+        String partition = "00000";
+        String offset = "00000000012" + id;
+        String fileName = topicName + "-" + partition + "-" + offset + ".txt";
+        final Path testFilePath = Paths.get("/tmp/" + fileName);
+        Files.write(testFilePath, testData1.getBytes(StandardCharsets.UTF_8));
+
+        saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
     }
 
     private Map<String, String> getConfig(final Map<String, String> config) {
@@ -179,7 +185,7 @@ final class IntegrationTest implements IntegrationBase {
         config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
         config.put("aws.s3.prefix", s3Prefix);
         config.put(START_MARKER_KEY, COMMON_PREFIX);
-        config.put(TOPIC_PARTITIONS_KEY, "1,2");
+        config.put(OFFSET_STORAGE_TOPIC_PARTITIONS, "1,2");
         config.put(OFFSET_STORAGE_TOPIC, "connect-offsets");
         return config;
     }
