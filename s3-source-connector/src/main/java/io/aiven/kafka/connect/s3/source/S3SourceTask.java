@@ -22,8 +22,6 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STOR
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -36,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 import org.apache.kafka.connect.storage.Converter;
@@ -84,6 +83,7 @@ public class S3SourceTask extends SourceTask {
         return Version.VERSION;
     }
 
+    @Deprecated
     @Override
     public void start(final Map<String, String> props) {
         LOGGER.info("S3 Source task started.");
@@ -94,7 +94,7 @@ public class S3SourceTask extends SourceTask {
             keyConverter = Optional.of((Converter) s3SourceConfig.getClass("key.converter").newInstance());
             valueConverter = (Converter) s3SourceConfig.getClass("value.converter").newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new ConnectException("Connect converters could not be instantiated.", e);
         }
 
         this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
@@ -148,13 +148,6 @@ public class S3SourceTask extends SourceTask {
         }
     }
 
-    private Charset parseEncoding(final S3SourceConfig s3SourceConfig, final String key) {
-        return Optional.ofNullable(s3SourceConfig.getString(key))
-                .map(Object::toString)
-                .map(Charset::forName)
-                .orElse(StandardCharsets.UTF_8);
-    }
-
     @Override
     public List<SourceRecord> poll() throws InterruptedException {
         // read up to the configured poll size
@@ -198,9 +191,9 @@ public class S3SourceTask extends SourceTask {
                 && !stopped.get(); i++) {
             final S3SourceRecord record = sourceRecordIterator.next();
             LOGGER.info(record.offset() + record.getToTopic() + record.partition());
-            String topic = record.getToTopic();
-            Optional<SchemaAndValue> key = keyConverter.map(c -> c.toConnectData(topic, record.key()));
-            SchemaAndValue value = valueConverter.toConnectData(topic, record.value());
+            final String topic = record.getToTopic();
+            final Optional<SchemaAndValue> key = keyConverter.map(c -> c.toConnectData(topic, record.key()));
+            final SchemaAndValue value = valueConverter.toConnectData(topic, record.value());
             results.add(new SourceRecord(record.file().asMap(), record.offset().asMap(), topic, record.partition(),
                     key.map(SchemaAndValue::schema).orElse(null), key.map(SchemaAndValue::value).orElse(null),
                     value.schema(), value.value()));
