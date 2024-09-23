@@ -28,9 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.amazonaws.util.IOUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -41,16 +41,12 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-//import software.amazon.awssdk.core.sync.ResponseTransformer;
-//import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-//import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import com.amazonaws.util.IOUtils;
 
 public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
 
-    public static final Pattern DEFAULT_PATTERN = Pattern.compile("(\\/|^)" // match the / or the start of the key so we
-            // shouldn't have to worry about prefix
-            + "(?<topic>[^/]+?)-" // assuming no / in topic names
-            + "(?<partition>\\d{5})-" + "(?<offset>\\d{12})\\.gz$");
+    public static final Pattern DEFAULT_PATTERN = Pattern
+            .compile("(?<topic>[^/]+?)-" + "(?<partition>\\d{5})-" + "(?<offset>\\d{12})" + "\\.(?<extension>[^.]+)$");
     private String currentKey;
     private Iterator<S3ObjectSummary> nextFileIterator;
     private Iterator<ConsumerRecord<byte[], byte[]>> recordIterator = Collections.emptyIterator();
@@ -105,15 +101,19 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
         final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
         try (InputStream content = getContent(s3Object)) {
 
-            // Extract the topic, partition, and startOffset from the key
-            // Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
-            // if (!matcher.find()) {
-            // throw new IllegalArgumentException("Invalid file key format: " + currentKey);
-            // }
-            final String topic = "testtopic";// matcher.group("topic");
-            final int partition = 0;// Integer.parseInt(matcher.group("partition"));
-            final long startOffset = 0l;// Long.parseLong(matcher.group("offset"));
+            final Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
+            String topic = null;
+            int partition = 0;
+            long startOffset = 0l;
+            if (matcher.find()) {
+                topic = matcher.group("topic");
+                partition = Integer.parseInt(matcher.group("partition"));
+                startOffset = Long.parseLong(matcher.group("offset"));
+            }
 
+            final String finalTopic = topic;
+            final int finalPartition = partition;
+            final long finalStartOffset = startOffset;
             return new Iterator<>() {
                 private ConsumerRecord<byte[], byte[]> nextRecord = readNext();
 
@@ -131,7 +131,8 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
                             }
                             return null;
                         }
-                        return new ConsumerRecord<>(topic, partition, startOffset, key.orElse(null), value);
+                        return new ConsumerRecord<>(finalTopic, finalPartition, finalStartOffset, key.orElse(null),
+                                value);
                     } catch (IOException e) {
                         throw new RuntimeException("Failed to read record from file", e);
                     }

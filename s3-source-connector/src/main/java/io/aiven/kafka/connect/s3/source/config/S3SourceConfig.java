@@ -106,7 +106,9 @@ final public class S3SourceConfig extends AbstractConfig {
     public static final String AWS_S3_SSE_ALGORITHM_CONFIG = "aws.s3.sse.algorithm";
 
     public static final String TOPIC_PARTITIONS_KEY = "offset.storage.topic.partitions";
-    public static final String TOPICS_KEY = "topics";
+    public static final String OFFSET_STORAGE_TOPIC = "offset.storage.topic";
+
+    public static final String OFFSET_STORAGE_TOPIC_DEFAULT = "connect-offsets";
 
     public static final String START_MARKER_KEY = "aws.s3.start.marker";
     public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
@@ -115,13 +117,6 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static final String KEY_CONVERTER = "key.converter";
     public static final String VALUE_CONVERTER = "value.converter";
-    public static final String KEY_DELIMITER = "key.delimiter";
-
-    public static final String KEY_ENCODING = "key.encoding";
-
-    public static final String VALUE_DELIMITER = "value.delimiter";
-
-    public static final String VALUE_ENCODING = "value.encoding";
 
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
 
@@ -248,22 +243,15 @@ final public class S3SourceConfig extends AbstractConfig {
     }
 
     private static void addFileConfiguration(final S3SourceConfigDef configDef) {
-        configDef.define(KEY_DELIMITER, ConfigDef.Type.STRING, "\\t", new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : \n", GROUP_FILE, 0, ConfigDef.Width.NONE, KEY_DELIMITER);
-        configDef.define(KEY_ENCODING, ConfigDef.Type.STRING, "UTF-8", new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : UTF-8", GROUP_FILE, 1, ConfigDef.Width.NONE, KEY_ENCODING);
-        configDef.define(VALUE_DELIMITER, ConfigDef.Type.STRING, "\\n", new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : \t", GROUP_FILE, 2, ConfigDef.Width.NONE, VALUE_DELIMITER);
-        configDef.define(VALUE_ENCODING, ConfigDef.Type.STRING, "UTF-8", new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : UTF-8", GROUP_FILE, 3, ConfigDef.Width.NONE, VALUE_ENCODING);
     }
 
     private static void addOffsetStorageConfig(final ConfigDef configDef) {
         configDef.define(TOPIC_PARTITIONS_KEY, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "eg : 1,2", GROUP_OFFSET_TOPIC, 0, ConfigDef.Width.NONE,
                 TOPIC_PARTITIONS_KEY);
-        configDef.define(TOPICS_KEY, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : testtopic", GROUP_OFFSET_TOPIC, 0, ConfigDef.Width.NONE, TOPICS_KEY);
+        configDef.define(OFFSET_STORAGE_TOPIC, ConfigDef.Type.STRING, OFFSET_STORAGE_TOPIC_DEFAULT,
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "eg : connect-offsets", GROUP_OFFSET_TOPIC,
+                0, ConfigDef.Width.NONE, OFFSET_STORAGE_TOPIC);
     }
 
     private static void addDeprecatedConfiguration(final ConfigDef configDef) {
