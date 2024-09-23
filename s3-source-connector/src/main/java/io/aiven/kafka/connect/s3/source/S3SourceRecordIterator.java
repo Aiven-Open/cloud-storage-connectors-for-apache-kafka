@@ -115,6 +115,8 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
             final int finalPartition = partition;
             final long finalStartOffset = startOffset;
             return new Iterator<>() {
+                private Map<S3Partition, Long> currentOffsets = new HashMap<>(); // Track offsets for each
+                                                                                 // topic-partition
                 private ConsumerRecord<byte[], byte[]> nextRecord = readNext();
 
                 private ConsumerRecord<byte[], byte[]> readNext() {
@@ -131,8 +133,20 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
                             }
                             return null;
                         }
-                        return new ConsumerRecord<>(finalTopic, finalPartition, finalStartOffset, key.orElse(null),
-                                value);
+                        S3Partition s3Partition = S3Partition.from(bucketName, s3Prefix, finalTopic, finalPartition);
+
+                        long currentOffset;
+                        if (offsets.containsKey(s3Partition)) {
+                            S3Offset s3Offset = offsets.get(s3Partition);
+                            currentOffset = s3Offset.getOffset() + 1;
+                        } else {
+                            currentOffset = currentOffsets.getOrDefault(s3Partition, finalStartOffset);
+                        }
+                        ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(finalTopic, finalPartition,
+                                currentOffset, key.orElse(null), value);
+                        currentOffsets.put(s3Partition, currentOffset + 1);
+
+                        return record;
                     } catch (IOException e) {
                         throw new RuntimeException("Failed to read record from file", e);
                     }
@@ -161,8 +175,8 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
         return object.getObjectContent();
     }
 
-    private S3Offset offset() {
-        return offsets.get(S3Partition.from(bucketName, s3Prefix, "testtopic", 0));
+    private S3Offset offset(String topic, int partition) {
+        return offsets.get(S3Partition.from(bucketName, s3Prefix, topic, partition));
     }
 
     @Override
