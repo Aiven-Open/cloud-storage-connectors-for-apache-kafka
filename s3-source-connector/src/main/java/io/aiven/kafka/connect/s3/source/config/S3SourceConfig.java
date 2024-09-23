@@ -108,7 +108,7 @@ final public class S3SourceConfig extends AbstractConfig {
     public static final String OFFSET_STORAGE_TOPIC_PARTITIONS = "offset.storage.topic.partitions";
     public static final String OFFSET_STORAGE_TOPIC = "offset.storage.topic";
 
-    public static final String OFFSET_STORAGE_TOPIC_DEFAULT = "connect-offsets";
+    public static final String OFFSET_STORAGE_TOPIC_DEFAULT = "connect-storage-offsets";
 
     public static final String START_MARKER_KEY = "aws.s3.start.marker";
     public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
@@ -246,12 +246,12 @@ final public class S3SourceConfig extends AbstractConfig {
                 ConfigDef.Importance.MEDIUM, "eg : 0,1", GROUP_OFFSET_TOPIC, 0, ConfigDef.Width.NONE,
                 OFFSET_STORAGE_TOPIC_PARTITIONS);
         configDef.define(OFFSET_STORAGE_TOPIC, ConfigDef.Type.STRING, OFFSET_STORAGE_TOPIC_DEFAULT,
-                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "eg : connect-offsets", GROUP_OFFSET_TOPIC,
-                0, ConfigDef.Width.NONE, OFFSET_STORAGE_TOPIC);
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "eg : connect-storage-offsets",
+                GROUP_OFFSET_TOPIC, 0, ConfigDef.Width.NONE, OFFSET_STORAGE_TOPIC);
     }
 
     private static void addDeprecatedConfiguration(final ConfigDef configDef) {
-        configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+        configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, "prefix", new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM,
                 "[Deprecated] Use `file.name.template` instead. Prefix for stored objects, e.g. cluster-1/", GROUP_AWS,
                 0, ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
