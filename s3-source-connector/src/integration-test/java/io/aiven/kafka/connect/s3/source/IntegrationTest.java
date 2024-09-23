@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.START_MARKER_KEY;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TOPIC_PARTITIONS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,14 +36,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
-import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import org.apache.commons.io.IOUtils;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -127,36 +128,42 @@ final class IntegrationTest implements IntegrationBase {
     @Test
     void basicTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME));
 
         connectRunner.createConnector(connectorConfig);
 
-        // Create a new object on the bucket
-        // final String testObjectKey = s3Prefix + "test-file.txt";
-        final String testData = "Hello, Kafka Connect S3 Source!";
+        final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
+        final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
-        String fileName = topicName + "-0-0001.txt";
+        // write 2 objects to s3
+        writeToS3(topicName, testData1, 1);
+        writeToS3(topicName, testData2, 2);
 
-        final Path testFilePath = Paths.get("/tmp/" + fileName);
-        // final Path testFilePath = Paths.get("/tmp/test-file.txt");
-        Files.write(testFilePath, testData.getBytes(StandardCharsets.UTF_8));
-
-        saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
+        List<String> objects = testBucketAccessor.listObjects();
+        assertThat(objects.size()).isEqualTo(2);
 
         // Verify that the connector is correctly set up
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
 
         // Poll messages from the Kafka topic and verify the consumed data
-        final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
+        final List<String> records = IntegrationBase.consumeMessages(topicName, 2, KAFKA_CONTAINER);
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
-        assertThat(records).containsExactly(testData);
+        assertThat(records).contains(testData1).contains(testData2);
+    }
+
+    private static void writeToS3(String topicName, String testData1, int id) throws IOException {
+        String fileName = topicName + "-00000-00000000012" + id + ".txt";
+        final Path testFilePath = Paths.get("/tmp/" + fileName);
+        Files.write(testFilePath, testData1.getBytes(StandardCharsets.UTF_8));
+
+        saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
     }
 
     @Test
     void multiUploadTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME));
 
         connectRunner.createConnector(connectorConfig);
         multipartUpload(TEST_BUCKET_NAME, "testkey");
@@ -164,27 +171,16 @@ final class IntegrationTest implements IntegrationBase {
         final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
     }
 
-    private Map<String, String> getConfig(final Map<String, String> config, final String topicName) {
-        return getConfig(config, List.of(topicName));
-    }
-
-    private Map<String, String> getConfig(final Map<String, String> config, final List<String> topicNames) {
+    private Map<String, String> getConfig(final Map<String, String> config) {
         config.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
-        config.put("topics", String.join(",", topicNames));
         config.put("aws.access.key.id", S3_ACCESS_KEY_ID);
         config.put("aws.secret.access.key", S3_SECRET_ACCESS_KEY);
         config.put("aws.s3.endpoint", s3Endpoint);
         config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
         config.put("aws.s3.prefix", s3Prefix);
         config.put(START_MARKER_KEY, COMMON_PREFIX);
-
         config.put(TOPIC_PARTITIONS_KEY, "1,2");
-
-        config.put("key.delimiter", "\\t");
-        config.put("key.encoding", "UTF-8");
-        config.put("value.delimiter", "\\n");
-        config.put("value.encoding", "UTF-8");
-
+        config.put(OFFSET_STORAGE_TOPIC, "connect-offsets");
         return config;
     }
 
@@ -201,17 +197,16 @@ final class IntegrationTest implements IntegrationBase {
             final File fileToWrite) {
         final PutObjectRequest request = new PutObjectRequest(bucketName, folderName + fileNameInS3, fileToWrite);
         s3Client.putObject(request);
-        List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(1);
     }
 
     public void multipartUpload(String bucketName, String key) {
-        try (S3OutputStream s3OutputStream = new S3OutputStream(bucketName, key, S3OutputStream.DEFAULT_PART_SIZE, s3Client)) {
+        try (S3OutputStream s3OutputStream = new S3OutputStream(bucketName, key, S3OutputStream.DEFAULT_PART_SIZE,
+                s3Client)) {
             InputStream resourceStream = Thread.currentThread()
-                .getContextClassLoader()
-                .getResourceAsStream(S3_FILE_NAME);
+                    .getContextClassLoader()
+                    .getResourceAsStream(S3_FILE_NAME);
             assert resourceStream != null;
-            byte [] fileBytes = IOUtils.toByteArray(resourceStream);
+            byte[] fileBytes = IOUtils.toByteArray(resourceStream);
             s3OutputStream.write(fileBytes);
         } catch (IOException e) {
             LOGGER.error(e.getMessage());
