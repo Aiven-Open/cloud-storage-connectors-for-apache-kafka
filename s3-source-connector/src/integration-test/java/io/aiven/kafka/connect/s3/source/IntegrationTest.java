@@ -21,9 +21,9 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCK
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.START_MARKER_KEY;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
@@ -130,7 +130,7 @@ final class IntegrationTest implements IntegrationBase {
     @Test
     void basicTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME));
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
         connectRunner.createConnector(connectorConfig);
 
@@ -157,7 +157,7 @@ final class IntegrationTest implements IntegrationBase {
     @Test
     void multiPartUploadTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME));
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
         connectRunner.createConnector(connectorConfig);
         final String partition = "00001";
@@ -181,7 +181,7 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Deprecated
-    private Map<String, String> getConfig(final Map<String, String> config) {
+    private Map<String, String> getConfig(final Map<String, String> config, final String topics) {
         config.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
         config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
         config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
@@ -189,8 +189,8 @@ final class IntegrationTest implements IntegrationBase {
         config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
         config.put(AWS_S3_PREFIX_CONFIG, s3Prefix);
         config.put(START_MARKER_KEY, COMMON_PREFIX);
-        config.put(OFFSET_STORAGE_TOPIC_PARTITIONS, "1,2");
-        config.put(OFFSET_STORAGE_TOPIC, "connect-storage-offsets");
+        config.put(TARGET_TOPIC_PARTITIONS, "0,1");
+        config.put(TARGET_TOPICS, topics);
         return config;
     }
 

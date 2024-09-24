@@ -105,10 +105,8 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static final String AWS_S3_SSE_ALGORITHM_CONFIG = "aws.s3.sse.algorithm";
 
-    public static final String OFFSET_STORAGE_TOPIC_PARTITIONS = "offset.storage.topic.partitions";
-    public static final String OFFSET_STORAGE_TOPIC = "offset.storage.topic";
-
-    public static final String OFFSET_STORAGE_TOPIC_DEFAULT = "connect-storage-offsets";
+    public static final String TARGET_TOPIC_PARTITIONS = "topic.partitions";
+    public static final String TARGET_TOPICS = "topics";
 
     public static final String START_MARKER_KEY = "aws.s3.start.marker";
     public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
@@ -242,12 +240,12 @@ final public class S3SourceConfig extends AbstractConfig {
     }
 
     private static void addOffsetStorageConfig(final ConfigDef configDef) {
-        configDef.define(OFFSET_STORAGE_TOPIC_PARTITIONS, ConfigDef.Type.STRING, "0", new ConfigDef.NonEmptyString(),
+        configDef.define(TARGET_TOPIC_PARTITIONS, ConfigDef.Type.STRING, "0", new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "eg : 0,1", GROUP_OFFSET_TOPIC, 0, ConfigDef.Width.NONE,
-                OFFSET_STORAGE_TOPIC_PARTITIONS);
-        configDef.define(OFFSET_STORAGE_TOPIC, ConfigDef.Type.STRING, OFFSET_STORAGE_TOPIC_DEFAULT,
-                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "eg : connect-storage-offsets",
-                GROUP_OFFSET_TOPIC, 0, ConfigDef.Width.NONE, OFFSET_STORAGE_TOPIC);
+                TARGET_TOPIC_PARTITIONS);
+        configDef.define(TARGET_TOPICS, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.MEDIUM, "eg : connect-storage-offsets", GROUP_OFFSET_TOPIC, 0,
+                ConfigDef.Width.NONE, TARGET_TOPICS);
     }
 
     private static void addDeprecatedConfiguration(final ConfigDef configDef) {

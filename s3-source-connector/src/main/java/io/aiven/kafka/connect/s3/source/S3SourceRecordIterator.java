@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.LOGGER;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -152,11 +153,13 @@ public final class S3SourceRecordIterator implements Iterator<S3SourceRecord> {
 
                 long currentOffset;
                 if (offsets.containsKey(s3Partition)) {
+                    LOGGER.info("getConsumerRecord containsKey: " + offsets);
                     final S3Offset s3Offset = offsets.get(s3Partition);
                     currentOffset = s3Offset.getOffset() + 1;
                 } else {
                     currentOffset = currentOffsets.getOrDefault(s3Partition, finalStartOffset);
                 }
+                LOGGER.info("currentOffset :" + currentOffset);
                 final Optional<ConsumerRecord<byte[], byte[]>> record = Optional
                         .of(new ConsumerRecord<>(finalTopic, finalPartition, currentOffset, key.orElse(null), value));
                 currentOffsets.put(s3Partition, currentOffset + 1);
