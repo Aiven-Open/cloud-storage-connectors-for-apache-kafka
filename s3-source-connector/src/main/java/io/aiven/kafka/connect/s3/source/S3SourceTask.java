@@ -16,9 +16,11 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OFFSET_STORAGE_TOPIC_PARTITIONS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -103,22 +105,26 @@ public class S3SourceTask extends SourceTask {
         prepareReaderFromOffsetStorageReader();
     }
 
+    @Deprecated
     private void prepareReaderFromOffsetStorageReader() {
-        final String s3Prefix = s3SourceConfig.getString("aws.s3.prefix");
-        final String s3Bucket = s3SourceConfig.getString("aws.s3.bucket.name");
+        final String s3Prefix = s3SourceConfig.getString(AWS_S3_PREFIX_CONFIG);
+        final String s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
 
-        final Set<Integer> offsetStorageTopicPartitions = getOffsetStorageTopicPartitions();
-        final Set<String> offsetStorageTopic = getOffsetStorageTopic();
+        final Set<Integer> offsetStorageTopicPartitions = getTargetTopicPartitions();
+        final Set<String> targetTopics = getTargetTopics();
 
         // map to s3 partitions
         final List<S3Partition> s3Partitions = offsetStorageTopicPartitions.stream()
-                .flatMap(p -> offsetStorageTopic.stream().map(t -> S3Partition.from(s3Bucket, s3Prefix, t, p)))
+                .flatMap(p -> targetTopics.stream().map(t -> S3Partition.from(s3Bucket, s3Prefix, t, p)))
                 .collect(toList());
 
         // get partition offsets
         final List<Map<String, Object>> partitions = s3Partitions.stream().map(S3Partition::asMap).collect(toList());
         final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
                 .offsets(partitions);
+
+        LOGGER.info("offsetMap : " + offsetMap);
+        LOGGER.info("offsetMap entry set : " + offsetMap.entrySet());
 
         if (offsets == null) {
             offsets = offsetMap.entrySet()
@@ -127,11 +133,12 @@ public class S3SourceTask extends SourceTask {
                     .collect(
                             toMap(entry -> S3Partition.from(entry.getKey()), entry -> S3Offset.from(entry.getValue())));
         }
+        LOGGER.info("Storage offsets : " + offsets);
         sourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, s3Prefix, offsets);
     }
 
-    private Set<Integer> getOffsetStorageTopicPartitions() {
-        final String partitionString = s3SourceConfig.getString(OFFSET_STORAGE_TOPIC_PARTITIONS);
+    private Set<Integer> getTargetTopicPartitions() {
+        final String partitionString = s3SourceConfig.getString(TARGET_TOPIC_PARTITIONS);
         if (Objects.nonNull(partitionString)) {
             return Arrays.stream(partitionString.split(",")).map(Integer::parseInt).collect(Collectors.toSet());
         } else {
@@ -139,8 +146,8 @@ public class S3SourceTask extends SourceTask {
         }
     }
 
-    private Set<String> getOffsetStorageTopic() {
-        final String topicString = s3SourceConfig.getString(OFFSET_STORAGE_TOPIC);
+    private Set<String> getTargetTopics() {
+        final String topicString = s3SourceConfig.getString(TARGET_TOPICS);
         if (Objects.nonNull(topicString)) {
             return Arrays.stream(topicString.split(",")).collect(Collectors.toSet());
         } else {
@@ -150,14 +157,12 @@ public class S3SourceTask extends SourceTask {
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException {
-        // read up to the configured poll size
         final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
 
         if (stopped.get()) {
             return results;
         }
 
-        // AWS errors will happen. Nothing to do about it but sleep and try again.
         while (!stopped.get()) {
             try {
                 return getSourceRecords(results);
