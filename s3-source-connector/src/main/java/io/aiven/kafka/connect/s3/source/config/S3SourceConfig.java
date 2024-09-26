@@ -94,6 +94,8 @@ final public class S3SourceConfig extends AbstractConfig {
     @Deprecated
     public static final String AWS_S3_PREFIX = "aws_s3_prefix";
 
+    public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
+
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
 
@@ -117,6 +119,9 @@ final public class S3SourceConfig extends AbstractConfig {
     public static final String VALUE_CONVERTER = "value.converter";
 
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
+    public static final String OUTPUT_FORMAT = "output.format";
+
+    public static final String AVRO_OUTPUT_FORMAT = "avro";
 
     public S3SourceConfig(final Map<String, String> properties) {
         super(configDef(), preprocessProperties(properties));
@@ -157,6 +162,7 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static ConfigDef configDef() {
         final var configDef = new S3SourceConfigDef();
+        addSchemaRegistryGroup(configDef);
         addOffsetStorageConfig(configDef);
         addAwsStsConfigGroup(configDef);
         addAwsConfigGroup(configDef);
@@ -164,6 +170,16 @@ final public class S3SourceConfig extends AbstractConfig {
         addS3RetryPolicies(configDef);
         addOtherConfig(configDef);
         return configDef;
+    }
+
+    private static void addSchemaRegistryGroup(final ConfigDef configDef) {
+        int srCounter = 0;
+        configDef.define(SCHEMA_REGISTRY_URL, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_AWS, srCounter++, ConfigDef.Width.NONE,
+                SCHEMA_REGISTRY_URL);
+        configDef.define(OUTPUT_FORMAT, ConfigDef.Type.STRING, "bytearray", new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.MEDIUM, "Output format avro/bytearray", GROUP_AWS, srCounter++, // NOPMD
+                ConfigDef.Width.NONE, OUTPUT_FORMAT);
     }
 
     private static void addOtherConfig(final S3SourceConfigDef configDef) {
@@ -298,11 +314,6 @@ final public class S3SourceConfig extends AbstractConfig {
                 ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD
                 // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_S3_REGION);
-
-        configDef.define(START_MARKER_KEY, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Start marker, e.g. prefix", GROUP_AWS, awsGroupCounter++, // NOPMD
-                // UnusedAssignment
-                ConfigDef.Width.NONE, START_MARKER_KEY);
     }
 
     protected static class AwsRegionValidator implements ConfigDef.Validator {
