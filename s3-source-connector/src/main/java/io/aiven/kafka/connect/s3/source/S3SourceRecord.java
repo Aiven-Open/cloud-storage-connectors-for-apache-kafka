@@ -19,29 +19,30 @@ package io.aiven.kafka.connect.s3.source;
 import java.util.Arrays;
 
 public class S3SourceRecord {
-    private final S3Partition s3Partition;
-    private final S3Offset s3Offset;
+    private final OffsetStoragePartitionKey offsetStoragePartitionKey;
+    private final OffsetStoragePartitionValue offsetStoragePartitionValue;
     private final String toTopic;
     private final int topicPartition;
     private final byte[] recordKey;
     private final byte[] recordValue;
 
-    public S3SourceRecord(final S3Partition s3Partition, final S3Offset s3Offset, final String toTopic,
+    public S3SourceRecord(final OffsetStoragePartitionKey offsetStoragePartitionKey,
+            final OffsetStoragePartitionValue offsetStoragePartitionValue, final String toTopic,
             final int topicPartition, final byte[] recordKey, final byte[] recordValue) {
-        this.s3Partition = s3Partition;
-        this.s3Offset = s3Offset;
+        this.offsetStoragePartitionKey = offsetStoragePartitionKey;
+        this.offsetStoragePartitionValue = offsetStoragePartitionValue;
         this.toTopic = toTopic;
         this.topicPartition = topicPartition;
         this.recordKey = Arrays.copyOf(recordKey, recordKey.length);
         this.recordValue = Arrays.copyOf(recordValue, recordValue.length);
     }
 
-    public S3Partition file() {
-        return s3Partition;
+    public OffsetStoragePartitionKey getOffsetStoragePartitionKey() {
+        return offsetStoragePartitionKey;
     }
 
-    public S3Offset offset() {
-        return s3Offset;
+    public OffsetStoragePartitionValue getOffsetStoragePartitionValue() {
+        return offsetStoragePartitionValue;
     }
 
     public String getToTopic() {
