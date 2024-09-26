@@ -16,16 +16,19 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.START_MARKER_KEY;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,6 +50,12 @@ import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumWriter;
 import org.apache.commons.io.IOUtils;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
@@ -87,6 +96,9 @@ final class IntegrationTest implements IntegrationBase {
 
     @Container
     private static final KafkaContainer KAFKA_CONTAINER = IntegrationBase.createKafkaContainer();
+
+    @Container
+    private static final SchemaRegistryContainer SCHEMA_REGISTRY = new SchemaRegistryContainer(KAFKA_CONTAINER);
     private AdminClient adminClient;
     private ConnectRunner connectRunner;
 
@@ -138,8 +150,8 @@ final class IntegrationTest implements IntegrationBase {
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
         // write 2 objects to s3
-        writeToS3(topicName, testData1, 1);
-        writeToS3(topicName, testData2, 2);
+        writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), 1);
+        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), 2);
 
         final List<String> objects = testBucketAccessor.listObjects();
         assertThat(objects.size()).isEqualTo(2);
@@ -155,7 +167,7 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Test
-    void multiPartUploadTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+    void multiPartUploadTest(final TestInfo testInfo) throws ExecutionException, InterruptedException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
@@ -169,13 +181,61 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(records.get(0)).contains("performanceeeqjz");
     }
 
-    private static void writeToS3(final String topicName, final String testData1, final int offsetId)
+    @Test
+    void avroTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+        final var topicName = IntegrationBase.topicName(testInfo);
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        connectorConfig.put(OUTPUT_FORMAT, AVRO_OUTPUT_FORMAT);
+        connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
+
+        connectRunner.createConnector(connectorConfig);
+
+        // Define Avro schema
+        final String schemaJson = "{\n" + "  \"type\": \"record\",\n" + "  \"name\": \"TestRecord\",\n"
+                + "  \"fields\": [\n" + "    {\"name\": \"message\", \"type\": \"string\"},\n"
+                + "    {\"name\": \"id\", \"type\": \"int\"}\n" + "  ]\n" + "}";
+        final Schema.Parser parser = new Schema.Parser();
+        final Schema schema = parser.parse(schemaJson);
+
+        // Create Avro records
+        final GenericRecord avroRecord = new GenericData.Record(schema);
+        avroRecord.put("message", "Hello, Kafka Connect S3 Source! object 1");
+        avroRecord.put("id", 1);
+
+        // Serialize Avro records to byte arrays
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
+            dataFileWriter.create(schema, outputStream);
+            dataFileWriter.append(avroRecord);
+            dataFileWriter.flush();
+        }
+
+        writeToS3(topicName, outputStream.toByteArray(), 1);
+        outputStream.close();
+
+        final List<String> objects = testBucketAccessor.listObjects();
+        assertThat(objects.size()).isEqualTo(1);
+
+        // Verify that the connector is correctly set up
+        assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
+
+        // Poll Avro messages from the Kafka topic and deserialize them
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 2, KAFKA_CONTAINER,
+                SCHEMA_REGISTRY.getSchemaRegistryUrl()); // Ensure this method deserializes Avro
+
+        // Verify that the correct data is read from the S3 bucket and pushed to Kafka
+        assertThat(records).extracting(record -> record.get("message").toString())
+                .contains("Hello, Kafka Connect S3 Source! object 1");
+    }
+
+    private static void writeToS3(final String topicName, final byte[] testDataBytes, final int offsetId)
             throws IOException {
         final String partition = "00000";
         final String offset = "00000000012" + offsetId;
         final String fileName = topicName + "-" + partition + "-" + offset + ".txt";
         final Path testFilePath = Paths.get("/tmp/" + fileName);
-        Files.write(testFilePath, testData1.getBytes(StandardCharsets.UTF_8));
+        Files.write(testFilePath, testDataBytes);
 
         saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
     }
@@ -188,7 +248,6 @@ final class IntegrationTest implements IntegrationBase {
         config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);
         config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
         config.put(AWS_S3_PREFIX_CONFIG, s3Prefix);
-        config.put(START_MARKER_KEY, COMMON_PREFIX);
         config.put(TARGET_TOPIC_PARTITIONS, "0,1");
         config.put(TARGET_TOPICS, topics);
         return config;

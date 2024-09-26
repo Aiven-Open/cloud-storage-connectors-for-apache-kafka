@@ -69,6 +69,10 @@ dependencies {
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
+  implementation(apache.avro)
+  implementation(confluent.kafka.connect.avro.converter) {
+    exclude(group = "org.apache.kafka", module = "kafka-clients")
+  }
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
