@@ -26,7 +26,9 @@ public class TimestampSourceValidator implements ConfigDef.Validator {
     @Override
     public void ensureValid(final String name, final Object value) {
         try {
-            TimestampSource.Type.of(value.toString());
+            new TimestampSource.Builder()
+                    .configuration(value.toString())
+                    .build();
         } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
             throw new ConfigException(name, value, e.getMessage());
         }

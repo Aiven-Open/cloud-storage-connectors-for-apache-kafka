@@ -202,8 +202,10 @@ public class AivenCommonConfig extends AbstractConfig {
     }
 
     public final TimestampSource getFilenameTimestampSource() {
-        return TimestampSource.of(getFilenameTimezone(),
-                TimestampSource.Type.of(getString(FILE_NAME_TIMESTAMP_SOURCE)));
+        return new TimestampSource.Builder()
+                .configuration(getString(FILE_NAME_TIMESTAMP_SOURCE))
+                .zoneId(getFilenameTimezone())
+                .build();
     }
 
     public final int getMaxRecordsPerFile() {

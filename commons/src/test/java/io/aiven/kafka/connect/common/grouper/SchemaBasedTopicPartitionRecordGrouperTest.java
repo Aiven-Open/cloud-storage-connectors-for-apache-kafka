@@ -64,7 +64,7 @@ final class SchemaBasedTopicPartitionRecordGrouperTest {
     static final SinkRecord KRT1P1R3 = new SinkRecord("topic1", 0, SchemaBuilder.string().optional().version(2).build(),
             "some_key", SchemaBuilder.string().optional().version(2).build(), null, 1003);
 
-    static final TimestampSource DEFAULT_TS_SOURCE = TimestampSource.of(TimestampSource.Type.WALLCLOCK);
+    static final TimestampSource DEFAULT_TS_SOURCE = TestTimestampSource.of(TimestampSource.Type.WALLCLOCK);
 
     @Test
     void rotateOnKeySchemaChanged() {
