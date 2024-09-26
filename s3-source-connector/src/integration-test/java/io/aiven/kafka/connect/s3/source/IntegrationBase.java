@@ -36,6 +36,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -43,6 +44,8 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.github.dockerjava.api.model.Ulimit;
+import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import org.apache.avro.generic.GenericRecord;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.Container;
@@ -143,6 +146,36 @@ public interface IntegrationBase {
             }
 
             return messages;
+        }
+    }
+
+    static List<GenericRecord> consumeAvroMessages(final String topic, final int expectedMessageCount,
+            final KafkaContainer kafka, final String schemaRegistryUrl) {
+        final Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group-avro");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()); // Assuming string
+                                                                                                     // key
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName()); // Avro
+                                                                                                          // deserializer
+                                                                                                          // for values
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put("schema.registry.url", schemaRegistryUrl); // URL of the schema registry
+        props.put("specific.avro.reader", "false"); // Use GenericRecord instead of specific Avro classes
+
+        try (KafkaConsumer<String, GenericRecord> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            final List<GenericRecord> recordsList = new ArrayList<>();
+
+            // Poll messages from the topic
+            while (recordsList.size() < expectedMessageCount) {
+                final ConsumerRecords<String, GenericRecord> records = consumer.poll(500L);
+                for (final ConsumerRecord<String, GenericRecord> record : records) {
+                    recordsList.add(record.value()); // Add the GenericRecord to the list
+                }
+            }
+
+            return recordsList;
         }
     }
 }
