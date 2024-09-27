@@ -23,9 +23,11 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDP
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.PARQUET_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
@@ -72,6 +74,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Ignore
 @Testcontainers
+@SuppressWarnings("PMD.ExcessiveImports")
 final class IntegrationTest implements IntegrationBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTest.class);
@@ -187,6 +190,9 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put(OUTPUT_FORMAT, AVRO_OUTPUT_FORMAT);
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+        connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        connectorConfig.put(VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
 
         connectRunner.createConnector(connectorConfig);
 
@@ -197,25 +203,14 @@ final class IntegrationTest implements IntegrationBase {
         final Schema.Parser parser = new Schema.Parser();
         final Schema schema = parser.parse(schemaJson);
 
-        // Create Avro records
-        final GenericRecord avroRecord = new GenericData.Record(schema);
-        avroRecord.put("message", "Hello, Kafka Connect S3 Source! object 1");
-        avroRecord.put("id", 1);
+        final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1);
+        final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2);
 
-        // Serialize Avro records to byte arrays
-        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
-        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
-            dataFileWriter.create(schema, outputStream);
-            dataFileWriter.append(avroRecord);
-            dataFileWriter.flush();
-        }
-
-        writeToS3(topicName, outputStream.toByteArray(), 1);
-        outputStream.close();
+        writeToS3(topicName, outputStream1.toByteArray(), 1);
+        writeToS3(topicName, outputStream2.toByteArray(), 2);
 
         final List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(1);
+        assertThat(objects.size()).isEqualTo(2);
 
         // Verify that the connector is correctly set up
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
@@ -226,7 +221,51 @@ final class IntegrationTest implements IntegrationBase {
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).extracting(record -> record.get("message").toString())
-                .contains("Hello, Kafka Connect S3 Source! object 1");
+                .contains("Hello, Kafka Connect S3 Source! object 1")
+                .contains("Hello, Kafka Connect S3 Source! object 2");
+        assertThat(records).extracting(record -> record.get("id").toString()).contains("1").contains("2");
+    }
+
+    @Test
+    @Ignore
+    void parquetTest(final TestInfo testInfo) throws ExecutionException, InterruptedException {
+        final var topicName = IntegrationBase.topicName(testInfo);
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        connectorConfig.put(OUTPUT_FORMAT, PARQUET_OUTPUT_FORMAT);
+        connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
+
+        final String partition = "00000";
+        final String offset = "000000000123";
+        final String fileName = topicName + "-" + partition + "-" + offset + ".txt";
+
+        connectRunner.createConnector(connectorConfig);
+        try (InputStream resourceStream = Thread.currentThread()
+                .getContextClassLoader()
+                .getResourceAsStream("sample1.parquet")) {
+            s3Client.putObject(TEST_BUCKET_NAME, fileName, resourceStream, null);
+        } catch (final Exception e) { // NOPMD broad exception catched
+            LOGGER.error("Error in reading file" + e.getMessage());
+        }
+        // TODO
+        assertThat(1).isEqualTo(1);
+    }
+
+    private static ByteArrayOutputStream getAvroRecord(final Schema schema, final int messageId) throws IOException {
+        // Create Avro records
+        final GenericRecord avroRecord = new GenericData.Record(schema);
+        avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + messageId);
+        avroRecord.put("id", messageId);
+
+        // Serialize Avro records to byte arrays
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
+            dataFileWriter.create(schema, outputStream);
+            dataFileWriter.append(avroRecord);
+            dataFileWriter.flush();
+        }
+        outputStream.close();
+        return outputStream;
     }
 
     private static void writeToS3(final String topicName, final byte[] testDataBytes, final int offsetId)

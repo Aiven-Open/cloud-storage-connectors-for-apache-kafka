@@ -96,6 +96,9 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
 
+    public static final String VALUE_SERIALIZER = "value.serializer"; // ex :
+                                                                      // io.confluent.kafka.serializers.KafkaAvroSerializer
+
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
 
@@ -122,6 +125,8 @@ final public class S3SourceConfig extends AbstractConfig {
     public static final String OUTPUT_FORMAT = "output.format";
 
     public static final String AVRO_OUTPUT_FORMAT = "avro";
+
+    public static final String PARQUET_OUTPUT_FORMAT = "parquet";
 
     public S3SourceConfig(final Map<String, String> properties) {
         super(configDef(), preprocessProperties(properties));
@@ -180,6 +185,11 @@ final public class S3SourceConfig extends AbstractConfig {
         configDef.define(OUTPUT_FORMAT, ConfigDef.Type.STRING, "bytearray", new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "Output format avro/bytearray", GROUP_AWS, srCounter++, // NOPMD
                 ConfigDef.Width.NONE, OUTPUT_FORMAT);
+
+        configDef.define(VALUE_SERIALIZER, ConfigDef.Type.CLASS, "io.confluent.kafka.serializers.KafkaAvroSerializer",
+                ConfigDef.Importance.MEDIUM, "Value serializer", GROUP_OTHER, srCounter++, // NOPMD
+                // UnusedAssignment
+                ConfigDef.Width.NONE, VALUE_SERIALIZER);
     }
 
     private static void addOtherConfig(final S3SourceConfigDef configDef) {
