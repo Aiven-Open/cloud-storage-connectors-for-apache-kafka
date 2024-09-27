@@ -19,11 +19,14 @@ package io.aiven.kafka.connect.s3.source;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.PARQUET_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -123,12 +126,15 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             final String finalTopic = topic;
             final int finalPartition = partition;
             final long finalStartOffset = startOffset;
-            if (s3SourceConfig.getString(OUTPUT_FORMAT).equals(AVRO_OUTPUT_FORMAT)) {
-                final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-                DecoderFactory.get().binaryDecoder(content, null);
-                return getIterator(content, finalTopic, finalPartition, finalStartOffset, datumReader, true);
-            } else {
-                return getIterator(content, finalTopic, finalPartition, finalStartOffset, null, false);
+            switch (s3SourceConfig.getString(OUTPUT_FORMAT)) {
+                case AVRO_OUTPUT_FORMAT :
+                    final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+                    DecoderFactory.get().binaryDecoder(content, null);
+                    return getIterator(content, finalTopic, finalPartition, finalStartOffset, datumReader, true);
+                case PARQUET_OUTPUT_FORMAT :
+                    return getIterator(content, finalTopic, finalPartition, finalStartOffset, null, false);
+                default :
+                    return getIterator(content, finalTopic, finalPartition, finalStartOffset, null, false);
             }
         }
     }
@@ -217,14 +223,15 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         return value;
     }
 
+    @Deprecated
     private byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String finalTopic)
             throws IOException {
         // Create a map to configure the Avro serializer
         final Map<String, String> config = new HashMap<>();
-        config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL)); // Replace with your Schema
-                                                                                        // Registry URL
+        config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
 
-        try (KafkaAvroSerializer avroSerializer = new KafkaAvroSerializer()) {
+        try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
+                .newInstance()) {
             avroSerializer.configure(config, false); // `false` since this is for value serialization
             // Use a ByteArrayOutputStream to combine the serialized records
             final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -237,6 +244,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
             // Convert the combined output stream to a byte array and return it
             return outputStream.toByteArray();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new ConnectException("Could not create instance of serializer.");
         }
     }
 
