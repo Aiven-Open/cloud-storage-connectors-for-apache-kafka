@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static java.util.stream.Collectors.toList;
@@ -25,6 +26,7 @@ import static java.util.stream.Collectors.toMap;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -52,6 +56,7 @@ import org.slf4j.LoggerFactory;
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
  * Connect records.
  */
+@SuppressWarnings("PMD.ExcessiveImports")
 public class S3SourceTask extends SourceTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AivenKafkaConnectS3SourceConnector.class);
@@ -193,13 +198,20 @@ public class S3SourceTask extends SourceTask {
             return results;
         }
 
+        final Map<String, String> config = new HashMap<>();
         for (int i = 0; sourceRecordIterator.hasNext() && i < s3SourceConfig.getInt(MAX_POLL_RECORDS)
                 && !stopped.get(); i++) {
             final S3SourceRecord record = sourceRecordIterator.next();
             LOGGER.info(record.getOffsetStoragePartitionValue() + record.getToTopic() + record.partition());
             final String topic = record.getToTopic();
             final Optional<SchemaAndValue> key = keyConverter.map(c -> c.toConnectData(topic, record.key()));
+
+            config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
+            config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+
+            valueConverter.configure(config, false);
             final SchemaAndValue value = valueConverter.toConnectData(topic, record.value());
+
             results.add(new SourceRecord(record.getOffsetStoragePartitionKey().toPartitionMap(),
                     record.getOffsetStoragePartitionValue().asOffsetMap(), topic, record.partition(),
                     key.map(SchemaAndValue::schema).orElse(null), key.map(SchemaAndValue::value).orElse(null),
