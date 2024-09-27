@@ -147,6 +147,11 @@ flush
 In this case, there will be two files `k0` (containing value `4`) and
 `k1` (containing value `3`).
 
+#### Custom grouping
+
+For more complex case a custom grouping may be defined by defining `file.record.grouper.builder`
+where you can supply your own implementation of a builder for a record grouping.
+
 ##### The string representation of a key
 
 The connector in this mode uses the following algorithm to create the

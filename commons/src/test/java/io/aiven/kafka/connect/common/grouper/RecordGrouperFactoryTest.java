@@ -18,9 +18,18 @@ package io.aiven.kafka.connect.common.grouper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.stream.Stream;
+
+import io.aiven.kafka.connect.common.config.AivenCommonConfig;
+import io.aiven.kafka.connect.common.config.TestConfig;
+import io.aiven.kafka.connect.common.config.TimestampSource;
+import io.aiven.kafka.connect.common.grouper.TestRecordGrouperBuilders.TestRecordGrouper;
 import io.aiven.kafka.connect.common.templating.Template;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 final class RecordGrouperFactoryTest {
 
@@ -50,5 +59,38 @@ final class RecordGrouperFactoryTest {
         final Template filenameTemplate = Template.of("{{topic}}/{{partition}}/{{key}}");
         final String grType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
         assertThat(RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD).isEqualTo(grType);
+    }
+
+    public static Stream<Arguments> customGrouperTestData() {
+        return Stream.of(
+                Arguments.of(true, "avro", "{{topic}}/{{partition}}/{{start_offset}}", 100, TimestampSource.Type.EVENT),
+                Arguments.of(true, "parquet", "{{topic}}/{{partition}}/{{start_offset}}", 100,
+                        TimestampSource.Type.EVENT),
+                Arguments.of(false, "csv", "{{key}}", 1, TimestampSource.Type.WALLCLOCK),
+                Arguments.of(false, "csv", "{{foo}} {{bat}}", 1, TimestampSource.Type.WALLCLOCK));
+    }
+    @ParameterizedTest
+    @MethodSource("customGrouperTestData")
+    void customGrouper(final boolean schemaBased, final String format, final String template,
+            final int maxRecordsPerFile, final TimestampSource.Type timestampSource) {
+
+        final AivenCommonConfig configuration = new TestConfig.Builder().withMinimalProperties()
+                .withProperty(AivenCommonConfig.CUSTOM_RECORD_GROUPER_BUILDER,
+                        TestRecordGrouperBuilders.TestRecordGrouperBuilder.class.getName())
+                .withProperty(AivenCommonConfig.FORMAT_OUTPUT_TYPE_CONFIG, format)
+                .withProperty(AivenCommonConfig.FILE_NAME_TEMPLATE_CONFIG, template)
+                .withProperty(AivenCommonConfig.FILE_MAX_RECORDS, String.valueOf(maxRecordsPerFile))
+                .withProperty(AivenCommonConfig.FILE_NAME_TIMESTAMP_SOURCE, timestampSource.name())
+                .build();
+
+        final var grouper = RecordGrouperFactory.newRecordGrouper(configuration);
+        assertThat(grouper).isInstanceOf(TestRecordGrouper.class);
+        final TestRecordGrouper testGrouper = (TestRecordGrouper) grouper;
+
+        assertThat(testGrouper.filenameTemplate.originalTemplate()).isEqualTo(template);
+        assertThat(testGrouper.maxRecordsPerFile).isEqualTo(maxRecordsPerFile);
+        assertThat(testGrouper.timestampSource.type()).isEqualTo(timestampSource);
+        assertThat(testGrouper.schemaBased).isEqualTo(schemaBased);
+        assertThat(testGrouper.config).isSameAs(configuration);
     }
 }

@@ -17,10 +17,12 @@
 package io.aiven.kafka.connect.common.config;
 
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.ServiceLoader;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -28,13 +30,20 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.kafka.connect.common.config.validators.ClassValidator;
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
+import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
+import io.aiven.kafka.connect.common.config.validators.NonNegativeValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsEncodingValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputTypeValidator;
+import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
+import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
+import io.aiven.kafka.connect.common.grouper.CustomRecordGrouperBuilder;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.templating.Template;
 
+@SuppressWarnings("PMD.TooManyMethods")
 public class AivenCommonConfig extends AbstractConfig {
     public static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
     public static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
@@ -45,6 +54,7 @@ public class AivenCommonConfig extends AbstractConfig {
     public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
+    public static final String CUSTOM_RECORD_GROUPER_BUILDER = "file.record.grouper.builder";
 
     private static final String GROUP_COMPRESSION = "File Compression";
     private static final String GROUP_FORMAT = "Format";
@@ -53,12 +63,73 @@ public class AivenCommonConfig extends AbstractConfig {
     private static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
     public static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
 
+    @SuppressWarnings({ "PMD.this-escape", "PMD.ConstructorCallsOverridableMethodcls" })
     protected AivenCommonConfig(final ConfigDef definition, final Map<?, ?> originals) {
         super(definition, originals);
         // TODO: calls getOutputFields, can be overridden in subclasses.
-        validate(); // NOPMD ConstructorCallsOverridableMethod
+        validate(); // NOPMD
     }
 
+    protected static int addFileConfigGroup(final ConfigDef configDef, final String groupFile, final String type,
+            int fileGroupCounter, final CompressionType defaultCompressionType) {
+        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, null, ConfigDef.Importance.MEDIUM,
+                "The template for file names on " + type + ". "
+                        + "Supports `{{ variable }}` placeholders for substituting variables. "
+                        + "Currently supported variables are `topic`, `partition`, and `start_offset` "
+                        + "(the offset of the first record in the file). "
+                        + "Only some combinations of variables are valid, which currently are:\n"
+                        + "- `topic`, `partition`, `start_offset`."
+                        + "There is also `key` only variable {{key}} for grouping by keys" + "If a "
+                        + CUSTOM_RECORD_GROUPER_BUILDER + " is set, the template will be passed"
+                        + " to that builder and validated according to to its rules which may be more or less constrained.",
+                groupFile, fileGroupCounter++, // NOPMD UnusedAssignment
+                ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
+
+        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
+                defaultCompressionType == null ? null : defaultCompressionType.name, new FileCompressionTypeValidator(),
+                ConfigDef.Importance.MEDIUM,
+                "The compression type used for files put on " + type + ". " + "The supported values are: "
+                        + CompressionType.SUPPORTED_COMPRESSION_TYPES + ".",
+                groupFile, fileGroupCounter++, // NOPMD UnusedAssignment
+                ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
+                FixedSetRecommender.ofSupportedValues(CompressionType.names()));
+
+        configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, new NonNegativeValidator(),
+                ConfigDef.Importance.MEDIUM,
+                "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
+                        + "0 is interpreted as \"unlimited\", which is the default.",
+                groupFile, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
+
+        configDef.define(FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(),
+                new TimeZoneValidator(), ConfigDef.Importance.LOW,
+                "Specifies the timezone in which the dates and time for the timestamp variable will be treated. "
+                        + "Use standard shot and long names. Default is UTC",
+                groupFile, fileGroupCounter++, // NOPMD UnusedAssignment
+                ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_TIMEZONE);
+
+        configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
+                new TimestampSourceValidator(), ConfigDef.Importance.LOW,
+                "Specifies the the timestamp variable source. Default is wall-clock.", groupFile, fileGroupCounter++, // NOPMD
+                // UnusedAssignment
+                ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_SOURCE);
+
+        configDef.define(CUSTOM_RECORD_GROUPER_BUILDER, ConfigDef.Type.CLASS, null,
+                new ClassValidator(CustomRecordGrouperBuilder.class), ConfigDef.Importance.LOW,
+                "Specifies a custom record grouper. The default record grouper is defined by "
+                        + FILE_NAME_TEMPLATE_CONFIG,
+                groupFile, fileGroupCounter++, // NOPMD UnusedAssignment
+                ConfigDef.Width.SHORT, CUSTOM_RECORD_GROUPER_BUILDER);
+
+        return fileGroupCounter;
+
+    }
+
+    protected static void addCommonConfig(final ConfigDef configDef) {
+        addKafkaBackoffPolicy(configDef);
+        addExtensionConfig(configDef);
+    }
+
+    @SuppressWarnings("PMD.this-escape")
     private void validate() {
         // Special checks for output json envelope config.
         final List<OutputField> outputFields = getOutputFields();
@@ -68,7 +139,16 @@ public class AivenCommonConfig extends AbstractConfig {
                     FORMAT_OUTPUT_ENVELOPE_CONFIG, false, FORMAT_OUTPUT_FIELDS_CONFIG);
             throw new ConfigException(msg);
         }
+        if (getCustomRecordGrouperBuilder() == null) {
+            // if there is a custom record grouper builder, it will validate the filename template
+            new FilenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG).ensureValid(FILE_NAME_TEMPLATE_CONFIG,
+                    getString(FILE_NAME_TEMPLATE_CONFIG));
+        }
         validateKeyFilenameTemplate();
+    }
+    protected static void addExtensionConfig(final ConfigDef configDef) {
+        final ServiceLoader<ExtraConfiguration> extraConfigurations = ServiceLoader.load(ExtraConfiguration.class);
+        extraConfigurations.forEach(extraConfiguration -> extraConfiguration.configure(configDef));
     }
 
     protected static void addKafkaBackoffPolicy(final ConfigDef configDef) {
@@ -173,13 +253,15 @@ public class AivenCommonConfig extends AbstractConfig {
     }
 
     protected final void validateKeyFilenameTemplate() {
-        // Special checks for {{key}} filename template.
-        final Template filenameTemplate = getFilenameTemplate();
-        final String groupType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        if (isKeyBased(groupType) && getMaxRecordsPerFile() > 1) {
-            final String msg = String.format("When %s is %s, %s must be either 1 or not set", FILE_NAME_TEMPLATE_CONFIG,
-                    filenameTemplate, FILE_MAX_RECORDS);
-            throw new ConfigException(msg);
+        // Special checks for {{key}} filename template, if there isnt a custom record grouper.
+        if (getCustomRecordGrouperBuilder() == null) {
+            final Template filenameTemplate = getFilenameTemplate();
+            final String groupType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
+            if (isKeyBased(groupType) && getMaxRecordsPerFile() > 1) {
+                final String msg = String.format("When %s is %s, %s must be either 1 or not set",
+                        FILE_NAME_TEMPLATE_CONFIG, filenameTemplate, FILE_MAX_RECORDS);
+                throw new ConfigException(msg);
+            }
         }
     }
 
@@ -228,5 +310,11 @@ public class AivenCommonConfig extends AbstractConfig {
     private Boolean isKeyBased(final String groupType) {
         return RecordGrouperFactory.KEY_RECORD.equals(groupType)
                 || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
+    }
+
+    public Class<? extends CustomRecordGrouperBuilder> getCustomRecordGrouperBuilder() {
+        final Class<?> result = getClass(CUSTOM_RECORD_GROUPER_BUILDER);
+        // its already been validated to be a subclass of CustomRecordGrouperBuilder
+        return result == null ? null : result.asSubclass(CustomRecordGrouperBuilder.class);
     }
 }

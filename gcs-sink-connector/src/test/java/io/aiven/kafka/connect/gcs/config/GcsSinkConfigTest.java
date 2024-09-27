@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.gcs.config;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -75,10 +74,12 @@ final class GcsSinkConfigTest {
                 .filter(x -> GcsSinkConfig.FILE_NAME_TEMPLATE_CONFIG.equals(x.name()))
                 .findFirst()
                 .get();
-        assertFalse(configValue.errorMessages().isEmpty());
+        assertTrue(configValue.errorMessages().isEmpty());
 
         final var throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertTrue(throwable.getMessage().startsWith("Invalid value "));
+        assertTrue(throwable.getMessage()
+                .startsWith("Invalid value " + template
+                        + " for configuration file.name.template: unsupported set of template variables"));
     }
 
     @Test
@@ -516,7 +517,7 @@ final class GcsSinkConfigTest {
         final var expectedErrorMessage = "Invalid value  for configuration file.name.template: "
                 + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES;
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -531,7 +532,7 @@ final class GcsSinkConfigTest {
                 + "for configuration file.name.template: unsupported set of template variables, "
                 + "supported sets are: " + TEMPLATE_VARIABLES;
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -545,7 +546,7 @@ final class GcsSinkConfigTest {
         final var expectedErrorMessage = "Invalid value {{ partition }}{{ start_offset }} for configuration file.name.template: "
                 + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES;
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -561,7 +562,7 @@ final class GcsSinkConfigTest {
                 + "supported sets are: "
                 + "partition:padding=true|false,start_offset:padding=true|false,timestamp:unit=yyyy|MM|dd|HH";
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -576,7 +577,7 @@ final class GcsSinkConfigTest {
                 + "for configuration file.name.template: "
                 + "parameter unit is required for the the variable timestamp, " + "supported values are: yyyy|MM|dd|HH";
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -590,7 +591,7 @@ final class GcsSinkConfigTest {
         final var expectedErrorMessage = "Invalid value {{start_offset:}}-{{partition}}-{{topic}} "
                 + "for configuration file.name.template: " + "Wrong variable with parameter definition";
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -605,7 +606,7 @@ final class GcsSinkConfigTest {
                 + "for configuration file.name.template: "
                 + "Variable name hasn't been set for template: {{:padding=true}}-{{partition}}-{{topic}}";
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -620,7 +621,7 @@ final class GcsSinkConfigTest {
                 + "for configuration file.name.template: "
                 + "Parameter value for variable `start_offset` and parameter `padding` has not been set";
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -635,7 +636,7 @@ final class GcsSinkConfigTest {
                 + "for configuration file.name.template: "
                 + "Parameter name for variable `start_offset` has not been set";
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -649,7 +650,7 @@ final class GcsSinkConfigTest {
         final var expectedErrorMessage = "Invalid value {{ topic }}{{ start_offset }} for configuration file.name.template: "
                 + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES;
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
@@ -663,7 +664,7 @@ final class GcsSinkConfigTest {
         final var expectedErrorMessage = "Invalid value {{ topic }}{{ partition }} for configuration file.name.template: "
                 + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES;
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        assertConfigDefValidationPasses(properties);
 
         final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
         assertEquals(expectedErrorMessage, throwable.getMessage());
