@@ -41,7 +41,7 @@ public interface RecordGrouper {
     /**
      * Get all records associated with files, grouped by the file name.
      *
-     * @return map of records assotiated with files
+     * @return map of records associated with files
      */
     Map<String, List<SinkRecord>> records();
 

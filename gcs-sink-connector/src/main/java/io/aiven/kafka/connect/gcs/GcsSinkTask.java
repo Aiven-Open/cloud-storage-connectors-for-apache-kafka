@@ -81,6 +81,8 @@ public final class GcsSinkTask extends SinkTask {
                         .setRetryDelayMultiplier(config.getGcsRetryBackoffDelayMultiplier())
                         .setTotalTimeout(config.getGcsRetryBackoffTotalTimeout())
                         .setMaxAttempts(config.getGcsRetryBackoffMaxAttempts())
+
+
                         .build())
                 .build()
                 .getService();
@@ -111,7 +113,11 @@ public final class GcsSinkTask extends SinkTask {
     @Override
     public void flush(final Map<TopicPartition, OffsetAndMetadata> currentOffsets) {
         try {
-            recordGrouper.records().forEach(this::flushFile);
+            recordGrouper
+                    .records()
+                    .entrySet()
+                    .parallelStream()
+                    .forEach(entry -> flushFile(entry.getKey(), entry.getValue()));
         } finally {
             recordGrouper.clear();
         }

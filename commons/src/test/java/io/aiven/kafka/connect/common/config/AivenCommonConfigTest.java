@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import static io.aiven.kafka.connect.common.config.AivenCommonConfig.addFileConfigGroup;
 import static io.aiven.kafka.connect.common.config.AivenCommonConfig.addOutputFieldsFormatConfigGroup;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -32,15 +33,8 @@ class AivenCommonConfigTest {
     private ConfigDef getBaseConfigDefinition() {
         final ConfigDef definition = new ConfigDef();
         addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
-
-        definition.define(AivenCommonConfig.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-                ConfigDef.Importance.MEDIUM, "File name template");
-        definition.define(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
-                CompressionType.NONE.name, ConfigDef.Importance.MEDIUM, "File compression");
-        definition.define(AivenCommonConfig.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, ConfigDef.Importance.MEDIUM,
-                "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
-                        + "0 is interpreted as \"unlimited\", which is the default.");
-        return definition;
+        addFileConfigGroup(definition, "File", "Test", 1, CompressionType.NONE);
+      return definition;
     }
 
     @Test
@@ -108,5 +102,19 @@ class AivenCommonConfigTest {
         final AivenCommonConfig config = new AivenCommonConfig(definition, propertiesWithoutKey);
         assertThat(config.getFilename()).isEqualTo("{{topic}}-{{partition}}-{{start_offset}}");
         assertThat(config.getMaxRecordsPerFile()).isEqualTo(10);
+    }
+
+    @Test
+    void ensureAdditionalConfigurations() {
+        final TestConfig config = new TestConfig.Builder().withMinimalProperties()
+                .withProperty("a.custom.property", "true")
+                .withProperty("another.custom.property", "42")
+                .withProperty("undefined.property", "42")
+                .build();
+
+        assertThat(config.getBoolean("a.custom.property")).isEqualTo(true);
+        assertThat(config.getInt("another.custom.property")).isEqualTo(42);
+        assertThatThrownBy(() -> config.getString("undefined.property")).isInstanceOf(ConfigException.class)
+                .hasMessage("Unknown configuration 'undefined.property'");
     }
 }
