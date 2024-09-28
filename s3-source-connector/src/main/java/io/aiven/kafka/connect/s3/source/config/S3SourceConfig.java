@@ -128,6 +128,8 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static final String PARQUET_OUTPUT_FORMAT = "parquet";
 
+    public static final String JSON_OUTPUT_FORMAT = "json";
+
     public S3SourceConfig(final Map<String, String> properties) {
         super(configDef(), preprocessProperties(properties));
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
