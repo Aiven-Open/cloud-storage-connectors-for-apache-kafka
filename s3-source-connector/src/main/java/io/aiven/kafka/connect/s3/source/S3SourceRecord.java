@@ -17,32 +17,32 @@
 package io.aiven.kafka.connect.s3.source;
 
 import java.util.Arrays;
+import java.util.Map;
 
 public class S3SourceRecord {
-    private final OffsetStoragePartitionKey offsetStoragePartitionKey;
-    private final OffsetStoragePartitionValue offsetStoragePartitionValue;
+    private final Map<String, Object> partitionMap;
+    private final Map<String, Object> offsetMap;
     private final String toTopic;
     private final int topicPartition;
     private final byte[] recordKey;
     private final byte[] recordValue;
 
-    public S3SourceRecord(final OffsetStoragePartitionKey offsetStoragePartitionKey,
-            final OffsetStoragePartitionValue offsetStoragePartitionValue, final String toTopic,
-            final int topicPartition, final byte[] recordKey, final byte[] recordValue) {
-        this.offsetStoragePartitionKey = offsetStoragePartitionKey;
-        this.offsetStoragePartitionValue = offsetStoragePartitionValue;
+    public S3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
+            final String toTopic, final int topicPartition, final byte[] recordKey, final byte[] recordValue) {
+        this.partitionMap = partitionMap;
+        this.offsetMap = offsetMap;
         this.toTopic = toTopic;
         this.topicPartition = topicPartition;
         this.recordKey = Arrays.copyOf(recordKey, recordKey.length);
         this.recordValue = Arrays.copyOf(recordValue, recordValue.length);
     }
 
-    public OffsetStoragePartitionKey getOffsetStoragePartitionKey() {
-        return offsetStoragePartitionKey;
+    public Map<String, Object> getPartitionMap() {
+        return partitionMap;
     }
 
-    public OffsetStoragePartitionValue getOffsetStoragePartitionValue() {
-        return offsetStoragePartitionValue;
+    public Map<String, Object> getOffsetMap() {
+        return offsetMap;
     }
 
     public String getToTopic() {

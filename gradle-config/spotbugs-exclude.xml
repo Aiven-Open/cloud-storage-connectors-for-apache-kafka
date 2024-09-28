@@ -24,16 +24,16 @@
         <Bug pattern="CT_CONSTRUCTOR_THROW" />
     </Match>
     <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.OffsetStoragePartitionKey" />
-        <Bug pattern="CT_CONSTRUCTOR_THROW" />
-    </Match>
-    <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.OffsetStoragePartitionValue" />
-        <Bug pattern="CT_CONSTRUCTOR_THROW" />
-    </Match>
-    <Match>
         <Class name="io.aiven.kafka.connect.s3.source.SourceRecordIterator" />
         <Bug pattern="EI_EXPOSE_REP2" />
+    </Match>
+    <Match>
+        <Class name="io.aiven.kafka.connect.s3.source.S3SourceRecord" />
+        <Bug pattern="EI_EXPOSE_REP2" />
+    </Match>
+    <Match>
+        <Class name="io.aiven.kafka.connect.s3.source.S3SourceRecord" />
+        <Bug pattern="EI_EXPOSE_REP" />
     </Match>
 
 
