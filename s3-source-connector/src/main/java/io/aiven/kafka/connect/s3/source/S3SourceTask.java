@@ -16,8 +16,11 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
@@ -63,7 +66,8 @@ public class S3SourceTask extends SourceTask {
 
     private S3SourceConfig s3SourceConfig;
 
-    private Map<OffsetStoragePartitionKey, OffsetStoragePartitionValue> offsets;
+    // private Map<OffsetStoragePartitionKey, OffsetStoragePartitionValue> offsets;
+    private Map<Map<String, Object>, Map<String, Object>> offsets;
 
     Iterator<S3SourceRecord> sourceRecordIterator;
 
@@ -117,27 +121,65 @@ public class S3SourceTask extends SourceTask {
         final Set<String> targetTopics = getTargetTopics();
 
         // map to s3 partitions
-        final List<OffsetStoragePartitionKey> offsetStoragePartitionKeys = offsetStorageTopicPartitions.stream()
-                .flatMap(
-                        p -> targetTopics.stream().map(t -> OffsetStoragePartitionKey.fromPartitionMap(s3Bucket, t, p)))
+        // final List<OffsetStoragePartitionKey> offsetStoragePartitionKeys = offsetStorageTopicPartitions.stream()
+        // .flatMap(
+        // p -> targetTopics.stream().map(t -> OffsetStoragePartitionKey.fromPartitionMap(s3Bucket, t, p)))
+        // .collect(toList());
+
+        final List<Map<String, Object>> partitionKeys = offsetStorageTopicPartitions.stream()
+                .flatMap(p -> targetTopics.stream().map(t -> {
+                    final Map<String, Object> partitionMap = new HashMap<>();
+                    partitionMap.put("bucket", s3Bucket);
+                    partitionMap.put("topic", t);
+                    partitionMap.put("partition", p);
+                    return partitionMap;
+                }))
                 .collect(toList());
 
+        // Map<String, Object> partitionMapK = new HashMap<>();
+        // partitionMapK.put("bucket", s3Bucket);
+        // partitionMapK.put("topic", "basicTest");
+        // partitionMapK.put("partition", 0);
+        //
+        // Map<String, Object> partitionMapV = new HashMap<>();
+        // partitionMapV.put("offset", 123);
+        //
+        // Map<Map<String, Object>, Map<String, Object>> offsetMapO = new HashMap<>();
+        // offsetMapO.put(partitionMapK, partitionMapV);
+
         // get partition offsets
-        final List<Map<String, Object>> partitions = offsetStoragePartitionKeys.stream()
-                .map(OffsetStoragePartitionKey::toPartitionMap)
-                .collect(toList());
+        // final List<Map<String, Object>> partitions = offsetStoragePartitionKeys.stream()
+        // .map(OffsetStoragePartitionKey::toPartitionMap)
+        // .collect(toList());
+
+        // final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
+        // .offsets(partitions);
         final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
-                .offsets(partitions);
+                .offsets(partitionKeys);
+
+        // offsetMap = offsetMapO;
 
         LOGGER.info("offsetMap : " + offsetMap);
         LOGGER.info("offsetMap entry set : " + offsetMap.entrySet());
 
         if (offsets == null) {
-            offsets = offsetMap.entrySet()
-                    .stream()
-                    .filter(e -> e.getValue() != null)
-                    .collect(toMap(entry -> OffsetStoragePartitionKey.fromPartitionMap(entry.getKey()),
-                            entry -> OffsetStoragePartitionValue.fromOffsetMap(entry.getValue())));
+            // offsets = offsetMap.entrySet()
+            // .stream()
+            // .filter(e -> e.getValue() != null)
+            // .collect(toMap(entry -> OffsetStoragePartitionKey.fromPartitionMap(entry.getKey()),
+            // entry -> OffsetStoragePartitionValue.fromOffsetMap(entry.getValue())));
+            offsets = offsetMap.entrySet().stream().filter(e -> e.getValue() != null).collect(toMap(entry -> {
+                // Directly use the partition map (entry.getKey())
+                final Map<String, Object> partitionMap = new HashMap<>();
+                partitionMap.putAll(entry.getKey()); // Assuming entry.getKey() is already a map
+                return partitionMap;
+            }, entry -> {
+                // Directly use the offset map (entry.getValue())
+                final Map<String, Object> offsetValueMap = new HashMap<>();
+                offsetValueMap.putAll(entry.getValue()); // Assuming entry.getValue() is already a map
+                return offsetValueMap;
+            }));
+
         }
         LOGGER.info("Storage offsets : " + offsets);
         sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, offsets);
@@ -202,20 +244,25 @@ public class S3SourceTask extends SourceTask {
         for (int i = 0; sourceRecordIterator.hasNext() && i < s3SourceConfig.getInt(MAX_POLL_RECORDS)
                 && !stopped.get(); i++) {
             final S3SourceRecord record = sourceRecordIterator.next();
-            LOGGER.info(record.getOffsetStoragePartitionValue() + record.getToTopic() + record.partition());
+            LOGGER.info(record.getOffsetMap() + record.getToTopic() + record.partition());
             final String topic = record.getToTopic();
             final Optional<SchemaAndValue> key = keyConverter.map(c -> c.toConnectData(topic, record.key()));
 
-            config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
-            config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-
+            if (s3SourceConfig.getString(OUTPUT_FORMAT).equals(AVRO_OUTPUT_FORMAT)) {
+                config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
+                config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+            } else if (s3SourceConfig.getString(OUTPUT_FORMAT).equals(JSON_OUTPUT_FORMAT)) {
+                config.put("schemas.enable", "false");
+            }
             valueConverter.configure(config, false);
+
             final SchemaAndValue value = valueConverter.toConnectData(topic, record.value());
 
-            results.add(new SourceRecord(record.getOffsetStoragePartitionKey().toPartitionMap(),
-                    record.getOffsetStoragePartitionValue().asOffsetMap(), topic, record.partition(),
-                    key.map(SchemaAndValue::schema).orElse(null), key.map(SchemaAndValue::value).orElse(null),
-                    value.schema(), value.value()));
+            // Create SourceRecord using partition and offset maps from the S3SourceRecord
+            results.add(new SourceRecord(record.getPartitionMap(), // Use partition map
+                    record.getOffsetMap(), // Use offset map
+                    topic, record.partition(), key.map(SchemaAndValue::schema).orElse(null),
+                    key.map(SchemaAndValue::value).orElse(null), value.schema(), value.value()));
         }
 
         LOGGER.debug("{} records.", results.size());
