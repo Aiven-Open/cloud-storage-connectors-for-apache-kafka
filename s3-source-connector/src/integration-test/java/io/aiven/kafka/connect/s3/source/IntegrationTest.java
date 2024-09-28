@@ -22,6 +22,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCK
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.PARQUET_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
@@ -52,6 +53,7 @@ import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericData;
@@ -248,6 +250,25 @@ final class IntegrationTest implements IntegrationBase {
         }
         // TODO
         assertThat(1).isEqualTo(1);
+    }
+
+    @Test
+    void jsonTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+        final var topicName = IntegrationBase.topicName(testInfo);
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        connectorConfig.put(OUTPUT_FORMAT, JSON_OUTPUT_FORMAT);
+        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+
+        connectRunner.createConnector(connectorConfig);
+        final String testMessage = "This is a test";
+        final String jsonContent = "{\"message\": \"" + testMessage + "\", \"id\":\"1\"}";
+        writeToS3(topicName, jsonContent.getBytes(StandardCharsets.UTF_8), 7);
+
+        // Poll Json messages from the Kafka topic and deserialize them
+        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 1, KAFKA_CONTAINER);
+
+        assertThat(records).extracting(record -> record.get("payload").get("message").asText()).contains(testMessage);
+        assertThat(records).extracting(record -> record.get("payload").get("id").asText()).contains("1");
     }
 
     private static ByteArrayOutputStream getAvroRecord(final Schema schema, final int messageId) throws IOException {
