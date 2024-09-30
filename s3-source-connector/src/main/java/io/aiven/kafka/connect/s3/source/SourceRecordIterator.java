@@ -16,6 +16,9 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.BUCKET;
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.PARTITION;
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.TOPIC;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
@@ -27,7 +30,6 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIA
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,31 +58,42 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableByteArrayInput;
-import org.apache.avro.file.SeekableInput;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
 
+/**
+ * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
+ * Parquet).
+ */
 @SuppressWarnings("PMD.ExcessiveImports")
 public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     public static final Pattern DEFAULT_PATTERN = Pattern
             .compile("(?<topic>[^/]+?)-" + "(?<partition>\\d{5})-" + "(?<offset>\\d{12})" + "\\.(?<extension>[^.]+)$");
+    public static final String PATTERN_TOPIC_KEY = "topic";
+    public static final String PATTERN_PARTITION_KEY = "partition";
+    public static final String OFFSET_KEY = "offset";
     private String currentKey;
+
+    final ObjectMapper objectMapper = new ObjectMapper();
     private Iterator<S3ObjectSummary> nextFileIterator;
     private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> recordIterator = Collections.emptyIterator();
 
-    private final Map<Map<String, Object>, Map<String, Object>> offsets;
+    // private final Map<Map<String, Object>, Map<String, Object>> offsets;
+
+    private final OffsetManager offsetManager;
 
     private final S3SourceConfig s3SourceConfig;
     private final String bucketName;
     private final AmazonS3 s3Client;
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
-            final Map<Map<String, Object>, Map<String, Object>> offsets) {
+            final OffsetManager offsetManager) {
         this.s3SourceConfig = s3SourceConfig;
-        this.offsets = Optional.ofNullable(offsets).orElseGet(HashMap::new);
+        // this.offsets = Optional.ofNullable(offsets).orElseGet(HashMap::new);
+        this.offsetManager = offsetManager;
         this.s3Client = s3Client;
         this.bucketName = bucketName;
         try {
@@ -98,7 +111,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         return new ArrayList<>(objectListing.getObjectSummaries());
     }
 
-    private void nextObject() {
+    private void nextS3Object() {
         if (!nextFileIterator.hasNext()) {
             recordIterator = Collections.emptyIterator();
             return;
@@ -119,35 +132,37 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             final Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
             String topic = null;
             int partition = 0;
-            long startOffset = 0l;
+            long startOffset = 0L;
             if (matcher.find()) {
-                topic = matcher.group("topic");
-                partition = Integer.parseInt(matcher.group("partition"));
-                startOffset = Long.parseLong(matcher.group("offset"));
+                topic = matcher.group(PATTERN_TOPIC_KEY);
+                partition = Integer.parseInt(matcher.group(PATTERN_PARTITION_KEY));
+                startOffset = Long.parseLong(matcher.group(OFFSET_KEY));
             }
 
             final String finalTopic = topic;
             final int finalPartition = partition;
             final long finalStartOffset = startOffset;
+
             switch (s3SourceConfig.getString(OUTPUT_FORMAT)) {
                 case AVRO_OUTPUT_FORMAT :
                     final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
                     DecoderFactory.get().binaryDecoder(content, null);
-                    return getIterator(content, finalTopic, finalPartition, finalStartOffset, datumReader,
+                    return getObjectIterator(content, finalTopic, finalPartition, finalStartOffset, datumReader,
                             AVRO_OUTPUT_FORMAT);
                 case PARQUET_OUTPUT_FORMAT :
-                    return getIterator(content, finalTopic, finalPartition, finalStartOffset, null,
+                    return getObjectIterator(content, finalTopic, finalPartition, finalStartOffset, null,
                             PARQUET_OUTPUT_FORMAT);
                 case JSON_OUTPUT_FORMAT :
-                    return getIterator(content, finalTopic, finalPartition, finalStartOffset, null, JSON_OUTPUT_FORMAT);
+                    return getObjectIterator(content, finalTopic, finalPartition, finalStartOffset, null,
+                            JSON_OUTPUT_FORMAT);
                 default :
-                    return getIterator(content, finalTopic, finalPartition, finalStartOffset, null, "");
+                    return getObjectIterator(content, finalTopic, finalPartition, finalStartOffset, null, "");
             }
         }
     }
 
-    private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> getIterator(final InputStream content,
-            final String finalTopic, final int finalPartition, final long finalStartOffset,
+    private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> getObjectIterator(final InputStream content,
+            final String topic, final int topicPartition, final long startOffset,
             final DatumReader<GenericRecord> datumReader, final String fileFormat) {
         return new Iterator<>() {
             private Map<Map<String, Object>, Long> currentOffsets = new HashMap<>();
@@ -155,12 +170,9 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
             private Optional<ConsumerRecord<byte[], byte[]>> readNext() {
                 try {
-                    Optional<byte[]> key = Optional.empty();
-                    if (currentKey != null) {
-                        key = Optional.of(currentKey.getBytes(StandardCharsets.UTF_8));
-                    }
-                    byte[] value;
-                    value = getBytes(fileFormat, content, datumReader, finalTopic);
+                    final Optional<byte[]> key = Optional.ofNullable(currentKey)
+                            .map(k -> k.getBytes(StandardCharsets.UTF_8));
+                    final byte[] value = getValueBytes(fileFormat, content, datumReader, topic);
 
                     if (value == null) {
                         if (key.isPresent()) {
@@ -176,52 +188,28 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 }
             }
 
-            // private Optional<ConsumerRecord<byte[], byte[]>> getConsumerRecord(final Optional<byte[]> key,
-            // final byte[] value) {
-            // final OffsetStoragePartitionKey offsetStoragePartitionKey = OffsetStoragePartitionKey
-            // .fromPartitionMap(bucketName, finalTopic, finalPartition);
-            //
-            // long currentOffset;
-            // if (offsets.containsKey(offsetStoragePartitionKey)) {
-            // final OffsetStoragePartitionValue offsetStoragePartitionValue = offsets
-            // .get(offsetStoragePartitionKey);
-            // currentOffset = offsetStoragePartitionValue.getOffset() + 1;
-            // } else {
-            // currentOffset = currentOffsets.getOrDefault(offsetStoragePartitionKey, finalStartOffset);
-            // }
-            // final Optional<ConsumerRecord<byte[], byte[]>> record = Optional
-            // .of(new ConsumerRecord<>(finalTopic, finalPartition, currentOffset, key.orElse(null), value));
-            // currentOffsets.put(offsetStoragePartitionKey, currentOffset + 1);
-            // return record;
-            // }
-
             private Optional<ConsumerRecord<byte[], byte[]>> getConsumerRecord(final Optional<byte[]> key,
                     final byte[] value) {
-                // Create a map to represent the partition information
                 final Map<String, Object> partitionMap = new HashMap<>();
-                partitionMap.put("bucket", bucketName);
-                partitionMap.put("topic", finalTopic);
-                partitionMap.put("partition", finalPartition);
+                partitionMap.put(BUCKET, bucketName);
+                partitionMap.put(TOPIC, topic);
+                partitionMap.put(PARTITION, topicPartition);
 
                 long currentOffset;
 
-                // Check if the partition is present in the offsets map
-                if (offsets.containsKey(partitionMap)) {
-                    // Retrieve the offset map and extract the offset value
-                    final Map<String, Object> offsetMap = offsets.get(partitionMap);
-                    currentOffset = (long) offsetMap.get("offset") + 1; // Assuming "offset" is the key for the offset
-                                                                        // value
+                if (offsetManager.getOffsets().containsKey(partitionMap)) {
+                    final Map<String, Object> offsetMap = offsetManager.getOffsetForPartition(partitionMap);
+                    currentOffset = (long) offsetMap.get(OFFSET_KEY) + 1;
                 } else {
-                    // If not present in offsets, check currentOffsets or use the finalStartOffset
-                    currentOffset = currentOffsets.getOrDefault(partitionMap, finalStartOffset);
+                    currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
                 }
 
-                // Create the ConsumerRecord
                 final Optional<ConsumerRecord<byte[], byte[]>> record = Optional
-                        .of(new ConsumerRecord<>(finalTopic, finalPartition, currentOffset, key.orElse(null), value));
+                        .of(new ConsumerRecord<>(topic, topicPartition, currentOffset, key.orElse(null), value));
 
-                // Update currentOffsets with the next offset
-                currentOffsets.put(partitionMap, currentOffset + 1);
+                final Map<String, Object> newOffset = new HashMap<>();
+                newOffset.put(OFFSET_KEY, currentOffset + 1);
+                offsetManager.updateOffset(partitionMap, newOffset);
 
                 return record;
             }
@@ -243,55 +231,48 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         };
     }
 
-    private byte[] getBytes(final String fileFormat, final InputStream content,
+    private byte[] getValueBytes(final String fileFormat, final InputStream content,
             final DatumReader<GenericRecord> datumReader, final String topicName) throws IOException {
-        byte[] value;
-        if (fileFormat.equals(AVRO_OUTPUT_FORMAT)) {
-            List<GenericRecord> items;
-            try (SeekableInput sin = new SeekableByteArrayInput(IOUtils.toByteArray(content))) {
-                try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
-                    items = new ArrayList<>();
-                    reader.forEach(items::add);
-                }
-            }
-            value = serializeAvroRecordToBytes(items, topicName);
-        } else if (fileFormat.equals(JSON_OUTPUT_FORMAT)) {
-            value = serializeJsonData(content);
+        if (AVRO_OUTPUT_FORMAT.equals(fileFormat)) {
+            return serializeAvroRecordToBytes(readAvroRecords(content, datumReader), topicName);
+        } else if (JSON_OUTPUT_FORMAT.equals(fileFormat)) {
+            return serializeJsonData(content);
         } else {
-            value = IOUtils.toByteArray(content);
+            return IOUtils.toByteArray(content);
         }
-        return value;
+    }
+
+    private List<GenericRecord> readAvroRecords(final InputStream content, final DatumReader<GenericRecord> datumReader)
+            throws IOException {
+        final List<GenericRecord> records = new ArrayList<>();
+        try (SeekableByteArrayInput sin = new SeekableByteArrayInput(IOUtils.toByteArray(content))) {
+            try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
+                reader.forEach(records::add);
+            }
+        }
+        return records;
     }
 
     private byte[] serializeJsonData(final InputStream inputStream) throws IOException {
-        final ObjectMapper objectMapper = new ObjectMapper();
         final JsonNode jsonNode = objectMapper.readTree(inputStream);
         return objectMapper.writeValueAsBytes(jsonNode);
     }
 
     @Deprecated
-    private byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String finalTopic)
+    private byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String topic)
             throws IOException {
-        // Create a map to configure the Avro serializer
-        final Map<String, String> config = new HashMap<>();
-        config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
+        final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
+                s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
 
         try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
-                .newInstance()) {
-            avroSerializer.configure(config, false); // `false` since this is for value serialization
-            // Use a ByteArrayOutputStream to combine the serialized records
-            final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-            // Loop through each Avro record and serialize it
+                .newInstance(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            avroSerializer.configure(config, false);
             for (final GenericRecord avroRecord : avroRecords) {
-                final byte[] serializedRecord = avroSerializer.serialize(finalTopic, avroRecord);
-                outputStream.write(serializedRecord);
+                out.write(avroSerializer.serialize(topic, avroRecord));
             }
-
-            // Convert the combined output stream to a byte array and return it
-            return outputStream.toByteArray();
+            return out.toByteArray();
         } catch (InstantiationException | IllegalAccessException e) {
-            throw new ConnectException("Could not create instance of serializer.");
+            throw new IllegalStateException("Failed to initialize serializer", e);
         }
     }
 
@@ -299,38 +280,43 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         return object.getObjectContent();
     }
 
+    // @Override
+    // public boolean hasNext() {
+    // while (!recordIterator.hasNext() && nextFileIterator.hasNext()) {
+    // nextS3Object();
+    // }
+    // return recordIterator.hasNext();
+    // }
+
     @Override
     public boolean hasNext() {
-        while (!recordIterator.hasNext() && nextFileIterator.hasNext()) {
-            nextObject();
-        }
-        return recordIterator.hasNext();
+        return recordIterator.hasNext() || nextFileIterator.hasNext();
     }
 
     @Override
     public S3SourceRecord next() {
-        if (!hasNext()) {
+        if (!recordIterator.hasNext()) {
+            nextS3Object();
+        }
+
+        final Optional<ConsumerRecord<byte[], byte[]>> consumerRecord = recordIterator.next();
+        if (consumerRecord.isEmpty()) {
             throw new NoSuchElementException();
         }
-        final ConsumerRecord<byte[], byte[]> record = recordIterator.next().get();
 
-        // Create the partition map
+        final ConsumerRecord<byte[], byte[]> currentRecord = consumerRecord.get();
+
         final Map<String, Object> partitionMap = new HashMap<>();
-        partitionMap.put("bucket", bucketName);
-        partitionMap.put("topic", record.topic());
-        partitionMap.put("partition", record.partition());
+        partitionMap.put(BUCKET, bucketName);
+        partitionMap.put(TOPIC, currentRecord.topic());
+        partitionMap.put(PARTITION, currentRecord.partition());
 
         // Create the offset map
         final Map<String, Object> offsetMap = new HashMap<>();
-        offsetMap.put("offset", record.offset());
+        offsetMap.put(OFFSET_KEY, currentRecord.offset());
 
-        return new S3SourceRecord(partitionMap, // Use the partition map
-                offsetMap, // Use the offset map
-                record.topic(), // Topic
-                record.partition(), // Partition
-                record.key(), // Record key
-                record.value() // Record value
-        );
+        return new S3SourceRecord(partitionMap, offsetMap, currentRecord.topic(), currentRecord.partition(),
+                currentRecord.key(), currentRecord.value());
     }
 
     @Override
