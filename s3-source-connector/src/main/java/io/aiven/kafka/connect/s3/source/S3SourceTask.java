@@ -16,32 +16,16 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -59,31 +43,28 @@ import org.slf4j.LoggerFactory;
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
  * Connect records.
  */
-@SuppressWarnings("PMD.ExcessiveImports")
 public class S3SourceTask extends SourceTask {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AivenKafkaConnectS3SourceConnector.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
+
+    public static final String BUCKET = "bucket";
+    public static final String TOPIC = "topic";
+    public static final String PARTITION = "partition";
+
+    private static final long S_3_POLL_INTERVAL_MS = 10_000L;
+    private static final long ERROR_BACKOFF = 1000L;
 
     private S3SourceConfig s3SourceConfig;
+    private AmazonS3 s3Client;
 
-    // private Map<OffsetStoragePartitionKey, OffsetStoragePartitionValue> offsets;
-    private Map<Map<String, Object>, Map<String, Object>> offsets;
-
-    Iterator<S3SourceRecord> sourceRecordIterator;
-
+    private Iterator<S3SourceRecord> sourceRecordIterator;
     private Optional<Converter> keyConverter;
     private Converter valueConverter;
 
-    private final AtomicBoolean stopped = new AtomicBoolean();
+    private final AtomicBoolean connectorStopped = new AtomicBoolean();
+    private final S3ClientFactory s3ClientFactory = new S3ClientFactory();
 
-    private final static long S_3_POLL_INTERVAL_MS = 10_000L;
-
-    private final static long ERROR_BACKOFF = 1000L;
-
-    final S3ClientFactory s3ClientFactory = new S3ClientFactory();
-    private AmazonS3 s3Client;
-
-    @SuppressWarnings("PMD.UnnecessaryConstructor") // required by Connect
+    @SuppressWarnings("PMD.UnnecessaryConstructor")
     public S3SourceTask() {
         super();
     }
@@ -93,184 +74,84 @@ public class S3SourceTask extends SourceTask {
         return Version.VERSION;
     }
 
-    @Deprecated
     @Override
     public void start(final Map<String, String> props) {
         LOGGER.info("S3 Source task started.");
-        Objects.requireNonNull(props, "props hasn't been set");
         s3SourceConfig = new S3SourceConfig(props);
+        initializeConverters();
+        initializeS3Client();
+        prepareReaderFromOffsetStorageReader();
+    }
 
+    @Deprecated
+    private void initializeConverters() {
         try {
             keyConverter = Optional.of((Converter) s3SourceConfig.getClass("key.converter").newInstance());
             valueConverter = (Converter) s3SourceConfig.getClass("value.converter").newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             throw new ConnectException("Connect converters could not be instantiated.", e);
         }
+    }
 
+    private void initializeS3Client() {
         this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
-
-        LOGGER.info("S3 client initialized ");
-        prepareReaderFromOffsetStorageReader();
+        LOGGER.debug("S3 client initialized");
     }
 
-    @Deprecated
     private void prepareReaderFromOffsetStorageReader() {
+        final OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
+
         final String s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
-
-        final Set<Integer> offsetStorageTopicPartitions = getTargetTopicPartitions();
-        final Set<String> targetTopics = getTargetTopics();
-
-        // map to s3 partitions
-        // final List<OffsetStoragePartitionKey> offsetStoragePartitionKeys = offsetStorageTopicPartitions.stream()
-        // .flatMap(
-        // p -> targetTopics.stream().map(t -> OffsetStoragePartitionKey.fromPartitionMap(s3Bucket, t, p)))
-        // .collect(toList());
-
-        final List<Map<String, Object>> partitionKeys = offsetStorageTopicPartitions.stream()
-                .flatMap(p -> targetTopics.stream().map(t -> {
-                    final Map<String, Object> partitionMap = new HashMap<>();
-                    partitionMap.put("bucket", s3Bucket);
-                    partitionMap.put("topic", t);
-                    partitionMap.put("partition", p);
-                    return partitionMap;
-                }))
-                .collect(toList());
-
-        // Map<String, Object> partitionMapK = new HashMap<>();
-        // partitionMapK.put("bucket", s3Bucket);
-        // partitionMapK.put("topic", "basicTest");
-        // partitionMapK.put("partition", 0);
-        //
-        // Map<String, Object> partitionMapV = new HashMap<>();
-        // partitionMapV.put("offset", 123);
-        //
-        // Map<Map<String, Object>, Map<String, Object>> offsetMapO = new HashMap<>();
-        // offsetMapO.put(partitionMapK, partitionMapV);
-
-        // get partition offsets
-        // final List<Map<String, Object>> partitions = offsetStoragePartitionKeys.stream()
-        // .map(OffsetStoragePartitionKey::toPartitionMap)
-        // .collect(toList());
-
-        // final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
-        // .offsets(partitions);
-        final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
-                .offsets(partitionKeys);
-
-        // offsetMap = offsetMapO;
-
-        LOGGER.info("offsetMap : " + offsetMap);
-        LOGGER.info("offsetMap entry set : " + offsetMap.entrySet());
-
-        if (offsets == null) {
-            // offsets = offsetMap.entrySet()
-            // .stream()
-            // .filter(e -> e.getValue() != null)
-            // .collect(toMap(entry -> OffsetStoragePartitionKey.fromPartitionMap(entry.getKey()),
-            // entry -> OffsetStoragePartitionValue.fromOffsetMap(entry.getValue())));
-            offsets = offsetMap.entrySet().stream().filter(e -> e.getValue() != null).collect(toMap(entry -> {
-                // Directly use the partition map (entry.getKey())
-                final Map<String, Object> partitionMap = new HashMap<>();
-                partitionMap.putAll(entry.getKey()); // Assuming entry.getKey() is already a map
-                return partitionMap;
-            }, entry -> {
-                // Directly use the offset map (entry.getValue())
-                final Map<String, Object> offsetValueMap = new HashMap<>();
-                offsetValueMap.putAll(entry.getValue()); // Assuming entry.getValue() is already a map
-                return offsetValueMap;
-            }));
-
-        }
-        LOGGER.info("Storage offsets : " + offsets);
-        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, offsets);
-    }
-
-    private Set<Integer> getTargetTopicPartitions() {
-        final String partitionString = s3SourceConfig.getString(TARGET_TOPIC_PARTITIONS);
-        if (Objects.nonNull(partitionString)) {
-            return Arrays.stream(partitionString.split(",")).map(Integer::parseInt).collect(Collectors.toSet());
-        } else {
-            throw new IllegalStateException("Offset storage topics partition list is not configured.");
-        }
-    }
-
-    private Set<String> getTargetTopics() {
-        final String topicString = s3SourceConfig.getString(TARGET_TOPICS);
-        if (Objects.nonNull(topicString)) {
-            return Arrays.stream(topicString.split(",")).collect(Collectors.toSet());
-        } else {
-            throw new IllegalStateException("Offset storage topics list is not configured.");
-        }
+        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, offsetManager);
     }
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException {
         final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
 
-        if (stopped.get()) {
+        if (connectorStopped.get()) {
             return results;
         }
 
-        while (!stopped.get()) {
+        while (!connectorStopped.get()) {
             try {
-                return getSourceRecords(results);
+                return extractSourceRecords(results);
             } catch (AmazonS3Exception e) {
-                if (e.isRetryable()) {
-                    LOGGER.warn("Retryable error while polling. Will sleep and try again.", e);
-                    Thread.sleep(ERROR_BACKOFF);
-                    prepareReaderFromOffsetStorageReader();
-                } else {
-                    // die
-                    throw e;
-                }
+                handleS3Exception(e);
             }
         }
         return results;
     }
 
-    private List<SourceRecord> getSourceRecords(final List<SourceRecord> results) throws InterruptedException {
-        while (!sourceRecordIterator.hasNext() && !stopped.get()) {
+    private List<SourceRecord> extractSourceRecords(final List<SourceRecord> results) throws InterruptedException {
+        waitForObjects();
+        if (connectorStopped.get()) {
+            return results;
+        }
+        return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
+                valueConverter, connectorStopped);
+    }
+
+    private void waitForObjects() throws InterruptedException {
+        while (!sourceRecordIterator.hasNext() && !connectorStopped.get()) {
             LOGGER.debug("Blocking until new S3 files are available.");
-            // sleep and block here until new files are available
             Thread.sleep(S_3_POLL_INTERVAL_MS);
             prepareReaderFromOffsetStorageReader();
         }
+    }
 
-        if (stopped.get()) {
-            return results;
+    private void handleS3Exception(final AmazonS3Exception amazonS3Exception) throws InterruptedException {
+        if (amazonS3Exception.isRetryable()) {
+            LOGGER.warn("Retryable error while polling. Will sleep and try again.", amazonS3Exception);
+            Thread.sleep(ERROR_BACKOFF);
+            prepareReaderFromOffsetStorageReader();
+        } else {
+            throw amazonS3Exception;
         }
-
-        final Map<String, String> config = new HashMap<>();
-        for (int i = 0; sourceRecordIterator.hasNext() && i < s3SourceConfig.getInt(MAX_POLL_RECORDS)
-                && !stopped.get(); i++) {
-            final S3SourceRecord record = sourceRecordIterator.next();
-            LOGGER.info(record.getOffsetMap() + record.getToTopic() + record.partition());
-            final String topic = record.getToTopic();
-            final Optional<SchemaAndValue> key = keyConverter.map(c -> c.toConnectData(topic, record.key()));
-
-            if (s3SourceConfig.getString(OUTPUT_FORMAT).equals(AVRO_OUTPUT_FORMAT)) {
-                config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
-                config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-            } else if (s3SourceConfig.getString(OUTPUT_FORMAT).equals(JSON_OUTPUT_FORMAT)) {
-                config.put("schemas.enable", "false");
-            }
-            valueConverter.configure(config, false);
-
-            final SchemaAndValue value = valueConverter.toConnectData(topic, record.value());
-
-            // Create SourceRecord using partition and offset maps from the S3SourceRecord
-            results.add(new SourceRecord(record.getPartitionMap(), // Use partition map
-                    record.getOffsetMap(), // Use offset map
-                    topic, record.partition(), key.map(SchemaAndValue::schema).orElse(null),
-                    key.map(SchemaAndValue::value).orElse(null), value.schema(), value.value()));
-        }
-
-        LOGGER.debug("{} records.", results.size());
-        return results;
     }
 
     @Override
     public void stop() {
-        this.stopped.set(true);
+        this.connectorStopped.set(true);
     }
 }
