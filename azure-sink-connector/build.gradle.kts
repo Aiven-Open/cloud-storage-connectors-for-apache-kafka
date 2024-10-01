@@ -1,7 +1,7 @@
 import com.github.spotbugs.snom.SpotBugsTask
 
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,25 +44,19 @@ tasks.register<Test>("integrationTest") {
   // Run always.
   outputs.upToDateWhen { false }
 
-  // Pass the GCS credentials path to the tests.
-  if (project.hasProperty("gcsCredentialsPath")) {
+  // Pass the Azure connection string to the tests.
+  if (project.hasProperty("testAzureStorageString")) {
     systemProperty(
-        "integration-test.gcs.credentials.path",
-        project.findProperty("gcsCredentialsPath").toString())
+        "integration-test.azure.connection.string",
+        project.findProperty("testAzureStorageString").toString())
   }
-  // Pass the GCS credentials JSON to the tests.
-  if (project.hasProperty("gcsCredentialsJson")) {
-    systemProperty(
-        "integration-test.gcs.credentials.json",
-        project.findProperty("gcsCredentialsJson").toString())
-  }
-  // Pass the GCS bucket name to the tests.
-  systemProperty("integration-test.gcs.bucket", project.findProperty("testGcsBucket").toString())
+  // Pass the Azure container name to the tests.
+  systemProperty(
+      "integration-test.azure.container", project.findProperty("testAzureStorage").toString())
   // Pass the distribution file path to the tests.
-  val distTarTask = tasks["distTar"] as Tar
+  val distTarTask = tasks.get("distTar") as Tar
   val distributionFilePath = distTarTask.archiveFile.get().asFile.path
   systemProperty("integration-test.distribution.file.path", distributionFilePath)
-  systemProperty("fake-gcs-server-version", "1.45.2")
 }
 
 idea {
@@ -74,15 +68,11 @@ idea {
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
-  compileOnly(apache.kafka.connect.runtime)
+  runtimeOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
 
-  implementation("com.google.cloud:google-cloud-storage:2.43.1") {
-    exclude(group = "com.google.guava", module = "guava")
-  }
-  // TODO: document why specific version of guava is required
-  implementation("com.google.guava:guava:33.3.1-jre")
+  implementation("com.azure:azure-storage-blob:12.26.1")
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -91,6 +81,7 @@ dependencies {
   testImplementation(testinglibs.hamcrest)
   testImplementation(testinglibs.assertj.core)
   testImplementation(testinglibs.mockito.core)
+  testImplementation(testinglibs.mockito.junit.jupiter)
   testImplementation(testinglibs.jqwik)
   // is provided by "jqwik", but need this in testImplementation scope
   testImplementation(testinglibs.jqwik.engine)
@@ -98,7 +89,6 @@ dependencies {
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
-  testImplementation("com.google.cloud:google-cloud-nio:0.127.23")
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
@@ -168,7 +158,7 @@ tasks.named<SpotBugsTask>("spotbugsIntegrationTest") {
 }
 
 tasks.processResources {
-  filesMatching("gcs-sink-connector-for-apache-kafka-version.properties") {
+  filesMatching("azure-blob-sink-connector-for-apache-kafka-version.properties") {
     expand(mapOf("version" to version))
   }
 }
@@ -177,15 +167,15 @@ publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {
       groupId = group.toString()
-      artifactId = "gcs-sink-connector-for-apache-kafka"
+      artifactId = "azure-blob-sink-connector-for-apache-kafka"
       version = version.toString()
 
       from(components["java"])
 
       pom {
-        name = "Aiven's GCS Sink Connector for Apache Kafka"
-        description = "Aiven's GCS Sink Connector for Apache Kafka"
-        url = "https://github.com/Aiven-Open/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
+        name = "Aiven's Azure Blob Sink Connector for Apache Kafka"
+        description = "Aiven's Azure Blob Sink Connector for Apache Kafka"
+        url = "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         organization {
           name = "Aiven Oy"
           url = "https://aiven.io"

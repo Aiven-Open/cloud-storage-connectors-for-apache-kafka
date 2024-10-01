@@ -11,6 +11,7 @@ val hamcrestVersion by extra("2.2")
 val jacksonVersion by extra("2.15.3")
 val junitVersion by extra("5.10.2")
 val jqwikVersion by extra("1.8.4")
+// TODO: document why we stick to these versions
 val kafkaVersion by extra("1.1.0")
 val logbackVersion by extra("1.5.6")
 val localstackVersion by extra("0.2.23")
@@ -93,3 +94,5 @@ include("commons")
 include("gcs-sink-connector")
 
 include("s3-sink-connector")
+
+include("azure-sink-connector")
