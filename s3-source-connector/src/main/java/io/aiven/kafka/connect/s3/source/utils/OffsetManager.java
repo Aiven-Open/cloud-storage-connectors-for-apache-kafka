@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source;
+package io.aiven.kafka.connect.s3.source.utils;
 
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.BUCKET;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.PARTITION;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.TOPIC;
+import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.OFFSET_KEY;
 import static java.util.stream.Collectors.toMap;
 
 import java.util.ArrayList;
@@ -82,15 +83,8 @@ public class OffsetManager {
         return offsets;
     }
 
-    /**
-     * Get the current offset for a specific partition.
-     *
-     * @param partitionMap
-     *            The partition map containing bucket, topic, partition, etc.
-     * @return The offset for the given partition, or null if no offset exists.
-     */
-    public Map<String, Object> getOffsetForPartition(final Map<String, Object> partitionMap) {
-        return offsets.get(partitionMap);
+    public long getIncrementedOffsetForPartition(final Map<String, Object> partitionMap) {
+        return (long) (offsets.get(partitionMap)).get(OFFSET_KEY) + 1L;
     }
 
     /**
@@ -98,12 +92,12 @@ public class OffsetManager {
      *
      * @param partitionMap
      *            The partition map.
-     * @param newOffset
-     *            The new offset to be updated.
      */
-    public void updateOffset(final Map<String, Object> partitionMap, final Map<String, Object> newOffset) {
+    public void updateOffset(final Map<String, Object> partitionMap, final long currentOffset) {
+        final Map<String, Object> newOffset = new HashMap<>();
+        // increment offset id by 1
+        newOffset.put(OFFSET_KEY, currentOffset + 1);
         offsets.put(partitionMap, newOffset);
-        // You can persist offsets here if needed
     }
 
     /**

@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source;
+package io.aiven.kafka.connect.s3.source.utils;
 
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.BUCKET;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.PARTITION;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.TOPIC;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.PARQUET_OUTPUT_FORMAT;
@@ -48,8 +47,6 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.util.IOUtils;
@@ -81,34 +78,27 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private Iterator<S3ObjectSummary> nextFileIterator;
     private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> recordIterator = Collections.emptyIterator();
 
-    // private final Map<Map<String, Object>, Map<String, Object>> offsets;
-
     private final OffsetManager offsetManager;
 
     private final S3SourceConfig s3SourceConfig;
     private final String bucketName;
     private final AmazonS3 s3Client;
 
+    private final FileReader fileReader;
+
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
             final OffsetManager offsetManager) {
         this.s3SourceConfig = s3SourceConfig;
-        // this.offsets = Optional.ofNullable(offsets).orElseGet(HashMap::new);
         this.offsetManager = offsetManager;
         this.s3Client = s3Client;
         this.bucketName = bucketName;
+        this.fileReader = new FileReader(s3SourceConfig, bucketName);
         try {
-            final List<S3ObjectSummary> chunks = fetchObjectSummaries(s3Client);
+            final List<S3ObjectSummary> chunks = fileReader.fetchObjectSummaries(s3Client);
             nextFileIterator = chunks.iterator();
         } catch (IOException e) {
             throw new AmazonClientException("Failed to initialize S3 file reader", e);
         }
-    }
-
-    private List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
-        final ObjectListing objectListing = s3Client.listObjects(new ListObjectsRequest().withBucketName(bucketName)
-                .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * 2));
-
-        return new ArrayList<>(objectListing.getObjectSummaries());
     }
 
     private void nextS3Object() {
@@ -128,7 +118,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> createIteratorForCurrentFile() throws IOException {
         final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
-        try (InputStream content = getContent(s3Object)) {
+        try (InputStream content = fileReader.getContent(s3Object)) {
             final Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
             String topic = null;
             int partition = 0;
@@ -198,8 +188,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 long currentOffset;
 
                 if (offsetManager.getOffsets().containsKey(partitionMap)) {
-                    final Map<String, Object> offsetMap = offsetManager.getOffsetForPartition(partitionMap);
-                    currentOffset = (long) offsetMap.get(OFFSET_KEY) + 1;
+                    currentOffset = offsetManager.getIncrementedOffsetForPartition(partitionMap);
                 } else {
                     currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
                 }
@@ -207,9 +196,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 final Optional<ConsumerRecord<byte[], byte[]>> record = Optional
                         .of(new ConsumerRecord<>(topic, topicPartition, currentOffset, key.orElse(null), value));
 
-                final Map<String, Object> newOffset = new HashMap<>();
-                newOffset.put(OFFSET_KEY, currentOffset + 1);
-                offsetManager.updateOffset(partitionMap, newOffset);
+                offsetManager.updateOffset(partitionMap, currentOffset);
 
                 return record;
             }
@@ -275,18 +262,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             throw new IllegalStateException("Failed to initialize serializer", e);
         }
     }
-
-    private InputStream getContent(final S3Object object) {
-        return object.getObjectContent();
-    }
-
-    // @Override
-    // public boolean hasNext() {
-    // while (!recordIterator.hasNext() && nextFileIterator.hasNext()) {
-    // nextS3Object();
-    // }
-    // return recordIterator.hasNext();
-    // }
 
     @Override
     public boolean hasNext() {
