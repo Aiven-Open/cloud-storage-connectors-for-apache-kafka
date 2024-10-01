@@ -20,23 +20,23 @@
         <Bug pattern="CT_CONSTRUCTOR_THROW" />
     </Match>
     <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.SourceRecordIterator$1" />
+        <Class name="io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator$1" />
         <Bug pattern="CT_CONSTRUCTOR_THROW" />
     </Match>
     <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.SourceRecordIterator" />
+        <Class name="io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator" />
         <Bug pattern="EI_EXPOSE_REP2" />
     </Match>
     <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.S3SourceRecord" />
+        <Class name="io.aiven.kafka.connect.s3.source.utils.S3SourceRecord" />
         <Bug pattern="EI_EXPOSE_REP2" />
     </Match>
     <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.S3SourceRecord" />
+        <Class name="io.aiven.kafka.connect.s3.source.utils.S3SourceRecord" />
         <Bug pattern="EI_EXPOSE_REP" />
     </Match>
     <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.OffsetManager" />
+        <Class name="io.aiven.kafka.connect.s3.source.utils.OffsetManager" />
         <Bug pattern="EI_EXPOSE_REP" />
     </Match>
 
