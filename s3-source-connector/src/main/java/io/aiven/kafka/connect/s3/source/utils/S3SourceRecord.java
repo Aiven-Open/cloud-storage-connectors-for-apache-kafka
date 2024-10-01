@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source;
+package io.aiven.kafka.connect.s3.source.utils;
 
 import java.util.Arrays;
 import java.util.Map;
