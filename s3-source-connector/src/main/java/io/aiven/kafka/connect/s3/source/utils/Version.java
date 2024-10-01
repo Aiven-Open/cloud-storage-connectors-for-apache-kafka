@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source;
+package io.aiven.kafka.connect.s3.source.utils;
 
 import java.io.InputStream;
 import java.util.Properties;
@@ -22,12 +22,12 @@ import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-final class Version {
+public final class Version {
     private static final Logger LOGGER = LoggerFactory.getLogger(Version.class);
 
     private static final String PROPERTIES_FILENAME = "s3-source-connector-for-apache-kafka-version.properties";
 
-    static final String VERSION; // NOPMD AvoidFieldNameMatchingTypeName
+    public static final String VERSION; // NOPMD AvoidFieldNameMatchingTypeName
 
     static {
         final Properties props = new Properties();
