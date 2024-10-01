@@ -84,7 +84,7 @@ dependencies {
     exclude(group = "com.google.guava", module = "guava")
   }
   // TODO: document why specific version of guava is required
-  implementation("com.google.guava:guava:33.3.0-jre")
+  implementation("com.google.guava:guava:33.3.1-jre")
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
