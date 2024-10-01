@@ -26,6 +26,7 @@ import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.utils.Version;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
