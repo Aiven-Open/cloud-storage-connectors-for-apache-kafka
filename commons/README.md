@@ -10,9 +10,9 @@ When installing this library on Kafka Connect, use a specific plugin path, and *
 
 # Development
 
-     To use this library for development, you need to build and publish it in your local Maven repository using command:
-<br/>
-`./gradlew clean build publishToMavenLocal`
+To use this library for development, you need to build and publish it in your local Maven repository using command:
+
+    ./gradlew clean build publishToMavenLocal
 
 # License
 
