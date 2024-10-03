@@ -68,7 +68,6 @@ idea {
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
-  runtimeOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
 
