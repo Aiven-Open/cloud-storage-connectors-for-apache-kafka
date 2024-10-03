@@ -33,9 +33,9 @@ import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
@@ -62,7 +62,7 @@ public class S3SourceTask extends SourceTask {
     private S3SourceConfig s3SourceConfig;
     private AmazonS3 s3Client;
 
-    private Iterator<S3SourceRecord> sourceRecordIterator;
+    private Iterator<List<AivenS3SourceRecord>> sourceRecordIterator;
     private Optional<Converter> keyConverter;
     private Converter valueConverter;
 
