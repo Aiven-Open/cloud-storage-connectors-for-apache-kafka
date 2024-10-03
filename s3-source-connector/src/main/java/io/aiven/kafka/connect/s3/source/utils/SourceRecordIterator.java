@@ -65,7 +65,7 @@ import org.apache.avro.io.DecoderFactory;
  * Parquet).
  */
 @SuppressWarnings("PMD.ExcessiveImports")
-public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
+public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRecord>> {
 
     public static final Pattern DEFAULT_PATTERN = Pattern
             .compile("(?<topic>[^/]+?)-" + "(?<partition>\\d{5})-" + "(?<offset>\\d{12})" + "\\.(?<extension>[^.]+)$");
@@ -76,7 +76,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     final ObjectMapper objectMapper = new ObjectMapper();
     private Iterator<S3ObjectSummary> nextFileIterator;
-    private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> recordIterator = Collections.emptyIterator();
+    private Iterator<List<ConsumerRecord<byte[], byte[]>>> recordIterator = Collections.emptyIterator();
 
     private final OffsetManager offsetManager;
 
@@ -116,7 +116,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         }
     }
 
-    private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> createIteratorForCurrentFile() throws IOException {
+    private Iterator<List<ConsumerRecord<byte[], byte[]>>> createIteratorForCurrentFile() throws IOException {
         final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
         try (InputStream content = fileReader.getContent(s3Object)) {
             final Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
@@ -151,35 +151,60 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         }
     }
 
-    private Iterator<Optional<ConsumerRecord<byte[], byte[]>>> getObjectIterator(final InputStream content,
+    @SuppressWarnings("PMD.CognitiveComplexity")
+    private Iterator<List<ConsumerRecord<byte[], byte[]>>> getObjectIterator(final InputStream inputStream,
             final String topic, final int topicPartition, final long startOffset,
             final DatumReader<GenericRecord> datumReader, final String fileFormat) {
         return new Iterator<>() {
             private Map<Map<String, Object>, Long> currentOffsets = new HashMap<>();
-            private Optional<ConsumerRecord<byte[], byte[]>> nextRecord = readNext();
+            private List<ConsumerRecord<byte[], byte[]>> nextRecord = readNext();
 
-            private Optional<ConsumerRecord<byte[], byte[]>> readNext() {
+            private List<ConsumerRecord<byte[], byte[]>> readNext() {
                 try {
                     final Optional<byte[]> key = Optional.ofNullable(currentKey)
                             .map(k -> k.getBytes(StandardCharsets.UTF_8));
-                    final byte[] value = getValueBytes(fileFormat, content, datumReader, topic);
+                    final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
+                    handleValueData(key, consumerRecordList);
 
-                    if (value == null) {
-                        if (key.isPresent()) {
-                            throw new IllegalStateException("missing value for key!" + key);
-                        }
-                        return Optional.empty();
-                    }
+                    return consumerRecordList;
 
-                    return getConsumerRecord(key, value);
                 } catch (IOException e) {
                     throw new org.apache.kafka.connect.errors.ConnectException(
                             "Connect converters could not be instantiated.", e);
                 }
             }
 
-            private Optional<ConsumerRecord<byte[], byte[]>> getConsumerRecord(final Optional<byte[]> key,
-                    final byte[] value) {
+            private void handleValueData(final Optional<byte[]> key,
+                    final List<ConsumerRecord<byte[], byte[]>> consumerRecordList) throws IOException {
+                switch (fileFormat) {
+                    case PARQUET_OUTPUT_FORMAT : {
+                        final List<GenericRecord> records = ParquetUtils.getRecords(inputStream, topic);
+                        for (final GenericRecord record : records) {
+                            final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record),
+                                    topic);
+                            consumerRecordList.add(getConsumerRecord(key, valueBytes));
+                        }
+                        break;
+                    }
+                    case AVRO_OUTPUT_FORMAT : {
+                        final List<GenericRecord> records = readAvroRecords(inputStream, datumReader);
+                        for (final GenericRecord record : records) {
+                            final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record),
+                                    topic);
+                            consumerRecordList.add(getConsumerRecord(key, valueBytes));
+                        }
+                        break;
+                    }
+                    case JSON_OUTPUT_FORMAT :
+                        consumerRecordList.add(getConsumerRecord(key, serializeJsonData(inputStream)));
+                        break;
+                    default :
+                        consumerRecordList.add(getConsumerRecord(key, IOUtils.toByteArray(inputStream)));
+                        break;
+                }
+            }
+
+            private ConsumerRecord<byte[], byte[]> getConsumerRecord(final Optional<byte[]> key, final byte[] value) {
                 final Map<String, Object> partitionMap = new HashMap<>();
                 partitionMap.put(BUCKET, bucketName);
                 partitionMap.put(TOPIC, topic);
@@ -193,8 +218,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                     currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
                 }
 
-                final Optional<ConsumerRecord<byte[], byte[]>> record = Optional
-                        .of(new ConsumerRecord<>(topic, topicPartition, currentOffset, key.orElse(null), value));
+                final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(topic, topicPartition, currentOffset,
+                        key.orElse(null), value);
 
                 offsetManager.updateOffset(partitionMap, currentOffset);
 
@@ -203,30 +228,19 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
             @Override
             public boolean hasNext() {
-                return nextRecord.isPresent();
+                return !nextRecord.isEmpty();
             }
 
             @Override
-            public Optional<ConsumerRecord<byte[], byte[]>> next() {
+            public List<ConsumerRecord<byte[], byte[]>> next() {
                 if (nextRecord.isEmpty()) {
                     throw new NoSuchElementException();
                 }
-                final Optional<ConsumerRecord<byte[], byte[]>> currentRecord = nextRecord;
-                nextRecord = Optional.empty();
+                final List<ConsumerRecord<byte[], byte[]>> currentRecord = nextRecord;
+                nextRecord = Collections.emptyList();
                 return currentRecord;
             }
         };
-    }
-
-    private byte[] getValueBytes(final String fileFormat, final InputStream content,
-            final DatumReader<GenericRecord> datumReader, final String topicName) throws IOException {
-        if (AVRO_OUTPUT_FORMAT.equals(fileFormat)) {
-            return serializeAvroRecordToBytes(readAvroRecords(content, datumReader), topicName);
-        } else if (JSON_OUTPUT_FORMAT.equals(fileFormat)) {
-            return serializeJsonData(content);
-        } else {
-            return IOUtils.toByteArray(content);
-        }
     }
 
     private List<GenericRecord> readAvroRecords(final InputStream content, final DatumReader<GenericRecord> datumReader)
@@ -269,29 +283,38 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     }
 
     @Override
-    public S3SourceRecord next() {
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    public List<AivenS3SourceRecord> next() {
         if (!recordIterator.hasNext()) {
             nextS3Object();
         }
 
-        final Optional<ConsumerRecord<byte[], byte[]>> consumerRecord = recordIterator.next();
-        if (consumerRecord.isEmpty()) {
+        final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = recordIterator.next();
+        if (consumerRecordList.isEmpty()) {
             throw new NoSuchElementException();
         }
+        final List<AivenS3SourceRecord> aivenS3SourceRecordList = new ArrayList<>();
 
-        final ConsumerRecord<byte[], byte[]> currentRecord = consumerRecord.get();
+        AivenS3SourceRecord aivenS3SourceRecord;
+        Map<String, Object> offsetMap;
+        Map<String, Object> partitionMap;
+        for (final ConsumerRecord<byte[], byte[]> currentRecord : consumerRecordList) {
+            partitionMap = new HashMap<>();
+            partitionMap.put(BUCKET, bucketName);
+            partitionMap.put(TOPIC, currentRecord.topic());
+            partitionMap.put(PARTITION, currentRecord.partition());
 
-        final Map<String, Object> partitionMap = new HashMap<>();
-        partitionMap.put(BUCKET, bucketName);
-        partitionMap.put(TOPIC, currentRecord.topic());
-        partitionMap.put(PARTITION, currentRecord.partition());
+            // Create the offset map
+            offsetMap = new HashMap<>();
+            offsetMap.put(OFFSET_KEY, currentRecord.offset());
 
-        // Create the offset map
-        final Map<String, Object> offsetMap = new HashMap<>();
-        offsetMap.put(OFFSET_KEY, currentRecord.offset());
+            aivenS3SourceRecord = new AivenS3SourceRecord(partitionMap, offsetMap, currentRecord.topic(),
+                    currentRecord.partition(), currentRecord.key(), currentRecord.value());
 
-        return new S3SourceRecord(partitionMap, offsetMap, currentRecord.topic(), currentRecord.partition(),
-                currentRecord.key(), currentRecord.value());
+            aivenS3SourceRecordList.add(aivenS3SourceRecord);
+        }
+
+        return aivenS3SourceRecordList;
     }
 
     @Override

@@ -19,7 +19,7 @@ package io.aiven.kafka.connect.s3.source.utils;
 import java.util.Arrays;
 import java.util.Map;
 
-public class S3SourceRecord {
+public class AivenS3SourceRecord {
     private final Map<String, Object> partitionMap;
     private final Map<String, Object> offsetMap;
     private final String toTopic;
@@ -27,7 +27,7 @@ public class S3SourceRecord {
     private final byte[] recordKey;
     private final byte[] recordValue;
 
-    public S3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
+    public AivenS3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
             final String toTopic, final int topicPartition, final byte[] recordKey, final byte[] recordValue) {
         this.partitionMap = partitionMap;
         this.offsetMap = offsetMap;
