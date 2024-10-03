@@ -55,18 +55,6 @@ public class OffsetManager {
         final List<Map<String, Object>> partitionKeys = buildPartitionKeys(s3Bucket, partitions, topics);
         final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
                 .offsets(partitionKeys);
-        // Map<String, Object> partitionMapK = new HashMap<>();
-        // partitionMapK.put("bucket", s3Bucket);
-        // partitionMapK.put("topic", "basicTest");
-        // partitionMapK.put("partition", 0);
-        //
-        // Map<String, Object> partitionMapV = new HashMap<>();
-        // partitionMapV.put("offset", 123l);
-        //
-        // offsetMap = context.offsetStorageReader()
-        // .offsets(partitionKeys);
-        //
-        // offsetMap.put(partitionMapK, partitionMapV);
 
         this.offsets = offsetMap.entrySet()
                 .stream()

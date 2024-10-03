@@ -28,11 +28,11 @@
         <Bug pattern="EI_EXPOSE_REP2" />
     </Match>
     <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.utils.S3SourceRecord" />
+        <Class name="io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord" />
         <Bug pattern="EI_EXPOSE_REP2" />
     </Match>
     <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.utils.S3SourceRecord" />
+        <Class name="io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord" />
         <Bug pattern="EI_EXPOSE_REP" />
     </Match>
     <Match>
