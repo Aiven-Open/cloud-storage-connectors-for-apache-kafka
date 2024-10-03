@@ -35,6 +35,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -61,6 +62,9 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.commons.io.IOUtils;
+import org.apache.parquet.avro.AvroParquetWriter;
+import org.apache.parquet.hadoop.ParquetWriter;
+import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -229,27 +233,34 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Test
-    @Ignore
-    void parquetTest(final TestInfo testInfo) throws ExecutionException, InterruptedException {
+    void parquetTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put(OUTPUT_FORMAT, PARQUET_OUTPUT_FORMAT);
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+        connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
 
         final String partition = "00000";
         final String offset = "000000000123";
         final String fileName = topicName + "-" + partition + "-" + offset + ".txt";
 
         connectRunner.createConnector(connectorConfig);
-        try (InputStream resourceStream = Thread.currentThread()
-                .getContextClassLoader()
-                .getResourceAsStream("sample1.parquet")) {
-            s3Client.putObject(TEST_BUCKET_NAME, fileName, resourceStream, null);
-        } catch (final Exception e) { // NOPMD broad exception catched
+        final String tmpFilePath = "/tmp/users.parquet";
+        final String name1 = "Alice";
+        final String name2 = "Bob";
+        writeParquetFile(tmpFilePath, name1, name2);
+        final Path path = Paths.get(tmpFilePath);
+        try {
+            s3Client.putObject(TEST_BUCKET_NAME, fileName, Files.newInputStream(path), null);
+        } catch (final Exception e) { // NOPMD broad exception caught
             LOGGER.error("Error in reading file" + e.getMessage());
         }
-        // TODO
-        assertThat(1).isEqualTo(1);
+        Files.delete(path);
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 2, KAFKA_CONTAINER,
+                SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        assertThat(2).isEqualTo(records.size());
+        assertThat(records).extracting(record -> record.get("name").toString()).contains(name1).contains(name2);
     }
 
     @Test
@@ -298,6 +309,7 @@ final class IntegrationTest implements IntegrationBase {
         Files.write(testFilePath, testDataBytes);
 
         saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
+        Files.delete(testFilePath);
     }
 
     @Deprecated
@@ -339,6 +351,50 @@ final class IntegrationTest implements IntegrationBase {
             s3OutputStream.write(fileBytes);
         } catch (IOException e) {
             LOGGER.error(e.getMessage());
+        }
+    }
+
+    public static void writeParquetFile(final String tempFilePath, final String name1, final String name2)
+            throws IOException {
+        // Define the Avro schema
+        final String schemaString = "{" + "\"type\":\"record\"," + "\"name\":\"User\"," + "\"fields\":["
+                + "{\"name\":\"name\",\"type\":\"string\"}," + "{\"name\":\"age\",\"type\":\"int\"},"
+                + "{\"name\":\"email\",\"type\":\"string\"}" + "]" + "}";
+        final Schema schema = new Schema.Parser().parse(schemaString);
+
+        // Write the Parquet file
+        try {
+            writeParquetFile(tempFilePath, schema, name1, name2);
+        } catch (IOException e) {
+            throw new ConnectException("Error writing parquet file");
+        }
+    }
+
+    private static void writeParquetFile(final String outputPath, final Schema schema, final String name1,
+            final String name2) throws IOException {
+
+        // Create sample records
+        final GenericData.Record user1 = new GenericData.Record(schema);
+        user1.put("name", name1);
+        user1.put("age", 30);
+        user1.put("email", "alice@example.com");
+
+        final GenericData.Record user2 = new GenericData.Record(schema);
+        user2.put("name", name2);
+        user2.put("age", 25);
+        user2.put("email", "bob@example.com");
+
+        // Create a Parquet writer
+        final org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(outputPath); // NOPMD
+        try (ParquetWriter<GenericData.Record> writer = AvroParquetWriter.<GenericData.Record>builder(path)
+                .withSchema(schema)
+                .withCompressionCodec(CompressionCodecName.SNAPPY) // You can choose GZIP, LZO, etc.
+                .withRowGroupSize(100 * 1024) // Customize row group size
+                .withPageSize(1024 * 1024) // Customize page size
+                .build()) {
+            // Write records to the Parquet file
+            writer.write(user1);
+            writer.write(user2);
         }
     }
 
