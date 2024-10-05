@@ -35,7 +35,7 @@ import org.apache.parquet.io.DelegatingSeekableInputStream;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
 
-final class ParquetUtils {
+public final class ParquetUtils {
 
     public static final String TMP_DIR = "/tmp";
     public static final int BUFFER_SIZE = 8192;
@@ -43,7 +43,7 @@ final class ParquetUtils {
     private ParquetUtils() {
         /* hide constructor */ }
 
-    static List<GenericRecord> getRecords(final InputStream inputStream, final String topic) throws IOException {
+    public static List<GenericRecord> getRecords(final InputStream inputStream, final String topic) throws IOException {
         final Path tmpDir = Paths.get(TMP_DIR);
 
         final String timestamp = String.valueOf(Instant.now().toEpochMilli());
