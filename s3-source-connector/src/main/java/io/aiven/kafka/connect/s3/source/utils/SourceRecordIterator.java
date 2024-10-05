@@ -19,14 +19,7 @@ package io.aiven.kafka.connect.s3.source.utils;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.BUCKET;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.PARTITION;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.TOPIC;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.PARQUET_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -44,21 +37,13 @@ import java.util.regex.Pattern;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.output.OutputWriter;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.util.IOUtils;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.confluent.kafka.serializers.KafkaAvroSerializer;
-import org.apache.avro.file.DataFileReader;
-import org.apache.avro.file.SeekableByteArrayInput;
-import org.apache.avro.generic.GenericDatumReader;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.DatumReader;
-import org.apache.avro.io.DecoderFactory;
 
 /**
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
@@ -86,12 +71,15 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
 
     private final FileReader fileReader;
 
+    private final OutputWriter outputWriter;
+
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
-            final OffsetManager offsetManager) {
+            final OffsetManager offsetManager, final OutputWriter outputWriter) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
         this.s3Client = s3Client;
         this.bucketName = bucketName;
+        this.outputWriter = outputWriter;
         this.fileReader = new FileReader(s3SourceConfig, bucketName);
         try {
             final List<S3ObjectSummary> chunks = fileReader.fetchObjectSummaries(s3Client);
@@ -118,7 +106,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
 
     private Iterator<List<ConsumerRecord<byte[], byte[]>>> createIteratorForCurrentFile() throws IOException {
         final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
-        try (InputStream content = fileReader.getContent(s3Object)) {
+        try (InputStream inputStream = fileReader.getContent(s3Object)) {
             final Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
             String topic = null;
             int partition = 0;
@@ -133,38 +121,40 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
             final int finalPartition = partition;
             final long finalStartOffset = startOffset;
 
-            switch (s3SourceConfig.getString(OUTPUT_FORMAT)) {
-                case AVRO_OUTPUT_FORMAT :
-                    final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-                    DecoderFactory.get().binaryDecoder(content, null);
-                    return getObjectIterator(content, finalTopic, finalPartition, finalStartOffset, datumReader,
-                            AVRO_OUTPUT_FORMAT);
-                case PARQUET_OUTPUT_FORMAT :
-                    return getObjectIterator(content, finalTopic, finalPartition, finalStartOffset, null,
-                            PARQUET_OUTPUT_FORMAT);
-                case JSON_OUTPUT_FORMAT :
-                    return getObjectIterator(content, finalTopic, finalPartition, finalStartOffset, null,
-                            JSON_OUTPUT_FORMAT);
-                default :
-                    return getObjectIterator(content, finalTopic, finalPartition, finalStartOffset, null, "");
-            }
+            return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, outputWriter);
+
+            // switch (s3SourceConfig.getString(OUTPUT_FORMAT)) {
+            // case AVRO_OUTPUT_FORMAT :
+            //
+            // return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, datumReader,
+            // AVRO_OUTPUT_FORMAT);
+            // case PARQUET_OUTPUT_FORMAT :
+            // return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, null,
+            // PARQUET_OUTPUT_FORMAT);
+            // case JSON_OUTPUT_FORMAT :
+            // return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, null,
+            // JSON_OUTPUT_FORMAT);
+            // default :
+            // return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, null, "");
+            // }
         }
     }
 
     @SuppressWarnings("PMD.CognitiveComplexity")
-    private Iterator<List<ConsumerRecord<byte[], byte[]>>> getObjectIterator(final InputStream inputStream,
-            final String topic, final int topicPartition, final long startOffset,
-            final DatumReader<GenericRecord> datumReader, final String fileFormat) {
+    private Iterator<List<ConsumerRecord<byte[], byte[]>>> getObjectIterator(final InputStream valueInputStream,
+            final String topic, final int topicPartition, final long startOffset, final OutputWriter outputWriter) {
         return new Iterator<>() {
             private Map<Map<String, Object>, Long> currentOffsets = new HashMap<>();
             private List<ConsumerRecord<byte[], byte[]>> nextRecord = readNext();
 
             private List<ConsumerRecord<byte[], byte[]>> readNext() {
                 try {
-                    final Optional<byte[]> key = Optional.ofNullable(currentKey)
+                    final Optional<byte[]> optionalKeyBytes = Optional.ofNullable(currentKey)
                             .map(k -> k.getBytes(StandardCharsets.UTF_8));
                     final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
-                    handleValueData(key, consumerRecordList);
+                    // handleValueData(optionalKeyBytes, consumerRecordList);
+                    outputWriter.handleValueData(optionalKeyBytes, valueInputStream, topic, consumerRecordList,
+                            s3SourceConfig, topicPartition, startOffset, offsetManager, currentOffsets);
 
                     return consumerRecordList;
 
@@ -174,57 +164,61 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                 }
             }
 
-            private void handleValueData(final Optional<byte[]> key,
-                    final List<ConsumerRecord<byte[], byte[]>> consumerRecordList) throws IOException {
-                switch (fileFormat) {
-                    case PARQUET_OUTPUT_FORMAT : {
-                        final List<GenericRecord> records = ParquetUtils.getRecords(inputStream, topic);
-                        for (final GenericRecord record : records) {
-                            final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record),
-                                    topic);
-                            consumerRecordList.add(getConsumerRecord(key, valueBytes));
-                        }
-                        break;
-                    }
-                    case AVRO_OUTPUT_FORMAT : {
-                        final List<GenericRecord> records = readAvroRecords(inputStream, datumReader);
-                        for (final GenericRecord record : records) {
-                            final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record),
-                                    topic);
-                            consumerRecordList.add(getConsumerRecord(key, valueBytes));
-                        }
-                        break;
-                    }
-                    case JSON_OUTPUT_FORMAT :
-                        consumerRecordList.add(getConsumerRecord(key, serializeJsonData(inputStream)));
-                        break;
-                    default :
-                        consumerRecordList.add(getConsumerRecord(key, IOUtils.toByteArray(inputStream)));
-                        break;
-                }
-            }
+            // private void handleValueData(final Optional<byte[]> key,
+            // final List<ConsumerRecord<byte[], byte[]>> consumerRecordList) throws IOException {
+            //
+            // switch (fileFormat) {
+            // case PARQUET_OUTPUT_FORMAT : {
+            // final List<GenericRecord> records = ParquetUtils.getRecords(valueInputStream, topic);
+            // for (final GenericRecord record : records) {
+            // final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record),
+            // topic);
+            // consumerRecordList.add(getConsumerRecord(key, valueBytes));
+            // }
+            // break;
+            // }
+            // case AVRO_OUTPUT_FORMAT : {
+            // final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+            // DecoderFactory.get().binaryDecoder(valueInputStream, null);
+            // final List<GenericRecord> records = readAvroRecords(valueInputStream, datumReader);
+            // for (final GenericRecord record : records) {
+            // final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record),
+            // topic);
+            // consumerRecordList.add(getConsumerRecord(key, valueBytes));
+            // }
+            // break;
+            // }
+            // case JSON_OUTPUT_FORMAT :
+            // consumerRecordList.add(getConsumerRecord(key, serializeJsonData(valueInputStream)));
+            // break;
+            // default :
+            // consumerRecordList.add(getConsumerRecord(key, IOUtils.toByteArray(valueInputStream)));
+            // break;
+            // }
+            // }
 
-            private ConsumerRecord<byte[], byte[]> getConsumerRecord(final Optional<byte[]> key, final byte[] value) {
-                final Map<String, Object> partitionMap = new HashMap<>();
-                partitionMap.put(BUCKET, bucketName);
-                partitionMap.put(TOPIC, topic);
-                partitionMap.put(PARTITION, topicPartition);
-
-                long currentOffset;
-
-                if (offsetManager.getOffsets().containsKey(partitionMap)) {
-                    currentOffset = offsetManager.getIncrementedOffsetForPartition(partitionMap);
-                } else {
-                    currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
-                }
-
-                final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(topic, topicPartition, currentOffset,
-                        key.orElse(null), value);
-
-                offsetManager.updateOffset(partitionMap, currentOffset);
-
-                return record;
-            }
+            // private ConsumerRecord<byte[], byte[]> getConsumerRecord(final Optional<byte[]> key, final byte[] value)
+            // {
+            // final Map<String, Object> partitionMap = new HashMap<>();
+            // partitionMap.put(BUCKET, bucketName);
+            // partitionMap.put(TOPIC, topic);
+            // partitionMap.put(PARTITION, topicPartition);
+            //
+            // long currentOffset;
+            //
+            // if (offsetManager.getOffsets().containsKey(partitionMap)) {
+            // currentOffset = offsetManager.getIncrementedOffsetForPartition(partitionMap);
+            // } else {
+            // currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
+            // }
+            //
+            // final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(topic, topicPartition, currentOffset,
+            // key.orElse(null), value);
+            //
+            // offsetManager.updateOffset(partitionMap, currentOffset);
+            //
+            // return record;
+            // }
 
             @Override
             public boolean hasNext() {
@@ -243,39 +237,40 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
         };
     }
 
-    private List<GenericRecord> readAvroRecords(final InputStream content, final DatumReader<GenericRecord> datumReader)
-            throws IOException {
-        final List<GenericRecord> records = new ArrayList<>();
-        try (SeekableByteArrayInput sin = new SeekableByteArrayInput(IOUtils.toByteArray(content))) {
-            try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
-                reader.forEach(records::add);
-            }
-        }
-        return records;
-    }
+    // private List<GenericRecord> readAvroRecords(final InputStream content, final DatumReader<GenericRecord>
+    // datumReader)
+    // throws IOException {
+    // final List<GenericRecord> records = new ArrayList<>();
+    // try (SeekableByteArrayInput sin = new SeekableByteArrayInput(IOUtils.toByteArray(content))) {
+    // try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
+    // reader.forEach(records::add);
+    // }
+    // }
+    // return records;
+    // }
 
-    private byte[] serializeJsonData(final InputStream inputStream) throws IOException {
-        final JsonNode jsonNode = objectMapper.readTree(inputStream);
-        return objectMapper.writeValueAsBytes(jsonNode);
-    }
+    // private byte[] serializeJsonData(final InputStream inputStream) throws IOException {
+    // final JsonNode jsonNode = objectMapper.readTree(inputStream);
+    // return objectMapper.writeValueAsBytes(jsonNode);
+    // }
 
-    @Deprecated
-    private byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String topic)
-            throws IOException {
-        final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
-                s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
-
-        try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
-                .newInstance(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            avroSerializer.configure(config, false);
-            for (final GenericRecord avroRecord : avroRecords) {
-                out.write(avroSerializer.serialize(topic, avroRecord));
-            }
-            return out.toByteArray();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new IllegalStateException("Failed to initialize serializer", e);
-        }
-    }
+    // @Deprecated
+    // private byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String topic)
+    // throws IOException {
+    // final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
+    // s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
+    //
+    // try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
+    // .newInstance(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+    // avroSerializer.configure(config, false);
+    // for (final GenericRecord avroRecord : avroRecords) {
+    // out.write(avroSerializer.serialize(topic, avroRecord));
+    // }
+    // return out.toByteArray();
+    // } catch (InstantiationException | IllegalAccessException e) {
+    // throw new IllegalStateException("Failed to initialize serializer", e);
+    // }
+    // }
 
     @Override
     public boolean hasNext() {
