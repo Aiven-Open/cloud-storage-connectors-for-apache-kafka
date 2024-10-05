@@ -80,13 +80,4 @@ public final class RecordProcessor {
 
         return sourceRecordList;
     }
-
-    // private static void configureValueConverter(final String outputFormat, final Map<String, String> config,
-    // final S3SourceConfig s3SourceConfig) {
-    // if (AVRO_OUTPUT_FORMAT.equals(outputFormat) || PARQUET_OUTPUT_FORMAT.equals(outputFormat)) {
-    // config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
-    // } else if (JSON_OUTPUT_FORMAT.equals(outputFormat)) {
-    // config.put(SCHEMAS_ENABLE, "false");
-    // }
-    // }
 }
