@@ -19,9 +19,13 @@ package io.aiven.kafka.connect.s3.source.output;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.BUCKET;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.PARTITION;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.TOPIC;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +35,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
+
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import org.apache.avro.generic.GenericRecord;
 
 public interface OutputWriter {
 
@@ -62,5 +69,23 @@ public interface OutputWriter {
         offsetManager.updateOffset(partitionMap, currentOffset);
 
         return record;
+    }
+
+    @Deprecated
+    default byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String topic,
+            final S3SourceConfig s3SourceConfig) throws IOException {
+        final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
+                s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
+
+        try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
+                .newInstance(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            avroSerializer.configure(config, false);
+            for (final GenericRecord avroRecord : avroRecords) {
+                out.write(avroSerializer.serialize(topic, avroRecord));
+            }
+            return out.toByteArray();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new IllegalStateException("Failed to initialize serializer", e);
+        }
     }
 }

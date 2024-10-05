@@ -108,13 +108,15 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
         final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
         try (InputStream inputStream = fileReader.getContent(s3Object)) {
             final Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
-            String topic = null;
+            String topic;
             int partition = 0;
             long startOffset = 0L;
             if (matcher.find()) {
                 topic = matcher.group(PATTERN_TOPIC_KEY);
                 partition = Integer.parseInt(matcher.group(PATTERN_PARTITION_KEY));
                 startOffset = Long.parseLong(matcher.group(OFFSET_KEY));
+            } else {
+                topic = offsetManager.getFirstConfiguredTopic(s3SourceConfig);
             }
 
             final String finalTopic = topic;
@@ -122,21 +124,6 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
             final long finalStartOffset = startOffset;
 
             return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, outputWriter);
-
-            // switch (s3SourceConfig.getString(OUTPUT_FORMAT)) {
-            // case AVRO_OUTPUT_FORMAT :
-            //
-            // return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, datumReader,
-            // AVRO_OUTPUT_FORMAT);
-            // case PARQUET_OUTPUT_FORMAT :
-            // return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, null,
-            // PARQUET_OUTPUT_FORMAT);
-            // case JSON_OUTPUT_FORMAT :
-            // return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, null,
-            // JSON_OUTPUT_FORMAT);
-            // default :
-            // return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, null, "");
-            // }
         }
     }
 
@@ -152,7 +139,6 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                     final Optional<byte[]> optionalKeyBytes = Optional.ofNullable(currentKey)
                             .map(k -> k.getBytes(StandardCharsets.UTF_8));
                     final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
-                    // handleValueData(optionalKeyBytes, consumerRecordList);
                     outputWriter.handleValueData(optionalKeyBytes, valueInputStream, topic, consumerRecordList,
                             s3SourceConfig, topicPartition, startOffset, offsetManager, currentOffsets);
 
@@ -163,62 +149,6 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                             "Connect converters could not be instantiated.", e);
                 }
             }
-
-            // private void handleValueData(final Optional<byte[]> key,
-            // final List<ConsumerRecord<byte[], byte[]>> consumerRecordList) throws IOException {
-            //
-            // switch (fileFormat) {
-            // case PARQUET_OUTPUT_FORMAT : {
-            // final List<GenericRecord> records = ParquetUtils.getRecords(valueInputStream, topic);
-            // for (final GenericRecord record : records) {
-            // final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record),
-            // topic);
-            // consumerRecordList.add(getConsumerRecord(key, valueBytes));
-            // }
-            // break;
-            // }
-            // case AVRO_OUTPUT_FORMAT : {
-            // final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-            // DecoderFactory.get().binaryDecoder(valueInputStream, null);
-            // final List<GenericRecord> records = readAvroRecords(valueInputStream, datumReader);
-            // for (final GenericRecord record : records) {
-            // final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record),
-            // topic);
-            // consumerRecordList.add(getConsumerRecord(key, valueBytes));
-            // }
-            // break;
-            // }
-            // case JSON_OUTPUT_FORMAT :
-            // consumerRecordList.add(getConsumerRecord(key, serializeJsonData(valueInputStream)));
-            // break;
-            // default :
-            // consumerRecordList.add(getConsumerRecord(key, IOUtils.toByteArray(valueInputStream)));
-            // break;
-            // }
-            // }
-
-            // private ConsumerRecord<byte[], byte[]> getConsumerRecord(final Optional<byte[]> key, final byte[] value)
-            // {
-            // final Map<String, Object> partitionMap = new HashMap<>();
-            // partitionMap.put(BUCKET, bucketName);
-            // partitionMap.put(TOPIC, topic);
-            // partitionMap.put(PARTITION, topicPartition);
-            //
-            // long currentOffset;
-            //
-            // if (offsetManager.getOffsets().containsKey(partitionMap)) {
-            // currentOffset = offsetManager.getIncrementedOffsetForPartition(partitionMap);
-            // } else {
-            // currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
-            // }
-            //
-            // final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(topic, topicPartition, currentOffset,
-            // key.orElse(null), value);
-            //
-            // offsetManager.updateOffset(partitionMap, currentOffset);
-            //
-            // return record;
-            // }
 
             @Override
             public boolean hasNext() {
@@ -236,41 +166,6 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
             }
         };
     }
-
-    // private List<GenericRecord> readAvroRecords(final InputStream content, final DatumReader<GenericRecord>
-    // datumReader)
-    // throws IOException {
-    // final List<GenericRecord> records = new ArrayList<>();
-    // try (SeekableByteArrayInput sin = new SeekableByteArrayInput(IOUtils.toByteArray(content))) {
-    // try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
-    // reader.forEach(records::add);
-    // }
-    // }
-    // return records;
-    // }
-
-    // private byte[] serializeJsonData(final InputStream inputStream) throws IOException {
-    // final JsonNode jsonNode = objectMapper.readTree(inputStream);
-    // return objectMapper.writeValueAsBytes(jsonNode);
-    // }
-
-    // @Deprecated
-    // private byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String topic)
-    // throws IOException {
-    // final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
-    // s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
-    //
-    // try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
-    // .newInstance(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-    // avroSerializer.configure(config, false);
-    // for (final GenericRecord avroRecord : avroRecords) {
-    // out.write(avroSerializer.serialize(topic, avroRecord));
-    // }
-    // return out.toByteArray();
-    // } catch (InstantiationException | IllegalAccessException e) {
-    // throw new IllegalStateException("Failed to initialize serializer", e);
-    // }
-    // }
 
     @Override
     public boolean hasNext() {
