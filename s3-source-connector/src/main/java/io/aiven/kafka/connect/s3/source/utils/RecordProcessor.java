@@ -16,11 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.PARQUET_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -34,6 +29,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.output.OutputWriter;
 
 public final class RecordProcessor {
 
@@ -45,7 +41,7 @@ public final class RecordProcessor {
     public static List<SourceRecord> processRecords(final Iterator<List<AivenS3SourceRecord>> sourceRecordIterator,
             final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
             final Optional<Converter> keyConverter, final Converter valueConverter,
-            final AtomicBoolean connectorStopped) {
+            final AtomicBoolean connectorStopped, final OutputWriter outputWriter) {
 
         final Map<String, String> conversionConfig = new HashMap<>();
         final int maxPollRecords = s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS);
@@ -53,7 +49,7 @@ public final class RecordProcessor {
         for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
             final List<AivenS3SourceRecord> recordList = sourceRecordIterator.next();
             final List<SourceRecord> sourceRecords = createSourceRecords(recordList, s3SourceConfig, keyConverter,
-                    valueConverter, conversionConfig);
+                    valueConverter, conversionConfig, outputWriter);
             results.addAll(sourceRecords);
         }
 
@@ -63,7 +59,7 @@ public final class RecordProcessor {
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private static List<SourceRecord> createSourceRecords(final List<AivenS3SourceRecord> aivenS3SourceRecordList,
             final S3SourceConfig s3SourceConfig, final Optional<Converter> keyConverter, final Converter valueConverter,
-            final Map<String, String> conversionConfig) {
+            final Map<String, String> conversionConfig, final OutputWriter outputWriter) {
 
         final List<SourceRecord> sourceRecordList = new ArrayList<>();
         for (final AivenS3SourceRecord aivenS3SourceRecord : aivenS3SourceRecordList) {
@@ -71,8 +67,7 @@ public final class RecordProcessor {
             final Optional<SchemaAndValue> keyData = keyConverter
                     .map(c -> c.toConnectData(topic, aivenS3SourceRecord.key()));
 
-            configureValueConverter(s3SourceConfig.getString(S3SourceConfig.OUTPUT_FORMAT), conversionConfig,
-                    s3SourceConfig);
+            outputWriter.configureValueConverter(conversionConfig, s3SourceConfig);
             valueConverter.configure(conversionConfig, false);
             final SchemaAndValue value = valueConverter.toConnectData(topic, aivenS3SourceRecord.value());
 
@@ -86,12 +81,12 @@ public final class RecordProcessor {
         return sourceRecordList;
     }
 
-    private static void configureValueConverter(final String outputFormat, final Map<String, String> config,
-            final S3SourceConfig s3SourceConfig) {
-        if (AVRO_OUTPUT_FORMAT.equals(outputFormat) || PARQUET_OUTPUT_FORMAT.equals(outputFormat)) {
-            config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
-        } else if (JSON_OUTPUT_FORMAT.equals(outputFormat)) {
-            config.put(SCHEMAS_ENABLE, "false");
-        }
-    }
+    // private static void configureValueConverter(final String outputFormat, final Map<String, String> config,
+    // final S3SourceConfig s3SourceConfig) {
+    // if (AVRO_OUTPUT_FORMAT.equals(outputFormat) || PARQUET_OUTPUT_FORMAT.equals(outputFormat)) {
+    // config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
+    // } else if (JSON_OUTPUT_FORMAT.equals(outputFormat)) {
+    // config.put(SCHEMAS_ENABLE, "false");
+    // }
+    // }
 }
