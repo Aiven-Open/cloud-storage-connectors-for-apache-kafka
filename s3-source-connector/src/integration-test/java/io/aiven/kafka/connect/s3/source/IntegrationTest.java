@@ -22,6 +22,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCK
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.BYTE_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.PARQUET_OUTPUT_FORMAT;
@@ -154,6 +155,7 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
         connectRunner.createConnector(connectorConfig);
+        connectorConfig.put(OUTPUT_FORMAT, BYTE_OUTPUT_FORMAT);
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
@@ -247,8 +249,8 @@ final class IntegrationTest implements IntegrationBase {
 
         connectRunner.createConnector(connectorConfig);
         final String tmpFilePath = "/tmp/users.parquet";
-        final String name1 = "Alice";
-        final String name2 = "Bob";
+        final String name1 = "testuser1";
+        final String name2 = "testuser2";
         writeParquetFile(tmpFilePath, name1, name2);
         final Path path = Paths.get(tmpFilePath);
         try {
@@ -345,7 +347,7 @@ final class IntegrationTest implements IntegrationBase {
                 s3Client);
                 InputStream resourceStream = Thread.currentThread()
                         .getContextClassLoader()
-                        .getResourceAsStream(S3_FILE_NAME);) {
+                        .getResourceAsStream(S3_FILE_NAME)) {
             assert resourceStream != null;
             final byte[] fileBytes = IOUtils.toByteArray(resourceStream);
             s3OutputStream.write(fileBytes);
@@ -377,12 +379,12 @@ final class IntegrationTest implements IntegrationBase {
         final GenericData.Record user1 = new GenericData.Record(schema);
         user1.put("name", name1);
         user1.put("age", 30);
-        user1.put("email", "alice@example.com");
+        user1.put("email", name1 + "@test");
 
         final GenericData.Record user2 = new GenericData.Record(schema);
         user2.put("name", name2);
         user2.put("age", 25);
-        user2.put("email", "bob@example.com");
+        user2.put("email", name2 + "@test");
 
         // Create a Parquet writer
         final org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(outputPath); // NOPMD
