@@ -22,6 +22,7 @@ import static io.aiven.kafka.connect.s3.source.S3SourceTask.TOPIC;
 import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.OFFSET_KEY;
 import static java.util.stream.Collectors.toMap;
 
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -110,6 +111,13 @@ public class OffsetManager {
     private static Set<String> parseTopics(final S3SourceConfig s3SourceConfig) {
         final String topicString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPICS);
         return Arrays.stream(topicString.split(",")).collect(Collectors.toSet());
+    }
+
+    String getFirstConfiguredTopic(final S3SourceConfig s3SourceConfig) throws ConnectException {
+        final String topicString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPICS);
+        return Arrays.stream(topicString.split(","))
+                .findFirst()
+                .orElseThrow(() -> new ConnectException("Topic could not be derived"));
     }
 
     /**
