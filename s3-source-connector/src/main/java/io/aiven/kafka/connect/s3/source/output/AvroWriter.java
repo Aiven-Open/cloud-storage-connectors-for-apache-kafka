@@ -17,9 +17,7 @@
 package io.aiven.kafka.connect.s3.source.output;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -34,7 +32,6 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
 import com.amazonaws.util.IOUtils;
-import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.generic.GenericDatumReader;
@@ -64,7 +61,8 @@ public class AvroWriter implements OutputWriter {
         DecoderFactory.get().binaryDecoder(inputStream, null);
         final List<GenericRecord> records = readAvroRecords(inputStream, datumReader);
         for (final GenericRecord record : records) {
-            final byte[] valueBytes = serializeRecordToBytes(Collections.singletonList(record), topic, s3SourceConfig);
+            final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record), topic,
+                    s3SourceConfig);
             consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, this.bucketName, topic,
                     topicPartition, offsetManager, currentOffsets, startOffset));
         }
@@ -79,23 +77,5 @@ public class AvroWriter implements OutputWriter {
             }
         }
         return records;
-    }
-
-    @Deprecated
-    private byte[] serializeRecordToBytes(final List<GenericRecord> avroRecords, final String topic,
-            final S3SourceConfig s3SourceConfig) throws IOException {
-        final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
-                s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
-
-        try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
-                .newInstance(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            avroSerializer.configure(config, false);
-            for (final GenericRecord avroRecord : avroRecords) {
-                out.write(avroSerializer.serialize(topic, avroRecord));
-            }
-            return out.toByteArray();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new IllegalStateException("Failed to initialize serializer", e);
-        }
     }
 }
