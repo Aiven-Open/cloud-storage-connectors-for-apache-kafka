@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,6 +34,8 @@ import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.output.OutputWriter;
+import io.aiven.kafka.connect.s3.source.output.OutputWriterFactory;
 import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
@@ -66,6 +69,10 @@ public class S3SourceTask extends SourceTask {
     private Optional<Converter> keyConverter;
     private Converter valueConverter;
 
+    private OutputWriter outputWriter;
+
+    private String s3Bucket;
+
     private final AtomicBoolean connectorStopped = new AtomicBoolean();
     private final S3ClientFactory s3ClientFactory = new S3ClientFactory();
 
@@ -85,6 +92,8 @@ public class S3SourceTask extends SourceTask {
         s3SourceConfig = new S3SourceConfig(props);
         initializeConverters();
         initializeS3Client();
+        this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
+        this.outputWriter = OutputWriterFactory.getWriter(s3SourceConfig.getString(OUTPUT_FORMAT), this.s3Bucket);
         prepareReaderFromOffsetStorageReader();
     }
 
@@ -105,9 +114,8 @@ public class S3SourceTask extends SourceTask {
 
     private void prepareReaderFromOffsetStorageReader() {
         final OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
-
-        final String s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
-        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, offsetManager);
+        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
+                this.outputWriter);
     }
 
     @Override
@@ -134,7 +142,7 @@ public class S3SourceTask extends SourceTask {
             return results;
         }
         return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
-                valueConverter, connectorStopped);
+                valueConverter, connectorStopped, this.outputWriter);
     }
 
     private void waitForObjects() throws InterruptedException {

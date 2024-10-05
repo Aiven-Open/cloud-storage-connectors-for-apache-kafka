@@ -130,6 +130,8 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static final String JSON_OUTPUT_FORMAT = "json";
 
+    public static final String BYTE_OUTPUT_FORMAT = "bytes";
+
     public S3SourceConfig(final Map<String, String> properties) {
         super(configDef(), preprocessProperties(properties));
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
@@ -184,7 +186,7 @@ final public class S3SourceConfig extends AbstractConfig {
         configDef.define(SCHEMA_REGISTRY_URL, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_AWS, srCounter++, ConfigDef.Width.NONE,
                 SCHEMA_REGISTRY_URL);
-        configDef.define(OUTPUT_FORMAT, ConfigDef.Type.STRING, "bytearray", new ConfigDef.NonEmptyString(),
+        configDef.define(OUTPUT_FORMAT, ConfigDef.Type.STRING, BYTE_OUTPUT_FORMAT, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "Output format avro/bytearray", GROUP_AWS, srCounter++, // NOPMD
                 ConfigDef.Width.NONE, OUTPUT_FORMAT);
 
