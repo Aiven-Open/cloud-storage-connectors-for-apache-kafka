@@ -16,25 +16,21 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.BYTE_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.PARQUET_OUTPUT_FORMAT;
-
 public final class OutputWriterFactory {
 
     private OutputWriterFactory() {
-        throw new UnsupportedOperationException("Class cannot be instantiated");
+        // hidden
     }
     public static OutputWriter getWriter(final String outputFormat, final String bucket) {
-        switch (outputFormat) {
-            case AVRO_OUTPUT_FORMAT :
+        final OutputFormat outputFormatEnum = OutputFormat.valueOfFormat(outputFormat);
+        switch (outputFormatEnum) {
+            case AVRO :
                 return new AvroWriter(bucket);
-            case PARQUET_OUTPUT_FORMAT :
+            case PARQUET :
                 return new ParquetWriter(bucket);
-            case JSON_OUTPUT_FORMAT :
+            case JSON :
                 return new JsonWriter(bucket);
-            case BYTE_OUTPUT_FORMAT :
+            case BYTES :
                 return new ByteArrayWriter(bucket);
             default :
                 throw new IllegalArgumentException("Unknown output format: " + outputFormat);

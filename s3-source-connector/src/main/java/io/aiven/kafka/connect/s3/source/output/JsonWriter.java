@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
-import static io.aiven.kafka.connect.s3.source.utils.RecordProcessor.SCHEMAS_ENABLE;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMAS_ENABLE;
 
 import java.io.IOException;
 import java.io.InputStream;

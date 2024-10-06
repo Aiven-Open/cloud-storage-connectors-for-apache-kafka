@@ -38,15 +38,6 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 public class OffsetManager {
     private final Map<Map<String, Object>, Map<String, Object>> offsets;
 
-    /**
-     * Constructor for OffsetManager. Initializes with the task context and S3 source configuration, and retrieves
-     * offsets.
-     *
-     * @param context
-     *            SourceTaskContext that provides access to the offset storage
-     * @param s3SourceConfig
-     *            S3SourceConfig that contains the source configuration details
-     */
     public OffsetManager(final SourceTaskContext context, final S3SourceConfig s3SourceConfig) {
         final String s3Bucket = s3SourceConfig.getString(S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG);
         final Set<Integer> partitions = parsePartitions(s3SourceConfig);
@@ -63,11 +54,6 @@ public class OffsetManager {
                 .collect(toMap(entry -> new HashMap<>(entry.getKey()), entry -> new HashMap<>(entry.getValue())));
     }
 
-    /**
-     * Fetches all offsets for the current partitions and topics from the context.
-     *
-     * @return Map of partition keys and their corresponding offsets
-     */
     public Map<Map<String, Object>, Map<String, Object>> getOffsets() {
         return offsets;
     }
@@ -76,12 +62,6 @@ public class OffsetManager {
         return (long) (offsets.get(partitionMap)).get(OFFSET_KEY) + 1L;
     }
 
-    /**
-     * Updates the offset for a specific partition.
-     *
-     * @param partitionMap
-     *            The partition map.
-     */
     public void updateOffset(final Map<String, Object> partitionMap, final long currentOffset) {
         final Map<String, Object> newOffset = new HashMap<>();
         // increment offset id by 1
@@ -89,25 +69,11 @@ public class OffsetManager {
         offsets.put(partitionMap, newOffset);
     }
 
-    /**
-     * Helper method to parse partitions from the configuration.
-     *
-     * @param s3SourceConfig
-     *            The S3 source configuration.
-     * @return Set of partitions.
-     */
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {
         final String partitionString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPIC_PARTITIONS);
         return Arrays.stream(partitionString.split(",")).map(Integer::parseInt).collect(Collectors.toSet());
     }
 
-    /**
-     * Helper method to parse topics from the configuration.
-     *
-     * @param s3SourceConfig
-     *            The S3 source configuration.
-     * @return Set of topics.
-     */
     private static Set<String> parseTopics(final S3SourceConfig s3SourceConfig) {
         final String topicString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPICS);
         return Arrays.stream(topicString.split(",")).collect(Collectors.toSet());
@@ -120,17 +86,6 @@ public class OffsetManager {
                 .orElseThrow(() -> new ConnectException("Topic could not be derived"));
     }
 
-    /**
-     * Builds partition keys to be used for offset retrieval.
-     *
-     * @param bucket
-     *            The S3 bucket name.
-     * @param partitions
-     *            The set of partitions.
-     * @param topics
-     *            The set of topics.
-     * @return List of partition keys (maps) used for fetching offsets.
-     */
     private static List<Map<String, Object>> buildPartitionKeys(final String bucket, final Set<Integer> partitions,
             final Set<String> topics) {
         final List<Map<String, Object>> partitionKeys = new ArrayList<>();
