@@ -16,16 +16,12 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AVRO_OUTPUT_FORMAT;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.BYTE_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.JSON_OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.PARQUET_OUTPUT_FORMAT;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
@@ -50,6 +46,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.admin.AdminClient;
 
+import io.aiven.kafka.connect.s3.source.output.OutputFormat;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
 
@@ -150,19 +147,19 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Test
-    void basicTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+    void bytesTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
         connectRunner.createConnector(connectorConfig);
-        connectorConfig.put(OUTPUT_FORMAT, BYTE_OUTPUT_FORMAT);
+        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.BYTES.getFormat());
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
         // write 2 objects to s3
-        writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), 1);
-        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), 2);
+        writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001");
+        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00002");
 
         final List<String> objects = testBucketAccessor.listObjects();
         assertThat(objects.size()).isEqualTo(2);
@@ -178,14 +175,13 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Test
-    void multiPartUploadTest(final TestInfo testInfo) throws ExecutionException, InterruptedException {
+    void multiPartUploadBytesTest(final TestInfo testInfo) throws ExecutionException, InterruptedException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
         connectRunner.createConnector(connectorConfig);
         final String partition = "00001";
-        final String offset = "000000000121";
-        final String key = topicName + "-" + partition + "-" + offset + ".txt";
+        final String key = topicName + "-" + partition + ".txt";
         multipartUpload(TEST_BUCKET_NAME, key);
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
@@ -196,7 +192,7 @@ final class IntegrationTest implements IntegrationBase {
     void avroTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT, AVRO_OUTPUT_FORMAT);
+        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.AVRO.getFormat());
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
@@ -214,8 +210,8 @@ final class IntegrationTest implements IntegrationBase {
         final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1);
         final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2);
 
-        writeToS3(topicName, outputStream1.toByteArray(), 1);
-        writeToS3(topicName, outputStream2.toByteArray(), 2);
+        writeToS3(topicName, outputStream1.toByteArray(), "00001");
+        writeToS3(topicName, outputStream2.toByteArray(), "00002");
 
         final List<String> objects = testBucketAccessor.listObjects();
         assertThat(objects.size()).isEqualTo(2);
@@ -238,7 +234,7 @@ final class IntegrationTest implements IntegrationBase {
     void parquetTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT, PARQUET_OUTPUT_FORMAT);
+        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.PARQUET.getFormat());
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
@@ -269,13 +265,13 @@ final class IntegrationTest implements IntegrationBase {
     void jsonTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT, JSON_OUTPUT_FORMAT);
+        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.JSON.getFormat());
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
 
         connectRunner.createConnector(connectorConfig);
         final String testMessage = "This is a test";
         final String jsonContent = "{\"message\": \"" + testMessage + "\", \"id\":\"1\"}";
-        writeToS3(topicName, jsonContent.getBytes(StandardCharsets.UTF_8), 7);
+        writeToS3(topicName, jsonContent.getBytes(StandardCharsets.UTF_8), "00001");
 
         // Poll Json messages from the Kafka topic and deserialize them
         final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 1, KAFKA_CONTAINER);
@@ -302,11 +298,11 @@ final class IntegrationTest implements IntegrationBase {
         return outputStream;
     }
 
-    private static void writeToS3(final String topicName, final byte[] testDataBytes, final int offsetId)
+    private static void writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId)
             throws IOException {
-        final String partition = "00000";
-        final String offset = "00000000012" + offsetId;
-        final String fileName = topicName + "-" + partition + "-" + offset + ".txt";
+        // final String partition = "00000";
+        // final String offset = "00000000012" + offsetId;
+        final String fileName = topicName + "-" + partitionId + ".txt";
         final Path testFilePath = Paths.get("/tmp/" + fileName);
         Files.write(testFilePath, testDataBytes);
 
