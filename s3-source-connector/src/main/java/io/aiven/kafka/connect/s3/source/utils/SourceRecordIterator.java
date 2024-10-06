@@ -43,23 +43,21 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
  * Parquet).
  */
-@SuppressWarnings("PMD.ExcessiveImports")
 public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRecord>> {
-
-    public static final Pattern DEFAULT_PATTERN = Pattern
-            .compile("(?<topic>[^/]+?)-" + "(?<partition>\\d{5})-" + "(?<offset>\\d{12})" + "\\.(?<extension>[^.]+)$");
-    public static final String PATTERN_TOPIC_KEY = "topic";
-    public static final String PATTERN_PARTITION_KEY = "partition";
+    public static final String PATTERN_TOPIC_KEY = "topicName";
+    public static final String PATTERN_PARTITION_KEY = "partitionId";
     public static final String OFFSET_KEY = "offset";
-    private String currentKey;
 
-    final ObjectMapper objectMapper = new ObjectMapper();
+    public static final Pattern FILE_DEFAULT_PATTERN = Pattern
+            .compile("(?<topicName>[^/]+?)-" + "(?<partitionId>\\d{5})" + "\\.(?<fileExtension>[^.]+)$"); // ex :
+                                                                                                          // topic-00001.txt
+    private String currentObjectKey;
+
     private Iterator<S3ObjectSummary> nextFileIterator;
     private Iterator<List<ConsumerRecord<byte[], byte[]>>> recordIterator = Collections.emptyIterator();
 
@@ -97,7 +95,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
 
         try {
             final S3ObjectSummary file = nextFileIterator.next();
-            currentKey = file.getKey();
+            currentObjectKey = file.getKey();
             recordIterator = createIteratorForCurrentFile();
         } catch (IOException e) {
             throw new AmazonClientException(e);
@@ -105,25 +103,23 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
     }
 
     private Iterator<List<ConsumerRecord<byte[], byte[]>>> createIteratorForCurrentFile() throws IOException {
-        final S3Object s3Object = s3Client.getObject(bucketName, currentKey);
+        final S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);
         try (InputStream inputStream = fileReader.getContent(s3Object)) {
-            final Matcher matcher = DEFAULT_PATTERN.matcher(currentKey);
-            String topic;
-            int partition = 0;
-            long startOffset = 0L;
-            if (matcher.find()) {
-                topic = matcher.group(PATTERN_TOPIC_KEY);
-                partition = Integer.parseInt(matcher.group(PATTERN_PARTITION_KEY));
-                startOffset = Long.parseLong(matcher.group(OFFSET_KEY));
+            String topicName;
+            int defaultPartitionId = 0;
+            final long defaultStartOffsetId = 0L;
+
+            final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(currentObjectKey);
+            if (fileMatcher.find()) {
+                topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
+                defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
             } else {
-                topic = offsetManager.getFirstConfiguredTopic(s3SourceConfig);
+                topicName = offsetManager.getFirstConfiguredTopic(s3SourceConfig);
             }
 
-            final String finalTopic = topic;
-            final int finalPartition = partition;
-            final long finalStartOffset = startOffset;
+            final String finalTopic = topicName;
 
-            return getObjectIterator(inputStream, finalTopic, finalPartition, finalStartOffset, outputWriter);
+            return getObjectIterator(inputStream, finalTopic, defaultPartitionId, defaultStartOffsetId, outputWriter);
         }
     }
 
@@ -136,7 +132,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
 
             private List<ConsumerRecord<byte[], byte[]>> readNext() {
                 try {
-                    final Optional<byte[]> optionalKeyBytes = Optional.ofNullable(currentKey)
+                    final Optional<byte[]> optionalKeyBytes = Optional.ofNullable(currentObjectKey)
                             .map(k -> k.getBytes(StandardCharsets.UTF_8));
                     final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
                     outputWriter.handleValueData(optionalKeyBytes, valueInputStream, topic, consumerRecordList,
