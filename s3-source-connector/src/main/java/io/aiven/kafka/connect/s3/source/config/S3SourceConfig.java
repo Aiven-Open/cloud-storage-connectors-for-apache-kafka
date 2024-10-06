@@ -30,6 +30,7 @@ import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
 import io.aiven.kafka.connect.common.config.validators.UrlValidator;
+import io.aiven.kafka.connect.s3.source.output.OutputFormat;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Region;
@@ -47,43 +48,11 @@ final public class S3SourceConfig extends AbstractConfig {
     @Deprecated
     public static final String AWS_ACCESS_KEY_ID = "aws_access_key_id";
 
-    public static final String AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG = "aws.s3.backoff.delay.ms";
-
-    public static final String AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG = "aws.s3.backoff.max.delay.ms";
-
-    public static final String AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG = "aws.s3.backoff.max.retries";
-
-    public static final String AWS_S3_REGION_CONFIG = "aws.s3.region";
-
-    public static final String AWS_S3_ENDPOINT_CONFIG = "aws.s3.endpoint";
-
     @Deprecated
     public static final String AWS_S3_ENDPOINT = "aws_s3_endpoint";
 
     @Deprecated
     public static final String AWS_S3_REGION = "aws_s3_region";
-
-    public static final String AWS_STS_ROLE_ARN = "aws.sts.role.arn";
-
-    public static final String AWS_STS_ROLE_EXTERNAL_ID = "aws.sts.role.external.id";
-
-    public static final String AWS_STS_ROLE_SESSION_NAME = "aws.sts.role.session.name";
-    public static final String AWS_STS_ROLE_SESSION_DURATION = "aws.sts.role.session.duration";
-    public static final String AWS_STS_CONFIG_ENDPOINT = "aws.sts.config.endpoint";
-
-    private static final String GROUP_AWS = "AWS";
-    private static final String GROUP_AWS_STS = "AWS_STS";
-    private static final String GROUP_OTHER = "OTHER_CFG";
-
-    private static final String GROUP_OFFSET_TOPIC = "OFFSET_TOPIC";
-
-    private static final String GROUP_FILE = "FILE_SPECIFIC";
-
-    private static final String GROUP_S3_RETRY_BACKOFF_POLICY = "S3 retry backoff policy";
-
-    // Default values from AWS SDK, since they are hidden
-    public static final int AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT = 100;
-    public static final int AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 20_000;
 
     @Deprecated
     public static final String AWS_SECRET_ACCESS_KEY = "aws_secret_access_key";
@@ -94,43 +63,47 @@ final public class S3SourceConfig extends AbstractConfig {
     @Deprecated
     public static final String AWS_S3_PREFIX = "aws_s3_prefix";
 
+    public static final String AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG = "aws.s3.backoff.delay.ms";
+
+    public static final String AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG = "aws.s3.backoff.max.delay.ms";
+
+    public static final String AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG = "aws.s3.backoff.max.retries";
+
+    public static final String AWS_S3_REGION_CONFIG = "aws.s3.region";
+
+    public static final String AWS_S3_ENDPOINT_CONFIG = "aws.s3.endpoint";
+
+    public static final String AWS_STS_ROLE_ARN = "aws.sts.role.arn";
+    public static final String AWS_STS_ROLE_EXTERNAL_ID = "aws.sts.role.external.id";
+    public static final String AWS_STS_ROLE_SESSION_NAME = "aws.sts.role.session.name";
+    public static final String AWS_STS_ROLE_SESSION_DURATION = "aws.sts.role.session.duration";
+    public static final String AWS_STS_CONFIG_ENDPOINT = "aws.sts.config.endpoint";
+    private static final String GROUP_AWS = "AWS";
+    private static final String GROUP_AWS_STS = "AWS_STS";
+    private static final String GROUP_OTHER = "OTHER_CFG";
+    private static final String GROUP_OFFSET_TOPIC = "OFFSET_TOPIC";
+    private static final String GROUP_S3_RETRY_BACKOFF_POLICY = "S3 retry backoff policy";
+
+    // Default values from AWS SDK, since they are hidden
+    public static final int AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT = 100;
+    public static final int AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 20_000;
     public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
-
-    public static final String VALUE_SERIALIZER = "value.serializer"; // ex :
-                                                                      // io.confluent.kafka.serializers.KafkaAvroSerializer
-
+    public static final String VALUE_SERIALIZER = "value.serializer";
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
-
     public static final String AWS_CREDENTIALS_PROVIDER_CONFIG = "aws.credentials.provider";
-
     public static final String AWS_CREDENTIAL_PROVIDER_DEFAULT = "com.amazonaws.auth.DefaultAWSCredentialsProviderChain";
-
     public static final String AWS_S3_BUCKET_NAME_CONFIG = "aws.s3.bucket.name";
-
     public static final String AWS_S3_SSE_ALGORITHM_CONFIG = "aws.s3.sse.algorithm";
-
     public static final String TARGET_TOPIC_PARTITIONS = "topic.partitions";
     public static final String TARGET_TOPICS = "topics";
-
-    public static final String START_MARKER_KEY = "aws.s3.start.marker";
     public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
-
     public static final String MAX_POLL_RECORDS = "max.poll.records";
-
     public static final String KEY_CONVERTER = "key.converter";
     public static final String VALUE_CONVERTER = "value.converter";
-
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
-    public static final String OUTPUT_FORMAT = "output.format";
-
-    public static final String AVRO_OUTPUT_FORMAT = "avro";
-
-    public static final String PARQUET_OUTPUT_FORMAT = "parquet";
-
-    public static final String JSON_OUTPUT_FORMAT = "json";
-
-    public static final String BYTE_OUTPUT_FORMAT = "bytes";
+    public static final String OUTPUT_FORMAT_KEY = "output.format";
+    public static final String SCHEMAS_ENABLE = "schemas.enable";
 
     public S3SourceConfig(final Map<String, String> properties) {
         super(configDef(), preprocessProperties(properties));
@@ -184,11 +157,12 @@ final public class S3SourceConfig extends AbstractConfig {
     private static void addSchemaRegistryGroup(final ConfigDef configDef) {
         int srCounter = 0;
         configDef.define(SCHEMA_REGISTRY_URL, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_AWS, srCounter++, ConfigDef.Width.NONE,
+                ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_OTHER, srCounter++, ConfigDef.Width.NONE,
                 SCHEMA_REGISTRY_URL);
-        configDef.define(OUTPUT_FORMAT, ConfigDef.Type.STRING, BYTE_OUTPUT_FORMAT, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "Output format avro/bytearray", GROUP_AWS, srCounter++, // NOPMD
-                ConfigDef.Width.NONE, OUTPUT_FORMAT);
+        configDef.define(OUTPUT_FORMAT_KEY, ConfigDef.Type.STRING, OutputFormat.BYTES.getFormat(),
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "Output format avro/json/parquet/bytes",
+                GROUP_OTHER, srCounter++, // NOPMD
+                ConfigDef.Width.NONE, OUTPUT_FORMAT_KEY);
 
         configDef.define(VALUE_SERIALIZER, ConfigDef.Type.CLASS, "io.confluent.kafka.serializers.KafkaAvroSerializer",
                 ConfigDef.Importance.MEDIUM, "Value serializer", GROUP_OTHER, srCounter++, // NOPMD

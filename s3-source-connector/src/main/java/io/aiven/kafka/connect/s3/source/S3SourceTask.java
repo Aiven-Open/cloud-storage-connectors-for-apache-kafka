@@ -18,7 +18,7 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT_KEY;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -93,7 +93,7 @@ public class S3SourceTask extends SourceTask {
         initializeConverters();
         initializeS3Client();
         this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
-        this.outputWriter = OutputWriterFactory.getWriter(s3SourceConfig.getString(OUTPUT_FORMAT), this.s3Bucket);
+        this.outputWriter = OutputWriterFactory.getWriter(s3SourceConfig.getString(OUTPUT_FORMAT_KEY), this.s3Bucket);
         prepareReaderFromOffsetStorageReader();
     }
 
