@@ -33,8 +33,6 @@ import io.aiven.kafka.connect.s3.source.output.OutputWriter;
 
 public final class RecordProcessor {
 
-    public static final String SCHEMAS_ENABLE = "schemas.enable";
-
     private RecordProcessor() {
 
     }
