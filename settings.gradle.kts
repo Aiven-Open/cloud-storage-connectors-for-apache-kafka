@@ -96,3 +96,5 @@ include("gcs-sink-connector")
 include("s3-sink-connector")
 
 include("azure-sink-connector")
+
+include("s3-source-connector")
