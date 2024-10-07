@@ -20,26 +20,9 @@
         <Bug pattern="CT_CONSTRUCTOR_THROW" />
     </Match>
     <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator$1" />
-        <Bug pattern="CT_CONSTRUCTOR_THROW" />
-    </Match>
-    <Match>
         <Class name="io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator" />
         <Bug pattern="EI_EXPOSE_REP2" />
     </Match>
-    <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord" />
-        <Bug pattern="EI_EXPOSE_REP2" />
-    </Match>
-    <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord" />
-        <Bug pattern="EI_EXPOSE_REP" />
-    </Match>
-    <Match>
-        <Class name="io.aiven.kafka.connect.s3.source.utils.OffsetManager" />
-        <Bug pattern="EI_EXPOSE_REP" />
-    </Match>
-
 
 
     <!-- Test classes -->

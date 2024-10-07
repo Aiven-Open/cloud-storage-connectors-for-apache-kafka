@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +27,6 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 public class FileReader {
@@ -46,10 +44,6 @@ public class FileReader {
                 .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * 2));
 
         return new ArrayList<>(objectListing.getObjectSummaries());
-    }
-
-    InputStream getContent(final S3Object object) {
-        return object.getObjectContent();
     }
 
 }
