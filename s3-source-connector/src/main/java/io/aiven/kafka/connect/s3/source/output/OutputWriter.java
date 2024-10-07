@@ -25,6 +25,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIA
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -38,14 +39,17 @@ import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.generic.GenericRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public interface OutputWriter {
+
+    Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
 
     void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
     void handleValueData(Optional<byte[]> optionalKeyBytes, InputStream inputStream, String topic,
             List<ConsumerRecord<byte[], byte[]>> consumerRecordList, S3SourceConfig s3SourceConfig, int topicPartition,
-            long startOffset, OffsetManager offsetManager, Map<Map<String, Object>, Long> currentOffsets)
-            throws IOException;
+            long startOffset, OffsetManager offsetManager, Map<Map<String, Object>, Long> currentOffsets);
 
     default ConsumerRecord<byte[], byte[]> getConsumerRecord(final Optional<byte[]> key, final byte[] value,
             final String bucketName, final String topic, final int topicPartition, final OffsetManager offsetManager,
@@ -58,34 +62,32 @@ public interface OutputWriter {
         long currentOffset;
 
         if (offsetManager.getOffsets().containsKey(partitionMap)) {
-            currentOffset = offsetManager.getIncrementedOffsetForPartition(partitionMap);
+            currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap);
         } else {
             currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
+            currentOffsets.put(partitionMap, currentOffset + 1);
         }
 
-        final ConsumerRecord<byte[], byte[]> record = new ConsumerRecord<>(topic, topicPartition, currentOffset,
-                key.orElse(null), value);
-
-        offsetManager.updateOffset(partitionMap, currentOffset);
-
-        return record;
+        return new ConsumerRecord<>(topic, topicPartition, currentOffset, key.orElse(null), value);
     }
 
-    @Deprecated
     default byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String topic,
-            final S3SourceConfig s3SourceConfig) throws IOException {
+            final S3SourceConfig s3SourceConfig) {
         final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
                 s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
 
         try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
+                .getDeclaredConstructor()
                 .newInstance(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             avroSerializer.configure(config, false);
             for (final GenericRecord avroRecord : avroRecords) {
                 out.write(avroSerializer.serialize(topic, avroRecord));
             }
             return out.toByteArray();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new IllegalStateException("Failed to initialize serializer", e);
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException
+                | IOException e) {
+            LOGGER.error("Error in reading s3 object stream for topic " + topic + " with error : " + e.getMessage());
         }
+        return new byte[0];
     }
 }

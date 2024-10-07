@@ -50,13 +50,22 @@ public class JsonWriter implements OutputWriter {
     public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
             final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
             final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) throws IOException {
-        consumerRecordList.add(getConsumerRecord(optionalKeyBytes, serializeJsonData(inputStream), this.bucketName,
-                topic, topicPartition, offsetManager, currentOffsets, startOffset));
+            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) {
+        final byte[] valueBytes = serializeJsonData(inputStream);
+        if (valueBytes.length > 0) {
+            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, serializeJsonData(inputStream), this.bucketName,
+                    topic, topicPartition, offsetManager, currentOffsets, startOffset));
+        }
     }
 
-    private byte[] serializeJsonData(final InputStream inputStream) throws IOException {
-        final JsonNode jsonNode = objectMapper.readTree(inputStream);
-        return objectMapper.writeValueAsBytes(jsonNode);
+    private byte[] serializeJsonData(final InputStream inputStream) {
+        final JsonNode jsonNode;
+        try {
+            jsonNode = objectMapper.readTree(inputStream);
+            return objectMapper.writeValueAsBytes(jsonNode);
+        } catch (IOException e) {
+            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+        }
+        return new byte[0];
     }
 }

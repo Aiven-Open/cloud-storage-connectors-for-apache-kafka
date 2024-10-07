@@ -45,23 +45,7 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConfig.class);
 
-    @Deprecated
-    public static final String AWS_ACCESS_KEY_ID = "aws_access_key_id";
-
-    @Deprecated
-    public static final String AWS_S3_ENDPOINT = "aws_s3_endpoint";
-
-    @Deprecated
-    public static final String AWS_S3_REGION = "aws_s3_region";
-
-    @Deprecated
-    public static final String AWS_SECRET_ACCESS_KEY = "aws_secret_access_key";
-
-    @Deprecated
     public static final String AWS_S3_PREFIX_CONFIG = "aws.s3.prefix";
-
-    @Deprecated
-    public static final String AWS_S3_PREFIX = "aws_s3_prefix";
 
     public static final String AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG = "aws.s3.backoff.delay.ms";
 
@@ -116,12 +100,12 @@ final public class S3SourceConfig extends AbstractConfig {
     }
 
     private static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
-        if (!properties.containsKey(AWS_S3_PREFIX_CONFIG) && !properties.containsKey(AWS_S3_PREFIX)) {
+        if (!properties.containsKey(AWS_S3_PREFIX_CONFIG)) {
             return properties;
         }
 
         final var result = new HashMap<>(properties);
-        for (final var prop : List.of(AWS_S3_PREFIX_CONFIG, AWS_S3_PREFIX)) {
+        for (final var prop : List.of(AWS_S3_PREFIX_CONFIG)) {
             if (properties.containsKey(prop)) {
                 String template = properties.get(prop);
                 final String originalTemplate = template;
@@ -298,10 +282,10 @@ final public class S3SourceConfig extends AbstractConfig {
                 ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD
                                                                                                             // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
-        configDef.define(AWS_S3_REGION, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
+        configDef.define(AWS_S3_REGION_CONFIG, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
                 ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD
                 // UnusedAssignment
-                ConfigDef.Width.NONE, AWS_S3_REGION);
+                ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
     }
 
     protected static class AwsRegionValidator implements ConfigDef.Validator {
@@ -350,54 +334,42 @@ final public class S3SourceConfig extends AbstractConfig {
         return getInt(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
     }
 
-    public Region getAwsS3Region() {
+    Region getAwsS3Region() {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
         if (Objects.nonNull(getString(AWS_S3_REGION_CONFIG))) {
             return RegionUtils.getRegion(getString(AWS_S3_REGION_CONFIG));
-        } else if (Objects.nonNull(getString(AWS_S3_REGION))) {
-            return RegionUtils.getRegion(getString(AWS_S3_REGION));
         } else {
             return RegionUtils.getRegion(Regions.US_EAST_1.getName());
         }
     }
 
-    public String getAwsS3EndPoint() {
-        return Objects.nonNull(getString(AWS_S3_ENDPOINT_CONFIG))
-                ? getString(AWS_S3_ENDPOINT_CONFIG)
-                : getString(AWS_S3_ENDPOINT);
+    String getAwsS3EndPoint() {
+        return getString(AWS_S3_ENDPOINT_CONFIG);
     }
 
-    public boolean hasAwsStsRole() {
+    boolean hasAwsStsRole() {
         return getStsRole().isValid();
     }
 
-    public AwsStsRole getStsRole() {
+    AwsStsRole getStsRole() {
         return new AwsStsRole(getString(AWS_STS_ROLE_ARN), getString(AWS_STS_ROLE_EXTERNAL_ID),
                 getString(AWS_STS_ROLE_SESSION_NAME), getInt(AWS_STS_ROLE_SESSION_DURATION));
     }
 
-    public boolean hasStsEndpointConfig() {
+    boolean hasStsEndpointConfig() {
         return getStsEndpointConfig().isValid();
     }
 
-    public AwsStsEndpointConfig getStsEndpointConfig() {
+    AwsStsEndpointConfig getStsEndpointConfig() {
         return new AwsStsEndpointConfig(getString(AWS_STS_CONFIG_ENDPOINT), getString(AWS_S3_REGION_CONFIG));
     }
 
-    public AwsAccessSecret getAwsCredentials() {
-        return getNewAwsCredentials().isValid() ? getNewAwsCredentials() : getOldAwsCredentials();
-    }
-
-    public AwsAccessSecret getNewAwsCredentials() {
+    AwsAccessSecret getAwsCredentials() {
         return new AwsAccessSecret(getPassword(AWS_ACCESS_KEY_ID_CONFIG), getPassword(AWS_SECRET_ACCESS_KEY_CONFIG));
     }
 
-    public AwsAccessSecret getOldAwsCredentials() {
-        return new AwsAccessSecret(getPassword(AWS_ACCESS_KEY_ID), getPassword(AWS_SECRET_ACCESS_KEY));
-    }
-
-    public AWSCredentialsProvider getCustomCredentialsProvider() {
+    AWSCredentialsProvider getCustomCredentialsProvider() {
         return getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
     }
 }

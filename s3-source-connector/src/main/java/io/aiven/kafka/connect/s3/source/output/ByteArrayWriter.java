@@ -28,8 +28,11 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
 import com.amazonaws.util.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ByteArrayWriter implements OutputWriter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
 
     private final String bucketName;
 
@@ -46,8 +49,12 @@ public class ByteArrayWriter implements OutputWriter {
     public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
             final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
             final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) throws IOException {
-        consumerRecordList.add(getConsumerRecord(optionalKeyBytes, IOUtils.toByteArray(inputStream), this.bucketName,
-                topic, topicPartition, offsetManager, currentOffsets, startOffset));
+            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) {
+        try {
+            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, IOUtils.toByteArray(inputStream),
+                    this.bucketName, topic, topicPartition, offsetManager, currentOffsets, startOffset));
+        } catch (IOException e) {
+            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+        }
     }
 }
