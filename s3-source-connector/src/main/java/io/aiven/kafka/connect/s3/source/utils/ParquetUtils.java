@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,15 +28,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.kafka.connect.errors.ConnectException;
+import io.aiven.kafka.connect.s3.source.output.AvroWriter;
 
 import org.apache.avro.generic.GenericRecord;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.io.DelegatingSeekableInputStream;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class ParquetUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
 
     public static final String TMP_DIR = "/tmp";
     public static final int BUFFER_SIZE = 8192;
@@ -43,7 +48,7 @@ public final class ParquetUtils {
     private ParquetUtils() {
         /* hide constructor */ }
 
-    public static List<GenericRecord> getRecords(final InputStream inputStream, final String topic) throws IOException {
+    public static List<GenericRecord> getRecords(final InputStream inputStream, final String topic) {
         final Path tmpDir = Paths.get(TMP_DIR);
 
         final String timestamp = String.valueOf(Instant.now().toEpochMilli());
@@ -59,44 +64,54 @@ public final class ParquetUtils {
                 bytesRead = inputStream.read(buffer);
             }
         } catch (IOException e) {
-            throw new ConnectException("Error writing tmp parquet file", e);
+            LOGGER.error("Error in reading s3 object stream for topic " + topic + " with error : " + e.getMessage());
         }
-
         final var records = new ArrayList<GenericRecord>();
-        final var seekableByteChannel = Files.newByteChannel(parquetFile);
-        try (var parquetReader = AvroParquetReader.<GenericRecord>builder(new InputFile() {
-            @Override
-            public long getLength() throws IOException {
-                return seekableByteChannel.size();
-            }
-
-            @Override
-            public SeekableInputStream newStream() {
-                return new DelegatingSeekableInputStream(Channels.newInputStream(seekableByteChannel)) {
+        try (SeekableByteChannel seekableByteChannel = Files.newByteChannel(parquetFile);
+                var parquetReader = AvroParquetReader.<GenericRecord>builder(new InputFile() {
                     @Override
-                    public long getPos() throws IOException {
-                        return seekableByteChannel.position();
+                    public long getLength() throws IOException {
+                        return seekableByteChannel.size();
                     }
 
                     @Override
-                    public void seek(final long value) throws IOException {
-                        seekableByteChannel.position(value);
-                    }
-                };
-            }
+                    public SeekableInputStream newStream() {
+                        return new DelegatingSeekableInputStream(Channels.newInputStream(seekableByteChannel)) {
+                            @Override
+                            public long getPos() throws IOException {
+                                return seekableByteChannel.position();
+                            }
 
-        }).withCompatibility(false).build()) {
+                            @Override
+                            public void seek(final long value) throws IOException {
+                                seekableByteChannel.position(value);
+                            }
+                        };
+                    }
+
+                }).withCompatibility(false).build()) {
             var record = parquetReader.read();
             while (record != null) {
                 records.add(record);
                 record = parquetReader.read();
             }
-        }
-        if (Files.exists(parquetFile)) {
-            Files.delete(parquetFile);
+        } catch (IOException e) {
+            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
         }
 
+        deleteTmpFile(parquetFile);
+
         return records;
+    }
+
+    private static void deleteTmpFile(final Path parquetFile) {
+        if (Files.exists(parquetFile)) {
+            try {
+                Files.delete(parquetFile);
+            } catch (IOException e) {
+                LOGGER.error("Error in deleting tmp file " + e.getMessage());
+            }
+        }
     }
 
 }
