@@ -1,12 +1,13 @@
 # Aiven's S3 Source Connector for Apache Kafka
 
-This is a source Apache Kafka Connect connector that stores AWS S3 bucket objects in Apache Kafka.
-
-## This connector is in development phase ##
+This is a source Apache Kafka Connect connector that stores Apache Kafka messages in an AWS S3 bucket.
 
 **Table of Contents**
 
 - [How it works](#how-it-works)
+- [Data Format](#data-format)
+- [Usage](#usage)
+- [Configuration](#configuration)
 - [Development](#development)
 
 
@@ -20,7 +21,7 @@ published into the corresponding Kafka topic.
 
 The connector requires Java 11 or newer for development and production.
 
-### TODO update documentation
+## TODO update documentation
 
 ## Development
 
