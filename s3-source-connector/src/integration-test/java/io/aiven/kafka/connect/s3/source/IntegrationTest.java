@@ -310,7 +310,6 @@ final class IntegrationTest implements IntegrationBase {
         Files.delete(testFilePath);
     }
 
-    @Deprecated
     private Map<String, String> getConfig(final Map<String, String> config, final String topics) {
         config.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
         config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
