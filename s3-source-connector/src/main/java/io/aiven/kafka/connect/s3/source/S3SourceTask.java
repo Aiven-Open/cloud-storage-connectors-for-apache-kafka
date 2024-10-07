@@ -20,6 +20,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCK
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT_KEY;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -97,12 +98,15 @@ public class S3SourceTask extends SourceTask {
         prepareReaderFromOffsetStorageReader();
     }
 
-    @Deprecated
     private void initializeConverters() {
         try {
-            keyConverter = Optional.of((Converter) s3SourceConfig.getClass("key.converter").newInstance());
-            valueConverter = (Converter) s3SourceConfig.getClass("value.converter").newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
+            keyConverter = Optional
+                    .of((Converter) s3SourceConfig.getClass("key.converter").getDeclaredConstructor().newInstance());
+            valueConverter = (Converter) s3SourceConfig.getClass("value.converter")
+                    .getDeclaredConstructor()
+                    .newInstance();
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException
+                | NoSuchMethodException e) {
             throw new ConnectException("Connect converters could not be instantiated.", e);
         }
     }
