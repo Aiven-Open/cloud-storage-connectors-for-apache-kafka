@@ -17,7 +17,13 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.source.SourceRecord;
 
 public class AivenS3SourceRecord {
     private final Map<String, Object> partitionMap;
@@ -29,8 +35,9 @@ public class AivenS3SourceRecord {
 
     public AivenS3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
             final String toTopic, final int topicPartition, final byte[] recordKey, final byte[] recordValue) {
-        this.partitionMap = partitionMap;
-        this.offsetMap = offsetMap;
+        this.partitionMap = new HashMap<>(partitionMap);
+        this.offsetMap = new HashMap<>(offsetMap);
+
         this.toTopic = toTopic;
         this.topicPartition = topicPartition;
         this.recordKey = Arrays.copyOf(recordKey, recordKey.length);
@@ -38,11 +45,11 @@ public class AivenS3SourceRecord {
     }
 
     public Map<String, Object> getPartitionMap() {
-        return partitionMap;
+        return Collections.unmodifiableMap(partitionMap);
     }
 
     public Map<String, Object> getOffsetMap() {
-        return offsetMap;
+        return Collections.unmodifiableMap(offsetMap);
     }
 
     public String getToTopic() {
@@ -59,5 +66,12 @@ public class AivenS3SourceRecord {
 
     public byte[] value() {
         return recordValue.clone();
+    }
+
+    public SourceRecord getSourceRecord(final String topic, final Optional<SchemaAndValue> keyData,
+            final SchemaAndValue schemaAndValue) {
+        return new SourceRecord(getPartitionMap(), getOffsetMap(), topic, partition(),
+                keyData.map(SchemaAndValue::schema).orElse(null), keyData.map(SchemaAndValue::value).orElse(null),
+                schemaAndValue.schema(), schemaAndValue.value());
     }
 }

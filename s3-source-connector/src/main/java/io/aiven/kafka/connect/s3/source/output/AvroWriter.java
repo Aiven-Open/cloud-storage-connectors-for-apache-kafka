@@ -38,9 +38,12 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AvroWriter implements OutputWriter {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
     private final String bucketName;
 
     public AvroWriter(final String bucketName) {
@@ -56,25 +59,31 @@ public class AvroWriter implements OutputWriter {
     public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
             final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
             final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) throws IOException {
+            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) {
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
         DecoderFactory.get().binaryDecoder(inputStream, null);
         final List<GenericRecord> records = readAvroRecords(inputStream, datumReader);
         for (final GenericRecord record : records) {
             final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record), topic,
                     s3SourceConfig);
-            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, this.bucketName, topic,
-                    topicPartition, offsetManager, currentOffsets, startOffset));
+            if (valueBytes.length > 0) {
+                consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, this.bucketName, topic,
+                        topicPartition, offsetManager, currentOffsets, startOffset));
+            }
         }
     }
 
-    private List<GenericRecord> readAvroRecords(final InputStream content, final DatumReader<GenericRecord> datumReader)
-            throws IOException {
+    private List<GenericRecord> readAvroRecords(final InputStream content,
+            final DatumReader<GenericRecord> datumReader) {
         final List<GenericRecord> records = new ArrayList<>();
         try (SeekableByteArrayInput sin = new SeekableByteArrayInput(IOUtils.toByteArray(content))) {
             try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
                 reader.forEach(records::add);
+            } catch (IOException e) {
+                LOGGER.error("Error in reading s3 object stream " + e.getMessage());
             }
+        } catch (IOException e) {
+            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
         }
         return records;
     }

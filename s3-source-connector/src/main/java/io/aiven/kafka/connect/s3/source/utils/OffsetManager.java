@@ -25,6 +25,7 @@ import static java.util.stream.Collectors.toMap;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,18 +56,19 @@ public class OffsetManager {
     }
 
     public Map<Map<String, Object>, Map<String, Object>> getOffsets() {
-        return offsets;
+        return Collections.unmodifiableMap(offsets);
     }
 
-    public long getIncrementedOffsetForPartition(final Map<String, Object> partitionMap) {
-        return (long) (offsets.get(partitionMap)).get(OFFSET_KEY) + 1L;
-    }
-
-    public void updateOffset(final Map<String, Object> partitionMap, final long currentOffset) {
-        final Map<String, Object> newOffset = new HashMap<>();
-        // increment offset id by 1
-        newOffset.put(OFFSET_KEY, currentOffset + 1);
-        offsets.put(partitionMap, newOffset);
+    public long incrementAndUpdateOffsetMap(final Map<String, Object> partitionMap) {
+        if (offsets.containsKey(partitionMap)) {
+            final Map<String, Object> offsetValue = offsets.get(partitionMap);
+            if (offsetValue.containsKey(OFFSET_KEY)) {
+                final long newOffsetVal = (long) offsetValue.get(OFFSET_KEY) + 1L;
+                offsetValue.put(OFFSET_KEY, newOffsetVal);
+                return newOffsetVal;
+            }
+        }
+        return 0L;
     }
 
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {

@@ -67,13 +67,9 @@ public final class RecordProcessor {
 
             outputWriter.configureValueConverter(conversionConfig, s3SourceConfig);
             valueConverter.configure(conversionConfig, false);
-            final SchemaAndValue value = valueConverter.toConnectData(topic, aivenS3SourceRecord.value());
+            final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, aivenS3SourceRecord.value());
 
-            final SourceRecord sourceRecord = new SourceRecord(aivenS3SourceRecord.getPartitionMap(),
-                    aivenS3SourceRecord.getOffsetMap(), topic, aivenS3SourceRecord.partition(),
-                    keyData.map(SchemaAndValue::schema).orElse(null), keyData.map(SchemaAndValue::value).orElse(null),
-                    value.schema(), value.value());
-            sourceRecordList.add(sourceRecord);
+            sourceRecordList.add(aivenS3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue));
         }
 
         return sourceRecordList;

@@ -67,8 +67,6 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
     private final String bucketName;
     private final AmazonS3 s3Client;
 
-    private final FileReader fileReader;
-
     private final OutputWriter outputWriter;
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
@@ -78,7 +76,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
         this.s3Client = s3Client;
         this.bucketName = bucketName;
         this.outputWriter = outputWriter;
-        this.fileReader = new FileReader(s3SourceConfig, bucketName);
+        final FileReader fileReader = new FileReader(s3SourceConfig, bucketName);
         try {
             final List<S3ObjectSummary> chunks = fileReader.fetchObjectSummaries(s3Client);
             nextFileIterator = chunks.iterator();
@@ -103,8 +101,8 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
     }
 
     private Iterator<List<ConsumerRecord<byte[], byte[]>>> createIteratorForCurrentFile() throws IOException {
-        final S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);
-        try (InputStream inputStream = fileReader.getContent(s3Object)) {
+        try (S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);
+                InputStream inputStream = s3Object.getObjectContent()) {
             String topicName;
             int defaultPartitionId = 0;
             final long defaultStartOffsetId = 0L;
@@ -131,19 +129,13 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
             private List<ConsumerRecord<byte[], byte[]>> nextRecord = readNext();
 
             private List<ConsumerRecord<byte[], byte[]>> readNext() {
-                try {
-                    final Optional<byte[]> optionalKeyBytes = Optional.ofNullable(currentObjectKey)
-                            .map(k -> k.getBytes(StandardCharsets.UTF_8));
-                    final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
-                    outputWriter.handleValueData(optionalKeyBytes, valueInputStream, topic, consumerRecordList,
-                            s3SourceConfig, topicPartition, startOffset, offsetManager, currentOffsets);
+                final Optional<byte[]> optionalKeyBytes = Optional.ofNullable(currentObjectKey)
+                        .map(k -> k.getBytes(StandardCharsets.UTF_8));
+                final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
+                outputWriter.handleValueData(optionalKeyBytes, valueInputStream, topic, consumerRecordList,
+                        s3SourceConfig, topicPartition, startOffset, offsetManager, currentOffsets);
 
-                    return consumerRecordList;
-
-                } catch (IOException e) {
-                    throw new org.apache.kafka.connect.errors.ConnectException(
-                            "Connect converters could not be instantiated.", e);
-                }
+                return consumerRecordList;
             }
 
             @Override

@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.output;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
@@ -49,13 +48,15 @@ public class ParquetWriter implements OutputWriter {
     public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
             final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
             final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) throws IOException {
+            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) {
         final List<GenericRecord> records = ParquetUtils.getRecords(inputStream, topic);
         for (final GenericRecord record : records) {
             final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record), topic,
                     s3SourceConfig);
-            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, this.bucketName, topic,
-                    topicPartition, offsetManager, currentOffsets, startOffset));
+            if (valueBytes.length > 0) {
+                consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, this.bucketName, topic,
+                        topicPartition, offsetManager, currentOffsets, startOffset));
+            }
         }
     }
 }
