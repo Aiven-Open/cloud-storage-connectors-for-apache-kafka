@@ -32,13 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ByteArrayWriter implements OutputWriter {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
-
-    private final String bucketName;
-
-    public ByteArrayWriter(final String bucketName) {
-        this.bucketName = bucketName;
-    }
+    private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayWriter.class);
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
@@ -46,13 +40,15 @@ public class ByteArrayWriter implements OutputWriter {
     }
 
     @Override
+    @SuppressWarnings("PMD.ExcessiveParameterList")
     public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
             final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
             final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) {
+            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
+            final Map<String, Object> partitionMap) {
         try {
-            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, IOUtils.toByteArray(inputStream),
-                    this.bucketName, topic, topicPartition, offsetManager, currentOffsets, startOffset));
+            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, IOUtils.toByteArray(inputStream), topic,
+                    topicPartition, offsetManager, currentOffsets, startOffset, partitionMap));
         } catch (IOException e) {
             LOGGER.error("Error in reading s3 object stream " + e.getMessage());
         }

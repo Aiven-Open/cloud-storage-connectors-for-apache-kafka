@@ -34,12 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JsonWriter implements OutputWriter {
 
-    private final String bucketName;
     final ObjectMapper objectMapper = new ObjectMapper();
-
-    public JsonWriter(final String bucketName) {
-        this.bucketName = bucketName;
-    }
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
@@ -47,14 +42,16 @@ public class JsonWriter implements OutputWriter {
     }
 
     @Override
+    @SuppressWarnings("PMD.ExcessiveParameterList")
     public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
             final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
             final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) {
+            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
+            final Map<String, Object> partitionMap) {
         final byte[] valueBytes = serializeJsonData(inputStream);
         if (valueBytes.length > 0) {
-            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, serializeJsonData(inputStream), this.bucketName,
-                    topic, topicPartition, offsetManager, currentOffsets, startOffset));
+            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition, offsetManager,
+                    currentOffsets, startOffset, partitionMap));
         }
     }
 
