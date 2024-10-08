@@ -240,21 +240,21 @@ final class IntegrationTest implements IntegrationBase {
         connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
 
         final String partition = "00000";
-        final String offset = "000000000123";
-        final String fileName = topicName + "-" + partition + "-" + offset + ".txt";
-
-        connectRunner.createConnector(connectorConfig);
-        final String tmpFilePath = "/tmp/users.parquet";
+        final String fileName = topicName + "-" + partition + ".txt";
         final String name1 = "testuser1";
         final String name2 = "testuser2";
-        writeParquetFile(tmpFilePath, name1, name2);
-        final Path path = Paths.get(tmpFilePath);
+
+        connectRunner.createConnector(connectorConfig);
+        final Path path = getTmpFilePath(name1, name2);
+
         try {
             s3Client.putObject(TEST_BUCKET_NAME, fileName, Files.newInputStream(path), null);
         } catch (final Exception e) { // NOPMD broad exception caught
             LOGGER.error("Error in reading file" + e.getMessage());
+        } finally {
+            Files.delete(path);
         }
-        Files.delete(path);
+
         final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 2, KAFKA_CONTAINER,
                 SCHEMA_REGISTRY.getSchemaRegistryUrl());
         assertThat(2).isEqualTo(records.size());
@@ -300,13 +300,12 @@ final class IntegrationTest implements IntegrationBase {
 
     private static void writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId)
             throws IOException {
-        // final String partition = "00000";
-        // final String offset = "00000000012" + offsetId;
-        final String fileName = topicName + "-" + partitionId + ".txt";
-        final Path testFilePath = Paths.get("/tmp/" + fileName);
+        final String filePrefix = topicName + "-" + partitionId;
+        final String fileSuffix = ".txt";
+        final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
         Files.write(testFilePath, testDataBytes);
 
-        saveToS3(TEST_BUCKET_NAME, "", fileName, testFilePath.toFile());
+        saveToS3(TEST_BUCKET_NAME, "", filePrefix + fileSuffix, testFilePath.toFile());
         Files.delete(testFilePath);
     }
 
@@ -365,6 +364,15 @@ final class IntegrationTest implements IntegrationBase {
         } catch (IOException e) {
             throw new ConnectException("Error writing parquet file");
         }
+    }
+
+    private static Path getTmpFilePath(final String name1, final String name2) throws IOException {
+        final String tmpFile = "users.parquet";
+        final Path parquetFileDir = Files.createTempDirectory("parquet_tests");
+        final String parquetFilePath = parquetFileDir.toAbsolutePath() + "/" + tmpFile;
+
+        writeParquetFile(parquetFilePath, name1, name2);
+        return Paths.get(parquetFilePath);
     }
 
     private static void writeParquetFile(final String outputPath, final Schema schema, final String name1,
