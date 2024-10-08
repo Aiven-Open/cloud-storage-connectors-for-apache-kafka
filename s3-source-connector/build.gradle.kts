@@ -20,7 +20,7 @@ plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
 val amazonS3Version by extra("1.12.729")
 val amazonSTSVersion by extra("1.12.729")
-val parquetVersion by extra("1.11.2")
+val parquetVersion by extra("1.14.3")
 
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
