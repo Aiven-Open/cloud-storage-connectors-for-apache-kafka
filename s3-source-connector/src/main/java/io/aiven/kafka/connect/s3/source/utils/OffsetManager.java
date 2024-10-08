@@ -16,9 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.BUCKET;
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.PARTITION;
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.TOPIC;
 import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.OFFSET_KEY;
 import static java.util.stream.Collectors.toMap;
 
@@ -92,11 +89,7 @@ public class OffsetManager {
             final Set<String> topics) {
         final List<Map<String, Object>> partitionKeys = new ArrayList<>();
         partitions.forEach(partition -> topics.forEach(topic -> {
-            final Map<String, Object> partitionMap = new HashMap<>();
-            partitionMap.put(BUCKET, bucket);
-            partitionMap.put(TOPIC, topic);
-            partitionMap.put(PARTITION, partition);
-            partitionKeys.add(partitionMap);
+            partitionKeys.add(ConnectUtils.getPartitionMap(topic, partition, bucket));
         }));
         return partitionKeys;
     }
