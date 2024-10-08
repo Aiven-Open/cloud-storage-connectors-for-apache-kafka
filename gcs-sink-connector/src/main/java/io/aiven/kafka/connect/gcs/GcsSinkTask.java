@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.gcs;
 
+import java.lang.reflect.InvocationTargetException;
 import java.nio.channels.Channels;
 import java.util.Collection;
 import java.util.List;
@@ -72,7 +73,7 @@ public final class GcsSinkTask extends SinkTask {
         Objects.requireNonNull(props, "props cannot be null");
 
         this.config = new GcsSinkConfig(props);
-        this.storage = StorageOptions.newBuilder()
+        StorageOptions.Builder builder = StorageOptions.newBuilder()
                 .setHost(config.getGcsEndpoint())
                 .setCredentials(config.getCredentials())
                 .setHeaderProvider(FixedHeaderProvider.create(USER_AGENT_HEADER_KEY, config.getUserAgent()))
@@ -82,10 +83,11 @@ public final class GcsSinkTask extends SinkTask {
                         .setRetryDelayMultiplier(config.getGcsRetryBackoffDelayMultiplier())
                         .setTotalTimeout(config.getGcsRetryBackoffTotalTimeout())
                         .setMaxAttempts(config.getGcsRetryBackoffMaxAttempts())
-
-
-                        .build())
-                .build()
+                        .build());
+        if (config.getApiTracerFactory() != null) {
+            builder.setApiTracerFactory(config.getApiTracerFactory());
+        }
+        this.storage = builder.build()
                 .getService();
         initRest();
         if (Objects.nonNull(config.getKafkaRetryBackoffMs())) {
@@ -120,7 +122,7 @@ public final class GcsSinkTask extends SinkTask {
             } else {
                 stream = recordGrouper.records().entrySet().stream();
             }
-            stream.forEach( entry -> flushFile(entry.getKey(), entry.getValue()));
+            stream.forEach(entry -> flushFile(entry.getKey(), entry.getValue()));
         } finally {
             recordGrouper.clear();
         }
@@ -131,12 +133,12 @@ public final class GcsSinkTask extends SinkTask {
                 .setContentEncoding(config.getObjectContentEncoding())
                 .build();
         try (var out = Channels.newOutputStream(storage.writer(blob));
-                var writer = OutputWriter.builder()
-                        .withExternalProperties(config.originalsStrings())
-                        .withOutputFields(config.getOutputFields())
-                        .withCompressionType(config.getCompressionType())
-                        .withEnvelopeEnabled(config.envelopeEnabled())
-                        .build(out, config.getFormatType())) {
+             var writer = OutputWriter.builder()
+                     .withExternalProperties(config.originalsStrings())
+                     .withOutputFields(config.getOutputFields())
+                     .withCompressionType(config.getCompressionType())
+                     .withEnvelopeEnabled(config.envelopeEnabled())
+                     .build(out, config.getFormatType())) {
             writer.writeRecords(records);
         } catch (final Exception e) { // NOPMD broad exception catched
             throw new ConnectException(e);

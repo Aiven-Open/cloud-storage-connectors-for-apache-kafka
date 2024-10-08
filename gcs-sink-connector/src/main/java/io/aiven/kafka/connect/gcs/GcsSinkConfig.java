@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.gcs;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +25,8 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import com.google.api.gax.tracing.ApiTracerFactory;
+import io.aiven.kafka.connect.common.config.validators.ClassValidator;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
@@ -53,6 +56,7 @@ public final class GcsSinkConfig extends AivenCommonConfig {
     public static final String GCS_BUCKET_NAME_CONFIG = "gcs.bucket.name";
     public static final String GCS_OBJECT_CONTENT_ENCODING_CONFIG = "gcs.object.content.encoding";
     public static final String GCS_USER_AGENT = "gcs.user.agent";
+    public static final String GCS_METRICS = "gcs.metrics.class";
     private static final String GROUP_FILE = "File";
     public static final String FILE_NAME_PREFIX_CONFIG = "file.name.prefix";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
@@ -146,6 +150,16 @@ public final class GcsSinkConfig extends AivenCommonConfig {
                                                                                                                      // never
                                                                                                                      // used
                 GCS_BUCKET_NAME_CONFIG);
+        configDef.define(GCS_METRICS, ConfigDef.Type.CLASS,
+                null, new ClassValidator(ApiTracerFactory.class),
+                ConfigDef.Importance.LOW,
+                "class for GCS metrics. Default is not to attache metrics",
+                GROUP_GCS, gcsGroupCounter++, ConfigDef.Width.NONE, // NOPMD
+                // retryPolicyGroupCounter
+                // updated value never
+                // used
+                GCS_METRICS);
+
     }
 
     private static void addGcsRetryPolicies(final ConfigDef configDef) {
@@ -194,9 +208,9 @@ public final class GcsSinkConfig extends AivenCommonConfig {
                 "Retry total timeout in milliseconds. The default value is "
                         + GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT,
                 GROUP_GCS_RETRY_BACKOFF_POLICY, retryPolicyGroupCounter++, ConfigDef.Width.NONE, // NOPMD
-                                                                                                 // retryPolicyGroupCounter
-                                                                                                 // updated value never
-                                                                                                 // used
+                // retryPolicyGroupCounter
+                // updated value never
+                // used
                 GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_CONFIG);
     }
 
@@ -361,5 +375,16 @@ public final class GcsSinkConfig extends AivenCommonConfig {
 
     public String getUserAgent() {
         return getString(GCS_USER_AGENT);
+    }
+
+    public ApiTracerFactory getApiTracerFactory() {
+        if (getClass(GCS_METRICS) == null) {
+            return null;
+        }
+        try {
+            return getClass(GCS_METRICS).asSubclass(ApiTracerFactory.class).getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
