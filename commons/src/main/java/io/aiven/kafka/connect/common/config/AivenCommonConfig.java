@@ -55,6 +55,7 @@ public class AivenCommonConfig extends AbstractConfig {
     public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     public static final String CUSTOM_RECORD_GROUPER_BUILDER = "file.record.grouper.builder";
+    public static final String FILE_WRITE_PARALLEL = "file.write.parallel";
 
     private static final String GROUP_COMPRESSION = "File Compression";
     private static final String GROUP_FORMAT = "Format";
@@ -119,6 +120,12 @@ public class AivenCommonConfig extends AbstractConfig {
                         + FILE_NAME_TEMPLATE_CONFIG,
                 groupFile, fileGroupCounter++, // NOPMD UnusedAssignment
                 ConfigDef.Width.SHORT, CUSTOM_RECORD_GROUPER_BUILDER);
+
+        configDef.define(FILE_WRITE_PARALLEL, ConfigDef.Type.BOOLEAN, false,
+                null, ConfigDef.Importance.LOW,
+                "Specifies if file should be written in parallel. Default is false",
+                groupFile, fileGroupCounter++, // NOPMD UnusedAssignment
+                ConfigDef.Width.SHORT, FILE_WRITE_PARALLEL);
 
         return fileGroupCounter;
 
@@ -317,5 +324,8 @@ public class AivenCommonConfig extends AbstractConfig {
         final Class<?> result = getClass(CUSTOM_RECORD_GROUPER_BUILDER);
         // its already been validated to be a subclass of CustomRecordGrouperBuilder
         return result == null ? null : result.asSubclass(CustomRecordGrouperBuilder.class);
+    }
+    public boolean isWriteParallel() {
+        return getBoolean(FILE_WRITE_PARALLEL);
     }
 }

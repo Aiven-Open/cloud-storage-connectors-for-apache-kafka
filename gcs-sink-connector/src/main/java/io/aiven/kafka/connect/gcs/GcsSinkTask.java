@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -113,11 +114,13 @@ public final class GcsSinkTask extends SinkTask {
     @Override
     public void flush(final Map<TopicPartition, OffsetAndMetadata> currentOffsets) {
         try {
-            recordGrouper
-                    .records()
-                    .entrySet()
-                    .parallelStream()
-                    .forEach(entry -> flushFile(entry.getKey(), entry.getValue()));
+            final Stream<Map.Entry<String, List<SinkRecord>>> stream;
+            if (config.isWriteParallel()) {
+                stream = recordGrouper.records().entrySet().stream().parallel();
+            } else {
+                stream = recordGrouper.records().entrySet().stream();
+            }
+            stream.forEach( entry -> flushFile(entry.getKey(), entry.getValue()));
         } finally {
             recordGrouper.clear();
         }
