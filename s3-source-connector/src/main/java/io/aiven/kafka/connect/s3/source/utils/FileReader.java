@@ -21,12 +21,13 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 public class FileReader {
@@ -40,11 +41,49 @@ public class FileReader {
         this.bucketName = bucketName;
     }
 
-    List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
-        final ObjectListing objectListing = s3Client.listObjects(new ListObjectsRequest().withBucketName(bucketName)
-                .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR));
+    List<S3ObjectSummary> fetchObjectSummaries1(final AmazonS3 s3Client) throws IOException {
+        // final ObjectListing objectListing = s3Client.listObjects(new ListObjectsRequest().withBucketName(bucketName)
+        // .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR));
 
-        return new ArrayList<>(objectListing.getObjectSummaries());
+        final ListObjectsV2Result objectListing = s3Client
+                .listObjectsV2(new ListObjectsV2Request().withBucketName(bucketName)
+                        .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR));
+
+        // filtering zero byte objects
+        return objectListing.getObjectSummaries()
+                .stream()
+                .filter(objectSummary -> objectSummary.getSize() > 0)
+                .collect(Collectors.toList());
+    }
+
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
+        final List<S3ObjectSummary> allSummaries = new ArrayList<>();
+        String continuationToken = null;
+        ListObjectsV2Result objectListing;
+
+        do {
+            // Create the request for listing objects
+            final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
+                    .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR)
+                    .withContinuationToken(continuationToken); // Set continuation token for pagination
+
+            // List objects from S3
+            objectListing = s3Client.listObjectsV2(request);
+
+            // Filter out zero-byte objects and add to the list
+            final List<S3ObjectSummary> filteredSummaries = objectListing.getObjectSummaries()
+                    .stream()
+                    .filter(objectSummary -> objectSummary.getSize() > 0)
+                    .collect(Collectors.toList());
+
+            allSummaries.addAll(filteredSummaries); // Add the filtered summaries to the main list
+
+            // Check if there are more objects to fetch
+            continuationToken = objectListing.getNextContinuationToken();
+        } while (objectListing.isTruncated()); // Continue fetching if the result is truncated
+
+        return allSummaries;
     }
 
 }
