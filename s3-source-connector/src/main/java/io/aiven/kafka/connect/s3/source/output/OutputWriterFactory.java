@@ -21,17 +21,17 @@ public final class OutputWriterFactory {
     private OutputWriterFactory() {
         // hidden
     }
-    public static OutputWriter getWriter(final String outputFormat, final String bucket) {
+    public static OutputWriter getWriter(final String outputFormat) {
         final OutputFormat outputFormatEnum = OutputFormat.valueOfFormat(outputFormat);
         switch (outputFormatEnum) {
             case AVRO :
-                return new AvroWriter(bucket);
+                return new AvroWriter();
             case PARQUET :
-                return new ParquetWriter(bucket);
+                return new ParquetWriter();
             case JSON :
-                return new JsonWriter(bucket);
+                return new JsonWriter();
             case BYTES :
-                return new ByteArrayWriter(bucket);
+                return new ByteArrayWriter();
             default :
                 throw new IllegalArgumentException("Unknown output format: " + outputFormat);
         }

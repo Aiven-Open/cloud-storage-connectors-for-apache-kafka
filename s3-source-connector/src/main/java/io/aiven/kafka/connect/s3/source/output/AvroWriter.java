@@ -21,7 +21,6 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGI
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,11 +43,6 @@ import org.slf4j.LoggerFactory;
 public class AvroWriter implements OutputWriter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
-    private final String bucketName;
-
-    public AvroWriter(final String bucketName) {
-        this.bucketName = bucketName;
-    }
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
@@ -56,21 +50,17 @@ public class AvroWriter implements OutputWriter {
     }
 
     @Override
+    @SuppressWarnings("PMD.ExcessiveParameterList")
     public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
             final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
             final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets) {
+            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
+            final Map<String, Object> partitionMap) {
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
         DecoderFactory.get().binaryDecoder(inputStream, null);
         final List<GenericRecord> records = readAvroRecords(inputStream, datumReader);
-        for (final GenericRecord record : records) {
-            final byte[] valueBytes = serializeAvroRecordToBytes(Collections.singletonList(record), topic,
-                    s3SourceConfig);
-            if (valueBytes.length > 0) {
-                consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, this.bucketName, topic,
-                        topicPartition, offsetManager, currentOffsets, startOffset));
-            }
-        }
+        OutputUtils.buildConsumerRecordList(this, optionalKeyBytes, topic, consumerRecordList, s3SourceConfig,
+                topicPartition, startOffset, offsetManager, currentOffsets, records, partitionMap);
     }
 
     private List<GenericRecord> readAvroRecords(final InputStream content,
