@@ -50,8 +50,8 @@ public class JsonWriter implements OutputWriter {
             final Map<String, Object> partitionMap) {
         final byte[] valueBytes = serializeJsonData(inputStream);
         if (valueBytes.length > 0) {
-            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition, offsetManager,
-                    currentOffsets, startOffset, partitionMap));
+            consumerRecordList.add(OutputUtils.getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition,
+                    offsetManager, currentOffsets, startOffset, partitionMap));
         }
     }
 

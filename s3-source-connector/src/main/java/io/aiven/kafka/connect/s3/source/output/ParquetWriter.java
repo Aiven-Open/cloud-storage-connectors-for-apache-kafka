@@ -59,8 +59,8 @@ public class ParquetWriter implements OutputWriter {
             final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
             final Map<String, Object> partitionMap) {
         final List<GenericRecord> records = getRecords(inputStream, topic, topicPartition);
-        OutputUtils.buildConsumerRecordList(this, optionalKeyBytes, topic, consumerRecordList, s3SourceConfig,
-                topicPartition, startOffset, offsetManager, currentOffsets, records, partitionMap);
+        OutputUtils.buildConsumerRecordList(optionalKeyBytes, topic, consumerRecordList, s3SourceConfig, topicPartition,
+                startOffset, offsetManager, currentOffsets, records, partitionMap);
     }
 
     public static List<GenericRecord> getRecords(final InputStream inputStream, final String topic,
