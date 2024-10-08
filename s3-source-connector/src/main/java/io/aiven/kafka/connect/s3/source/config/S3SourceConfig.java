@@ -282,10 +282,6 @@ final public class S3SourceConfig extends AbstractConfig {
                 ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD
                                                                                                             // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
-        configDef.define(AWS_S3_REGION_CONFIG, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD
-                // UnusedAssignment
-                ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
     }
 
     protected static class AwsRegionValidator implements ConfigDef.Validator {

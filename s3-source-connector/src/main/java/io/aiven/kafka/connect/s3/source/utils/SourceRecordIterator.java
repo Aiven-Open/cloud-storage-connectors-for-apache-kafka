@@ -116,24 +116,29 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
             }
 
             final String finalTopic = topicName;
+            final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
+                    bucketName);
 
-            return getObjectIterator(inputStream, finalTopic, defaultPartitionId, defaultStartOffsetId, outputWriter);
+            return getObjectIterator(inputStream, finalTopic, defaultPartitionId, defaultStartOffsetId, outputWriter,
+                    partitionMap);
         }
     }
 
     @SuppressWarnings("PMD.CognitiveComplexity")
     private Iterator<List<ConsumerRecord<byte[], byte[]>>> getObjectIterator(final InputStream valueInputStream,
-            final String topic, final int topicPartition, final long startOffset, final OutputWriter outputWriter) {
+            final String topic, final int topicPartition, final long startOffset, final OutputWriter outputWriter,
+            final Map<String, Object> partitionMap) {
         return new Iterator<>() {
             private Map<Map<String, Object>, Long> currentOffsets = new HashMap<>();
             private List<ConsumerRecord<byte[], byte[]>> nextRecord = readNext();
 
             private List<ConsumerRecord<byte[], byte[]>> readNext() {
+
                 final Optional<byte[]> optionalKeyBytes = Optional.ofNullable(currentObjectKey)
                         .map(k -> k.getBytes(StandardCharsets.UTF_8));
                 final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
                 outputWriter.handleValueData(optionalKeyBytes, valueInputStream, topic, consumerRecordList,
-                        s3SourceConfig, topicPartition, startOffset, offsetManager, currentOffsets);
+                        s3SourceConfig, topicPartition, startOffset, offsetManager, currentOffsets, partitionMap);
 
                 return consumerRecordList;
             }

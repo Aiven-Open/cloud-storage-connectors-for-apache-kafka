@@ -31,6 +31,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 public class FileReader {
 
+    public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
     private final String bucketName;
 
@@ -41,7 +42,7 @@ public class FileReader {
 
     List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
         final ObjectListing objectListing = s3Client.listObjects(new ListObjectsRequest().withBucketName(bucketName)
-                .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * 2));
+                .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR));
 
         return new ArrayList<>(objectListing.getObjectSummaries());
     }
