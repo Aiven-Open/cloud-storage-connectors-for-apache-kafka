@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.aiven.kafka.connect.common.grouper;
 
-import io.aiven.kafka.connect.common.config.TimestampSource;
-
 import java.time.ZoneOffset;
+
+import io.aiven.kafka.connect.common.config.TimestampSource;
 
 public final class TestTimestampSource {
     private TestTimestampSource() {
@@ -29,10 +30,6 @@ public final class TestTimestampSource {
 
     @SuppressWarnings("PMD.ShortMethodName")
     public static TimestampSource of(final TimestampSource.Type type, final ZoneOffset timeZone) {
-        return new TimestampSource.Builder()
-                .configuration(type.toString())
-                .zoneId(timeZone)
-                .build();
+        return new TimestampSource.Builder().configuration(type.toString()).zoneId(timeZone).build();
     }
 }
-

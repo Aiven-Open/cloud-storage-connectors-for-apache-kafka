@@ -84,7 +84,7 @@ final class TopicPartitionRecordGrouperTest {
     private static final SinkRecord T2P1R3 = new SinkRecord("topic2", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null,
             null, 2003, 1_635_547_906_000L, TimestampType.CREATE_TIME);
 
-    private static final TimestampSource DEFAULT_TS_SOURCE =TestTimestampSource.of(TimestampSource.Type.WALLCLOCK);
+    private static final TimestampSource DEFAULT_TS_SOURCE = TestTimestampSource.of(TimestampSource.Type.WALLCLOCK);
 
     @Test
     void withoutNecessaryParameters() {

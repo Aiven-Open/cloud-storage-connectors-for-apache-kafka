@@ -34,7 +34,7 @@ class AivenCommonConfigTest {
         final ConfigDef definition = new ConfigDef();
         addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
         addFileConfigGroup(definition, "File", "Test", 1, CompressionType.NONE);
-      return definition;
+        return definition;
     }
 
     @Test

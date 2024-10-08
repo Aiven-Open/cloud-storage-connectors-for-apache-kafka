@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.aiven.kafka.connect.common.config.extractors;
-
-
-import org.apache.kafka.connect.data.Field;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.sink.SinkRecord;
 
 public final class SimpleValuePath implements DataExtractor {
     private final String[] terms;
@@ -45,9 +45,9 @@ public final class SimpleValuePath implements DataExtractor {
     public static SimpleValuePath parse(final String pathDefinition) {
         final String pathDescription;
         final String pathSeparator;
-        if (pathDefinition.length() > 1 && pathDefinition.charAt(0) == '.' ) {
+        if (pathDefinition.length() > 1 && pathDefinition.charAt(0) == '.') {
             pathDescription = pathDefinition.substring(2);
-            pathSeparator = pathDefinition.substring(1,2);
+            pathSeparator = pathDefinition.substring(1, 2);
         } else {
             pathDescription = pathDefinition;
             pathSeparator = ".";
@@ -75,7 +75,7 @@ public final class SimpleValuePath implements DataExtractor {
             } else if (current instanceof List) {
                 try {
                     current = ((List<?>) current).get(Integer.parseInt(term));
-                } catch (NumberFormatException|IndexOutOfBoundsException e) {
+                } catch (NumberFormatException | IndexOutOfBoundsException e) {
                     return null;
                 }
             } else {
@@ -87,6 +87,6 @@ public final class SimpleValuePath implements DataExtractor {
 
     @Override
     public String toString() {
-        return "Path[terms=" + Arrays.toString( terms) +"]";
+        return "Path[terms=" + Arrays.toString(terms) + "]";
     }
 }

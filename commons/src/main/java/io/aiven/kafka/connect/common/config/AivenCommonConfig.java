@@ -284,8 +284,7 @@ public class AivenCommonConfig extends AbstractConfig {
     }
 
     public final TimestampSource getFilenameTimestampSource() {
-        return new TimestampSource.Builder()
-                .configuration(getString(FILE_NAME_TIMESTAMP_SOURCE))
+        return new TimestampSource.Builder().configuration(getString(FILE_NAME_TIMESTAMP_SOURCE))
                 .zoneId(getFilenameTimezone())
                 .build();
     }
