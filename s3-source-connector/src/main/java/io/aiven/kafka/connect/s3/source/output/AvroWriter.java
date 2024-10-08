@@ -59,8 +59,8 @@ public class AvroWriter implements OutputWriter {
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
         DecoderFactory.get().binaryDecoder(inputStream, null);
         final List<GenericRecord> records = readAvroRecords(inputStream, datumReader);
-        OutputUtils.buildConsumerRecordList(this, optionalKeyBytes, topic, consumerRecordList, s3SourceConfig,
-                topicPartition, startOffset, offsetManager, currentOffsets, records, partitionMap);
+        OutputUtils.buildConsumerRecordList(optionalKeyBytes, topic, consumerRecordList, s3SourceConfig, topicPartition,
+                startOffset, offsetManager, currentOffsets, records, partitionMap);
     }
 
     private List<GenericRecord> readAvroRecords(final InputStream content,
