@@ -16,13 +16,15 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
+import java.util.Locale;
+
 public final class OutputWriterFactory {
 
     private OutputWriterFactory() {
         // hidden
     }
     public static OutputWriter getWriter(final String outputFormat) {
-        final OutputFormat outputFormatEnum = OutputFormat.valueOfFormat(outputFormat);
+        final OutputFormat outputFormatEnum = OutputFormat.valueOf(outputFormat.toUpperCase(Locale.ROOT));
         switch (outputFormatEnum) {
             case AVRO :
                 return new AvroWriter();

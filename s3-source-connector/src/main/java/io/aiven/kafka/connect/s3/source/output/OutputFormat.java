@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
+import java.util.Locale;
+
 public enum OutputFormat {
     AVRO("avro"), PARQUET("parquet"), JSON("json"), BYTES("bytes");
 
@@ -26,16 +28,7 @@ public enum OutputFormat {
     }
 
     public String getFormat() {
-        return format;
-    }
-
-    public static OutputFormat valueOfFormat(final String outFormat) {
-        for (final OutputFormat outputFormat : values()) {
-            if (outputFormat.format.equalsIgnoreCase(outFormat)) {
-                return outputFormat;
-            }
-        }
-        throw new IllegalArgumentException("Unknown outFormat: " + outFormat);
+        return format.toLowerCase(Locale.ROOT);
     }
 
     @Override

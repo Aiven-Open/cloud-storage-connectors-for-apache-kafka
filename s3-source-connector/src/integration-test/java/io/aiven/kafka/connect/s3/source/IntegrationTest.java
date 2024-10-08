@@ -63,7 +63,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,7 +75,6 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Ignore
 @Testcontainers
 @SuppressWarnings("PMD.ExcessiveImports")
 final class IntegrationTest implements IntegrationBase {
@@ -160,9 +158,10 @@ final class IntegrationTest implements IntegrationBase {
         // write 2 objects to s3
         writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001");
         writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00002");
+        writeToS3(topicName, new byte[0], "00003"); // this should be ignored.
 
         final List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(2);
+        assertThat(objects.size()).isEqualTo(3);
 
         // Verify that the connector is correctly set up
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
@@ -302,11 +301,14 @@ final class IntegrationTest implements IntegrationBase {
             throws IOException {
         final String filePrefix = topicName + "-" + partitionId;
         final String fileSuffix = ".txt";
-        final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
-        Files.write(testFilePath, testDataBytes);
 
-        saveToS3(TEST_BUCKET_NAME, "", filePrefix + fileSuffix, testFilePath.toFile());
-        Files.delete(testFilePath);
+        final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
+        try {
+            Files.write(testFilePath, testDataBytes);
+            saveToS3(TEST_BUCKET_NAME, "", filePrefix + fileSuffix, testFilePath.toFile());
+        } finally {
+            Files.delete(testFilePath);
+        }
     }
 
     private Map<String, String> getConfig(final Map<String, String> config, final String topics) {
