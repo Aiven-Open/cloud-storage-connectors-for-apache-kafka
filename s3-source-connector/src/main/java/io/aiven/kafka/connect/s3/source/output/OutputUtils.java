@@ -65,18 +65,35 @@ final public class OutputUtils {
     }
 
     @SuppressWarnings("PMD.ExcessiveParameterList")
-    static void buildConsumerRecordList(final OutputWriter outputWriter, final Optional<byte[]> optionalKeyBytes,
-            final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
-            final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
-            final List<GenericRecord> records, final Map<String, Object> partitionMap) {
+    static void buildConsumerRecordList(final Optional<byte[]> optionalKeyBytes, final String topic,
+            final List<ConsumerRecord<byte[], byte[]>> consumerRecordList, final S3SourceConfig s3SourceConfig,
+            final int topicPartition, final long startOffset, final OffsetManager offsetManager,
+            final Map<Map<String, Object>, Long> currentOffsets, final List<GenericRecord> records,
+            final Map<String, Object> partitionMap) {
         for (final GenericRecord record : records) {
             final byte[] valueBytes = OutputUtils.serializeAvroRecordToBytes(Collections.singletonList(record), topic,
                     s3SourceConfig);
             if (valueBytes.length > 0) {
-                consumerRecordList.add(outputWriter.getConsumerRecord(optionalKeyBytes, valueBytes, topic,
-                        topicPartition, offsetManager, currentOffsets, startOffset, partitionMap));
+                consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition,
+                        offsetManager, currentOffsets, startOffset, partitionMap));
             }
         }
+    }
+
+    static ConsumerRecord<byte[], byte[]> getConsumerRecord(final Optional<byte[]> key, final byte[] value,
+            final String topic, final int topicPartition, final OffsetManager offsetManager,
+            final Map<Map<String, Object>, Long> currentOffsets, final long startOffset,
+            final Map<String, Object> partitionMap) {
+
+        long currentOffset;
+
+        if (offsetManager.getOffsets().containsKey(partitionMap)) {
+            currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap);
+        } else {
+            currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
+            currentOffsets.put(partitionMap, currentOffset + 1);
+        }
+
+        return new ConsumerRecord<>(topic, topicPartition, currentOffset, key.orElse(null), value);
     }
 }

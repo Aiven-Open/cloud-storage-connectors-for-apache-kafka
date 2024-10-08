@@ -47,8 +47,8 @@ public class ByteArrayWriter implements OutputWriter {
             final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
             final Map<String, Object> partitionMap) {
         try {
-            consumerRecordList.add(getConsumerRecord(optionalKeyBytes, IOUtils.toByteArray(inputStream), topic,
-                    topicPartition, offsetManager, currentOffsets, startOffset, partitionMap));
+            consumerRecordList.add(OutputUtils.getConsumerRecord(optionalKeyBytes, IOUtils.toByteArray(inputStream),
+                    topic, topicPartition, offsetManager, currentOffsets, startOffset, partitionMap));
         } catch (IOException e) {
             LOGGER.error("Error in reading s3 object stream " + e.getMessage());
         }
