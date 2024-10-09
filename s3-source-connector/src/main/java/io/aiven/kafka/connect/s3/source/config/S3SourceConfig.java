@@ -143,7 +143,7 @@ final public class S3SourceConfig extends AbstractConfig {
         configDef.define(SCHEMA_REGISTRY_URL, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_OTHER, srCounter++, ConfigDef.Width.NONE,
                 SCHEMA_REGISTRY_URL);
-        configDef.define(OUTPUT_FORMAT_KEY, ConfigDef.Type.STRING, OutputFormat.BYTES.getFormat(),
+        configDef.define(OUTPUT_FORMAT_KEY, ConfigDef.Type.STRING, OutputFormat.BYTES.getValue(),
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "Output format avro/json/parquet/bytes",
                 GROUP_OTHER, srCounter++, // NOPMD
                 ConfigDef.Width.NONE, OUTPUT_FORMAT_KEY);
