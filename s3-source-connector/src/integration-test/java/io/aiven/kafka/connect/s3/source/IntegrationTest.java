@@ -32,11 +32,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -48,6 +46,7 @@ import org.apache.kafka.clients.admin.AdminClient;
 
 import io.aiven.kafka.connect.s3.source.output.OutputFormat;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
 
 import com.amazonaws.services.s3.AmazonS3;
@@ -60,9 +59,6 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.commons.io.IOUtils;
-import org.apache.parquet.avro.AvroParquetWriter;
-import org.apache.parquet.hadoop.ParquetWriter;
-import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -244,7 +240,7 @@ final class IntegrationTest implements IntegrationBase {
         final String name2 = "testuser2";
 
         connectRunner.createConnector(connectorConfig);
-        final Path path = getTmpFilePath(name1, name2);
+        final Path path = ContentUtils.getTmpFilePath(name1, name2);
 
         try {
             s3Client.putObject(TEST_BUCKET_NAME, fileName, Files.newInputStream(path), null);
@@ -351,58 +347,4 @@ final class IntegrationTest implements IntegrationBase {
             LOGGER.error(e.getMessage());
         }
     }
-
-    public static void writeParquetFile(final String tempFilePath, final String name1, final String name2)
-            throws IOException {
-        // Define the Avro schema
-        final String schemaString = "{" + "\"type\":\"record\"," + "\"name\":\"User\"," + "\"fields\":["
-                + "{\"name\":\"name\",\"type\":\"string\"}," + "{\"name\":\"age\",\"type\":\"int\"},"
-                + "{\"name\":\"email\",\"type\":\"string\"}" + "]" + "}";
-        final Schema schema = new Schema.Parser().parse(schemaString);
-
-        // Write the Parquet file
-        try {
-            writeParquetFile(tempFilePath, schema, name1, name2);
-        } catch (IOException e) {
-            throw new ConnectException("Error writing parquet file");
-        }
-    }
-
-    private static Path getTmpFilePath(final String name1, final String name2) throws IOException {
-        final String tmpFile = "users.parquet";
-        final Path parquetFileDir = Files.createTempDirectory("parquet_tests");
-        final String parquetFilePath = parquetFileDir.toAbsolutePath() + "/" + tmpFile;
-
-        writeParquetFile(parquetFilePath, name1, name2);
-        return Paths.get(parquetFilePath);
-    }
-
-    private static void writeParquetFile(final String outputPath, final Schema schema, final String name1,
-            final String name2) throws IOException {
-
-        // Create sample records
-        final GenericData.Record user1 = new GenericData.Record(schema);
-        user1.put("name", name1);
-        user1.put("age", 30);
-        user1.put("email", name1 + "@test");
-
-        final GenericData.Record user2 = new GenericData.Record(schema);
-        user2.put("name", name2);
-        user2.put("age", 25);
-        user2.put("email", name2 + "@test");
-
-        // Create a Parquet writer
-        final org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(outputPath); // NOPMD
-        try (ParquetWriter<GenericData.Record> writer = AvroParquetWriter.<GenericData.Record>builder(path)
-                .withSchema(schema)
-                .withCompressionCodec(CompressionCodecName.SNAPPY) // You can choose GZIP, LZO, etc.
-                .withRowGroupSize(100 * 1024) // Customize row group size
-                .withPageSize(1024 * 1024) // Customize page size
-                .build()) {
-            // Write records to the Parquet file
-            writer.write(user1);
-            writer.write(user2);
-        }
-    }
-
 }
