@@ -33,8 +33,11 @@ public class AivenS3SourceRecord {
     private final byte[] recordKey;
     private final byte[] recordValue;
 
+    private final String objectKey;
+
     public AivenS3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
-            final String toTopic, final int topicPartition, final byte[] recordKey, final byte[] recordValue) {
+            final String toTopic, final int topicPartition, final byte[] recordKey, final byte[] recordValue,
+            final String objectKey) {
         this.partitionMap = new HashMap<>(partitionMap);
         this.offsetMap = new HashMap<>(offsetMap);
 
@@ -42,6 +45,7 @@ public class AivenS3SourceRecord {
         this.topicPartition = topicPartition;
         this.recordKey = Arrays.copyOf(recordKey, recordKey.length);
         this.recordValue = Arrays.copyOf(recordValue, recordValue.length);
+        this.objectKey = objectKey;
     }
 
     public Map<String, Object> getPartitionMap() {
@@ -66,6 +70,10 @@ public class AivenS3SourceRecord {
 
     public byte[] value() {
         return recordValue.clone();
+    }
+
+    public String getObjectKey() {
+        return objectKey;
     }
 
     public SourceRecord getSourceRecord(final String topic, final Optional<SchemaAndValue> keyData,
