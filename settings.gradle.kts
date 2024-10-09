@@ -91,6 +91,8 @@ dependencyResolutionManagement {
 
 include("commons")
 
+include("s3-connectors-common")
+
 include("gcs-sink-connector")
 
 include("s3-sink-connector")
