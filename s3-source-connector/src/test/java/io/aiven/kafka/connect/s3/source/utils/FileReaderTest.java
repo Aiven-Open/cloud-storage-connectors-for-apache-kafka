@@ -56,7 +56,7 @@ class FileReaderTest {
         properties = new HashMap<>();
         setBasicProperties();
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(properties);
-        fileReader = new FileReader(s3SourceConfig, TEST_BUCKET);
+        fileReader = new FileReader(s3SourceConfig, TEST_BUCKET, Collections.emptySet());
         s3Client = mock(AmazonS3.class);
     }
 

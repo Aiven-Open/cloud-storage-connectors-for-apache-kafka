@@ -173,10 +173,10 @@ final class S3SourceTaskTest {
     private static List<AivenS3SourceRecord> getAivenS3SourceRecords() {
         final List<AivenS3SourceRecord> aivenS3SourceRecordList = new ArrayList<>();
         final AivenS3SourceRecord aivenS3SourceRecord1 = new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(),
-                "testtopic", 0, new byte[0], new byte[0]);
+                "testtopic", 0, new byte[0], new byte[0], "");
         aivenS3SourceRecordList.add(aivenS3SourceRecord1);
         final AivenS3SourceRecord aivenS3SourceRecord2 = new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(),
-                "testtopic", 1, new byte[0], new byte[0]);
+                "testtopic", 1, new byte[0], new byte[0], "");
         aivenS3SourceRecordList.add(aivenS3SourceRecord2);
         return aivenS3SourceRecordList;
     }

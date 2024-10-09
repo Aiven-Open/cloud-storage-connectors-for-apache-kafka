@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
+import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,7 +70,7 @@ class RecordProcessorTest {
     }
 
     @Test
-    void testProcessRecordsNoRecords() {
+    void testProcessRecordsNoRecords() throws ConnectException {
         when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
         when(sourceRecordIterator.hasNext()).thenReturn(false);
 
@@ -81,14 +82,14 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            outputWriter
+            outputWriter, Collections.emptySet()
         );
 
         assertTrue(processedRecords.isEmpty(), "Processed records should be empty when there are no records.");
     }
 
     @Test
-    void testProcessRecordsWithRecords() {
+    void testProcessRecordsWithRecords() throws ConnectException {
         when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
         when(sourceRecordIterator.hasNext()).thenReturn(true, false); // One iteration with records
 
@@ -104,7 +105,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            outputWriter
+            outputWriter, Collections.emptySet()
         );
 
         assertThat(results.size()).isEqualTo(1);
@@ -112,7 +113,7 @@ class RecordProcessorTest {
     }
 
     @Test
-    void testProcessRecordsConnectorStopped() {
+    void testProcessRecordsConnectorStopped() throws ConnectException {
         when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
         connectorStopped.set(true); // Simulate connector stopped
 
@@ -124,7 +125,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            outputWriter
+            outputWriter, Collections.emptySet()
         );
 
         assertTrue(processedRecords.isEmpty(), "Processed records should be empty when connector is stopped.");
@@ -132,7 +133,7 @@ class RecordProcessorTest {
     }
 
     @Test
-    void testCreateSourceRecords() {
+    void testCreateSourceRecords() throws ConnectException {
         final AivenS3SourceRecord mockRecord = mock(AivenS3SourceRecord.class);
         when(mockRecord.getToTopic()).thenReturn("test-topic");
         when(mockRecord.key()).thenReturn("mock-key".getBytes(StandardCharsets.UTF_8));
@@ -144,7 +145,7 @@ class RecordProcessorTest {
 
         final List<AivenS3SourceRecord> recordList = Collections.singletonList(mockRecord);
         final List<SourceRecord> sourceRecords = RecordProcessor.createSourceRecords(recordList, s3SourceConfig,
-                Optional.of(keyConverter), valueConverter, new HashMap<>(), outputWriter);
+                Optional.of(keyConverter), valueConverter, new HashMap<>(), outputWriter, Collections.emptySet());
 
         assertThat(sourceRecords.size()).isEqualTo(1);
     }
