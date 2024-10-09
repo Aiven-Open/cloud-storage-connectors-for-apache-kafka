@@ -20,7 +20,6 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPI
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.OFFSET_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -133,7 +132,7 @@ final class OffsetManagerTest {
         offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
 
         final String firstTopic = offsetManager.getFirstConfiguredTopic(s3SourceConfig);
-        assertEquals("topic1", firstTopic);
+        assertThat(firstTopic).isEqualTo("topic1");
     }
 
     private void setBasicProperties() {

@@ -55,7 +55,7 @@ public final class RecordProcessor {
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    private static List<SourceRecord> createSourceRecords(final List<AivenS3SourceRecord> aivenS3SourceRecordList,
+    static List<SourceRecord> createSourceRecords(final List<AivenS3SourceRecord> aivenS3SourceRecordList,
             final S3SourceConfig s3SourceConfig, final Optional<Converter> keyConverter, final Converter valueConverter,
             final Map<String, String> conversionConfig, final OutputWriter outputWriter) {
 
