@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -70,13 +71,13 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
     private final OutputWriter outputWriter;
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
-            final OffsetManager offsetManager, final OutputWriter outputWriter) {
+            final OffsetManager offsetManager, final OutputWriter outputWriter, final Set<String> failedObjectKeys) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
         this.s3Client = s3Client;
         this.bucketName = bucketName;
         this.outputWriter = outputWriter;
-        final FileReader fileReader = new FileReader(s3SourceConfig, bucketName);
+        final FileReader fileReader = new FileReader(s3SourceConfig, bucketName, failedObjectKeys);
         try {
             final List<S3ObjectSummary> chunks = fileReader.fetchObjectSummaries(s3Client);
             nextFileIterator = chunks.iterator();
@@ -192,7 +193,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
             offsetMap.put(OFFSET_KEY, currentRecord.offset());
 
             aivenS3SourceRecord = new AivenS3SourceRecord(partitionMap, offsetMap, currentRecord.topic(),
-                    currentRecord.partition(), currentRecord.key(), currentRecord.value());
+                    currentRecord.partition(), currentRecord.key(), currentRecord.value(), currentObjectKey);
 
             aivenS3SourceRecordList.add(aivenS3SourceRecord);
         }

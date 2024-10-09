@@ -21,13 +21,16 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RE
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 import org.apache.kafka.connect.storage.Converter;
@@ -51,6 +54,7 @@ import org.slf4j.LoggerFactory;
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
  * Connect records.
  */
+@SuppressWarnings("PMD.TooManyMethods")
 public class S3SourceTask extends SourceTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
@@ -78,6 +82,9 @@ public class S3SourceTask extends SourceTask {
 
     private final AtomicBoolean connectorStopped = new AtomicBoolean();
     private final S3ClientFactory s3ClientFactory = new S3ClientFactory();
+
+    private final Object pollLock = new Object();
+    private final Set<String> failedObjectKeys = new HashSet<>();
 
     @SuppressWarnings("PMD.UnnecessaryConstructor")
     public S3SourceTask() {
@@ -122,25 +129,49 @@ public class S3SourceTask extends SourceTask {
     private void prepareReaderFromOffsetStorageReader() {
         final OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
         sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
-                this.outputWriter);
+                this.outputWriter, failedObjectKeys);
     }
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException {
-        final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
+        synchronized (pollLock) {
+            final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
 
-        if (connectorStopped.get()) {
+            if (connectorStopped.get()) {
+                return results;
+            }
+
+            while (!connectorStopped.get()) {
+                try {
+                    return extractSourceRecords(results);
+                } catch (AmazonS3Exception | DataException exception) {
+                    if (handleException(exception)) {
+                        return null; // NOPMD
+                    }
+                } catch (final Throwable t) { // NOPMD
+                    // This task has failed, so close any resources (may be reopened if needed) before throwing
+                    closeResources();
+                    throw t;
+                }
+            }
             return results;
         }
+    }
 
-        while (!connectorStopped.get()) {
-            try {
-                return extractSourceRecords(results);
-            } catch (AmazonS3Exception e) {
-                handleS3Exception(e);
+    private boolean handleException(final RuntimeException exception) throws InterruptedException {
+        if (exception instanceof AmazonS3Exception) {
+            if (((AmazonS3Exception) exception).isRetryable()) {
+                LOGGER.warn("Retryable error while polling. Will sleep and try again.", exception);
+                Thread.sleep(ERROR_BACKOFF);
+                prepareReaderFromOffsetStorageReader();
+            } else {
+                return true;
             }
         }
-        return results;
+        if (exception instanceof DataException) {
+            LOGGER.warn("DataException. Will NOT try again.", exception);
+        }
+        return false;
     }
 
     private List<SourceRecord> extractSourceRecords(final List<SourceRecord> results) throws InterruptedException {
@@ -149,7 +180,7 @@ public class S3SourceTask extends SourceTask {
             return results;
         }
         return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
-                valueConverter, connectorStopped, this.outputWriter);
+                valueConverter, connectorStopped, this.outputWriter, failedObjectKeys);
     }
 
     private void waitForObjects() throws InterruptedException {
@@ -160,20 +191,17 @@ public class S3SourceTask extends SourceTask {
         }
     }
 
-    private void handleS3Exception(final AmazonS3Exception amazonS3Exception) throws InterruptedException {
-        if (amazonS3Exception.isRetryable()) {
-            LOGGER.warn("Retryable error while polling. Will sleep and try again.", amazonS3Exception);
-            Thread.sleep(ERROR_BACKOFF);
-            prepareReaderFromOffsetStorageReader();
-        } else {
-            throw amazonS3Exception;
-        }
-    }
-
     @Override
     public void stop() {
         this.taskInitialized = false;
         this.connectorStopped.set(true);
+        synchronized (pollLock) {
+            closeResources();
+        }
+    }
+
+    private void closeResources() {
+        s3Client.shutdown();
     }
 
     // below for visibility in tests
