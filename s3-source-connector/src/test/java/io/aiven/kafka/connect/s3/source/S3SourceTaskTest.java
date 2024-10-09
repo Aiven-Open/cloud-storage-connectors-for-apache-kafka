@@ -22,12 +22,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
 import org.apache.kafka.connect.converters.ByteArrayConverter;
+import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.Converter;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
@@ -37,6 +41,8 @@ import io.aiven.kafka.connect.s3.source.output.ByteArrayWriter;
 import io.aiven.kafka.connect.s3.source.output.OutputFormat;
 import io.aiven.kafka.connect.s3.source.output.OutputWriter;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
+import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -133,6 +139,55 @@ final class S3SourceTaskTest {
 
         final boolean taskInitialized = s3SourceTask.isTaskInitialized();
         assertThat(taskInitialized).isTrue();
+    }
+
+    @Test
+    void testPoll() throws Exception {
+        final S3SourceTask s3SourceTask = new S3SourceTask();
+        startSourceTask(s3SourceTask);
+
+        SourceRecordIterator mockSourceRecordIterator;
+
+        mockSourceRecordIterator = mock(SourceRecordIterator.class);
+        setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
+        when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
+
+        final List<AivenS3SourceRecord> aivenS3SourceRecordList = getAivenS3SourceRecords();
+        when(mockSourceRecordIterator.next()).thenReturn(aivenS3SourceRecordList);
+
+        final List<SourceRecord> sourceRecordList = s3SourceTask.poll();
+        assertThat(sourceRecordList).hasSize(2);
+    }
+
+    @Test
+    void testStop() {
+        final S3SourceTask s3SourceTask = new S3SourceTask();
+        startSourceTask(s3SourceTask);
+        s3SourceTask.stop();
+
+        final boolean taskInitialized = s3SourceTask.isTaskInitialized();
+        assertThat(taskInitialized).isFalse();
+        assertThat(s3SourceTask.getConnectorStopped()).isTrue();
+    }
+
+    private static List<AivenS3SourceRecord> getAivenS3SourceRecords() {
+        final List<AivenS3SourceRecord> aivenS3SourceRecordList = new ArrayList<>();
+        final AivenS3SourceRecord aivenS3SourceRecord1 = new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(),
+                "testtopic", 0, new byte[0], new byte[0]);
+        aivenS3SourceRecordList.add(aivenS3SourceRecord1);
+        final AivenS3SourceRecord aivenS3SourceRecord2 = new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(),
+                "testtopic", 1, new byte[0], new byte[0]);
+        aivenS3SourceRecordList.add(aivenS3SourceRecord2);
+        return aivenS3SourceRecordList;
+    }
+
+    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
+    private void setPrivateField(final Object object, final String fieldName, final Object value)
+            throws NoSuchFieldException, IllegalAccessException {
+        Field field;
+        field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(object, value);
     }
 
     private void startSourceTask(final S3SourceTask s3SourceTask) {
