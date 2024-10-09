@@ -63,8 +63,7 @@ public class AvroWriter implements OutputWriter {
                 startOffset, offsetManager, currentOffsets, records, partitionMap);
     }
 
-    private List<GenericRecord> readAvroRecords(final InputStream content,
-            final DatumReader<GenericRecord> datumReader) {
+    List<GenericRecord> readAvroRecords(final InputStream content, final DatumReader<GenericRecord> datumReader) {
         final List<GenericRecord> records = new ArrayList<>();
         try (SeekableByteArrayInput sin = new SeekableByteArrayInput(IOUtils.toByteArray(content))) {
             try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
