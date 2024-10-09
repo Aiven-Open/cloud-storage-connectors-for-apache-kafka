@@ -27,7 +27,7 @@ public enum OutputFormat {
         this.format = format;
     }
 
-    public String getFormat() {
+    public String getValue() {
         return format.toLowerCase(Locale.ROOT);
     }
 
