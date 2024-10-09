@@ -20,7 +20,9 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -36,9 +38,13 @@ public class FileReader {
     private final S3SourceConfig s3SourceConfig;
     private final String bucketName;
 
-    public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName) {
+    private final Set<String> failedObjectKeys;
+
+    public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName,
+            final Set<String> failedObjectKeys) {
         this.s3SourceConfig = s3SourceConfig;
         this.bucketName = bucketName;
+        this.failedObjectKeys = new HashSet<>(failedObjectKeys);
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
@@ -60,6 +66,7 @@ public class FileReader {
             final List<S3ObjectSummary> filteredSummaries = objectListing.getObjectSummaries()
                     .stream()
                     .filter(objectSummary -> objectSummary.getSize() > 0)
+                    .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()))
                     .collect(Collectors.toList());
 
             allSummaries.addAll(filteredSummaries); // Add the filtered summaries to the main list
