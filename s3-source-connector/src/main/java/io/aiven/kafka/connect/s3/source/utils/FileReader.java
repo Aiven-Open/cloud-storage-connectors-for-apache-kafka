@@ -41,21 +41,6 @@ public class FileReader {
         this.bucketName = bucketName;
     }
 
-    List<S3ObjectSummary> fetchObjectSummaries1(final AmazonS3 s3Client) throws IOException {
-        // final ObjectListing objectListing = s3Client.listObjects(new ListObjectsRequest().withBucketName(bucketName)
-        // .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR));
-
-        final ListObjectsV2Result objectListing = s3Client
-                .listObjectsV2(new ListObjectsV2Request().withBucketName(bucketName)
-                        .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR));
-
-        // filtering zero byte objects
-        return objectListing.getObjectSummaries()
-                .stream()
-                .filter(objectSummary -> objectSummary.getSize() > 0)
-                .collect(Collectors.toList());
-    }
-
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
         final List<S3ObjectSummary> allSummaries = new ArrayList<>();

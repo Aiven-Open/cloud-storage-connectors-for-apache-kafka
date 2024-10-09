@@ -197,12 +197,12 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
             aivenS3SourceRecordList.add(aivenS3SourceRecord);
         }
 
-        return aivenS3SourceRecordList;
+        return Collections.unmodifiableList(aivenS3SourceRecordList);
     }
 
     @Override
     public void remove() {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("This iterator is unmodifiable");
     }
 
 }

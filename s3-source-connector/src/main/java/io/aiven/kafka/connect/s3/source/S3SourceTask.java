@@ -68,11 +68,14 @@ public class S3SourceTask extends SourceTask {
 
     private Iterator<List<AivenS3SourceRecord>> sourceRecordIterator;
     private Optional<Converter> keyConverter;
+
     private Converter valueConverter;
 
     private OutputWriter outputWriter;
 
     private String s3Bucket;
+
+    private boolean taskInitialized;
 
     private final AtomicBoolean connectorStopped = new AtomicBoolean();
     private final S3ClientFactory s3ClientFactory = new S3ClientFactory();
@@ -96,6 +99,7 @@ public class S3SourceTask extends SourceTask {
         this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
         this.outputWriter = OutputWriterFactory.getWriter(s3SourceConfig.getString(OUTPUT_FORMAT_KEY));
         prepareReaderFromOffsetStorageReader();
+        this.taskInitialized = true;
     }
 
     private void initializeConverters() {
@@ -170,5 +174,22 @@ public class S3SourceTask extends SourceTask {
     @Override
     public void stop() {
         this.connectorStopped.set(true);
+    }
+
+    // below for visibility in tests
+    public Optional<Converter> getKeyConverter() {
+        return keyConverter;
+    }
+
+    public Converter getValueConverter() {
+        return valueConverter;
+    }
+
+    public OutputWriter getOutputWriter() {
+        return outputWriter;
+    }
+
+    public boolean isTaskInitialized() {
+        return taskInitialized;
     }
 }

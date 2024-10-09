@@ -20,6 +20,7 @@ plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
 val amazonS3Version by extra("1.12.729")
 val amazonSTSVersion by extra("1.12.729")
+val s3mockVersion by extra("0.2.6")
 val parquetVersion by extra("1.14.3")
 
 val integrationTest: SourceSet =
@@ -92,6 +93,7 @@ dependencies {
   testImplementation(testinglibs.assertj.core)
 
   testImplementation(testinglibs.mockito.core)
+  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testImplementation(testinglibs.mockito.junit.jupiter)
