@@ -22,8 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.channels.Channels;
-import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -40,11 +38,14 @@ import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.parquet.avro.AvroParquetReader;
-import org.apache.parquet.io.DelegatingSeekableInputStream;
 import org.apache.parquet.io.InputFile;
-import org.apache.parquet.io.SeekableInputStream;
+import org.apache.parquet.io.LocalInputFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ParquetWriter implements OutputWriter {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ParquetWriter.class);
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
@@ -76,49 +77,25 @@ public class ParquetWriter implements OutputWriter {
         }
 
         try (OutputStream outputStream = Files.newOutputStream(parquetFile.toPath())) {
-            // write to a local file
             IOUtils.copy(inputStream, outputStream);
-
-            try (SeekableByteChannel seekableByteChannel = Files.newByteChannel(parquetFile.toPath());
-                    var parquetReader = AvroParquetReader.<GenericRecord>builder(new InputFile() {
-                        @Override
-                        public long getLength() throws IOException {
-                            return seekableByteChannel.size();
-                        }
-
-                        @Override
-                        public SeekableInputStream newStream() {
-                            return new DelegatingSeekableInputStream(Channels.newInputStream(seekableByteChannel)) {
-                                @Override
-                                public long getPos() throws IOException {
-                                    return seekableByteChannel.position();
-                                }
-
-                                @Override
-                                public void seek(final long value) throws IOException {
-                                    seekableByteChannel.position(value);
-                                }
-                            };
-                        }
-
-                    }).withCompatibility(false).build()) {
-                var record = parquetReader.read();
+            final InputFile inputFile = new LocalInputFile(parquetFile.toPath());
+            try (var parquetReader = AvroParquetReader.<GenericRecord>builder(inputFile).build()) {
+                GenericRecord record;
+                record = parquetReader.read();
                 while (record != null) {
                     records.add(record);
                     record = parquetReader.read();
                 }
-            } catch (IOException e) {
-                LOGGER.error("Error in reading s3 object stream " + e.getMessage());
-            } finally {
-                deleteTmpFile(parquetFile.toPath());
             }
-        } catch (IOException e) {
-            LOGGER.error("Error in reading s3 object stream for topic " + topic + " with error : " + e.getMessage());
+        } catch (IOException | RuntimeException e) { // NOPMD
+            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+        } finally {
+            deleteTmpFile(parquetFile.toPath());
         }
         return records;
     }
 
-    private static void deleteTmpFile(final Path parquetFile) {
+    static void deleteTmpFile(final Path parquetFile) {
         if (Files.exists(parquetFile)) {
             try {
                 Files.delete(parquetFile);
