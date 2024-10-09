@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT_KEY;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -97,7 +96,7 @@ public class S3SourceTask extends SourceTask {
         initializeConverters();
         initializeS3Client();
         this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
-        this.outputWriter = OutputWriterFactory.getWriter(s3SourceConfig.getString(OUTPUT_FORMAT_KEY));
+        this.outputWriter = OutputWriterFactory.getWriter(s3SourceConfig);
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;
     }
@@ -173,6 +172,7 @@ public class S3SourceTask extends SourceTask {
 
     @Override
     public void stop() {
+        this.taskInitialized = false;
         this.connectorStopped.set(true);
     }
 
@@ -191,5 +191,9 @@ public class S3SourceTask extends SourceTask {
 
     public boolean isTaskInitialized() {
         return taskInitialized;
+    }
+
+    public AtomicBoolean getConnectorStopped() {
+        return new AtomicBoolean(connectorStopped.get());
     }
 }

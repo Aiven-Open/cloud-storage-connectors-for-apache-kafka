@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.s3.source.config;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -330,6 +331,14 @@ final public class S3SourceConfig extends AbstractConfig {
         return getInt(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
     }
 
+    public String getAwsS3BucketName() {
+        return getString(AWS_S3_BUCKET_NAME_CONFIG);
+    }
+
+    public OutputFormat getOutputFormat() {
+        return OutputFormat.valueOf(getString(OUTPUT_FORMAT_KEY).toUpperCase(Locale.ROOT));
+    }
+
     Region getAwsS3Region() {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
@@ -367,5 +376,17 @@ final public class S3SourceConfig extends AbstractConfig {
 
     AWSCredentialsProvider getCustomCredentialsProvider() {
         return getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
+    }
+
+    String getTargetTopics() {
+        return getString(TARGET_TOPICS);
+    }
+
+    String getTargetTopicPartitions() {
+        return getString(TARGET_TOPIC_PARTITIONS);
+    }
+
+    String getSchemaRegistryUrl() {
+        return getString(SCHEMA_REGISTRY_URL);
     }
 }
