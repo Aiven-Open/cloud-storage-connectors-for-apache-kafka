@@ -16,15 +16,17 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
-import java.util.Locale;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT_KEY;
+
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 public final class OutputWriterFactory {
 
     private OutputWriterFactory() {
         // hidden
     }
-    public static OutputWriter getWriter(final String outputFormat) {
-        final OutputFormat outputFormatEnum = OutputFormat.valueOf(outputFormat.toUpperCase(Locale.ROOT));
+    public static OutputWriter getWriter(final S3SourceConfig s3SourceConfig) {
+        final OutputFormat outputFormatEnum = s3SourceConfig.getOutputFormat();
         switch (outputFormatEnum) {
             case AVRO :
                 return new AvroWriter();
@@ -35,7 +37,8 @@ public final class OutputWriterFactory {
             case BYTES :
                 return new ByteArrayWriter();
             default :
-                throw new IllegalArgumentException("Unknown output format: " + outputFormat);
+                throw new IllegalArgumentException(
+                        "Unknown output format " + s3SourceConfig.getString(OUTPUT_FORMAT_KEY));
         }
     }
 }
