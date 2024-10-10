@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.source.output;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -25,16 +24,9 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
 import com.amazonaws.util.IOUtils;
 import org.apache.avro.generic.GenericRecord;
@@ -43,20 +35,10 @@ import org.junit.jupiter.api.Test;
 
 final class ParquetWriterTest {
     private ParquetWriter parquetWriter;
-    private S3SourceConfig s3SourceConfig;
-    private OffsetManager offsetManager;
-    private List<ConsumerRecord<byte[], byte[]>> consumerRecordList;
-    private Map<Map<String, Object>, Long> currentOffsets;
-    private Map<String, Object> partitionMap;
 
     @BeforeEach
     public void setUp() {
         parquetWriter = new ParquetWriter();
-        s3SourceConfig = mock(S3SourceConfig.class);
-        offsetManager = mock(OffsetManager.class);
-        consumerRecordList = new ArrayList<>();
-        currentOffsets = mock(Map.class);
-        partitionMap = mock(Map.class);
     }
 
     @Test
@@ -66,12 +48,9 @@ final class ParquetWriterTest {
 
         final String topic = "test-topic";
         final int topicPartition = 0;
-        final long startOffset = 100L;
+        final List<Object> recs = parquetWriter.getRecords(inputStream, topic, topicPartition);
 
-        parquetWriter.handleValueData(Optional.empty(), inputStream, topic, consumerRecordList, s3SourceConfig,
-                topicPartition, startOffset, offsetManager, currentOffsets, partitionMap);
-
-        assertThat(consumerRecordList).isEmpty();
+        assertThat(recs).isEmpty();
     }
 
     @Test
@@ -82,10 +61,12 @@ final class ParquetWriterTest {
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final List<GenericRecord> records = ParquetWriter.getRecords(inputStream, topic, topicPartition);
+        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition);
 
         assertThat(records).isNotEmpty();
-        assertThat(records).extracting(record -> record.get("name").toString()).contains("name1").contains("name2");
+        assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
+                .contains("name1")
+                .contains("name2");
     }
 
     @Test
@@ -96,7 +77,7 @@ final class ParquetWriterTest {
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final List<GenericRecord> records = ParquetWriter.getRecords(inputStream, topic, topicPartition);
+        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition);
         assertThat(records).isEmpty();
     }
 
