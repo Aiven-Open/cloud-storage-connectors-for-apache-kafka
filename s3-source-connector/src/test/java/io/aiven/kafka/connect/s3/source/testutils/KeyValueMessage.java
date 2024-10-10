@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Aiven Oy
+ * Copyright 2020 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.config;
+package io.aiven.kafka.connect.s3.source.testutils;
 
-import java.util.List;
-import java.util.Map;
+public class KeyValueMessage {
+    public final String key;
+    public final String value;
+    public final int partition;
+    public final int idx;
+    public final int epoch;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
-
-public class S3SourceConfigDef extends ConfigDef {
-    @Override
-    public List<ConfigValue> validate(final Map<String, String> props) {
-        return super.validate(S3SourceConfig.preprocessProperties(props));
+    public KeyValueMessage(final String key, final String value, final int partition, final int idx, final int epoch) {
+        this.key = key;
+        this.value = value;
+        this.partition = partition;
+        this.idx = idx;
+        this.epoch = epoch;
     }
 }

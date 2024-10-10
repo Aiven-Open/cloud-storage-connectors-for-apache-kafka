@@ -18,6 +18,11 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
+val amazonS3Version by extra("1.12.729")
+val amazonSTSVersion by extra("1.12.729")
+val s3mockVersion by extra("0.2.6")
+val parquetVersion by extra("1.14.3")
+
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
       java { srcDir("src/integration-test/java") }
@@ -61,9 +66,30 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
+  implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
+  implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
+
+  implementation("org.apache.parquet:parquet-hadoop:$parquetVersion")
+  testImplementation("org.apache.parquet:parquet-hadoop:$parquetVersion")
+  integrationTestImplementation("org.apache.parquet:parquet-hadoop:$parquetVersion")
+
+  implementation("org.apache.parquet:parquet-avro:$parquetVersion") {
+    exclude(group = "org.xerial.snappy", module = "snappy-java")
+    exclude(group = "org.slf4j", module = "slf4j-api")
+    exclude(group = "org.apache.avro", module = "avro")
+  }
+  testImplementation("org.apache.parquet:parquet-avro:$parquetVersion") {
+    exclude(group = "org.xerial.snappy", module = "snappy-java")
+    exclude(group = "org.slf4j", module = "slf4j-api")
+    exclude(group = "org.apache.avro", module = "avro")
+  }
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
+  implementation(apache.avro)
+  implementation(confluent.kafka.connect.avro.converter) {
+    exclude(group = "org.apache.kafka", module = "kafka-clients")
+  }
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
@@ -76,9 +102,49 @@ dependencies {
   testImplementation(testinglibs.assertj.core)
 
   testImplementation(testinglibs.mockito.core)
+  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testImplementation(testinglibs.mockito.junit.jupiter)
+  //  implementation(apache.hadoop.common)
+
+  implementation(apache.hadoop.common) {
+    exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
+    exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")
+    exclude(group = "com.google.guava", module = "guava")
+    exclude(group = "commons-cli", module = "commons-cli")
+    exclude(group = "org.apache.commons", module = "commons-math3")
+    exclude(group = "org.apache.httpcomponents", module = "httpclient")
+    exclude(group = "commons-codec", module = "commons-codec")
+    exclude(group = "commons-io", module = "commons-io")
+    exclude(group = "commons-net", module = "commons-net")
+    exclude(group = "org.eclipse.jetty")
+    exclude(group = "org.eclipse.jetty.websocket")
+    exclude(group = "javax.servlet")
+    exclude(group = "javax.servlet.jsp")
+    exclude(group = "javax.activation")
+    exclude(group = "com.sun.jersey")
+    exclude(group = "log4j")
+    exclude(group = "org.apache.commons", module = "commons-text")
+    exclude(group = "org.slf4j", module = "slf4j-api")
+    //    exclude(group = "org.apache.hadoop", module = "hadoop-auth")
+    exclude(group = "org.apache.hadoop", module = "hadoop-yarn-api")
+    exclude(group = "com.google.re2j")
+    exclude(group = "com.google.protobuf")
+    exclude(group = "com.google.code.gson")
+    exclude(group = "com.jcraft")
+    exclude(group = "org.apache.curator")
+    exclude(group = "org.apache.zookeeper")
+    exclude(group = "org.apache.htrace")
+    exclude(group = "com.google.code.findbugs")
+    exclude(group = "org.apache.kerby")
+    exclude(group = "com.fasterxml.jackson.core")
+    exclude(group = "com.fasterxml.woodstox", module = "woodstox-core:5.0.3")
+    exclude(group = "org.apache.avro", module = "avro")
+    exclude(group = "org.apache.hadoop", module = "hadoop-yarn-common")
+    exclude(group = "com.google.inject.extensions", module = "guice-servlet")
+    exclude(group = "io.netty", module = "netty")
+  }
 
   testRuntimeOnly(logginglibs.logback.classic)
 
@@ -93,9 +159,6 @@ dependencies {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
 
-  integrationTestImplementation(apache.avro)
-
-  testImplementation(apache.parquet.tools) { exclude(group = "org.slf4j", module = "slf4j-api") }
   testImplementation(apache.hadoop.mapreduce.client.core) {
     exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
     exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")

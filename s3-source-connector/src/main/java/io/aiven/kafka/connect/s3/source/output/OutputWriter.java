@@ -14,17 +14,24 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.config;
+package io.aiven.kafka.connect.s3.source.output;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-public class S3SourceConfigDef extends ConfigDef {
-    @Override
-    public List<ConfigValue> validate(final Map<String, String> props) {
-        return super.validate(S3SourceConfig.preprocessProperties(props));
-    }
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public interface OutputWriter {
+
+    Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
+
+    void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
+
+    List<Object> getRecords(InputStream inputStream, String topic, int topicPartition);
+
+    byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
 }

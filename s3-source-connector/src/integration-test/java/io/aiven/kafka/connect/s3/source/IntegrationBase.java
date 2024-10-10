@@ -18,8 +18,11 @@ package io.aiven.kafka.connect.s3.source;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
@@ -28,13 +31,29 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.connect.json.JsonDeserializer;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.github.dockerjava.api.model.Ulimit;
+import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import org.apache.avro.generic.GenericRecord;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.Network;
+import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
 public interface IntegrationBase {
@@ -79,7 +98,7 @@ public interface IntegrationBase {
     }
 
     static String topicName(final TestInfo testInfo) {
-        return testInfo.getTestMethod().get().getName() + "-" + testInfo.getDisplayName().hashCode();
+        return testInfo.getTestMethod().get().getName();// + "-" + testInfo.getDisplayName().hashCode();
     }
 
     static void createTopics(final AdminClient adminClient, final List<String> topicNames)
@@ -90,5 +109,103 @@ public interface IntegrationBase {
 
     static void waitForRunningContainer(final Container<?> kafka) {
         Awaitility.await().atMost(Duration.ofMinutes(1)).until(kafka::isRunning);
+    }
+
+    static AmazonS3 createS3Client(final LocalStackContainer localStackContainer) {
+        return AmazonS3ClientBuilder.standard()
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                        localStackContainer.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
+                        localStackContainer.getRegion()))
+                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(
+                        localStackContainer.getAccessKey(), localStackContainer.getSecretKey())))
+                .build();
+    }
+
+    static LocalStackContainer createS3Container() {
+        return new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
+                .withServices(LocalStackContainer.Service.S3);
+    }
+
+    static List<String> consumeMessages(final String topic, final int expectedMessageCount,
+            final KafkaContainer kafka) {
+        final Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            final List<String> messages = new ArrayList<>();
+
+            // Poll messages from the topic
+            while (messages.size() < expectedMessageCount) {
+                final ConsumerRecords<byte[], byte[]> records = consumer.poll(5L);
+                for (final ConsumerRecord<byte[], byte[]> record : records) {
+                    messages.add(new String(record.value(), StandardCharsets.UTF_8));
+                }
+            }
+
+            return messages;
+        }
+    }
+
+    static List<GenericRecord> consumeAvroMessages(final String topic, final int expectedMessageCount,
+            final KafkaContainer kafka, final String schemaRegistryUrl) {
+        final Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group-avro");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()); // Assuming string
+                                                                                                     // key
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName()); // Avro
+                                                                                                          // deserializer
+                                                                                                          // for values
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put("schema.registry.url", schemaRegistryUrl); // URL of the schema registry
+        props.put("specific.avro.reader", "false"); // Use GenericRecord instead of specific Avro classes
+
+        try (KafkaConsumer<String, GenericRecord> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            final List<GenericRecord> recordsList = new ArrayList<>();
+
+            // Poll messages from the topic
+            while (recordsList.size() < expectedMessageCount) {
+                final ConsumerRecords<String, GenericRecord> records = consumer.poll(500L);
+                for (final ConsumerRecord<String, GenericRecord> record : records) {
+                    recordsList.add(record.value());
+                }
+            }
+
+            return recordsList;
+        }
+    }
+
+    static List<JsonNode> consumeJsonMessages(final String topic, final int expectedMessageCount,
+            final KafkaContainer kafka) {
+        final Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group-avro");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()); // Assuming string
+        // key
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName()); // Json
+        // deserializer
+        // for values
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        try (KafkaConsumer<String, JsonNode> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(Collections.singletonList(topic));
+            final List<JsonNode> recordsList = new ArrayList<>();
+
+            // Poll messages from the topic
+            while (recordsList.size() < expectedMessageCount) {
+                final ConsumerRecords<String, JsonNode> records = consumer.poll(500L);
+                for (final ConsumerRecord<String, JsonNode> record : records) {
+                    recordsList.add(record.value()); // Add the GenericRecord to the list
+                }
+            }
+
+            return recordsList;
+        }
     }
 }

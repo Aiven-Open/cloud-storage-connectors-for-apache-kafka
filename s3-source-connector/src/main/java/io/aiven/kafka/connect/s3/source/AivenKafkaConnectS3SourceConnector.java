@@ -16,15 +16,17 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.utils.Version;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,8 @@ import org.slf4j.LoggerFactory;
 public class AivenKafkaConnectS3SourceConnector extends SourceConnector {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AivenKafkaConnectS3SourceConnector.class);
+
+    private Map<String, String> configProperties;
 
     @Override
     public ConfigDef config() {
@@ -54,11 +58,18 @@ public class AivenKafkaConnectS3SourceConnector extends SourceConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
-        return Collections.emptyList();
+        final var taskProps = new ArrayList<Map<String, String>>();
+        for (int i = 0; i < maxTasks; i++) {
+            final var props = Map.copyOf(configProperties);
+            taskProps.add(props);
+        }
+        return taskProps;
     }
 
     @Override
     public void start(final Map<String, String> properties) {
+        Objects.requireNonNull(properties, "properties haven't been set");
+        configProperties = Map.copyOf(properties);
         LOGGER.info("Start S3 Source connector");
     }
 

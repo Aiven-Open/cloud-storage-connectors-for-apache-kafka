@@ -14,17 +14,25 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.config;
+package io.aiven.kafka.connect.s3.source.output;
 
-import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
+public enum OutputFormat {
+    AVRO("avro"), PARQUET("parquet"), JSON("json"), BYTES("bytes");
 
-public class S3SourceConfigDef extends ConfigDef {
+    private final String format;
+
+    OutputFormat(final String format) {
+        this.format = format;
+    }
+
+    public String getValue() {
+        return format.toLowerCase(Locale.ROOT);
+    }
+
     @Override
-    public List<ConfigValue> validate(final Map<String, String> props) {
-        return super.validate(S3SourceConfig.preprocessProperties(props));
+    public String toString() {
+        return format;
     }
 }
