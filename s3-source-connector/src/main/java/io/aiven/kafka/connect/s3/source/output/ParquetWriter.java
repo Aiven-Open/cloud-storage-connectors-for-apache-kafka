@@ -26,14 +26,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
 import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.compress.utils.IOUtils;
@@ -53,22 +50,21 @@ public class ParquetWriter implements OutputWriter {
     }
 
     @Override
-    @SuppressWarnings("PMD.ExcessiveParameterList")
-    public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
-            final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
-            final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
-            final Map<String, Object> partitionMap) {
-        final List<GenericRecord> records = getRecords(inputStream, topic, topicPartition);
-        OutputUtils.buildConsumerRecordList(optionalKeyBytes, topic, consumerRecordList, s3SourceConfig, topicPartition,
-                startOffset, offsetManager, currentOffsets, records, partitionMap);
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
+        return getParquetRecords(inputStream, topic, topicPartition);
     }
 
-    public static List<GenericRecord> getRecords(final InputStream inputStream, final String topic,
+    @Override
+    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
+        return OutputUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
+                s3SourceConfig);
+    }
+
+    private List<Object> getParquetRecords(final InputStream inputStream, final String topic,
             final int topicPartition) {
         final String timestamp = String.valueOf(Instant.now().toEpochMilli());
         File parquetFile;
-        final var records = new ArrayList<GenericRecord>();
+        final List<Object> records = new ArrayList<>();
         try {
             parquetFile = File.createTempFile(topic + "_" + topicPartition + "_" + timestamp, ".parquet");
         } catch (IOException e) {

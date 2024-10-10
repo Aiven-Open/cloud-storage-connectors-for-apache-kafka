@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -44,12 +43,15 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
  * Parquet).
  */
 public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRecord>> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
     public static final String PATTERN_TOPIC_KEY = "topicName";
     public static final String PATTERN_PARTITION_KEY = "partitionId";
     public static final String OFFSET_KEY = "offset";
@@ -138,10 +140,30 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                 final Optional<byte[]> optionalKeyBytes = Optional.ofNullable(currentObjectKey)
                         .map(k -> k.getBytes(StandardCharsets.UTF_8));
                 final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
-                outputWriter.handleValueData(optionalKeyBytes, valueInputStream, topic, consumerRecordList,
-                        s3SourceConfig, topicPartition, startOffset, offsetManager, currentOffsets, partitionMap);
 
+                for (final Object record : outputWriter.getRecords(valueInputStream, topic, topicPartition)) {
+                    final byte[] valueBytes = outputWriter.getValueBytes(record, topic, s3SourceConfig);
+                    consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition,
+                            offsetManager, currentOffsets, startOffset, partitionMap));
+                }
                 return consumerRecordList;
+            }
+
+            private ConsumerRecord<byte[], byte[]> getConsumerRecord(final Optional<byte[]> key, final byte[] value,
+                    final String topic, final int topicPartition, final OffsetManager offsetManager,
+                    final Map<Map<String, Object>, Long> currentOffsets, final long startOffset,
+                    final Map<String, Object> partitionMap) {
+
+                long currentOffset;
+
+                if (offsetManager.getOffsets().containsKey(partitionMap)) {
+                    currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap);
+                } else {
+                    currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
+                    currentOffsets.put(partitionMap, currentOffset + 1);
+                }
+
+                return new ConsumerRecord<>(topic, topicPartition, currentOffset, key.orElse(null), value);
             }
 
             @Override
@@ -152,7 +174,9 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
             @Override
             public List<ConsumerRecord<byte[], byte[]>> next() {
                 if (nextRecord.isEmpty()) {
-                    throw new NoSuchElementException();
+                    LOGGER.error("May be error in reading s3 object " + currentObjectKey);
+                    return Collections.emptyList();
+                    // throw new NoSuchElementException();
                 }
                 final List<ConsumerRecord<byte[], byte[]>> currentRecord = nextRecord;
                 nextRecord = Collections.emptyList();
@@ -175,7 +199,9 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
 
         final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = recordIterator.next();
         if (consumerRecordList.isEmpty()) {
-            throw new NoSuchElementException();
+            LOGGER.error("May be error in reading s3 object " + currentObjectKey);
+            return Collections.emptyList();
+            // throw new NoSuchElementException();
         }
         final List<AivenS3SourceRecord> aivenS3SourceRecordList = new ArrayList<>();
 

@@ -21,14 +21,11 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGI
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
 import com.amazonaws.util.IOUtils;
 import org.apache.avro.file.DataFileReader;
@@ -36,7 +33,6 @@ import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
-import org.apache.avro.io.DecoderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,21 +46,19 @@ public class AvroWriter implements OutputWriter {
     }
 
     @Override
-    @SuppressWarnings("PMD.ExcessiveParameterList")
-    public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
-            final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
-            final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
-            final Map<String, Object> partitionMap) {
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-        DecoderFactory.get().binaryDecoder(inputStream, null);
-        final List<GenericRecord> records = readAvroRecords(inputStream, datumReader);
-        OutputUtils.buildConsumerRecordList(optionalKeyBytes, topic, consumerRecordList, s3SourceConfig, topicPartition,
-                startOffset, offsetManager, currentOffsets, records, partitionMap);
+        return readAvroRecords(inputStream, datumReader);
     }
 
-    List<GenericRecord> readAvroRecords(final InputStream content, final DatumReader<GenericRecord> datumReader) {
-        final List<GenericRecord> records = new ArrayList<>();
+    @Override
+    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
+        return OutputUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
+                s3SourceConfig);
+    }
+
+    List<Object> readAvroRecords(final InputStream content, final DatumReader<GenericRecord> datumReader) {
+        final List<Object> records = new ArrayList<>();
         try (SeekableByteArrayInput sin = new SeekableByteArrayInput(IOUtils.toByteArray(content))) {
             try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
                 reader.forEach(records::add);
