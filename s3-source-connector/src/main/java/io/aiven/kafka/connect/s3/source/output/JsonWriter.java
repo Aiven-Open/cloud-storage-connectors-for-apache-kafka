@@ -20,15 +20,13 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMAS_ENA
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -42,27 +40,25 @@ public class JsonWriter implements OutputWriter {
     }
 
     @Override
-    @SuppressWarnings("PMD.ExcessiveParameterList")
-    public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
-            final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
-            final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
-            final Map<String, Object> partitionMap) {
-        final byte[] valueBytes = serializeJsonData(inputStream);
-        if (valueBytes.length > 0) {
-            consumerRecordList.add(OutputUtils.getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition,
-                    offsetManager, currentOffsets, startOffset, partitionMap));
-        }
-    }
-
-    private byte[] serializeJsonData(final InputStream inputStream) {
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
+        final List<Object> jsonNodeList = new ArrayList<>();
         final JsonNode jsonNode;
         try {
             jsonNode = objectMapper.readTree(inputStream);
-            return objectMapper.writeValueAsBytes(jsonNode);
+            jsonNodeList.add(jsonNode);
         } catch (IOException e) {
             LOGGER.error("Error in reading s3 object stream " + e.getMessage());
         }
-        return new byte[0];
+        return jsonNodeList;
+    }
+
+    @Override
+    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
+        try {
+            return objectMapper.writeValueAsBytes(record);
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+            return new byte[0];
+        }
     }
 }
