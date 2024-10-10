@@ -28,7 +28,7 @@ import com.amazonaws.retry.RetryPolicy;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
-public class S3ClientUtils {
+public class S3Utility {
 
     private final AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
 

@@ -34,11 +34,12 @@ import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValida
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
 import io.aiven.kafka.connect.common.config.validators.UrlValidator;
-import io.aiven.kafka.connect.iam.AwsAccessSecret;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
@@ -125,11 +126,11 @@ public class S3BaseConfig extends AbstractConfig {
     // in other words we can't use values greater than 30
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
 
-    protected S3BaseConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD UnusedAssignment
-        super(definition, originals);
+    protected S3BaseConfig(ConfigDef definition, Map<String, String> originals) { // NOPMD UnusedAssignment
+        super(definition, handleDeprecatedYyyyUppercase(originals));
     }
 
-    protected static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
+    private static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
         if (!properties.containsKey(AWS_S3_PREFIX_CONFIG)) {
             return properties;
         }
@@ -214,34 +215,6 @@ public class S3BaseConfig extends AbstractConfig {
         configDef.define(AWS_S3_REGION_CONFIG, Type.STRING, null, new AwsRegionValidator(), Importance.MEDIUM,
                 "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD UnusedAssignment
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
-    }
-
-    protected static void addS3SinkConfig(final ConfigDef configDef) {
-        int awsS3SinkCounter = 0;
-
-        configDef.define(AWS_S3_PART_SIZE, Type.INT, DEFAULT_PART_SIZE, new ConfigDef.Validator() {
-
-            static final int MAX_BUFFER_SIZE = 2_000_000_000;
-
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                if (value == null) {
-                    throw new ConfigException(name, null, "Part size must be non-null");
-                }
-                final var number = (Number) value;
-                if (number.longValue() <= 0) {
-                    throw new ConfigException(name, value, "Part size must be greater than 0");
-                }
-                if (number.longValue() > MAX_BUFFER_SIZE) {
-                    throw new ConfigException(name, value,
-                            "Part size must be no more: " + MAX_BUFFER_SIZE + " bytes (2GB)");
-                }
-            }
-        }, Importance.MEDIUM,
-                "The Part Size in S3 Multi-part Uploads in bytes. Maximum is " + Integer.MAX_VALUE
-                        + " (2GB) and default is " + DEFAULT_PART_SIZE + " (5MB)",
-                GROUP_AWS, awsS3SinkCounter++, // NOPMD UnusedAssignment
-                ConfigDef.Width.NONE, AWS_S3_PART_SIZE);
     }
 
     protected static void addAwsStsConfigGroup(final ConfigDef configDef) {
@@ -395,12 +368,22 @@ public class S3BaseConfig extends AbstractConfig {
         return new AwsStsEndpointConfig(getString(AWS_STS_CONFIG_ENDPOINT), getString(AWS_S3_REGION_CONFIG));
     }
 
-    public AwsAccessSecret getNewAwsCredentials() {
-        return new AwsAccessSecret(getPassword(AWS_ACCESS_KEY_ID_CONFIG), getPassword(AWS_SECRET_ACCESS_KEY_CONFIG));
+    public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
+        final AwsStsEndpointConfig config = getStsEndpointConfig();
+        return new AwsClientBuilder.EndpointConfiguration(config.getServiceEndpoint(), config.getSigningRegion());
     }
 
-    public AwsAccessSecret getAwsCredentials() {
-        return getNewAwsCredentials().isValid() ? getNewAwsCredentials() : getOldAwsCredentials();
+    public BasicAWSCredentials getAwsCredentials() {
+        if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID_CONFIG))
+                && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
+            return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
+                    getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value());
+        } else if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID))
+                && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY))) {
+            return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(),
+                    getPassword(AWS_SECRET_ACCESS_KEY).value());
+        }
+        return null;
     }
 
     public String getAwsS3EndPoint() {
@@ -453,11 +436,8 @@ public class S3BaseConfig extends AbstractConfig {
         return getInt(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
     }
 
-    public AwsAccessSecret getOldAwsCredentials() {
-        return new AwsAccessSecret(getPassword(AWS_ACCESS_KEY_ID), getPassword(AWS_SECRET_ACCESS_KEY));
-    }
-
     public AWSCredentialsProvider getCustomCredentialsProvider() {
         return getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
     }
+
 }
