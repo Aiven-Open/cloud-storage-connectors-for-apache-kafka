@@ -20,12 +20,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
 import com.amazonaws.util.IOUtils;
 import org.slf4j.Logger;
@@ -40,17 +36,17 @@ public class ByteArrayWriter implements OutputWriter {
     }
 
     @Override
-    @SuppressWarnings("PMD.ExcessiveParameterList")
-    public void handleValueData(final Optional<byte[]> optionalKeyBytes, final InputStream inputStream,
-            final String topic, final List<ConsumerRecord<byte[], byte[]>> consumerRecordList,
-            final S3SourceConfig s3SourceConfig, final int topicPartition, final long startOffset,
-            final OffsetManager offsetManager, final Map<Map<String, Object>, Long> currentOffsets,
-            final Map<String, Object> partitionMap) {
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
+        return List.of(inputStream);
+    }
+
+    @Override
+    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
         try {
-            consumerRecordList.add(OutputUtils.getConsumerRecord(optionalKeyBytes, IOUtils.toByteArray(inputStream),
-                    topic, topicPartition, offsetManager, currentOffsets, startOffset, partitionMap));
+            return IOUtils.toByteArray((InputStream) record);
         } catch (IOException e) {
             LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+            return new byte[0];
         }
     }
 }

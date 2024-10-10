@@ -173,7 +173,7 @@ public interface IntegrationBase {
             while (recordsList.size() < expectedMessageCount) {
                 final ConsumerRecords<String, GenericRecord> records = consumer.poll(500L);
                 for (final ConsumerRecord<String, GenericRecord> record : records) {
-                    recordsList.add(record.value()); // Add the GenericRecord to the list
+                    recordsList.add(record.value());
                 }
             }
 
