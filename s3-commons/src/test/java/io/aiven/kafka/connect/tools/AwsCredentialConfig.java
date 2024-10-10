@@ -24,7 +24,7 @@ import io.aiven.kafka.connect.s3.S3BaseConfig;
 
 public class AwsCredentialConfig extends S3BaseConfig {
     public AwsCredentialConfig(final Map<String, String> properties) {
-        super(configDef(new ConfigDef()), handleDeprecatedYyyyUppercase(properties));
+        super(configDef(new ConfigDef()), properties);
     }
 
     public static ConfigDef configDef(ConfigDef configDef) { // NOPMD UnusedAssignment
@@ -32,7 +32,6 @@ public class AwsCredentialConfig extends S3BaseConfig {
         addAwsConfigGroup(configDef);
         addAwsStsConfigGroup(configDef);
         addDeprecatedConfiguration(configDef);
-        addS3SinkConfig(configDef);
         return configDef;
     }
 }

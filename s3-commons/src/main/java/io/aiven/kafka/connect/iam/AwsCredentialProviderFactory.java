@@ -16,13 +16,14 @@
 
 package io.aiven.kafka.connect.iam;
 
+import java.util.Objects;
+
 import io.aiven.kafka.connect.s3.S3BaseConfig;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 
@@ -32,12 +33,11 @@ public class AwsCredentialProviderFactory {
         if (config.hasAwsStsRole()) {
             return getStsProvider(config);
         }
-        final AwsAccessSecret awsCredentials = config.getAwsCredentials();
-        if (!awsCredentials.isValid()) {
+        final BasicAWSCredentials awsCredentials = config.getAwsCredentials();
+        if (Objects.isNull(awsCredentials)) {
             return config.getCustomCredentialsProvider();
         }
-        return new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsCredentials.getAccessKeyId().value(),
-                awsCredentials.getSecretAccessKey().value()));
+        return new AWSStaticCredentialsProvider(awsCredentials);
     }
 
     private AWSCredentialsProvider getStsProvider(final S3BaseConfig config) {
@@ -52,11 +52,8 @@ public class AwsCredentialProviderFactory {
 
     private AWSSecurityTokenService securityTokenService(final S3BaseConfig config) {
         if (config.hasStsEndpointConfig()) {
-            final AwsStsEndpointConfig endpointConfig = config.getStsEndpointConfig();
-            final AwsClientBuilder.EndpointConfiguration stsConfig = new AwsClientBuilder.EndpointConfiguration(
-                    endpointConfig.getServiceEndpoint(), endpointConfig.getSigningRegion());
             final AWSSecurityTokenServiceClientBuilder stsBuilder = AWSSecurityTokenServiceClientBuilder.standard();
-            stsBuilder.setEndpointConfiguration(stsConfig);
+            stsBuilder.setEndpointConfiguration(config.getAwsEndpointConfiguration());
             return stsBuilder.build();
         }
         return AWSSecurityTokenServiceClientBuilder.defaultClient();
