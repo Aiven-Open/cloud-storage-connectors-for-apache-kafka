@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.output;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -26,13 +25,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
@@ -77,17 +72,13 @@ final class AvroWriterTest {
     }
 
     @Test
-    void testHandleValueData() throws Exception {
+    void testReadAvroRecordsInvalidData() {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
-        final Optional<byte[]> optionalKeyBytes = Optional.of("key".getBytes(StandardCharsets.UTF_8));
-        final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
-        final Map<Map<String, Object>, Long> currentOffsets = new HashMap<>();
-        final Map<String, Object> partitionMap = new HashMap<>();
 
-        avroWriter.handleValueData(optionalKeyBytes, inputStream, "test-topic", consumerRecordList, s3SourceConfig, 0,
-                0L, offsetManager, currentOffsets, partitionMap);
+        final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+        final List<Object> records = avroWriter.readAvroRecords(inputStream, datumReader);
 
-        assertTrue(consumerRecordList.isEmpty(), "Consumer record list should be populated by the OutputUtils method.");
+        assertThat(records.size()).isEqualTo(0);
     }
 
     @Test
@@ -96,7 +87,7 @@ final class AvroWriterTest {
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-        final List<GenericRecord> records = avroWriter.readAvroRecords(inputStream, datumReader);
+        final List<Object> records = avroWriter.readAvroRecords(inputStream, datumReader);
 
         assertThat(records.size()).isEqualTo(2);
     }
