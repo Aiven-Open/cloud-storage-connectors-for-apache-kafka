@@ -16,9 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.BUCKET;
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.PARTITION;
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.TOPIC;
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,7 +77,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
         this.s3Client = s3Client;
         this.bucketName = bucketName;
         this.outputWriter = outputWriter;
-        final FileReader fileReader = new FileReader(s3SourceConfig, bucketName, failedObjectKeys);
+        final FileReader fileReader = new FileReader(s3SourceConfig, bucketName, failedObjectKeys, offsetManager);
         try {
             final List<S3ObjectSummary> chunks = fileReader.fetchObjectSummaries(s3Client);
             nextFileIterator = chunks.iterator();
@@ -157,8 +155,10 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                 long currentOffset;
 
                 if (offsetManager.getOffsets().containsKey(partitionMap)) {
+                    LOGGER.info("***** offsetManager.getOffsets() ***** " + offsetManager.getOffsets());
                     currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap);
                 } else {
+                    LOGGER.info("Into else block ...");
                     currentOffset = currentOffsets.getOrDefault(partitionMap, startOffset);
                     currentOffsets.put(partitionMap, currentOffset + 1);
                 }
@@ -209,14 +209,13 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
         Map<String, Object> offsetMap;
         Map<String, Object> partitionMap;
         for (final ConsumerRecord<byte[], byte[]> currentRecord : consumerRecordList) {
-            partitionMap = new HashMap<>();
-            partitionMap.put(BUCKET, bucketName);
-            partitionMap.put(TOPIC, currentRecord.topic());
-            partitionMap.put(PARTITION, currentRecord.partition());
+
+            partitionMap = ConnectUtils.getPartitionMap(currentRecord.topic(), currentRecord.partition(), bucketName);
 
             // Create the offset map
             offsetMap = new HashMap<>();
             offsetMap.put(OFFSET_KEY, currentRecord.offset());
+            offsetMap.put(OBJECT_KEY, currentObjectKey);
 
             aivenS3SourceRecord = new AivenS3SourceRecord(partitionMap, offsetMap, currentRecord.topic(),
                     currentRecord.partition(), currentRecord.key(), currentRecord.value(), currentObjectKey);

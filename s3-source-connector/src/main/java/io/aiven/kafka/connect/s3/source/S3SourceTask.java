@@ -61,7 +61,9 @@ public class S3SourceTask extends SourceTask {
 
     public static final String BUCKET = "bucket";
     public static final String TOPIC = "topic";
-    public static final String PARTITION = "partition";
+
+    public static final String OBJECT_KEY = "object_key";
+    public static final String PARTITION = "topicPartition";
 
     private static final long S_3_POLL_INTERVAL_MS = 10_000L;
     private static final long ERROR_BACKOFF = 1000L;
@@ -86,6 +88,8 @@ public class S3SourceTask extends SourceTask {
     private final Object pollLock = new Object();
     private final Set<String> failedObjectKeys = new HashSet<>();
 
+    private OffsetManager offsetManager;
+
     @SuppressWarnings("PMD.UnnecessaryConstructor")
     public S3SourceTask() {
         super();
@@ -104,6 +108,7 @@ public class S3SourceTask extends SourceTask {
         initializeS3Client();
         this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
         this.outputWriter = OutputWriterFactory.getWriter(s3SourceConfig);
+        offsetManager = new OffsetManager(context, s3SourceConfig);
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;
     }
@@ -127,7 +132,6 @@ public class S3SourceTask extends SourceTask {
     }
 
     private void prepareReaderFromOffsetStorageReader() {
-        final OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
         sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
                 this.outputWriter, failedObjectKeys);
     }
@@ -180,7 +184,7 @@ public class S3SourceTask extends SourceTask {
             return results;
         }
         return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
-                valueConverter, connectorStopped, this.outputWriter, failedObjectKeys);
+                valueConverter, connectorStopped, this.outputWriter, failedObjectKeys, offsetManager);
     }
 
     private void waitForObjects() throws InterruptedException {
