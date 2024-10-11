@@ -41,6 +41,8 @@ import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.AUTO_REGISTER_SCHEMAS;
+
 @SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports" })
 final public class S3SourceConfig extends AbstractConfig {
 

@@ -25,7 +25,7 @@ import java.util.Optional;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 
-public class AivenS3SourceRecord {
+public final class AivenS3SourceRecord {
     private final Map<String, Object> partitionMap;
     private final Map<String, Object> offsetMap;
     private final String toTopic;

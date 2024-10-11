@@ -47,7 +47,7 @@ import org.codehaus.stax2.ri.SingletonIterator;
     public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
-            return new SingletonIterator(objectMapper.writeValueAsBytes(objectMapper.readTree(inputStream)));
+            return new SingletonIterator<>(objectMapper.writeValueAsBytes(objectMapper.readTree(inputStream)));
         } catch (IOException e) {
             throw new BadDataException(e);
         }

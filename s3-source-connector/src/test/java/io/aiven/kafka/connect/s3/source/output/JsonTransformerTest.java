@@ -28,7 +28,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -41,7 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-final class JsonWriterTest {
+final class JsonTransformerTest {
 
     JsonTransformer underTest;
 

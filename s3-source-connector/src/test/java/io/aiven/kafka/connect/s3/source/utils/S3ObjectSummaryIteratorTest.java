@@ -76,7 +76,7 @@ class S3ObjectSummaryIteratorTest {
 
         assertThat(underTest.hasNext()).isTrue();
         S3ObjectSummary actual = underTest.next();
-        assertThat(actual).equals(objectSummary);
+        assertThat(actual).isEqualTo(objectSummary);
         assertThat(underTest.hasNext()).isFalse();
     }
 
