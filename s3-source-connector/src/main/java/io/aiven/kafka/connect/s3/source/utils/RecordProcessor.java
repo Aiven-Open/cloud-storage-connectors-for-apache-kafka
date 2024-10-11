@@ -31,7 +31,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.OutputWriter;
+import io.aiven.kafka.connect.s3.source.output.Transformer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,9 +44,9 @@ public final class RecordProcessor {
 
     }
     public static List<SourceRecord> processRecords(final Iterator<List<AivenS3SourceRecord>> sourceRecordIterator,
-            final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
-            final Optional<Converter> keyConverter, final Converter valueConverter,
-            final AtomicBoolean connectorStopped, final OutputWriter outputWriter, final Set<String> failedObjectKeys) {
+                                                    final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
+                                                    final Optional<Converter> keyConverter, final Converter valueConverter,
+                                                    final AtomicBoolean connectorStopped, final Transformer outputWriter, final Set<String> failedObjectKeys) {
 
         final Map<String, String> conversionConfig = new HashMap<>();
         final int maxPollRecords = s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS);
@@ -64,7 +64,7 @@ public final class RecordProcessor {
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     static List<SourceRecord> createSourceRecords(final List<AivenS3SourceRecord> aivenS3SourceRecordList,
             final S3SourceConfig s3SourceConfig, final Optional<Converter> keyConverter, final Converter valueConverter,
-            final Map<String, String> conversionConfig, final OutputWriter outputWriter,
+            final Map<String, String> conversionConfig, final Transformer outputWriter,
             final Set<String> failedObjectKeys) {
 
         final List<SourceRecord> sourceRecordList = new ArrayList<>();

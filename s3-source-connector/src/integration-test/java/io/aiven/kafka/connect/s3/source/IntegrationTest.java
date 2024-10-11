@@ -44,7 +44,6 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.admin.AdminClient;
 
-import io.aiven.kafka.connect.s3.source.output.OutputFormat;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;

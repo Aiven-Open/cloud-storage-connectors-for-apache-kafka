@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.OFFSET_KEY;
+import static io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecordIterator.OFFSET_KEY;
 import static java.util.stream.Collectors.toMap;
 
 import java.net.ConnectException;

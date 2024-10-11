@@ -20,19 +20,23 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMAS_ENA
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.codehaus.stax2.ri.SingletonIterator;
 
-public class JsonWriter implements OutputWriter {
+/**
+ * Defines a transform from the S3 input stream to the JSON formatted data @{code byte[]} found in a {@code ConsumerRecord<byte[], byte[]>}.
+ */public class JsonTransformer implements Transformer {
 
-    final ObjectMapper objectMapper = new ObjectMapper();
+    @Override
+    public String getName() {
+        return "json";
+    }
+
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
@@ -40,25 +44,12 @@ public class JsonWriter implements OutputWriter {
     }
 
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
-        final List<Object> jsonNodeList = new ArrayList<>();
-        final JsonNode jsonNode;
+    public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException {
+        ObjectMapper objectMapper = new ObjectMapper();
         try {
-            jsonNode = objectMapper.readTree(inputStream);
-            jsonNodeList.add(jsonNode);
+            return new SingletonIterator(objectMapper.writeValueAsBytes(objectMapper.readTree(inputStream)));
         } catch (IOException e) {
-            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
-        }
-        return jsonNodeList;
-    }
-
-    @Override
-    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
-        try {
-            return objectMapper.writeValueAsBytes(record);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
-            return new byte[0];
+            throw new BadDataException(e);
         }
     }
 }
