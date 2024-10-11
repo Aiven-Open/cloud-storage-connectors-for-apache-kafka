@@ -1,0 +1,12 @@
+target
+docs/_build
+.idea
+*.iml
+*.DS_Store
+.gradle
+.gradletasknamecache
+build/
+rpm/
+rpmbuild/
+lib/
+*.sh
