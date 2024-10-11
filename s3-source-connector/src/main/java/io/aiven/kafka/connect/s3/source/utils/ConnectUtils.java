@@ -28,11 +28,12 @@ final public class ConnectUtils {
     private ConnectUtils() {
         // hidden
     }
-    static Map<String, Object> getPartitionMap(final String topicName, final int defaultPartitionId,
+    static Map<String, Object> getPartitionMap(final String topicName, final Integer defaultPartitionId,
             final String bucketName) {
         final Map<String, Object> partitionMap = new HashMap<>();
         partitionMap.put(BUCKET, bucketName);
         partitionMap.put(TOPIC, topicName);
+
         partitionMap.put(PARTITION, defaultPartitionId);
         return partitionMap;
     }

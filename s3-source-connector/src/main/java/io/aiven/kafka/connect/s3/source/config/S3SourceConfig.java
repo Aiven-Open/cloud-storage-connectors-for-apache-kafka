@@ -149,8 +149,8 @@ final public class S3SourceConfig extends AbstractConfig {
                 GROUP_OTHER, srCounter++, // NOPMD
                 ConfigDef.Width.NONE, OUTPUT_FORMAT_KEY);
 
-        configDef.define(VALUE_SERIALIZER, ConfigDef.Type.CLASS, "io.confluent.kafka.serializers.KafkaAvroSerializer",
-                ConfigDef.Importance.MEDIUM, "Value serializer", GROUP_OTHER, srCounter++, // NOPMD
+        configDef.define(VALUE_SERIALIZER, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM, "Value serializer",
+                GROUP_OTHER, srCounter++, // NOPMD
                 // UnusedAssignment
                 ConfigDef.Width.NONE, VALUE_SERIALIZER);
     }
