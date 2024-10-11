@@ -31,7 +31,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.OutputWriter;
+import io.aiven.kafka.connect.s3.source.output.Transformer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,10 +44,9 @@ public final class RecordProcessor {
 
     }
     public static List<SourceRecord> processRecords(final Iterator<List<AivenS3SourceRecord>> sourceRecordIterator,
-            final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
-            final Optional<Converter> keyConverter, final Converter valueConverter,
-            final AtomicBoolean connectorStopped, final OutputWriter outputWriter, final Set<String> failedObjectKeys,
-            final OffsetManager offsetManager) {
+                                                    final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
+                                                    final Optional<Converter> keyConverter, final Converter valueConverter,
+                                                    final AtomicBoolean connectorStopped, final Transformer outputWriter, final Set<String> failedObjectKeys) {
 
         final Map<String, String> conversionConfig = new HashMap<>();
         final int maxPollRecords = s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS);
@@ -55,23 +54,21 @@ public final class RecordProcessor {
         for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
             final List<AivenS3SourceRecord> recordList = sourceRecordIterator.next();
             final List<SourceRecord> sourceRecords = createSourceRecords(recordList, s3SourceConfig, keyConverter,
-                    valueConverter, conversionConfig, outputWriter, failedObjectKeys, offsetManager);
+                    valueConverter, conversionConfig, outputWriter, failedObjectKeys);
             results.addAll(sourceRecords);
         }
 
-        LOGGER.info("Number of records sent {}", results.size());
         return results;
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     static List<SourceRecord> createSourceRecords(final List<AivenS3SourceRecord> aivenS3SourceRecordList,
             final S3SourceConfig s3SourceConfig, final Optional<Converter> keyConverter, final Converter valueConverter,
-            final Map<String, String> conversionConfig, final OutputWriter outputWriter,
-            final Set<String> failedObjectKeys, final OffsetManager offsetManager) {
+            final Map<String, String> conversionConfig, final Transformer outputWriter,
+            final Set<String> failedObjectKeys) {
 
         final List<SourceRecord> sourceRecordList = new ArrayList<>();
         for (final AivenS3SourceRecord aivenS3SourceRecord : aivenS3SourceRecordList) {
-            LOGGER.info(" ******* CSR key ******** {}", aivenS3SourceRecord.getObjectKey());
             final String topic = aivenS3SourceRecord.getToTopic();
             final Optional<SchemaAndValue> keyData = keyConverter
                     .map(c -> c.toConnectData(topic, aivenS3SourceRecord.key()));
@@ -80,9 +77,6 @@ public final class RecordProcessor {
             valueConverter.configure(conversionConfig, false);
             try {
                 final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, aivenS3SourceRecord.value());
-                offsetManager.updateCurrentOffsets(aivenS3SourceRecord.getPartitionMap(),
-                        aivenS3SourceRecord.getOffsetMap());
-                aivenS3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(aivenS3SourceRecord.getPartitionMap()));
                 sourceRecordList.add(aivenS3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue));
             } catch (DataException e) {
                 LOGGER.error("Error in reading s3 object stream " + e.getMessage());

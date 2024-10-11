@@ -18,35 +18,38 @@ package io.aiven.kafka.connect.s3.source.output;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.util.IOUtils;
+import org.codehaus.stax2.ri.SingletonIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ByteArrayWriter implements OutputWriter {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayWriter.class);
+/**
+ * Defines a transform that does not change the @{code byte[]} retrieved from the S3 Object..
+ */
+public class ByteArrayTransformer implements Transformer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayTransformer.class);
+
+    @Override
+    public String getName() {
+        return TransformerFactory.DEFAULT_TRANSFORMER_NAME;
+    }
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
-
     }
 
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
-        return List.of(inputStream);
-    }
-
-    @Override
-    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
+    public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException {
         try {
-            return IOUtils.toByteArray((InputStream) record);
+            return new SingletonIterator(IOUtils.toByteArray(inputStream));
         } catch (IOException e) {
-            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
-            return new byte[0];
+            throw new BadDataException(e);
         }
     }
 }

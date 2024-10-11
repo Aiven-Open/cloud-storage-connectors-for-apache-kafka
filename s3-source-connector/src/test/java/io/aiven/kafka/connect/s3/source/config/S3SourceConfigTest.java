@@ -23,10 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 
-import io.aiven.kafka.connect.s3.source.output.OutputFormat;
-
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
+import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
 import org.junit.jupiter.api.Test;
 
 final class S3SourceConfigTest {
@@ -43,7 +42,7 @@ final class S3SourceConfigTest {
         props.put(S3SourceConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
         // record, topic specific props
-        props.put(S3SourceConfig.OUTPUT_FORMAT_KEY, OutputFormat.AVRO.getValue());
+        props.put(S3SourceConfig.OUTPUT_FORMAT_KEY, TransformerFactory.DEFAULT_TRANSFORMER_NAME);
         props.put(TARGET_TOPIC_PARTITIONS, "0,1");
         props.put(TARGET_TOPICS, "testtopic");
         props.put(SCHEMA_REGISTRY_URL, "localhost:8081");
@@ -57,7 +56,6 @@ final class S3SourceConfigTest {
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
         assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion("us-east-1"));
 
-        assertThat(conf.getOutputFormat()).isEqualTo(OutputFormat.AVRO);
         assertThat(conf.getTargetTopics()).isEqualTo("testtopic");
         assertThat(conf.getTargetTopicPartitions()).isEqualTo("0,1");
         assertThat(conf.getSchemaRegistryUrl()).isEqualTo("localhost:8081");
