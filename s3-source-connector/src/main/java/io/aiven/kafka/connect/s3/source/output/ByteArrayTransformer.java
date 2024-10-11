@@ -47,7 +47,7 @@ public class ByteArrayTransformer implements Transformer {
     @Override
     public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException {
         try {
-            return new SingletonIterator(IOUtils.toByteArray(inputStream));
+            return new SingletonIterator<>(IOUtils.toByteArray(inputStream));
         } catch (IOException e) {
             throw new BadDataException(e);
         }

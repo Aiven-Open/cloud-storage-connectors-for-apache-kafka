@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.s3.source.output;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
+import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.AUTO_REGISTER_SCHEMAS;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -43,6 +44,8 @@ import org.slf4j.LoggerFactory;
 public class AvroTransformer implements Transformer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroTransformer.class);
+
+    private static final String[] CONFIG_KEYS = {SCHEMA_REGISTRY_URL, AUTO_REGISTER_SCHEMAS};
 
     @Override
     public String getName() {
@@ -82,8 +85,17 @@ public class AvroTransformer implements Transformer {
      * @throws IllegalAccessException if the value serializer class constructor can not be accessed.
      */
     static KafkaAvroSerializer createAvroSerializer(S3SourceConfig s3SourceConfig) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
-                s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
+        final Map<String, String> config = new HashMap();
+        final Set<String> keys = s3SourceConfig.values().keySet();
+        for (String key : CONFIG_KEYS) {
+            if (keys.contains(key)) {
+                String value = s3SourceConfig.getString(key);
+                if (value != null && value.trim().length() > 0) {
+                    config.put(key, value);
+                }
+            }
+        }
+
         KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
                 .getDeclaredConstructor().newInstance();
         avroSerializer.configure(config, false);

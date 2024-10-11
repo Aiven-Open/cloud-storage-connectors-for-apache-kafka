@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -25,29 +26,44 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
+import java.util.Map;
 
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 
 import com.amazonaws.util.IOUtils;
-import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-final class ParquetWriterTest {
+final class ParquetTransformerTest {
     private ParquetTransformer underTest;
+
+    private S3SourceConfig s3SourceConfig;
 
     @BeforeEach
     public void setUp() {
         underTest = new ParquetTransformer();
+        s3SourceConfig = new S3SourceConfig(AvroTransformerTest.getBasicProperties());
     }
 
     @Test
     public void testName() {
-        assertThat(underTest.getName().equals("avro"));
+        assertThat(underTest.getName().equals("parquet"));
     }
 
+    @Test
+    void testConfigureValueConverter() {
+        final String value = "http://localhost:8081";
+        Map<String, String> config = new HashMap<>();
+
+        // test value
+        underTest.configureValueConverter(config, s3SourceConfig);
+        assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("http://localhost:8081")
+                .describedAs("The schema registry URL should be correctly set in the config.");
+
+    }
 
     @Test
     void testHandleValueDataWithZeroBytes() {
@@ -55,7 +71,7 @@ final class ParquetWriterTest {
 
         final String topic = "test-topic";
 
-        assertThatThrownBy(() -> underTest.byteArrayIterator(inputStream, "topic", null))
+        assertThatThrownBy(() -> underTest.byteArrayIterator(inputStream, "topic", s3SourceConfig))
                 .isInstanceOf(BadDataException.class);
     }
 
@@ -66,7 +82,7 @@ final class ParquetWriterTest {
 
         final String topic = "test-topic";
 
-        final Iterator<byte[]> iter = underTest.byteArrayIterator(inputStream, topic, null);
+        final Iterator<byte[]> iter = underTest.byteArrayIterator(inputStream, topic, s3SourceConfig);
 
         assertThat(iter).hasNext();
         byte[] actual = iter.next();
@@ -79,7 +95,7 @@ final class ParquetWriterTest {
         final InputStream inputStream = new ByteArrayInputStream(invalidData);
 
         final String topic = "test-topic";
-        assertThatThrownBy(() -> underTest.byteArrayIterator(inputStream, "topic", null))
+        assertThatThrownBy(() -> underTest.byteArrayIterator(inputStream, "topic", s3SourceConfig))
                 .isInstanceOf(BadDataException.class);
     }
 
