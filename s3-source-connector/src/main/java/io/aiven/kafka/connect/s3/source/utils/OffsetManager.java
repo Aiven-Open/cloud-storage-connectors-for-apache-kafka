@@ -33,7 +33,12 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class OffsetManager {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(OffsetManager.class);
     private final Map<Map<String, Object>, Map<String, Object>> offsets;
 
     public OffsetManager(final SourceTaskContext context, final S3SourceConfig s3SourceConfig) {
@@ -46,10 +51,12 @@ public class OffsetManager {
         final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
                 .offsets(partitionKeys);
 
+        LOGGER.info(" ********** offsetMap ***** " + offsetMap);
         this.offsets = offsetMap.entrySet()
                 .stream()
                 .filter(e -> e.getValue() != null)
                 .collect(toMap(entry -> new HashMap<>(entry.getKey()), entry -> new HashMap<>(entry.getValue())));
+        LOGGER.info(" ********** offsets ***** " + offsets);
     }
 
     public Map<Map<String, Object>, Map<String, Object>> getOffsets() {
@@ -58,14 +65,19 @@ public class OffsetManager {
 
     public long incrementAndUpdateOffsetMap(final Map<String, Object> partitionMap) {
         if (offsets.containsKey(partitionMap)) {
-            final Map<String, Object> offsetValue = offsets.get(partitionMap);
+            final Map<String, Object> offsetValue = new HashMap<>(offsets.get(partitionMap));
             if (offsetValue.containsKey(OFFSET_KEY)) {
                 final long newOffsetVal = (long) offsetValue.get(OFFSET_KEY) + 1L;
                 offsetValue.put(OFFSET_KEY, newOffsetVal);
+                offsets.put(partitionMap, offsetValue);
                 return newOffsetVal;
             }
         }
         return 0L;
+    }
+
+    void updateCurrentOffsets(final Map<String, Object> partitionMap, final Map<String, Object> offsetValueMap) {
+        offsets.put(partitionMap, offsetValueMap);
     }
 
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {
