@@ -123,18 +123,6 @@ final class OffsetManagerTest {
         assertThat(newOffset).isEqualTo(0L);
     }
 
-    @Test
-    void testGetFirstConfiguredTopic() throws Exception {
-        sourceTaskContext = mock(SourceTaskContext.class);
-        final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
-        when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
-
-        offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
-
-        final String firstTopic = offsetManager.getFirstConfiguredTopic(s3SourceConfig);
-        assertThat(firstTopic).isEqualTo("topic1");
-    }
-
     private void setBasicProperties() {
         properties.put(S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET);
         properties.put(TARGET_TOPIC_PARTITIONS, "0,1");
