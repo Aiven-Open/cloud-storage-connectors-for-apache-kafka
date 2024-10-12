@@ -79,8 +79,6 @@ public final class RecordProcessor {
             valueConverter.configure(conversionConfig, false);
             try {
                 final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, aivenS3SourceRecord.value());
-                offsetManager.updateCurrentOffsets(aivenS3SourceRecord.getPartitionMap(),
-                        aivenS3SourceRecord.getOffsetMap());
                 sourceRecordList.add(aivenS3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue));
             } catch (DataException e) {
                 LOGGER.error("Error in reading s3 object stream " + e.getMessage());
