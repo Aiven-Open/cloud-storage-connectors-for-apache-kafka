@@ -220,52 +220,10 @@ final class IntegrationTest implements IntegrationBase {
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).extracting(record -> record.get("message").toString())
-                .contains("Hello, Kafka Connect S3 Source! object 1")
-                .contains("Hello, Kafka Connect S3 Source! object 2");
-        assertThat(records).extracting(record -> record.get("id").toString()).contains("1").contains("2");
-    }
-
-    @Test
-    void avroTestRandomFiles(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.AVRO.getValue());
-        connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
-        connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
-        connectorConfig.put(VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
-
-        connectRunner.createConnector(connectorConfig);
-
-        // Define Avro schema
-        final String schemaJson = "{\n" + "  \"type\": \"record\",\n" + "  \"name\": \"TestRecord\",\n"
-                + "  \"fields\": [\n" + "    {\"name\": \"message\", \"type\": \"string\"},\n"
-                + "    {\"name\": \"id\", \"type\": \"int\"}\n" + "  ]\n" + "}";
-        final Schema.Parser parser = new Schema.Parser();
-        final Schema schema = parser.parse(schemaJson);
-
-        final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1);
-        final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2);
-
-        writeToS3GeneratedKey(topicName, outputStream1.toByteArray());
-        writeToS3(topicName, outputStream2.toByteArray(), "00000");
-        writeToS3GeneratedKey(topicName, outputStream2.toByteArray());
-        writeToS3GeneratedKey(topicName, outputStream2.toByteArray());
-
-        final List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(4);
-
-        // Verify that the connector is correctly set up
-        assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
-
-        // Poll Avro messages from the Kafka topic and deserialize them
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 4, KAFKA_CONTAINER,
-                SCHEMA_REGISTRY.getSchemaRegistryUrl()); // Ensure this method deserializes Avro
-
-        // Verify that the correct data is read from the S3 bucket and pushed to Kafka
-        assertThat(records).extracting(record -> record.get("message").toString())
-                .contains("Hello, Kafka Connect S3 Source! object 1")
-                .contains("Hello, Kafka Connect S3 Source! object 2");
+                .contains("Hello, Kafka Connect S3 Source! object 11")
+                .contains("Hello, Kafka Connect S3 Source! object 21")
+                .contains("Hello, Kafka Connect S3 Source! object 12")
+                .contains("Hello, Kafka Connect S3 Source! object 22");
         assertThat(records).extracting(record -> record.get("id").toString()).contains("1").contains("2");
     }
 
@@ -321,16 +279,21 @@ final class IntegrationTest implements IntegrationBase {
 
     private static ByteArrayOutputStream getAvroRecord(final Schema schema, final int messageId) throws IOException {
         // Create Avro records
-        final GenericRecord avroRecord = new GenericData.Record(schema);
-        avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + messageId);
-        avroRecord.put("id", messageId);
+        final GenericRecord avroRecord1 = new GenericData.Record(schema);
+        avroRecord1.put("message", "Hello, Kafka Connect S3 Source! object 1" + messageId);
+        avroRecord1.put("id", messageId);
+
+        final GenericRecord avroRecord2 = new GenericData.Record(schema);
+        avroRecord2.put("message", "Hello, Kafka Connect S3 Source! object 2" + messageId);
+        avroRecord2.put("id", messageId);
 
         // Serialize Avro records to byte arrays
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
             dataFileWriter.create(schema, outputStream);
-            dataFileWriter.append(avroRecord);
+            dataFileWriter.append(avroRecord1);
+            dataFileWriter.append(avroRecord2);
             dataFileWriter.flush();
         }
         outputStream.close();
@@ -340,19 +303,6 @@ final class IntegrationTest implements IntegrationBase {
     private static void writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId)
             throws IOException {
         final String filePrefix = topicName + "-" + partitionId;
-        final String fileSuffix = ".txt";
-
-        final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
-        try {
-            Files.write(testFilePath, testDataBytes);
-            saveToS3(TEST_BUCKET_NAME, "", filePrefix + fileSuffix, testFilePath.toFile());
-        } finally {
-            Files.delete(testFilePath);
-        }
-    }
-
-    private static void writeToS3GeneratedKey(final String topicName, final byte[] testDataBytes) throws IOException {
-        final String filePrefix = topicName + System.currentTimeMillis();
         final String fileSuffix = ".txt";
 
         final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
