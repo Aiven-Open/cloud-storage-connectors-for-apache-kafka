@@ -60,7 +60,7 @@ class FileReaderTest {
         setBasicProperties();
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(properties);
         offsetManager = mock(OffsetManager.class);
-        fileReader = new FileReader(s3SourceConfig, TEST_BUCKET, Collections.emptySet(), offsetManager);
+        fileReader = new FileReader(s3SourceConfig, TEST_BUCKET, Collections.emptySet());
         s3Client = mock(AmazonS3.class);
     }
 

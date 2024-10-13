@@ -16,15 +16,12 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.BUCKET;
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,16 +41,13 @@ public class FileReader {
     private final S3SourceConfig s3SourceConfig;
     private final String bucketName;
 
-    private final OffsetManager offsetManager;
-
     private final Set<String> failedObjectKeys;
 
-    public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName, final Set<String> failedObjectKeys,
-            final OffsetManager offsetManager) {
+    public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName,
+            final Set<String> failedObjectKeys) {
         this.s3SourceConfig = s3SourceConfig;
         this.bucketName = bucketName;
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
-        this.offsetManager = offsetManager;
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
@@ -78,28 +72,9 @@ public class FileReader {
                     .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()))
                     .collect(Collectors.toList());
 
-            final Map<Map<String, Object>, Map<String, Object>> processedOffsets = offsetManager.getOffsets();
-            LOGGER.info(processedOffsets + " processedOffsets");
+            allSummaries.addAll(filteredSummaries); // Add the filtered summaries to the main list
 
-            final List<S3ObjectSummary> filteredSummariesNewList = filteredSummaries.stream()
-                    .filter(s3ObjectSummary -> {
-                        for (final Map.Entry<Map<String, Object>, Map<String, Object>> mapMapEntry : processedOffsets
-                                .entrySet()) {
-                            if (mapMapEntry.getKey().get(BUCKET).equals(bucketName)
-                                    // && mapMapEntry.getKey().get(OBJECT_KEY).equals(s3ObjectSummary.getKey())
-                                    && s3ObjectSummary.getKey().equals(mapMapEntry.getValue().get(OBJECT_KEY))) {
-                                return false;
-                            }
-                        }
-                        return true;
-                    })
-                    .collect(Collectors.toList());
-
-            LOGGER.info(" **** filteredSummariesNewList  **** " + filteredSummariesNewList);
-
-            allSummaries.addAll(filteredSummariesNewList); // Add the filtered summaries to the main list
-
-            allSummaries.forEach(objSummary -> LOGGER.info(" ******* FR key ******** " + objSummary.getKey()));
+            allSummaries.forEach(objSummary -> LOGGER.info("Objects to be processed {} ", objSummary.getKey()));
 
             // Check if there are more objects to fetch
             continuationToken = objectListing.getNextContinuationToken();

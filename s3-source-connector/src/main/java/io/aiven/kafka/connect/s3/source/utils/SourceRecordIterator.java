@@ -52,9 +52,8 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
     public static final String PATTERN_PARTITION_KEY = "partitionId";
     public static final String OFFSET_KEY = "offset";
 
-    public static final Pattern FILE_DEFAULT_PATTERN = Pattern
-            .compile("(?<topicName>[^/]+?)-" + "(?<partitionId>\\d{5})" + "\\.(?<fileExtension>[^.]+)$"); // ex :
-                                                                                                          // topic-00001.txt
+    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile(
+            "(?<topicName>[^/]+?)-" + "(?<partitionId>\\d{5})-" + "(?<timestamp>\\d+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
     private String currentObjectKey;
 
     private Iterator<S3ObjectSummary> nextFileIterator;
@@ -75,7 +74,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
         this.s3Client = s3Client;
         this.bucketName = bucketName;
         this.outputWriter = outputWriter;
-        final FileReader fileReader = new FileReader(s3SourceConfig, bucketName, failedObjectKeys, offsetManager);
+        final FileReader fileReader = new FileReader(s3SourceConfig, bucketName, failedObjectKeys);
         try {
             final List<S3ObjectSummary> chunks = fileReader.fetchObjectSummaries(s3Client);
             nextFileIterator = chunks.iterator();
@@ -114,7 +113,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                 throw new ConnectException("File naming doesn't match to any topic. " + currentObjectKey);
             }
 
-            final long defaultStartOffsetId = 0L;
+            final long defaultStartOffsetId = 1L;
 
             final String finalTopic = topicName;
             final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
@@ -137,10 +136,28 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                         .map(k -> k.getBytes(StandardCharsets.UTF_8));
                 final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
 
+                int numOfProcessedRecs = 1;
+                boolean checkOffsetMap = true;
                 for (final Object record : outputWriter.getRecords(valueInputStream, topic, topicPartition)) {
+
+                    if (offsetManager.getOffsets().containsKey(partitionMap) && checkOffsetMap) {
+                        final Map<String, Object> offsetVal = offsetManager.getOffsets().get(partitionMap);
+                        if (offsetVal.containsKey(offsetManager.getObjectMapKey(currentObjectKey))) {
+                            final long offsetValue = (long) offsetVal
+                                    .get(offsetManager.getObjectMapKey(currentObjectKey));
+                            if (numOfProcessedRecs <= offsetValue) {
+                                numOfProcessedRecs++;
+                                continue;
+                            }
+                        }
+                    }
+
+                    checkOffsetMap = false;
+
                     final byte[] valueBytes = outputWriter.getValueBytes(record, topic, s3SourceConfig);
                     consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition,
                             offsetManager, startOffset, partitionMap));
+                    numOfProcessedRecs++;
                 }
                 return consumerRecordList;
             }
@@ -152,11 +169,12 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                 long currentOffset;
 
                 if (offsetManager.getOffsets().containsKey(partitionMap)) {
-                    LOGGER.info("***** offsetManager.getOffsets() ***** " + offsetManager.getOffsets());
-                    currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap);
+                    LOGGER.info("***** offsetManager.getOffsets() ***** {}", offsetManager.getOffsets());
+                    currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap, currentObjectKey,
+                            startOffset);
                 } else {
                     LOGGER.info("Into else block ...");
-                    currentOffset = startOffset + 1L;
+                    currentOffset = startOffset;
                     offsetManager.createNewOffsetMap(partitionMap, currentObjectKey, currentOffset);
                 }
 

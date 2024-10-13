@@ -176,7 +176,7 @@ final class IntegrationTest implements IntegrationBase {
 
         connectRunner.createConnector(connectorConfig);
         final String partition = "00001";
-        final String key = topicName + "-" + partition + ".txt";
+        final String key = topicName + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
         multipartUpload(TEST_BUCKET_NAME, key);
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
@@ -202,28 +202,30 @@ final class IntegrationTest implements IntegrationBase {
         final Schema.Parser parser = new Schema.Parser();
         final Schema schema = parser.parse(schemaJson);
 
-        final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1);
-        final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2);
+        final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1, 10);
+        final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2, 10);
 
         writeToS3(topicName, outputStream1.toByteArray(), "00001");
+        writeToS3(topicName, outputStream2.toByteArray(), "00001");
+
+        writeToS3(topicName, outputStream1.toByteArray(), "00002");
+        writeToS3(topicName, outputStream2.toByteArray(), "00002");
         writeToS3(topicName, outputStream2.toByteArray(), "00002");
 
         final List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(2);
+        assertThat(objects.size()).isEqualTo(5);
 
         // Verify that the connector is correctly set up
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
 
         // Poll Avro messages from the Kafka topic and deserialize them
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 4, KAFKA_CONTAINER,
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 10, KAFKA_CONTAINER,
                 SCHEMA_REGISTRY.getSchemaRegistryUrl()); // Ensure this method deserializes Avro
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).extracting(record -> record.get("message").toString())
-                .contains("Hello, Kafka Connect S3 Source! object 11")
-                .contains("Hello, Kafka Connect S3 Source! object 21")
-                .contains("Hello, Kafka Connect S3 Source! object 12")
-                .contains("Hello, Kafka Connect S3 Source! object 22");
+                .contains("Hello, Kafka Connect S3 Source! object 1")
+                .contains("Hello, Kafka Connect S3 Source! object 2");
         assertThat(records).extracting(record -> record.get("id").toString()).contains("1").contains("2");
     }
 
@@ -235,9 +237,10 @@ final class IntegrationTest implements IntegrationBase {
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        connectorConfig.put(VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
 
         final String partition = "00000";
-        final String fileName = topicName + "-" + partition + ".txt";
+        final String fileName = topicName + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
         final String name1 = "testuser1";
         final String name2 = "testuser2";
 
@@ -277,23 +280,25 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(records).extracting(record -> record.get("payload").get("id").asText()).contains("1");
     }
 
-    private static ByteArrayOutputStream getAvroRecord(final Schema schema, final int messageId) throws IOException {
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    private static ByteArrayOutputStream getAvroRecord(final Schema schema, final int messageId, final int noOfAvroRecs)
+            throws IOException {
         // Create Avro records
-        final GenericRecord avroRecord1 = new GenericData.Record(schema);
-        avroRecord1.put("message", "Hello, Kafka Connect S3 Source! object 1" + messageId);
-        avroRecord1.put("id", messageId);
-
-        final GenericRecord avroRecord2 = new GenericData.Record(schema);
-        avroRecord2.put("message", "Hello, Kafka Connect S3 Source! object 2" + messageId);
-        avroRecord2.put("id", messageId);
+        GenericRecord avroRecord;
 
         // Serialize Avro records to byte arrays
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
             dataFileWriter.create(schema, outputStream);
-            dataFileWriter.append(avroRecord1);
-            dataFileWriter.append(avroRecord2);
+            for (int i = 0; i < noOfAvroRecs; i++) {
+                avroRecord = new GenericData.Record(schema);
+                avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + i);
+                avroRecord.put("id", messageId);
+
+                dataFileWriter.append(avroRecord);
+            }
+
             dataFileWriter.flush();
         }
         outputStream.close();
@@ -302,7 +307,8 @@ final class IntegrationTest implements IntegrationBase {
 
     private static void writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId)
             throws IOException {
-        final String filePrefix = topicName + "-" + partitionId;
+        final String filePrefix = topicName + "-" + partitionId + "-" + System.currentTimeMillis();
+        // final String filePrefix = topicName + "-" + partitionId + "-" + "1234567891010";
         final String fileSuffix = ".txt";
 
         final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
@@ -354,4 +360,19 @@ final class IntegrationTest implements IntegrationBase {
             LOGGER.error(e.getMessage());
         }
     }
+
+    // private Map<Map<String, Object>, Map<String, Object>> getTmpData() {
+    // final Map<Map<String, Object>, Map<String, Object>> tmpOffsets = new HashMap<>();
+    // final Map<String, Object> partitionKeyMap = new HashMap<>();
+    // partitionKeyMap.put("topic", "avroTest");
+    // partitionKeyMap.put("bucket", "test-bucket0");
+    // partitionKeyMap.put("topicPartition", 1);
+    //
+    // final Map<String, Object> offsetValMap = new HashMap<>();
+    // offsetValMap.put(OBJECT_KEY + ":" + "avroTest-00001-1234567891010.txt", 4L);
+    //
+    // tmpOffsets.put(partitionKeyMap, offsetValMap);
+    //
+    // return tmpOffsets;
+    // }
 }
