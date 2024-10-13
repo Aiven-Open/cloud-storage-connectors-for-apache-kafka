@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.OFFSET_KEY;
@@ -87,22 +88,31 @@ final class OffsetManagerTest {
         final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
         when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
 
+        // Mock partition and offset values
+        final String objectKey = "testObject";
+        final String offsetObjectKey = OBJECT_KEY + ":" + objectKey;
+
         final Map<String, Object> partitionKey = new HashMap<>();
         partitionKey.put("topic", "topic1");
         partitionKey.put("partition", 0);
+        partitionKey.put("bucket", "bucket");
 
         final Map<String, Object> offsetValue = new HashMap<>();
-        offsetValue.put(OFFSET_KEY, 1L);
+        offsetValue.put(offsetObjectKey, 1L); // Existing offset value
         final Map<Map<String, Object>, Map<String, Object>> offsets = new HashMap<>();
         offsets.put(partitionKey, offsetValue);
 
-        when(offsetStorageReader.offsets(any())).thenReturn(offsets);
+        when(offsetStorageReader.offsets(any())).thenReturn(offsets); // Mock offset retrieval
 
+        // Initialize offset manager
         offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
-        final long newOffset = offsetManager.incrementAndUpdateOffsetMap(partitionKey);
 
-        assertThat(newOffset).isEqualTo(2L);
-        assertThat(offsetManager.getOffsets().get(partitionKey).get(OFFSET_KEY)).isEqualTo(2L);
+        // Invoke method and assert new offset value
+        final long newOffset = offsetManager.incrementAndUpdateOffsetMap(partitionKey, objectKey, 2L);
+
+        assertThat(newOffset).isEqualTo(2L); // Expect incremented offset
+        assertThat(offsetManager.getOffsets().get(partitionKey).get(offsetObjectKey)).isEqualTo(2L); // Verify updated
+                                                                                                     // offset in map
     }
 
     @Test
@@ -111,16 +121,22 @@ final class OffsetManagerTest {
         final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
         when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
 
+        // Mock partition without any existing offset
         final Map<String, Object> partitionKey = new HashMap<>();
         partitionKey.put("topic", "topic1");
         partitionKey.put("partition", 0);
 
-        when(offsetStorageReader.offsets(any())).thenReturn(Collections.emptyMap());
+        when(offsetStorageReader.offsets(any())).thenReturn(Collections.emptyMap()); // No existing offset
 
+        // Initialize offset manager
         offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
-        final long newOffset = offsetManager.incrementAndUpdateOffsetMap(partitionKey);
 
-        assertThat(newOffset).isEqualTo(0L);
+        // Invoke method and assert new offset value
+        final long startOffset = 5L;
+        final long newOffset = offsetManager.incrementAndUpdateOffsetMap(partitionKey, "", startOffset);
+
+        // Expect the startOffset to be returned when no existing offset is found
+        assertThat(newOffset).isEqualTo(startOffset);
     }
 
     private void setBasicProperties() {
