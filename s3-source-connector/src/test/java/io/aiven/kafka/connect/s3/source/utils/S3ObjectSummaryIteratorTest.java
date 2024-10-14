@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.amazonaws.services.s3.model.S3Object;
 import io.aiven.kafka.connect.s3.source.AivenKafkaConnectS3SourceConnector;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -46,6 +47,7 @@ class S3ObjectSummaryIteratorTest {
     private static final String TEST_BUCKET = "test-bucket";
     @Mock
     private AmazonS3 s3Client;
+
 
     private S3ObjectSummaryIterator underTest;
 

@@ -104,7 +104,7 @@ public class S3SourceTask extends SourceTask {
         this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
         this.outputWriter = TransformerFactory.transformer(s3SourceConfig);
         this.s3ObjectSummaryIterator = new S3ObjectSummaryIterator(s3Client, s3Bucket, s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR, null);
-        this.aivenS3SourceRecordIterator = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, context,  outputWriter, failedObjectKeys, new FilterIterator<S3ObjectSummary>(s3ObjectSummaryIterator, buildObjectSummaryPredicate()),
+        this.aivenS3SourceRecordIterator = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, context,  outputWriter, new FilterIterator<S3ObjectSummary>(s3ObjectSummaryIterator, buildObjectSummaryPredicate()),
                objectSkipList::add);
         this.taskInitialized = true;
     }
