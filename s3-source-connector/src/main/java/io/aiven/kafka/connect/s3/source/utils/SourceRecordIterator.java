@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,6 +37,7 @@ import io.aiven.kafka.connect.s3.source.output.OutputWriter;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,7 +100,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
 
     private Iterator<List<ConsumerRecord<byte[], byte[]>>> createIteratorForCurrentFile() throws IOException {
         try (S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);
-                InputStream inputStream = s3Object.getObjectContent()) {
+                S3ObjectInputStream inputStream = s3Object.getObjectContent()) {
 
             final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(currentObjectKey);
             String topicName;
@@ -110,7 +110,10 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                 topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
                 defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
             } else {
-                throw new ConnectException("File naming doesn't match to any topic. " + currentObjectKey);
+                LOGGER.error("File naming doesn't match to any topic. " + currentObjectKey);
+                inputStream.abort();
+                s3Object.close();
+                return Collections.emptyIterator();
             }
 
             final long defaultStartOffsetId = 1L;
@@ -208,6 +211,11 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
     public List<AivenS3SourceRecord> next() {
         if (!recordIterator.hasNext()) {
             nextS3Object();
+        }
+
+        if (!recordIterator.hasNext()) {
+            // If there are still no records, return an empty list
+            return Collections.emptyList(); // or new ArrayList<>() for mutable list
         }
 
         final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = recordIterator.next();
