@@ -99,7 +99,13 @@ public class OffsetManager {
     }
 
     void updateCurrentOffsets(final Map<String, Object> partitionMap, final Map<String, Object> offsetValueMap) {
-        offsets.put(partitionMap, offsetValueMap);
+        if (offsets.containsKey(partitionMap)) {
+            final Map<String, Object> offsetMap = new HashMap<>(offsets.get(partitionMap));
+            offsetMap.putAll(offsetValueMap);
+            offsets.put(partitionMap, offsetMap);
+        } else {
+            offsets.put(partitionMap, offsetValueMap);
+        }
     }
 
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {
