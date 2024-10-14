@@ -16,10 +16,9 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.OFFSET_KEY;
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static java.util.stream.Collectors.toMap;
 
-import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,7 +32,13 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class OffsetManager {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(OffsetManager.class);
+    public static final String SEPARATOR = "_";
     private final Map<Map<String, Object>, Map<String, Object>> offsets;
 
     public OffsetManager(final SourceTaskContext context, final S3SourceConfig s3SourceConfig) {
@@ -46,26 +51,61 @@ public class OffsetManager {
         final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
                 .offsets(partitionKeys);
 
+        LOGGER.info(" ********** offsetMap ***** {}", offsetMap);
         this.offsets = offsetMap.entrySet()
                 .stream()
                 .filter(e -> e.getValue() != null)
                 .collect(toMap(entry -> new HashMap<>(entry.getKey()), entry -> new HashMap<>(entry.getValue())));
+        LOGGER.info(" ********** offsets ***** {}", offsets);
     }
 
     public Map<Map<String, Object>, Map<String, Object>> getOffsets() {
         return Collections.unmodifiableMap(offsets);
     }
 
-    public long incrementAndUpdateOffsetMap(final Map<String, Object> partitionMap) {
+    public long incrementAndUpdateOffsetMap(final Map<String, Object> partitionMap, final String currentObjectKey,
+            final long startOffset) {
         if (offsets.containsKey(partitionMap)) {
-            final Map<String, Object> offsetValue = offsets.get(partitionMap);
-            if (offsetValue.containsKey(OFFSET_KEY)) {
-                final long newOffsetVal = (long) offsetValue.get(OFFSET_KEY) + 1L;
-                offsetValue.put(OFFSET_KEY, newOffsetVal);
+            final Map<String, Object> offsetValue = new HashMap<>(offsets.get(partitionMap));
+            if (offsetValue.containsKey(getObjectMapKey(currentObjectKey))) {
+                final long newOffsetVal = (long) offsetValue.get(getObjectMapKey(currentObjectKey)) + 1L;
+                offsetValue.put(getObjectMapKey(currentObjectKey), newOffsetVal);
+                offsets.put(partitionMap, offsetValue);
                 return newOffsetVal;
+            } else {
+                offsetValue.put(getObjectMapKey(currentObjectKey), startOffset);
+                offsets.put(partitionMap, offsetValue);
+                return startOffset;
             }
         }
-        return 0L;
+        return startOffset;
+    }
+
+    public String getObjectMapKey(final String currentObjectKey) {
+        return OBJECT_KEY + SEPARATOR + currentObjectKey;
+    }
+
+    public void createNewOffsetMap(final Map<String, Object> partitionMap, final String objectKey,
+            final long offsetId) {
+        final Map<String, Object> offsetMap = getOffsetValueMap(objectKey, offsetId);
+        offsets.put(partitionMap, offsetMap);
+    }
+
+    public Map<String, Object> getOffsetValueMap(final String currentObjectKey, final long offsetId) {
+        final Map<String, Object> offsetMap = new HashMap<>();
+        offsetMap.put(getObjectMapKey(currentObjectKey), offsetId);
+
+        return offsetMap;
+    }
+
+    void updateCurrentOffsets(final Map<String, Object> partitionMap, final Map<String, Object> offsetValueMap) {
+        if (offsets.containsKey(partitionMap)) {
+            final Map<String, Object> offsetMap = new HashMap<>(offsets.get(partitionMap));
+            offsetMap.putAll(offsetValueMap);
+            offsets.put(partitionMap, offsetMap);
+        } else {
+            offsets.put(partitionMap, offsetValueMap);
+        }
     }
 
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {
@@ -76,13 +116,6 @@ public class OffsetManager {
     private static Set<String> parseTopics(final S3SourceConfig s3SourceConfig) {
         final String topicString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPICS);
         return Arrays.stream(topicString.split(",")).collect(Collectors.toSet());
-    }
-
-    String getFirstConfiguredTopic(final S3SourceConfig s3SourceConfig) throws ConnectException {
-        final String topicString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPICS);
-        return Arrays.stream(topicString.split(","))
-                .findFirst()
-                .orElseThrow(() -> new ConnectException("Topic could not be derived"));
     }
 
     private static List<Map<String, Object>> buildPartitionKeys(final String bucket, final Set<Integer> partitions,

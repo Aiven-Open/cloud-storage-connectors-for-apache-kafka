@@ -25,6 +25,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORM
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -152,18 +153,20 @@ final class IntegrationTest implements IntegrationBase {
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
         // write 2 objects to s3
+        writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000");
+        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000");
         writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001");
-        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00002");
+        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001");
         writeToS3(topicName, new byte[0], "00003"); // this should be ignored.
 
         final List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(3);
+        assertThat(objects.size()).isEqualTo(5);
 
         // Verify that the connector is correctly set up
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
 
         // Poll messages from the Kafka topic and verify the consumed data
-        final List<String> records = IntegrationBase.consumeMessages(topicName, 2, KAFKA_CONTAINER);
+        final List<String> records = IntegrationBase.consumeMessages(topicName, 4, KAFKA_CONTAINER);
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).contains(testData1).contains(testData2);
@@ -176,7 +179,7 @@ final class IntegrationTest implements IntegrationBase {
 
         connectRunner.createConnector(connectorConfig);
         final String partition = "00001";
-        final String key = topicName + "-" + partition + ".txt";
+        final String key = topicName + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
         multipartUpload(TEST_BUCKET_NAME, key);
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
@@ -190,7 +193,7 @@ final class IntegrationTest implements IntegrationBase {
         connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.AVRO.getValue());
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        connectorConfig.put(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put(VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
 
         connectRunner.createConnector(connectorConfig);
@@ -202,20 +205,24 @@ final class IntegrationTest implements IntegrationBase {
         final Schema.Parser parser = new Schema.Parser();
         final Schema schema = parser.parse(schemaJson);
 
-        final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1);
-        final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2);
+        final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1, 100);
+        final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2, 100);
 
         writeToS3(topicName, outputStream1.toByteArray(), "00001");
+        writeToS3(topicName, outputStream2.toByteArray(), "00001");
+
+        writeToS3(topicName, outputStream1.toByteArray(), "00002");
+        writeToS3(topicName, outputStream2.toByteArray(), "00002");
         writeToS3(topicName, outputStream2.toByteArray(), "00002");
 
         final List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(2);
+        assertThat(objects.size()).isEqualTo(5);
 
         // Verify that the connector is correctly set up
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
 
         // Poll Avro messages from the Kafka topic and deserialize them
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 2, KAFKA_CONTAINER,
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 500, KAFKA_CONTAINER,
                 SCHEMA_REGISTRY.getSchemaRegistryUrl()); // Ensure this method deserializes Avro
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
@@ -233,14 +240,14 @@ final class IntegrationTest implements IntegrationBase {
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        connectorConfig.put(VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
 
         final String partition = "00000";
-        final String fileName = topicName + "-" + partition + ".txt";
-        final String name1 = "testuser1";
-        final String name2 = "testuser2";
+        final String fileName = topicName + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
+        final String name = "testuser";
 
         connectRunner.createConnector(connectorConfig);
-        final Path path = ContentUtils.getTmpFilePath(name1, name2);
+        final Path path = ContentUtils.getTmpFilePath(name);
 
         try {
             s3Client.putObject(TEST_BUCKET_NAME, fileName, Files.newInputStream(path), null);
@@ -250,10 +257,11 @@ final class IntegrationTest implements IntegrationBase {
             Files.delete(path);
         }
 
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 2, KAFKA_CONTAINER,
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 100, KAFKA_CONTAINER,
                 SCHEMA_REGISTRY.getSchemaRegistryUrl());
-        assertThat(2).isEqualTo(records.size());
-        assertThat(records).extracting(record -> record.get("name").toString()).contains(name1).contains(name2);
+        assertThat(records).extracting(record -> record.get("name").toString())
+                .contains(name + "1")
+                .contains(name + "2");
     }
 
     @Test
@@ -264,29 +272,42 @@ final class IntegrationTest implements IntegrationBase {
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
 
         connectRunner.createConnector(connectorConfig);
-        final String testMessage = "This is a test";
-        final String jsonContent = "{\"message\": \"" + testMessage + "\", \"id\":\"1\"}";
-        writeToS3(topicName, jsonContent.getBytes(StandardCharsets.UTF_8), "00001");
+        final String testMessage = "This is a test ";
+        final StringBuilder jsonBuilder = new StringBuilder();
+        for (int i = 0; i < 500; i++) {
+            final String jsonContent = "{\"message\": \"" + testMessage + "\", \"id\":\"" + i + "\"}";
+            jsonBuilder.append(jsonContent).append("\n"); // NOPMD
+        }
+        final byte[] jsonBytes = jsonBuilder.toString().getBytes(StandardCharsets.UTF_8);
+
+        writeToS3(topicName, jsonBytes, "00001");
 
         // Poll Json messages from the Kafka topic and deserialize them
-        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 1, KAFKA_CONTAINER);
+        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 500, KAFKA_CONTAINER);
 
         assertThat(records).extracting(record -> record.get("payload").get("message").asText()).contains(testMessage);
         assertThat(records).extracting(record -> record.get("payload").get("id").asText()).contains("1");
     }
 
-    private static ByteArrayOutputStream getAvroRecord(final Schema schema, final int messageId) throws IOException {
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    private static ByteArrayOutputStream getAvroRecord(final Schema schema, final int messageId, final int noOfAvroRecs)
+            throws IOException {
         // Create Avro records
-        final GenericRecord avroRecord = new GenericData.Record(schema);
-        avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + messageId);
-        avroRecord.put("id", messageId);
+        GenericRecord avroRecord;
 
         // Serialize Avro records to byte arrays
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
             dataFileWriter.create(schema, outputStream);
-            dataFileWriter.append(avroRecord);
+            for (int i = 0; i < noOfAvroRecs; i++) {
+                avroRecord = new GenericData.Record(schema);
+                avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + i);
+                avroRecord.put("id", messageId);
+
+                dataFileWriter.append(avroRecord);
+            }
+
             dataFileWriter.flush();
         }
         outputStream.close();
@@ -295,7 +316,8 @@ final class IntegrationTest implements IntegrationBase {
 
     private static void writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId)
             throws IOException {
-        final String filePrefix = topicName + "-" + partitionId;
+        final String filePrefix = topicName + "-" + partitionId + "-" + System.currentTimeMillis();
+        // final String filePrefix = topicName + "-" + partitionId + "-" + "1234567891010";
         final String fileSuffix = ".txt";
 
         final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
@@ -347,4 +369,19 @@ final class IntegrationTest implements IntegrationBase {
             LOGGER.error(e.getMessage());
         }
     }
+
+    // private Map<Map<String, Object>, Map<String, Object>> getTmpData() {
+    // final Map<Map<String, Object>, Map<String, Object>> tmpOffsets = new HashMap<>();
+    // final Map<String, Object> partitionKeyMap = new HashMap<>();
+    // partitionKeyMap.put("topic", "avroTest");
+    // partitionKeyMap.put("bucket", "test-bucket0");
+    // partitionKeyMap.put("topicPartition", 1);
+    //
+    // final Map<String, Object> offsetValMap = new HashMap<>();
+    // offsetValMap.put(OBJECT_KEY + ":" + "avroTest-00001-1234567891010.txt", 4L);
+    //
+    // tmpOffsets.put(partitionKeyMap, offsetValMap);
+    //
+    // return tmpOffsets;
+    // }
 }

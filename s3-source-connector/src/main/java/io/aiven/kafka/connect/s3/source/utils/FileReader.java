@@ -31,9 +31,12 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileReader {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(FileReader.class);
     public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
     private final String bucketName;
@@ -70,6 +73,8 @@ public class FileReader {
                     .collect(Collectors.toList());
 
             allSummaries.addAll(filteredSummaries); // Add the filtered summaries to the main list
+
+            allSummaries.forEach(objSummary -> LOGGER.info("Objects to be processed {} ", objSummary.getKey()));
 
             // Check if there are more objects to fetch
             continuationToken = objectListing.getNextContinuationToken();

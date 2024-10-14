@@ -58,6 +58,8 @@ class RecordProcessorTest {
     private OutputWriter outputWriter;
     @Mock
     private Converter keyConverter;
+    @Mock
+    private OffsetManager offsetManager;
 
     private AtomicBoolean connectorStopped;
     private Iterator<List<AivenS3SourceRecord>> sourceRecordIterator;
@@ -70,7 +72,7 @@ class RecordProcessorTest {
     }
 
     @Test
-    void testProcessRecordsNoRecords() throws ConnectException {
+    void testProcessRecordsNoRecords() {
         when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
         when(sourceRecordIterator.hasNext()).thenReturn(false);
 
@@ -82,7 +84,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            outputWriter, Collections.emptySet()
+            outputWriter, Collections.emptySet(), offsetManager
         );
 
         assertTrue(processedRecords.isEmpty(), "Processed records should be empty when there are no records.");
@@ -105,7 +107,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            outputWriter, Collections.emptySet()
+            outputWriter, Collections.emptySet(), offsetManager
         );
 
         assertThat(results.size()).isEqualTo(1);
@@ -125,7 +127,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            outputWriter, Collections.emptySet()
+            outputWriter, Collections.emptySet(), offsetManager
         );
 
         assertTrue(processedRecords.isEmpty(), "Processed records should be empty when connector is stopped.");
@@ -145,7 +147,8 @@ class RecordProcessorTest {
 
         final List<AivenS3SourceRecord> recordList = Collections.singletonList(mockRecord);
         final List<SourceRecord> sourceRecords = RecordProcessor.createSourceRecords(recordList, s3SourceConfig,
-                Optional.of(keyConverter), valueConverter, new HashMap<>(), outputWriter, Collections.emptySet());
+                Optional.of(keyConverter), valueConverter, new HashMap<>(), outputWriter, Collections.emptySet(),
+                offsetManager);
 
         assertThat(sourceRecords.size()).isEqualTo(1);
     }

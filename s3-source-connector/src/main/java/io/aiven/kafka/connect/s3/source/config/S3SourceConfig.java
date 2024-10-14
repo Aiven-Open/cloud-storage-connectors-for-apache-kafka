@@ -73,6 +73,8 @@ final public class S3SourceConfig extends AbstractConfig {
     public static final int AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT = 100;
     public static final int AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 20_000;
     public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
+
+    public static final String VALUE_CONVERTER_SCHEMA_REGISTRY_URL = "value.converter.schema.registry.url";
     public static final String VALUE_SERIALIZER = "value.serializer";
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
@@ -144,13 +146,16 @@ final public class S3SourceConfig extends AbstractConfig {
         configDef.define(SCHEMA_REGISTRY_URL, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_OTHER, srCounter++, ConfigDef.Width.NONE,
                 SCHEMA_REGISTRY_URL);
+        configDef.define(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, ConfigDef.Type.STRING, null,
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_OTHER,
+                srCounter++, ConfigDef.Width.NONE, VALUE_CONVERTER_SCHEMA_REGISTRY_URL);
         configDef.define(OUTPUT_FORMAT_KEY, ConfigDef.Type.STRING, OutputFormat.BYTES.getValue(),
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "Output format avro/json/parquet/bytes",
                 GROUP_OTHER, srCounter++, // NOPMD
                 ConfigDef.Width.NONE, OUTPUT_FORMAT_KEY);
 
-        configDef.define(VALUE_SERIALIZER, ConfigDef.Type.CLASS, "io.confluent.kafka.serializers.KafkaAvroSerializer",
-                ConfigDef.Importance.MEDIUM, "Value serializer", GROUP_OTHER, srCounter++, // NOPMD
+        configDef.define(VALUE_SERIALIZER, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM, "Value serializer",
+                GROUP_OTHER, srCounter++, // NOPMD
                 // UnusedAssignment
                 ConfigDef.Width.NONE, VALUE_SERIALIZER);
     }

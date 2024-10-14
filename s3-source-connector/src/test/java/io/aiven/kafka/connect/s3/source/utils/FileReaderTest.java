@@ -47,6 +47,9 @@ class FileReaderTest {
     @Mock
     private AmazonS3 s3Client;
 
+    @Mock
+    private OffsetManager offsetManager;
+
     private FileReader fileReader;
 
     private Map<String, String> properties;
@@ -56,6 +59,7 @@ class FileReaderTest {
         properties = new HashMap<>();
         setBasicProperties();
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(properties);
+        offsetManager = mock(OffsetManager.class);
         fileReader = new FileReader(s3SourceConfig, TEST_BUCKET, Collections.emptySet());
         s3Client = mock(AmazonS3.class);
     }
@@ -64,6 +68,8 @@ class FileReaderTest {
     void testFetchObjectSummariesWithNoObjects() throws IOException {
         final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(Collections.emptyList(), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
+        when(offsetManager.getOffsets()).thenReturn(new HashMap<>());
+
         final List<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
         assertThat(summaries.size()).isEqualTo(0);
     }
@@ -74,6 +80,7 @@ class FileReaderTest {
         final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(
                 Collections.singletonList(objectSummary), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
+        when(offsetManager.getOffsets()).thenReturn(new HashMap<>());
 
         final List<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
 
@@ -88,6 +95,7 @@ class FileReaderTest {
         final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(
                 List.of(zeroByteObject, nonZeroByteObject), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
+        when(offsetManager.getOffsets()).thenReturn(new HashMap<>());
 
         final List<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
 
@@ -106,6 +114,7 @@ class FileReaderTest {
         final ListObjectsV2Result secondResult = createListObjectsV2Result(secondBatch, null);
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
+        when(offsetManager.getOffsets()).thenReturn(new HashMap<>());
 
         final List<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
 

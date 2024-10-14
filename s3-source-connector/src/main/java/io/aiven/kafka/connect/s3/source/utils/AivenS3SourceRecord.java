@@ -27,16 +27,16 @@ import org.apache.kafka.connect.source.SourceRecord;
 
 public class AivenS3SourceRecord {
     private final Map<String, Object> partitionMap;
-    private final Map<String, Object> offsetMap;
+    private Map<String, Object> offsetMap;
     private final String toTopic;
-    private final int topicPartition;
+    private final Integer topicPartition;
     private final byte[] recordKey;
     private final byte[] recordValue;
 
     private final String objectKey;
 
     public AivenS3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
-            final String toTopic, final int topicPartition, final byte[] recordKey, final byte[] recordValue,
+            final String toTopic, final Integer topicPartition, final byte[] recordKey, final byte[] recordValue,
             final String objectKey) {
         this.partitionMap = new HashMap<>(partitionMap);
         this.offsetMap = new HashMap<>(offsetMap);
@@ -60,7 +60,7 @@ public class AivenS3SourceRecord {
         return toTopic;
     }
 
-    public int partition() {
+    public Integer partition() {
         return topicPartition;
     }
 
@@ -74,6 +74,10 @@ public class AivenS3SourceRecord {
 
     public String getObjectKey() {
         return objectKey;
+    }
+
+    public void setOffsetMap(final Map<String, Object> offsetMap) {
+        this.offsetMap = new HashMap<>(offsetMap);
     }
 
     public SourceRecord getSourceRecord(final String topic, final Optional<SchemaAndValue> keyData,
