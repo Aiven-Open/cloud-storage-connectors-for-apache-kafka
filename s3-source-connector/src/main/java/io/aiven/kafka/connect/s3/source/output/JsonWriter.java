@@ -18,8 +18,11 @@ package io.aiven.kafka.connect.s3.source.output;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMAS_ENABLE;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -42,12 +45,25 @@ public class JsonWriter implements OutputWriter {
     @Override
     public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
         final List<Object> jsonNodeList = new ArrayList<>();
-        final JsonNode jsonNode;
-        try {
-            jsonNode = objectMapper.readTree(inputStream);
-            jsonNodeList.add(jsonNode);
+        JsonNode jsonNode;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            String line = reader.readLine();
+            while (line != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    try {
+                        // Parse each line as a separate JSON object
+                        jsonNode = objectMapper.readTree(line.trim()); // Parse the current line into a JsonNode
+                        jsonNodeList.add(jsonNode); // Add parsed JSON object to the list
+                    } catch (IOException e) {
+                        LOGGER.error("Error parsing JSON record from S3 input stream: " + e.getMessage());
+                    }
+                }
+
+                line = reader.readLine();
+            }
         } catch (IOException e) {
-            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+            LOGGER.error("Error reading S3 object stream: " + e.getMessage());
         }
         return jsonNodeList;
     }
