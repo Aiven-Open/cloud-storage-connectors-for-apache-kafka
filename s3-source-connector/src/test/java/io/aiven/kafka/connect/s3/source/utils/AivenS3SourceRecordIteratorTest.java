@@ -3,18 +3,21 @@ package io.aiven.kafka.connect.s3.source.utils;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.nimbusds.jose.util.IOUtils;
 import io.aiven.kafka.connect.s3.source.AivenKafkaConnectS3SourceConnector;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.output.BadDataException;
 import io.aiven.kafka.connect.s3.source.output.ByteArrayTransformer;
 import io.aiven.kafka.connect.s3.source.output.Transformer;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
+import org.codehaus.plexus.util.IOUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -100,16 +103,9 @@ public class AivenS3SourceRecordIteratorTest {
     }
 
     @Test
-    public void testResetOffsetManager() {
-        fail("not implemented");
-    }
-
-
-    // compile("(?<topicName>[^/]+?)-" + "(?<partitionId>\\d{5})" + "\\.(?<fileExtension>[^.]+)$"); // ex :
-    @Test
     public void testNext() {
         byte[] text = "The quick brown fox jumps over the lazy dog".getBytes(StandardCharsets.UTF_8);
-        String key = TOPIC_NAME+"-0.fileExt";
+        String key = TOPIC_NAME+"-00001.fileExt";
         configure(key, text);
         List<String> badObjects = new ArrayList<>();
         underTest = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, BUCKET_NAME, context, transformer, s3ObjectSummaries.iterator(), badObjects::add);
@@ -121,22 +117,21 @@ public class AivenS3SourceRecordIteratorTest {
         Map<String, Object> aivenPartitionMap = new HashMap<>();
         aivenPartitionMap.put(BUCKET, BUCKET_NAME);
         aivenPartitionMap.put(TOPIC, TOPIC_NAME);
-        aivenPartitionMap.put(PARTITION, 0);
+        aivenPartitionMap.put(PARTITION, 1);
         assertThat(actual.getPartitionMap()).isEqualTo(aivenPartitionMap);
-
-        assertThat(actual.getOffsetMap().get(OFFSET_KEY)).isEqualTo(0L);
+        assertThat((long) (actual.getOffsetMap().get(OFFSET_KEY))).isEqualTo(0L);
         assertThat(badObjects).isEmpty();
 
         assertThat(underTest.hasNext()).isFalse();
     }
 
     @Test
-    public void testMultipleRecords() {
+    public void testMultipleS3Records() {
         byte[] text = "The quick brown fox jumps over the lazy dog".getBytes(StandardCharsets.UTF_8);
-        String key = TOPIC_NAME+"-0-1.fileExt";
+        String key = TOPIC_NAME+"-00001-1.fileExt";
         configure(key, text);
         byte[] text2 = "Now is the time for all good people to come to the aid of their country.".getBytes(StandardCharsets.UTF_8);
-        String key2 = TOPIC_NAME+"-0.fileExt";
+        String key2 = TOPIC_NAME+"-00002.fileExt";
         configure(key2, text2);
 
         List<String> badObjects = new ArrayList<>();
@@ -149,7 +144,7 @@ public class AivenS3SourceRecordIteratorTest {
         Map<String, Object> aivenPartitionMap = new HashMap<>();
         aivenPartitionMap.put(BUCKET, BUCKET_NAME);
         aivenPartitionMap.put(TOPIC, TOPIC_NAME);
-        aivenPartitionMap.put(PARTITION, 0);
+        aivenPartitionMap.put(PARTITION, 1);
         assertThat(actual.getPartitionMap()).isEqualTo(aivenPartitionMap);
 
         assertThat(actual.getOffsetMap().get(OFFSET_KEY)).isEqualTo(0L);
@@ -164,6 +159,72 @@ public class AivenS3SourceRecordIteratorTest {
         aivenPartitionMap = new HashMap<>();
         aivenPartitionMap.put(BUCKET, BUCKET_NAME);
         aivenPartitionMap.put(TOPIC, TOPIC_NAME);
+        aivenPartitionMap.put(PARTITION, 2);
+        assertThat(actual.getPartitionMap()).isEqualTo(aivenPartitionMap);
+
+        assertThat(actual.getOffsetMap().get(OFFSET_KEY)).isEqualTo(0L);
+        assertThat(badObjects).isEmpty();
+
+    }
+
+    @Test
+    public void testOneS3WithMultipleRecords() {
+        Transformer lineTransformer = new Transformer() {
+
+            @Override
+            public String getName() {
+                return "Testing transformer";
+            }
+
+            @Override
+            public void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig) {
+                // do nothing
+            }
+
+            @Override
+            public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException {
+                try {
+                    List<byte[]> result = new ArrayList<>();
+                    for (String s : IOUtils.readInputStreamToString(inputStream).split(System.lineSeparator())) {
+                       result.add(s.getBytes(StandardCharsets.UTF_8));
+                    }
+                    return result.iterator();
+                } catch (IOException e) {
+                    throw new BadDataException(e);
+                }
+            }
+        };
+
+        byte[] text = ("The quick brown fox jumps over the lazy dog"+System.lineSeparator()+"Now is the time for all good people to come to the aid of their country.").getBytes(StandardCharsets.UTF_8);
+        String key = TOPIC_NAME+"-00001.fileExt";
+        configure(key, text);
+
+
+        List<String> badObjects = new ArrayList<>();
+        underTest = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, BUCKET_NAME, context, lineTransformer, s3ObjectSummaries.iterator(), badObjects::add);
+        assertThat(underTest).hasNext();
+        AivenS3SourceRecord actual = underTest.next();
+        assertThat(actual.getObjectKey()).isEqualTo(key);
+        assertThat(actual.key()).isEqualTo(key.getBytes(StandardCharsets.UTF_8));
+
+        Map<String, Object> aivenPartitionMap = new HashMap<>();
+        aivenPartitionMap.put(BUCKET, BUCKET_NAME);
+        aivenPartitionMap.put(TOPIC, TOPIC_NAME);
+        aivenPartitionMap.put(PARTITION, 1);
+        assertThat(actual.getPartitionMap()).isEqualTo(aivenPartitionMap);
+
+        assertThat(actual.getOffsetMap().get(OFFSET_KEY)).isEqualTo(0L);
+        assertThat(badObjects).isEmpty();
+
+        // read 2nd record
+        assertThat(underTest).hasNext();
+        actual = underTest.next();
+        assertThat(actual.getObjectKey()).isEqualTo(key);
+        assertThat(actual.key()).isEqualTo(key.getBytes(StandardCharsets.UTF_8));
+
+        aivenPartitionMap = new HashMap<>();
+        aivenPartitionMap.put(BUCKET, BUCKET_NAME);
+        aivenPartitionMap.put(TOPIC, TOPIC_NAME);
         aivenPartitionMap.put(PARTITION, 1);
         assertThat(actual.getPartitionMap()).isEqualTo(aivenPartitionMap);
 
@@ -171,6 +232,7 @@ public class AivenS3SourceRecordIteratorTest {
         assertThat(badObjects).isEmpty();
 
     }
+
 
 
 

@@ -43,14 +43,14 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
     /** The logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(AivenS3SourceRecordIterator.class);
     /** The name for the topic pattern */
-    public static final String PATTERN_TOPIC_KEY = "topicName";
+    private static final int PATTERN_TOPIC_GROUP = 1;
     /** The name for the partition pattern */
-    public static final String PATTERN_PARTITION_KEY = "partitionId";
+    private static final int PATTERN_PARTITION_GROUP = 2;
     /** the name of the offset value in  the offset map */
     public static final String OFFSET_KEY = "offset";
     /** The pattern to extract topic name, partition id, and file extension from the processed file */
-    public static final Pattern FILE_DEFAULT_PATTERN = Pattern
-            .compile("(.+)-(\\d{5}).*\\.(^\\.]+)$"); // ex : topic-00001.txt
+    // ^(.+)-(\d{5}).*(\.[^.]+)$
+    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(.+)-(\\d{5}).*(\\.[^.]+)$"); // ex : topic-00001.txt
     /** The default partition id */
     public static final int DEFAULT_PARTITION = 0;
     /** The default offset value */
@@ -71,8 +71,6 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
     private Iterator<AivenS3SourceRecord> outerIterator;
     /** The consumer to record S3 keys that could not be processed */
     private final Consumer<String> badS3ObjectConsumer;
-    /** the map of current offsets that are not managed by the offsetMaanger */
-    Map<Map<String, Object>, Long> currentOffsets = new HashMap<>();
 
     /**
      * A transforming iterator that converts {@link S3ObjectSummary}s into {@link AivenS3SourceRecord}s
@@ -123,8 +121,8 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
             // extract the topic an partition information
             final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(s3Object.getKey());
             if (fileMatcher.find()) {
-                topic = fileMatcher.group(PATTERN_TOPIC_KEY);
-                topicPartition = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
+                topic = fileMatcher.group(PATTERN_TOPIC_GROUP);
+                topicPartition = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_GROUP));
             } else {
                 return Collections.emptyIterator();
             }
@@ -132,9 +130,10 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
             // create the partition map.
             final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topic, topicPartition, bucketName);
 
+            final Long offsetValue =  offsetManager.getOffset(partitionMap, s3Object.getKey());
+
             // predicate to filter out empty byte arrays and records that we have already read.
             Predicate<byte[]> recordFilter = new Predicate<byte[]>() {
-
                 private int recordCounter = 0;
                 @Override
                 public boolean test(byte[] bytes) {
@@ -142,10 +141,7 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
                         if (bytes.length == 0) {
                             return false;
                         }
-                        final Map<String, Object> offsetVal = offsetManager.getOffsets().get(partitionMap);
-                        if (offsetVal.containsKey(offsetManager.getObjectMapKey(s3Object.getKey()))) {
-                            final long offsetValue = (long) offsetVal
-                                    .get(offsetManager.getObjectMapKey(s3Object.getKey()));
+                        if (offsetValue != null) {
                             return recordCounter > offsetValue;
                         }
                         return true;
@@ -155,24 +151,14 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
                 }
             };
 
-
             try (InputStream inputStream = s3Object.getObjectContent()) {
                 // create a byte[] iterator and filter out empty byte[]
                 Iterator<byte[]> data = new FilterIterator<>(transformer.byteArrayIterator(inputStream, topic, s3SourceConfig), recordFilter);
                 // iterator that converts the byte[] iterator to AivenS3SourceRecord iterator.
                 return new TransformIterator<byte[], AivenS3SourceRecord>(data,
                         value -> {
-                            long currentOffset;
-                            if (offsetManager.getOffsets().containsKey(partitionMap)) {
-                                currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap, s3Object.getKey(), DEFAULT_START_OFFSET_ID);
-                            } else {
-                                currentOffset = currentOffsets.getOrDefault(partitionMap, DEFAULT_START_OFFSET_ID);
-                                currentOffsets.put(partitionMap, currentOffset + 1);
-                            }
-
-                            // Create the offset map
                             Map<String, Object> offsetMap = new HashMap<>();
-                            offsetMap.put(OFFSET_KEY, currentOffset);
+                            offsetMap.put(OFFSET_KEY, offsetManager.incrementAndUpdateOffset(partitionMap, s3Object.getKey(), DEFAULT_START_OFFSET_ID));
 
                             return new AivenS3SourceRecord(partitionMap, offsetMap, topic,
                                     topicPartition, key, value, s3Object.getKey());
