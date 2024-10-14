@@ -34,67 +34,89 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.*;
-
 /**
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
  * Parquet).
  */
 public final class AivenS3SourceRecordIterator implements Iterator<AivenS3SourceRecord>  {
+    /** The logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(AivenS3SourceRecordIterator.class);
+    /** The name for the topic pattern */
     public static final String PATTERN_TOPIC_KEY = "topicName";
+    /** The name for the partition pattern */
     public static final String PATTERN_PARTITION_KEY = "partitionId";
+    /** the name of the offset value in  the offset map */
     public static final String OFFSET_KEY = "offset";
-
+    /** The pattern to extract topic name, partition id, and file extension from the processed file */
     public static final Pattern FILE_DEFAULT_PATTERN = Pattern
-            .compile("(?<topicName>[^/]+?)-" + "(?<partitionId>\\d{5})" + "\\.(?<fileExtension>[^.]+)$"); // ex :
-
-    public static final int PAGE_SIZE_FACTOR = 2;
-
+            .compile("(.+)-(\\d{5}).*\\.(^\\.]+)$"); // ex : topic-00001.txt
+    /** The default partition id */
     public static final int DEFAULT_PARTITION = 0;
-
+    /** The default offset value */
     public static final long DEFAULT_START_OFFSET_ID = 0L;
-
+    /** The iterator of S3Objects */
     private final Iterator<S3Object> s3ObjectIterator;
-
+    /** The Object offset manager */
     private OffsetManager offsetManager;
-
+    /** The source configuration */
     private final S3SourceConfig s3SourceConfig;
+    /** The bucket name to process */
     private final String bucketName;
-    private final AmazonS3 s3Client;
-
-    private final Transformer outputWriter;
-
+    /** The transformer to transform the data */
+    private final Transformer transformer;
+    /** The iterator of iterators produced from the transformer output */
     private Iterator<Iterator<AivenS3SourceRecord>> innerIterator;
-
+    /** The active iterator.  This is retrieved from the innerIterator */
     private Iterator<AivenS3SourceRecord> outerIterator;
-
+    /** The consumer to record S3 keys that could not be processed */
     private final Consumer<String> badS3ObjectConsumer;
+    /** the map of current offsets that are not managed by the offsetMaanger */
+    Map<Map<String, Object>, Long> currentOffsets = new HashMap<>();
 
+    /**
+     * A transforming iterator that converts {@link S3ObjectSummary}s into {@link AivenS3SourceRecord}s
+     * @param s3SourceConfig The Configuration for this source.
+     * @param s3Client The client to communicate with S3.
+     * @param bucketName the name of the bucket to read from.
+     * @param context the source task context.
+     * @param transformer the transformer to translate S3 string to the expected output byte[].
+     * @param s3ObjectSummaryIterator An iterator of S3ObjectSummaries.
+     * @param badS3ObjectConsumer a consumer for S3 key that represent objects that could not be processed by the transformer.
+     */
     public AivenS3SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
-                                       final SourceTaskContext context, final Transformer outputWriter, final Set<String> failedObjectKeys,
+                                       final SourceTaskContext context, final Transformer transformer,
                                        final Iterator<S3ObjectSummary> s3ObjectSummaryIterator,
                                        final Consumer<String> badS3ObjectConsumer) {
         this.s3SourceConfig = s3SourceConfig;
-        this.s3Client = s3Client;
         this.bucketName = bucketName;
-        this.outputWriter = outputWriter;
-        this.s3ObjectIterator = new TransformIterator<S3ObjectSummary, S3Object>(s3ObjectSummaryIterator, (s) ->  s3Client.getObject(bucketName, s.getKey()));
-        this.innerIterator = new TransformIterator<S3Object, Iterator<AivenS3SourceRecord>>(s3ObjectIterator, this::convertS3ObjectToAvinS3SourceRecordIterator);
+        this.transformer = transformer;
+        this.s3ObjectIterator = new TransformIterator<>(s3ObjectSummaryIterator, (s) ->  s3Client.getObject(bucketName, s.getKey()));
+        this.innerIterator = new TransformIterator<>(s3ObjectIterator, this::convertS3ObjectToAvinS3SourceRecordIterator);
         this.outerIterator = Collections.emptyIterator();
         resetOffsetManager(context);
         this.badS3ObjectConsumer = badS3ObjectConsumer;
     }
 
+    /**
+     * Resets the offset manager to the offsets stored in the context
+     * @param context the Context to initialize the offset manager from.
+     */
     public void resetOffsetManager(final SourceTaskContext context) {
         offsetManager = new OffsetManager(context, s3SourceConfig);
     }
+
+    /**
+     * Convers an S3Object into a AivenS2SourceRecord iterator.
+     * @param s3Object
+     * @return
+     */
     private Iterator<AivenS3SourceRecord> convertS3ObjectToAvinS3SourceRecordIterator(final S3Object s3Object) {
         final String topic;
         final int topicPartition;
         final byte[] key = s3Object.getKey() == null ? null : s3Object.getKey().getBytes(StandardCharsets.UTF_8);
 
         try {
+            // extract the topic an partition information
             if (key == null) {
                 topic = offsetManager.getFirstConfiguredTopic(s3SourceConfig);
                 topicPartition = DEFAULT_PARTITION;
@@ -109,15 +131,15 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
                 }
             }
 
+            // create the partition map.
             final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topic, topicPartition,
                     bucketName);
 
-            Map<Map<String, Object>, Long> currentOffsets = new HashMap<>();
 
             try (InputStream inputStream = s3Object.getObjectContent()) {
                 // create a byte[] iterator and filter out empty byte[]
-                Iterator<byte[]> data = new FilterIterator<>(outputWriter.byteArrayIterator(inputStream, topic, s3SourceConfig), bytes -> bytes.length > 0);
-                // convert byte[] to ConsumerRecord
+                Iterator<byte[]> data = new FilterIterator<>(transformer.byteArrayIterator(inputStream, topic, s3SourceConfig), bytes -> bytes.length > 0);
+                // iterator that converts the byte[] iterator to AivenS3SourceRecord iterator.
                 return new TransformIterator<byte[], AivenS3SourceRecord>(data,
                         value -> {
                             long currentOffset;
@@ -127,10 +149,6 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
                                 currentOffset = currentOffsets.getOrDefault(partitionMap, DEFAULT_START_OFFSET_ID);
                                 currentOffsets.put(partitionMap, currentOffset + 1);
                             }
-                            Map<String, Object> aivenPartitionMap = new HashMap<>();
-                            aivenPartitionMap.put(BUCKET, bucketName);
-                            aivenPartitionMap.put(TOPIC, topic);
-                            aivenPartitionMap.put(PARTITION, topicPartition);
 
                             // Create the offset map
                             Map<String, Object> offsetMap = new HashMap<>();
@@ -138,8 +156,6 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
 
                             return new AivenS3SourceRecord(partitionMap, offsetMap, topic,
                                     topicPartition, key, value, s3Object.getKey());
-
-
                         });
             } catch (BadDataException e) {
                 LOGGER.error("Error reading data for {}, adding to skip list.", s3Object.getKey(), e);
