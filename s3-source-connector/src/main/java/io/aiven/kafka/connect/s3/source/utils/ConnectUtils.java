@@ -33,7 +33,6 @@ final public class ConnectUtils {
         final Map<String, Object> partitionMap = new HashMap<>();
         partitionMap.put(BUCKET, bucketName);
         partitionMap.put(TOPIC, topicName);
-
         partitionMap.put(PARTITION, defaultPartitionId);
         return partitionMap;
     }

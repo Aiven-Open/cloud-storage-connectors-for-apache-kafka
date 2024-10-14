@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 public class OffsetManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OffsetManager.class);
+    public static final String SEPARATOR = "_";
     private final Map<Map<String, Object>, Map<String, Object>> offsets;
 
     public OffsetManager(final SourceTaskContext context, final S3SourceConfig s3SourceConfig) {
@@ -81,7 +82,7 @@ public class OffsetManager {
     }
 
     public String getObjectMapKey(final String currentObjectKey) {
-        return OBJECT_KEY + ":" + currentObjectKey;
+        return OBJECT_KEY + SEPARATOR + currentObjectKey;
     }
 
     public void createNewOffsetMap(final Map<String, Object> partitionMap, final String objectKey,

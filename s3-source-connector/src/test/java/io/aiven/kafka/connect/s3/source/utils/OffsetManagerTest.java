@@ -90,7 +90,7 @@ final class OffsetManagerTest {
 
         // Mock partition and offset values
         final String objectKey = "testObject";
-        final String offsetObjectKey = OBJECT_KEY + ":" + objectKey;
+        final String offsetObjectKey = OBJECT_KEY + "_" + objectKey;
 
         final Map<String, Object> partitionKey = new HashMap<>();
         partitionKey.put("topic", "topic1");
