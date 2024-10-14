@@ -25,6 +25,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORM
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -152,18 +153,20 @@ final class IntegrationTest implements IntegrationBase {
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
         // write 2 objects to s3
+        writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000");
+        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000");
         writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001");
-        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00002");
+        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001");
         writeToS3(topicName, new byte[0], "00003"); // this should be ignored.
 
         final List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(3);
+        assertThat(objects.size()).isEqualTo(5);
 
         // Verify that the connector is correctly set up
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
 
         // Poll messages from the Kafka topic and verify the consumed data
-        final List<String> records = IntegrationBase.consumeMessages(topicName, 2, KAFKA_CONTAINER);
+        final List<String> records = IntegrationBase.consumeMessages(topicName, 4, KAFKA_CONTAINER);
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).contains(testData1).contains(testData2);
@@ -190,7 +193,7 @@ final class IntegrationTest implements IntegrationBase {
         connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.AVRO.getValue());
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        connectorConfig.put(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put(VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
 
         connectRunner.createConnector(connectorConfig);
@@ -269,12 +272,18 @@ final class IntegrationTest implements IntegrationBase {
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
 
         connectRunner.createConnector(connectorConfig);
-        final String testMessage = "This is a test";
-        final String jsonContent = "{\"message\": \"" + testMessage + "\", \"id\":\"1\"}";
-        writeToS3(topicName, jsonContent.getBytes(StandardCharsets.UTF_8), "00001");
+        final String testMessage = "This is a test ";
+        final StringBuilder jsonBuilder = new StringBuilder();
+        for (int i = 0; i < 500; i++) {
+            final String jsonContent = "{\"message\": \"" + testMessage + "\", \"id\":\"" + i + "\"}";
+            jsonBuilder.append(jsonContent).append("\n"); // NOPMD
+        }
+        final byte[] jsonBytes = jsonBuilder.toString().getBytes(StandardCharsets.UTF_8);
+
+        writeToS3(topicName, jsonBytes, "00001");
 
         // Poll Json messages from the Kafka topic and deserialize them
-        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 1, KAFKA_CONTAINER);
+        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 500, KAFKA_CONTAINER);
 
         assertThat(records).extracting(record -> record.get("payload").get("message").asText()).contains(testMessage);
         assertThat(records).extracting(record -> record.get("payload").get("id").asText()).contains("1");
