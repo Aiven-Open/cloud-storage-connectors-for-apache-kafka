@@ -52,8 +52,8 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
     public static final String PATTERN_PARTITION_KEY = "partitionId";
     public static final String OFFSET_KEY = "offset";
 
-    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile(
-            "(?<topicName>[^/]+?)-" + "(?<partitionId>\\d{5})-" + "(?<timestamp>\\d+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
+    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
+            + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
     private String currentObjectKey;
 
     private Iterator<S3ObjectSummary> nextFileIterator;
