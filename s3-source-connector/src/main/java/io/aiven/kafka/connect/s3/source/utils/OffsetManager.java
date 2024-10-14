@@ -17,7 +17,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static java.util.stream.Collectors.toMap;
 
 import java.util.ArrayList;
@@ -64,43 +63,35 @@ public class OffsetManager {
         return Collections.unmodifiableMap(offsets);
     }
 
-    public long incrementAndUpdateOffsetMap(final Map<String, Object> partitionMap, final String currentObjectKey,
-                                            final long startOffset) {
-        if (offsets.containsKey(partitionMap)) {
-            final Map<String, Object> offsetValue = new HashMap<>(offsets.get(partitionMap));
-            if (offsetValue.containsKey(getObjectMapKey(currentObjectKey))) {
-                final long newOffsetVal = (long) offsetValue.get(getObjectMapKey(currentObjectKey)) + 1L;
-                offsetValue.put(getObjectMapKey(currentObjectKey), newOffsetVal);
-                offsets.put(partitionMap, offsetValue);
-                return newOffsetVal;
-            } else {
-                offsetValue.put(getObjectMapKey(currentObjectKey), startOffset);
-                offsets.put(partitionMap, offsetValue);
-                return startOffset;
-            }
+    public long incrementAndUpdateOffset(final Map<String, Object> partitionMap, final String s3ObjectKey,
+                                         final long defaultOffset) {
+        Map<String, Object> innerMap = offsets.get(partitionMap);
+        if (innerMap == null) {
+            innerMap = new HashMap<>();
         }
-        return startOffset;
+        String innerKey = getOffsetKey(s3ObjectKey);
+        Object value = innerMap.get(innerKey);
+        if (value != null) {
+            final long newOffsetVal = 1L + (long) value;
+            innerMap.put(innerKey, newOffsetVal);
+            return newOffsetVal;
+        }
+        innerMap.put(innerKey, defaultOffset);
+        offsets.put(partitionMap, innerMap);
+        return defaultOffset;
     }
 
-    public String getObjectMapKey(final String currentObjectKey) {
-        return OBJECT_KEY + SEPARATOR + currentObjectKey;
+    public Long getOffset(final Map<String, Object> partitionMap, final String s3ObjectKey) {
+        Map<String, Object> innerMap = offsets.get(partitionMap);
+        if (innerMap == null) {
+            return null;
+        }
+        String innerKey = getOffsetKey(s3ObjectKey);
+        return (Long) innerMap.get(innerKey);
     }
 
-    public void createNewOffsetMap(final Map<String, Object> partitionMap, final String objectKey,
-                                   final long offsetId) {
-        final Map<String, Object> offsetMap = getOffsetValueMap(objectKey, offsetId);
-        offsets.put(partitionMap, offsetMap);
-    }
-
-    public Map<String, Object> getOffsetValueMap(final String currentObjectKey, final long offsetId) {
-        final Map<String, Object> offsetMap = new HashMap<>();
-        offsetMap.put(getObjectMapKey(currentObjectKey), offsetId);
-
-        return offsetMap;
-    }
-
-    void updateCurrentOffsets(final Map<String, Object> partitionMap, final Map<String, Object> offsetValueMap) {
-        offsets.put(partitionMap, offsetValueMap);
+    public static String getOffsetKey(final String currentObjectKey) {
+        return "offset" + SEPARATOR + currentObjectKey;
     }
 
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {

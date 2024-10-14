@@ -56,8 +56,6 @@ public class S3SourceTask extends SourceTask {
     public static final String TOPIC = "topic";
     public static final String PARTITION = "partition";
 
-    public static final String OBJECT_KEY = "object_key";
-
     private static final long S_3_POLL_INTERVAL_MS = 10_000L;
     private static final long ERROR_BACKOFF = 1000L;
 
