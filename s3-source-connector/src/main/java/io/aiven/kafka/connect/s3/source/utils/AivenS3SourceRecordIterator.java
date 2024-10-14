@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -116,35 +117,54 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
         final byte[] key = s3Object.getKey() == null ? null : s3Object.getKey().getBytes(StandardCharsets.UTF_8);
 
         try {
-            // extract the topic an partition information
             if (key == null) {
-                topic = offsetManager.getFirstConfiguredTopic(s3SourceConfig);
-                topicPartition = DEFAULT_PARTITION;
+                return Collections.emptyIterator();
+            }
+            // extract the topic an partition information
+            final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(s3Object.getKey());
+            if (fileMatcher.find()) {
+                topic = fileMatcher.group(PATTERN_TOPIC_KEY);
+                topicPartition = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
             } else {
-                final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(s3Object.getKey());
-                if (fileMatcher.find()) {
-                    topic = fileMatcher.group(PATTERN_TOPIC_KEY);
-                    topicPartition = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
-                } else {
-                    topic = offsetManager.getFirstConfiguredTopic(s3SourceConfig);
-                    topicPartition = DEFAULT_PARTITION;
-                }
+                return Collections.emptyIterator();
             }
 
             // create the partition map.
-            final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topic, topicPartition,
-                    bucketName);
+            final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topic, topicPartition, bucketName);
+
+            // predicate to filter out empty byte arrays and records that we have already read.
+            Predicate<byte[]> recordFilter = new Predicate<byte[]>() {
+
+                private int recordCounter = 0;
+                @Override
+                public boolean test(byte[] bytes) {
+                    try {
+                        if (bytes.length == 0) {
+                            return false;
+                        }
+                        final Map<String, Object> offsetVal = offsetManager.getOffsets().get(partitionMap);
+                        if (offsetVal.containsKey(offsetManager.getObjectMapKey(s3Object.getKey()))) {
+                            final long offsetValue = (long) offsetVal
+                                    .get(offsetManager.getObjectMapKey(s3Object.getKey()));
+                            return recordCounter > offsetValue;
+                        }
+                        return true;
+                    } finally {
+                        recordCounter++;
+                    }
+                }
+            };
 
 
             try (InputStream inputStream = s3Object.getObjectContent()) {
                 // create a byte[] iterator and filter out empty byte[]
-                Iterator<byte[]> data = new FilterIterator<>(transformer.byteArrayIterator(inputStream, topic, s3SourceConfig), bytes -> bytes.length > 0);
+                Iterator<byte[]> data = new FilterIterator<>(transformer.byteArrayIterator(inputStream, topic, s3SourceConfig), recordFilter);
                 // iterator that converts the byte[] iterator to AivenS3SourceRecord iterator.
                 return new TransformIterator<byte[], AivenS3SourceRecord>(data,
                         value -> {
                             long currentOffset;
                             if (offsetManager.getOffsets().containsKey(partitionMap)) {
-                                currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap);
+                                currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap, s3Object.getKey(), DEFAULT_START_OFFSET_ID);
                             } else {
                                 currentOffset = currentOffsets.getOrDefault(partitionMap, DEFAULT_START_OFFSET_ID);
                                 currentOffsets.put(partitionMap, currentOffset + 1);
