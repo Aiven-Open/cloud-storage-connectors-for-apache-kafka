@@ -101,9 +101,9 @@ public class ParquetTransformer implements Transformer {
         } catch (IOException e) {
             throw new BadDataException(e);
         } finally {
-            if (parquetFile != null)
+            if (parquetFile != null) {
                 deleteTmpFile(parquetFile.toPath());
-        }
+            }
         }
     }
 
