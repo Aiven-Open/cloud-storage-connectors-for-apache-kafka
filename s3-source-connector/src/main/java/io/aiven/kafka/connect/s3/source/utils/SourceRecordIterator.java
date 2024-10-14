@@ -139,7 +139,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                 int numOfProcessedRecs = 1;
                 boolean checkOffsetMap = true;
                 for (final Object record : outputWriter.getRecords(valueInputStream, topic, topicPartition)) {
-
+                    final byte[] valueBytes = outputWriter.getValueBytes(record, topic, s3SourceConfig);
                     if (offsetManager.getOffsets().containsKey(partitionMap) && checkOffsetMap) {
                         final Map<String, Object> offsetVal = offsetManager.getOffsets().get(partitionMap);
                         if (offsetVal.containsKey(offsetManager.getObjectMapKey(currentObjectKey))) {
@@ -153,8 +153,6 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
                     }
 
                     checkOffsetMap = false;
-
-                    final byte[] valueBytes = outputWriter.getValueBytes(record, topic, s3SourceConfig);
                     consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition,
                             offsetManager, startOffset, partitionMap));
                     numOfProcessedRecs++;
@@ -189,7 +187,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
             @Override
             public List<ConsumerRecord<byte[], byte[]>> next() {
                 if (nextRecord.isEmpty()) {
-                    LOGGER.error("May be error in reading s3 object " + currentObjectKey);
+                    // LOGGER.error("May be error in reading s3 object " + currentObjectKey);
                     return Collections.emptyList();
                     // throw new NoSuchElementException();
                 }
@@ -214,7 +212,7 @@ public final class SourceRecordIterator implements Iterator<List<AivenS3SourceRe
 
         final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = recordIterator.next();
         if (consumerRecordList.isEmpty()) {
-            LOGGER.error("May be error in reading s3 object " + currentObjectKey);
+            // LOGGER.error("May be error in reading s3 object " + currentObjectKey);
             return Collections.emptyList();
             // throw new NoSuchElementException();
         }
