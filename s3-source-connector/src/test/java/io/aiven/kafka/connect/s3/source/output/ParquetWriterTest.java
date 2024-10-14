@@ -91,7 +91,7 @@ final class ParquetWriterTest {
     }
 
     private byte[] generateMockParquetData() throws IOException {
-        final Path path = ContentUtils.getTmpFilePath("name1", "name2");
+        final Path path = ContentUtils.getTmpFilePath("name");
         return IOUtils.toByteArray(Files.newInputStream(path));
     }
 }

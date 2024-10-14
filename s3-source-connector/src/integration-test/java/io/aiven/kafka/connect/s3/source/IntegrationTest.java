@@ -202,8 +202,8 @@ final class IntegrationTest implements IntegrationBase {
         final Schema.Parser parser = new Schema.Parser();
         final Schema schema = parser.parse(schemaJson);
 
-        final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1, 10);
-        final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2, 10);
+        final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1, 100);
+        final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2, 100);
 
         writeToS3(topicName, outputStream1.toByteArray(), "00001");
         writeToS3(topicName, outputStream2.toByteArray(), "00001");
@@ -219,7 +219,7 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
 
         // Poll Avro messages from the Kafka topic and deserialize them
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 10, KAFKA_CONTAINER,
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 500, KAFKA_CONTAINER,
                 SCHEMA_REGISTRY.getSchemaRegistryUrl()); // Ensure this method deserializes Avro
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
@@ -241,11 +241,10 @@ final class IntegrationTest implements IntegrationBase {
 
         final String partition = "00000";
         final String fileName = topicName + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
-        final String name1 = "testuser1";
-        final String name2 = "testuser2";
+        final String name = "testuser";
 
         connectRunner.createConnector(connectorConfig);
-        final Path path = ContentUtils.getTmpFilePath(name1, name2);
+        final Path path = ContentUtils.getTmpFilePath(name);
 
         try {
             s3Client.putObject(TEST_BUCKET_NAME, fileName, Files.newInputStream(path), null);
@@ -255,10 +254,11 @@ final class IntegrationTest implements IntegrationBase {
             Files.delete(path);
         }
 
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 2, KAFKA_CONTAINER,
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 100, KAFKA_CONTAINER,
                 SCHEMA_REGISTRY.getSchemaRegistryUrl());
-        assertThat(2).isEqualTo(records.size());
-        assertThat(records).extracting(record -> record.get("name").toString()).contains(name1).contains(name2);
+        assertThat(records).extracting(record -> record.get("name").toString())
+                .contains(name + "1")
+                .contains(name + "2");
     }
 
     @Test

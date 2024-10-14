@@ -33,17 +33,16 @@ import org.apache.parquet.io.OutputFile;
 public final class ContentUtils {
     private ContentUtils() {
     }
-    public static Path getTmpFilePath(final String name1, final String name2) throws IOException {
+    public static Path getTmpFilePath(final String name1) throws IOException {
         final String tmpFile = "users.parquet";
         final Path parquetFileDir = Files.createTempDirectory("parquet_tests");
         final String parquetFilePath = parquetFileDir.toAbsolutePath() + "/" + tmpFile;
 
-        writeParquetFile(parquetFilePath, name1, name2);
+        writeParquetFile(parquetFilePath, name1);
         return Paths.get(parquetFilePath);
     }
 
-    public static void writeParquetFile(final String tempFilePath, final String name1, final String name2)
-            throws IOException {
+    public static void writeParquetFile(final String tempFilePath, final String name1) throws IOException {
         // Define the Avro schema
         final String schemaString = "{" + "\"type\":\"record\"," + "\"name\":\"User\"," + "\"fields\":["
                 + "{\"name\":\"name\",\"type\":\"string\"}," + "{\"name\":\"age\",\"type\":\"int\"},"
@@ -52,25 +51,18 @@ public final class ContentUtils {
 
         // Write the Parquet file
         try {
-            writeParquetFile(tempFilePath, schema, name1, name2);
+            writeParquetFile(tempFilePath, schema, name1, 100);
         } catch (IOException e) {
             throw new ConnectException("Error writing parquet file");
         }
     }
 
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private static void writeParquetFile(final String outputPath, final Schema schema, final String name1,
-            final String name2) throws IOException {
+            final int numOfRecords) throws IOException {
 
         // Create sample records
-        final GenericData.Record user1 = new GenericData.Record(schema);
-        user1.put("name", name1);
-        user1.put("age", 30);
-        user1.put("email", name1 + "@test");
-
-        final GenericData.Record user2 = new GenericData.Record(schema);
-        user2.put("name", name2);
-        user2.put("age", 25);
-        user2.put("email", name2 + "@test");
+        GenericData.Record user;
 
         // Create a Parquet writer
         final OutputFile outputFile = new LocalOutputFile(Paths.get(outputPath));
@@ -81,8 +73,15 @@ public final class ContentUtils {
                 .withPageSize(1024 * 1024)
                 .build()) {
             // Write records to the Parquet file
-            writer.write(user1);
-            writer.write(user2);
+            for (int i = 0; i < numOfRecords; i++) {
+                user = new GenericData.Record(schema);
+                user.put("name", name1 + i);
+                user.put("age", 30);
+                user.put("email", name1 + "@test");
+
+                writer.write(user);
+            }
+
         }
     }
 }
