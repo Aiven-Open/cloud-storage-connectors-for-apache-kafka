@@ -21,6 +21,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCK
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_MESSAGE_BYTES_SIZE;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
@@ -146,6 +147,7 @@ final class IntegrationTest implements IntegrationBase {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
+        connectorConfig.put(MAX_MESSAGE_BYTES_SIZE, "2");
         connectRunner.createConnector(connectorConfig);
         connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.BYTES.getValue());
 
