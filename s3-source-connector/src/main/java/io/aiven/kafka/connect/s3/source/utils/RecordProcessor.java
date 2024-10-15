@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -43,7 +42,8 @@ public final class RecordProcessor {
     private RecordProcessor() {
 
     }
-    public static List<SourceRecord> processRecords(final Iterator<List<AivenS3SourceRecord>> sourceRecordIterator,
+
+    public static List<SourceRecord> processRecords(final Iterator<AivenS3SourceRecord> sourceRecordIterator,
             final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
             final Optional<Converter> keyConverter, final Converter valueConverter,
             final AtomicBoolean connectorStopped, final OutputWriter outputWriter, final Set<String> failedObjectKeys,
@@ -53,44 +53,39 @@ public final class RecordProcessor {
         final int maxPollRecords = s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS);
 
         for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
-            final List<AivenS3SourceRecord> recordList = sourceRecordIterator.next();
-            final List<SourceRecord> sourceRecords = createSourceRecords(recordList, s3SourceConfig, keyConverter,
-                    valueConverter, conversionConfig, outputWriter, failedObjectKeys, offsetManager);
-            results.addAll(sourceRecords);
+            final AivenS3SourceRecord aivenS3SourceRecord = sourceRecordIterator.next();
+            if (aivenS3SourceRecord != null) {
+                final SourceRecord sourceRecord = createSourceRecord(aivenS3SourceRecord, s3SourceConfig, keyConverter,
+                        valueConverter, conversionConfig, outputWriter, failedObjectKeys, offsetManager);
+                results.add(sourceRecord);
+            }
         }
 
         LOGGER.info("Number of records sent {}", results.size());
         return results;
     }
 
-    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    static List<SourceRecord> createSourceRecords(final List<AivenS3SourceRecord> aivenS3SourceRecordList,
+    static SourceRecord createSourceRecord(final AivenS3SourceRecord aivenS3SourceRecord,
             final S3SourceConfig s3SourceConfig, final Optional<Converter> keyConverter, final Converter valueConverter,
             final Map<String, String> conversionConfig, final OutputWriter outputWriter,
             final Set<String> failedObjectKeys, final OffsetManager offsetManager) {
 
-        final List<SourceRecord> sourceRecordList = new ArrayList<>();
-        for (final AivenS3SourceRecord aivenS3SourceRecord : aivenS3SourceRecordList) {
-            LOGGER.info(" ******* CSR key ******** {}", aivenS3SourceRecord.getObjectKey());
-            final String topic = aivenS3SourceRecord.getToTopic();
-            final Optional<SchemaAndValue> keyData = keyConverter
-                    .map(c -> c.toConnectData(topic, aivenS3SourceRecord.key()));
+        final String topic = aivenS3SourceRecord.getToTopic();
+        final Optional<SchemaAndValue> keyData = keyConverter
+                .map(c -> c.toConnectData(topic, aivenS3SourceRecord.key()));
 
-            outputWriter.configureValueConverter(conversionConfig, s3SourceConfig);
-            valueConverter.configure(conversionConfig, false);
-            try {
-                final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, aivenS3SourceRecord.value());
-                offsetManager.updateCurrentOffsets(aivenS3SourceRecord.getPartitionMap(),
-                        aivenS3SourceRecord.getOffsetMap());
-                aivenS3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(aivenS3SourceRecord.getPartitionMap()));
-                sourceRecordList.add(aivenS3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue));
-            } catch (DataException e) {
-                LOGGER.error("Error in reading s3 object stream " + e.getMessage());
-                failedObjectKeys.add(aivenS3SourceRecord.getObjectKey());
-                throw e;
-            }
+        outputWriter.configureValueConverter(conversionConfig, s3SourceConfig);
+        valueConverter.configure(conversionConfig, false);
+        try {
+            final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, aivenS3SourceRecord.value());
+            offsetManager.updateCurrentOffsets(aivenS3SourceRecord.getPartitionMap(),
+                    aivenS3SourceRecord.getOffsetMap());
+            aivenS3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(aivenS3SourceRecord.getPartitionMap()));
+            return aivenS3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
+        } catch (DataException e) {
+            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+            failedObjectKeys.add(aivenS3SourceRecord.getObjectKey());
+            throw e;
         }
-
-        return sourceRecordList;
     }
 }
