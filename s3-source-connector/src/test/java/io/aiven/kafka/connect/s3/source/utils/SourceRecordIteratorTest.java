@@ -77,7 +77,7 @@ final class SourceRecordIteratorTest {
             when(mockS3Client.getObject(anyString(), anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
 
-            when(mockOutputWriter.getRecords(any(), anyString(), anyInt()))
+            when(mockOutputWriter.getRecords(any(), anyString(), anyInt(), any()))
                     .thenReturn(Collections.singletonList(new Object()));
 
             final String outStr = "this is a test";

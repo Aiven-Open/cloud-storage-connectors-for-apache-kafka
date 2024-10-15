@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.s3.source.output;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 
 import com.amazonaws.util.IOUtils;
@@ -45,10 +47,11 @@ final class ParquetWriterTest {
     void testHandleValueDataWithZeroBytes() {
         final byte[] mockParquetData = new byte[0];
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
+        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
         final String topic = "test-topic";
         final int topicPartition = 0;
-        final List<Object> recs = parquetWriter.getRecords(inputStream, topic, topicPartition);
+        final List<Object> recs = parquetWriter.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
 
         assertThat(recs).isEmpty();
     }
@@ -57,11 +60,12 @@ final class ParquetWriterTest {
     void testGetRecordsWithValidData() throws Exception {
         final byte[] mockParquetData = generateMockParquetData();
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
+        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition);
+        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
 
         assertThat(records).isNotEmpty();
         assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
@@ -73,11 +77,12 @@ final class ParquetWriterTest {
     void testGetRecordsWithInvalidData() {
         final byte[] invalidData = "invalid data".getBytes(StandardCharsets.UTF_8);
         final InputStream inputStream = new ByteArrayInputStream(invalidData);
+        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition);
+        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
         assertThat(records).isEmpty();
     }
 
