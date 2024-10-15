@@ -18,11 +18,11 @@ package io.aiven.kafka.connect.s3.source.output;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT_KEY;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 /**
  * The factory for Transformers
@@ -37,7 +37,7 @@ public final class TransformerFactory {
     /**
      * The registered transformers indexed by transformer name.
      */
-    private static Map<String,Transformer> registeredTransformers = new HashMap<>();
+    private static Map<String, Transformer> registeredTransformers = new HashMap<>();
 
     static {
         register(new AvroTransformer());
@@ -47,10 +47,11 @@ public final class TransformerFactory {
     }
 
     /**
-     * Registers a new transformer.
-     * Transformers are registered by the loser case version of their name.  If any previously registered transformer
-     * has the same name it is replaced.
-     * @param transformer the Transformer to register.
+     * Registers a new transformer. Transformers are registered by the loser case version of their name. If any
+     * previously registered transformer has the same name it is replaced.
+     *
+     * @param transformer
+     *            the Transformer to register.
      */
     public static void register(Transformer transformer) {
         registeredTransformers.put(transformer.getName().toLowerCase(Locale.ROOT).trim(), transformer);
@@ -67,8 +68,7 @@ public final class TransformerFactory {
     public static Transformer transformer(final String transformerName) {
         Transformer result = registeredTransformers.get(transformerName.toLowerCase(Locale.ROOT).trim());
         if (result == null) {
-            throw new IllegalArgumentException(
-                    "Unknown output format " + transformerName);
+            throw new IllegalArgumentException("Unknown output format " + transformerName);
         }
         return result;
     }

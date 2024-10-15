@@ -67,11 +67,9 @@ final class JsonTransformerTest {
         assertEquals("false", config.get(SCHEMAS_ENABLE), "SCHEMAS_ENABLE should be set to false");
     }
 
-
     @Test
     void testByteArrayIteratorInvalidData() {
-        final InputStream inputStream = new ByteArrayInputStream(
-                "invalid-json".getBytes(StandardCharsets.UTF_8));
+        final InputStream inputStream = new ByteArrayInputStream("invalid-json".getBytes(StandardCharsets.UTF_8));
 
         // s3Config is not used by json tranform.
         assertThatThrownBy(() -> underTest.byteArrayIterator(inputStream, "topic", null))

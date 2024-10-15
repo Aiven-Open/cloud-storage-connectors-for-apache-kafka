@@ -17,12 +17,9 @@
 package io.aiven.kafka.connect.s3.source;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import io.aiven.kafka.connect.s3.source.utils.*;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
@@ -37,10 +34,9 @@ import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.*;
 
 /**
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
@@ -49,7 +45,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.*;
 @SuppressWarnings("PMD.TooManyMethods")
 public class S3SourceTask extends SourceTask {
 
-    private  static final int PAGE_SIZE_FACTOR = 2;
+    private static final int PAGE_SIZE_FACTOR = 2;
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
 
     public static final String BUCKET = "bucket";
@@ -84,7 +80,6 @@ public class S3SourceTask extends SourceTask {
 
     private final List<String> objectSkipList = new ArrayList<>();
 
-
     @SuppressWarnings("PMD.UnnecessaryConstructor")
     public S3SourceTask() {
         super();
@@ -103,14 +98,18 @@ public class S3SourceTask extends SourceTask {
         initializeS3Client();
         this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
         this.outputWriter = TransformerFactory.transformer(s3SourceConfig);
-        this.s3ObjectSummaryIterator = new S3ObjectSummaryIterator(s3Client, s3Bucket, s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR, null);
-        this.aivenS3SourceRecordIterator = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, context,  outputWriter, new FilterIterator<S3ObjectSummary>(s3ObjectSummaryIterator, buildObjectSummaryPredicate()),
-               objectSkipList::add);
+        this.s3ObjectSummaryIterator = new S3ObjectSummaryIterator(s3Client, s3Bucket,
+                s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR, null);
+        this.aivenS3SourceRecordIterator = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, s3Bucket, context,
+                outputWriter,
+                new FilterIterator<S3ObjectSummary>(s3ObjectSummaryIterator, buildObjectSummaryPredicate()),
+                objectSkipList::add);
         this.taskInitialized = true;
     }
 
     /**
      * Creates a Predicate that must return {@code true} for an {@link S3ObjectSummary} to be considered for output
+     *
      * @return the Predicate to filter {@link S3ObjectSummary} objects.
      */
     private Predicate<S3ObjectSummary> buildObjectSummaryPredicate() {
@@ -154,11 +153,11 @@ public class S3SourceTask extends SourceTask {
             final List<SourceRecord> results = new ArrayList<>(maxRecords);
             while (!connectorStopped.get()) {
                 try {
-                    // FIXME there is a problem here.  If we throw an exception on a middle record the rest of the records do not get processed.
+                    // FIXME there is a problem here. If we throw an exception on a middle record the rest of the
+                    // records do not get processed.
                     // but we have already marked the S3 objects as having been processed. (i.e. we lose data)
                     return extractSourceRecords(results, maxRecords);
-                }
-                catch (AmazonS3Exception | DataException exception) {
+                } catch (AmazonS3Exception | DataException exception) {
                     if (handleException(exception)) {
                         return null; // NOPMD
                     }
@@ -188,15 +187,16 @@ public class S3SourceTask extends SourceTask {
         return false;
     }
 
-    private List<SourceRecord> extractSourceRecords(final List<SourceRecord> results, final int maxRecords) throws InterruptedException {
-        // FIXME : I think the following line is wrong.  We are supposed to return null from Poll if there is no data.
+    private List<SourceRecord> extractSourceRecords(final List<SourceRecord> results, final int maxRecords)
+            throws InterruptedException {
+        // FIXME : I think the following line is wrong. We are supposed to return null from Poll if there is no data.
         waitForObjects();
         if (connectorStopped.get()) {
             return results;
         }
         final Map<String, String> conversionConfig = new HashMap<>();
         int idx = 0;
-        while (idx<maxRecords && aivenS3SourceRecordIterator.hasNext()) {
+        while (idx < maxRecords && aivenS3SourceRecordIterator.hasNext()) {
             idx++;
             AivenS3SourceRecord aivenS3SourceRecord = aivenS3SourceRecordIterator.next();
             final String topic = aivenS3SourceRecord.getToTopic();

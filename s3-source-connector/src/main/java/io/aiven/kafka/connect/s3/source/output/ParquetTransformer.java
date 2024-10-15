@@ -25,13 +25,11 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.commons.collections.iterators.SingletonIterator;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.io.InputFile;
@@ -40,8 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Defines the transform from the S3 input stream Parquet based data for the @{code byte[]} found in a {@code ConsumerRecord<byte[], byte[]>}.
- * Each Avro record in the Parquet file will be converted to a {@code byte[]}.
+ * Defines the transform from the S3 input stream Parquet based data for the @{code byte[]} found in a
+ * {@code ConsumerRecord<byte[], byte[]>}. Each Avro record in the Parquet file will be converted to a {@code byte[]}.
  */
 public class ParquetTransformer implements Transformer {
 
@@ -58,7 +56,8 @@ public class ParquetTransformer implements Transformer {
     }
 
     @Override
-    public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException {
+    public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig)
+            throws BadDataException {
         try {
             List<byte[]> result = new ArrayList<>();
             KafkaAvroSerializer avroSerializer = AvroTransformer.createAvroSerializer(s3SourceConfig);
@@ -66,20 +65,25 @@ public class ParquetTransformer implements Transformer {
                 result.add(avroSerializer.serialize(topic, genericRecord));
             }
             return result.iterator();
-        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException |
-                 IllegalAccessException e) {
+        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException
+                | IllegalAccessException e) {
             throw new BadDataException(e);
         }
     }
 
     /**
      * Reads the parquet records from the input stream.
-     * @param inputStream The input stream to read.
-     * @param topic the Kafka topic the data will be placed on.
+     *
+     * @param inputStream
+     *            The input stream to read.
+     * @param topic
+     *            the Kafka topic the data will be placed on.
      * @return a list of GenericRecords extracted from the stream.
-     * @throws BadDataException if the data can not be read as a Parquet structure.
+     * @throws BadDataException
+     *             if the data can not be read as a Parquet structure.
      */
-    private List<GenericRecord> getParquetRecords(final InputStream inputStream, final String topic) throws BadDataException {
+    private List<GenericRecord> getParquetRecords(final InputStream inputStream, final String topic)
+            throws BadDataException {
         File parquetFile = null;
         try {
             parquetFile = File.createTempFile(topic + "_", ".parquet");
@@ -109,7 +113,9 @@ public class ParquetTransformer implements Transformer {
 
     /**
      * Deletes a temporary file if it exists and logs any exceptions hit in the process.
-     * @param tempFile the file to delete.
+     *
+     * @param tempFile
+     *            the file to delete.
      */
     // package private for testing.
     static void deleteTmpFile(final Path tempFile) {

@@ -29,14 +29,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.codehaus.stax2.ri.SingletonIterator;
 
 /**
- * Defines a transform from the S3 input stream to the JSON formatted data @{code byte[]} found in a {@code ConsumerRecord<byte[], byte[]>}.
- */public class JsonTransformer implements Transformer {
+ * Defines a transform from the S3 input stream to the JSON formatted data @{code byte[]} found in a
+ * {@code ConsumerRecord<byte[], byte[]>}.
+ */
+public class JsonTransformer implements Transformer {
 
     @Override
     public String getName() {
         return "json";
     }
-
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
@@ -44,7 +45,8 @@ import org.codehaus.stax2.ri.SingletonIterator;
     }
 
     @Override
-    public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException {
+    public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig)
+            throws BadDataException {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             return new SingletonIterator<>(objectMapper.writeValueAsBytes(objectMapper.readTree(inputStream)));

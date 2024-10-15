@@ -53,7 +53,6 @@ final class OffsetManagerTest {
 
     private Map<Map<String, Object>, Map<String, Object>> offsets;
 
-
     @BeforeEach
     public void setUp() {
         s3SourceConfig = new S3SourceConfig(getBasicProperties());
@@ -115,7 +114,7 @@ final class OffsetManagerTest {
 
         assertThat(newOffset).isEqualTo(2L); // Expect incremented offset
         assertThat(underTest.getOffsets().get(partitionKey).get(offsetObjectKey)).isEqualTo(2L); // Verify updated
-                                                                                                     // offset in map
+                                                                                                 // offset in map
     }
 
     @Test

@@ -16,38 +16,19 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
-import io.aiven.kafka.connect.s3.source.AivenKafkaConnectS3SourceConnector;
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.confluent.kafka.serializers.KafkaAvroSerializer;
-import org.apache.avro.Schema;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumWriter;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.DatumWriter;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.*;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
-
 final class BytesTransformerTest {
 
-
-
     private ByteArrayTransformer underTest;
-
 
     @BeforeEach
     void setUp() {
@@ -59,15 +40,14 @@ final class BytesTransformerTest {
         assertThat(underTest.getName().equals("bytes"));
     }
 
-
     @Test
     void testBytArrayIterator() throws BadDataException {
         byte[] expected = "Hello World".getBytes(StandardCharsets.UTF_8);
         final InputStream inputStream = new ByteArrayInputStream(expected);
         Iterator<byte[]> iter = underTest.byteArrayIterator(inputStream, null, null);
-       assertThat(iter).hasNext();
-       byte[] actual = iter.next();
-       assertThat(actual).isEqualTo(expected);
-       assertThat(iter.hasNext()).isFalse();
+        assertThat(iter).hasNext();
+        byte[] actual = iter.next();
+        assertThat(actual).isEqualTo(expected);
+        assertThat(iter.hasNext()).isFalse();
     }
 }

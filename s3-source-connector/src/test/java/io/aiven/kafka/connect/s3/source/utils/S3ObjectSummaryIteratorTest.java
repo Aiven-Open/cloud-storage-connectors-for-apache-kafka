@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.amazonaws.services.s3.model.S3Object;
 import io.aiven.kafka.connect.s3.source.AivenKafkaConnectS3SourceConnector;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -47,7 +46,6 @@ class S3ObjectSummaryIteratorTest {
     private static final String TEST_BUCKET = "test-bucket";
     @Mock
     private AmazonS3 s3Client;
-
 
     private S3ObjectSummaryIterator underTest;
 
@@ -82,19 +80,19 @@ class S3ObjectSummaryIteratorTest {
         assertThat(underTest.hasNext()).isFalse();
     }
 
-//    @Test
-//    void testFetchObjectSummariesWithZeroByteObject() throws IOException {
-//        final S3ObjectSummary zeroByteObject = createObjectSummary(0);
-//        final S3ObjectSummary nonZeroByteObject = createObjectSummary(1);
-//        final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(
-//                List.of(zeroByteObject, nonZeroByteObject), null);
-//        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
-//
-//        final List<S3ObjectSummary> summaries = underTest.fetchObjectSummaries(s3Client);
-//
-//        assertThat(summaries.size()).isEqualTo(1);
-//        assertThat(summaries.get(0).getSize()).isEqualTo(1);
-//    }
+    // @Test
+    // void testFetchObjectSummariesWithZeroByteObject() throws IOException {
+    // final S3ObjectSummary zeroByteObject = createObjectSummary(0);
+    // final S3ObjectSummary nonZeroByteObject = createObjectSummary(1);
+    // final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(
+    // List.of(zeroByteObject, nonZeroByteObject), null);
+    // when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
+    //
+    // final List<S3ObjectSummary> summaries = underTest.fetchObjectSummaries(s3Client);
+    //
+    // assertThat(summaries.size()).isEqualTo(1);
+    // assertThat(summaries.get(0).getSize()).isEqualTo(1);
+    // }
 
     @Test
     void testFetchObjectSummariesWithPagination() throws IOException {

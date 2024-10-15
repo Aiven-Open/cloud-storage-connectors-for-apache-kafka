@@ -20,16 +20,19 @@ import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Map;
 
-import com.amazonaws.services.s3.model.S3Object;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import com.amazonaws.services.s3.model.S3Object;
+
 /**
- * Defines a transform from the S3 input stream to the data @{code byte[]} found in a {@code ConsumerRecord<byte[], byte[]>}.
+ * Defines a transform from the S3 input stream to the data @{code byte[]} found in a
+ * {@code ConsumerRecord<byte[], byte[]>}.
  */
 public interface Transformer {
 
     /**
      * The name this Transformer is known as.
+     *
      * @return the Transformer name.
      */
     String getName();
@@ -38,11 +41,17 @@ public interface Transformer {
 
     /**
      * Converts the S3 base InputStream into one or more {@code byte[]}.
-     * @param inputStream the InputStream from an  {@link S3Object}
-     * @param topic The Kafka topic the data is destined for.
-     * @param s3SourceConfig the source configuration.
+     *
+     * @param inputStream
+     *            the InputStream from an {@link S3Object}
+     * @param topic
+     *            The Kafka topic the data is destined for.
+     * @param s3SourceConfig
+     *            the source configuration.
      * @return an {@code Iterator} over the {@code byte[]} constructed from the input.
-     * @throws BadDataException If the data conversion fails.
+     * @throws BadDataException
+     *             If the data conversion fails.
      */
-    Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException;
+    Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig)
+            throws BadDataException;
 }

@@ -30,9 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
-import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
-import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.Converter;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
@@ -40,6 +38,7 @@ import org.apache.kafka.connect.storage.OffsetStorageReader;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.output.ByteArrayTransformer;
 import io.aiven.kafka.connect.s3.source.output.Transformer;
+import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
 
@@ -140,23 +139,23 @@ final class S3SourceTaskTest {
         assertThat(taskInitialized).isTrue();
     }
 
-//    @Test
-//    void testPoll() throws Exception {
-//        final S3SourceTask s3SourceTask = new S3SourceTask();
-//        startSourceTask(s3SourceTask);
-//
-//        SourceRecordIterator mockSourceRecordIterator;
-//
-//        mockSourceRecordIterator = mock(SourceRecordIterator.class);
-//        setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
-//        when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
-//
-//        final List<AivenS3SourceRecord> aivenS3SourceRecordList = getAivenS3SourceRecords();
-//        when(mockSourceRecordIterator.next()).thenReturn(aivenS3SourceRecordList);
-//
-//        final List<SourceRecord> sourceRecordList = s3SourceTask.poll();
-//        assertThat(sourceRecordList).hasSize(2);
-//    }
+    // @Test
+    // void testPoll() throws Exception {
+    // final S3SourceTask s3SourceTask = new S3SourceTask();
+    // startSourceTask(s3SourceTask);
+    //
+    // SourceRecordIterator mockSourceRecordIterator;
+    //
+    // mockSourceRecordIterator = mock(SourceRecordIterator.class);
+    // setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
+    // when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
+    //
+    // final List<AivenS3SourceRecord> aivenS3SourceRecordList = getAivenS3SourceRecords();
+    // when(mockSourceRecordIterator.next()).thenReturn(aivenS3SourceRecordList);
+    //
+    // final List<SourceRecord> sourceRecordList = s3SourceTask.poll();
+    // assertThat(sourceRecordList).hasSize(2);
+    // }
 
     @Test
     void testStop() {

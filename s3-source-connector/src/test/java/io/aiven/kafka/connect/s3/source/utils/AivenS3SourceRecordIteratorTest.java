@@ -1,43 +1,57 @@
+/*
+ * Copyright 2024 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.connect.s3.source.utils;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.nimbusds.jose.util.IOUtils;
-import io.aiven.kafka.connect.s3.source.AivenKafkaConnectS3SourceConnector;
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.BadDataException;
-import io.aiven.kafka.connect.s3.source.output.ByteArrayTransformer;
-import io.aiven.kafka.connect.s3.source.output.Transformer;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
-import org.codehaus.plexus.util.IOUtil;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.*;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.*;
 import static io.aiven.kafka.connect.s3.source.output.TransformerFactory.DEFAULT_TRANSFORMER_NAME;
 import static io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecordIterator.OFFSET_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Fail.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+
+import io.aiven.kafka.connect.s3.source.AivenKafkaConnectS3SourceConnector;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.output.BadDataException;
+import io.aiven.kafka.connect.s3.source.output.ByteArrayTransformer;
+import io.aiven.kafka.connect.s3.source.output.Transformer;
+
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.nimbusds.jose.util.IOUtils;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 public class AivenS3SourceRecordIteratorTest {
 
-    //  public AivenS3SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
-    //                                       final SourceTaskContext context, final Transformer outputWriter,
-    //                                       final Iterator<S3ObjectSummary> s3ObjectSummaryIterator,
-    //                                       final Consumer<String> badS3ObjectConsumer) {
+    // public AivenS3SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String
+    // bucketName,
+    // final SourceTaskContext context, final Transformer outputWriter,
+    // final Iterator<S3ObjectSummary> s3ObjectSummaryIterator,
+    // final Consumer<String> badS3ObjectConsumer) {
     private AivenS3SourceRecordIterator underTest;
 
     private S3SourceConfig s3SourceConfig;
@@ -48,7 +62,6 @@ public class AivenS3SourceRecordIteratorTest {
     private static final String BUCKET_NAME = "bucket-name";
 
     private static final String TOPIC_NAME = "test-topic";
-
 
     private OffsetStorageReader offsetStorageReader;
     private SourceTaskContext context = new SourceTaskContext() {
@@ -75,8 +88,8 @@ public class AivenS3SourceRecordIteratorTest {
         s3ObjectSummaries = new ArrayList<>();
     }
 
-    private Map<String,String> getBasicProperties() {
-        Map<String,String> properties = new HashMap<>();
+    private Map<String, String> getBasicProperties() {
+        Map<String, String> properties = new HashMap<>();
         properties.put(S3SourceConfig.OUTPUT_FORMAT_KEY, DEFAULT_TRANSFORMER_NAME);
         properties.put("name", "test_source_connector");
         properties.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
@@ -89,7 +102,7 @@ public class AivenS3SourceRecordIteratorTest {
         return properties;
     }
 
-    private void configure(String fileName, byte[] contents ) {
+    private void configure(String fileName, byte[] contents) {
         S3Object obj = new S3Object();
         obj.setKey(fileName);
         obj.setObjectContent(new ByteArrayInputStream(contents));
@@ -105,10 +118,11 @@ public class AivenS3SourceRecordIteratorTest {
     @Test
     public void testNext() {
         byte[] text = "The quick brown fox jumps over the lazy dog".getBytes(StandardCharsets.UTF_8);
-        String key = TOPIC_NAME+"-00001.fileExt";
+        String key = TOPIC_NAME + "-00001.fileExt";
         configure(key, text);
         List<String> badObjects = new ArrayList<>();
-        underTest = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, BUCKET_NAME, context, transformer, s3ObjectSummaries.iterator(), badObjects::add);
+        underTest = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, BUCKET_NAME, context, transformer,
+                s3ObjectSummaries.iterator(), badObjects::add);
         assertThat(underTest).hasNext();
         AivenS3SourceRecord actual = underTest.next();
         assertThat(actual.getObjectKey()).isEqualTo(key);
@@ -128,14 +142,16 @@ public class AivenS3SourceRecordIteratorTest {
     @Test
     public void testMultipleS3Records() {
         byte[] text = "The quick brown fox jumps over the lazy dog".getBytes(StandardCharsets.UTF_8);
-        String key = TOPIC_NAME+"-00001-1.fileExt";
+        String key = TOPIC_NAME + "-00001-1.fileExt";
         configure(key, text);
-        byte[] text2 = "Now is the time for all good people to come to the aid of their country.".getBytes(StandardCharsets.UTF_8);
-        String key2 = TOPIC_NAME+"-00002.fileExt";
+        byte[] text2 = "Now is the time for all good people to come to the aid of their country."
+                .getBytes(StandardCharsets.UTF_8);
+        String key2 = TOPIC_NAME + "-00002.fileExt";
         configure(key2, text2);
 
         List<String> badObjects = new ArrayList<>();
-        underTest = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, BUCKET_NAME, context, transformer, s3ObjectSummaries.iterator(), badObjects::add);
+        underTest = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, BUCKET_NAME, context, transformer,
+                s3ObjectSummaries.iterator(), badObjects::add);
         assertThat(underTest).hasNext();
         AivenS3SourceRecord actual = underTest.next();
         assertThat(actual.getObjectKey()).isEqualTo(key);
@@ -182,11 +198,12 @@ public class AivenS3SourceRecordIteratorTest {
             }
 
             @Override
-            public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException {
+            public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic,
+                    S3SourceConfig s3SourceConfig) throws BadDataException {
                 try {
                     List<byte[]> result = new ArrayList<>();
                     for (String s : IOUtils.readInputStreamToString(inputStream).split(System.lineSeparator())) {
-                       result.add(s.getBytes(StandardCharsets.UTF_8));
+                        result.add(s.getBytes(StandardCharsets.UTF_8));
                     }
                     return result.iterator();
                 } catch (IOException e) {
@@ -195,13 +212,15 @@ public class AivenS3SourceRecordIteratorTest {
             }
         };
 
-        byte[] text = ("The quick brown fox jumps over the lazy dog"+System.lineSeparator()+"Now is the time for all good people to come to the aid of their country.").getBytes(StandardCharsets.UTF_8);
-        String key = TOPIC_NAME+"-00001.fileExt";
+        byte[] text = ("The quick brown fox jumps over the lazy dog" + System.lineSeparator()
+                + "Now is the time for all good people to come to the aid of their country.")
+                .getBytes(StandardCharsets.UTF_8);
+        String key = TOPIC_NAME + "-00001.fileExt";
         configure(key, text);
 
-
         List<String> badObjects = new ArrayList<>();
-        underTest = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, BUCKET_NAME, context, lineTransformer, s3ObjectSummaries.iterator(), badObjects::add);
+        underTest = new AivenS3SourceRecordIterator(s3SourceConfig, s3Client, BUCKET_NAME, context, lineTransformer,
+                s3ObjectSummaries.iterator(), badObjects::add);
         assertThat(underTest).hasNext();
         AivenS3SourceRecord actual = underTest.next();
         assertThat(actual.getObjectKey()).isEqualTo(key);
@@ -232,8 +251,5 @@ public class AivenS3SourceRecordIteratorTest {
         assertThat(badObjects).isEmpty();
 
     }
-
-
-
 
 }

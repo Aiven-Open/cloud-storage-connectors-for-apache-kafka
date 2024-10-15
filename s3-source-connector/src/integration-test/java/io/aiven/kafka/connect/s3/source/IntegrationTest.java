@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
 import org.apache.kafka.clients.admin.AdminClient;
 
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;

@@ -16,12 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.*;
-import static io.aiven.kafka.connect.s3.source.output.TransformerFactory.DEFAULT_TRANSFORMER_NAME;
-import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.AUTO_REGISTER_SCHEMAS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -44,7 +40,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 
 final class AvroTransformerTest {
 
@@ -74,15 +69,15 @@ final class AvroTransformerTest {
         assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("http://localhost:8081")
                 .describedAs("The schema registry URL should be correctly set in the config.");
 
-//        // test null
-//        underTest.configureValueConverter(config, s3SourceConfig);
-//        assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo(null)
-//                .describedAs("The schema registry URL should be null");
-//
-//        // test empty String
-//        underTest.configureValueConverter(config, s3SourceConfig);
-//        assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("")
-//                .describedAs("The schema registry URL should be an empty string");
+        // // test null
+        // underTest.configureValueConverter(config, s3SourceConfig);
+        // assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo(null)
+        // .describedAs("The schema registry URL should be null");
+        //
+        // // test empty String
+        // underTest.configureValueConverter(config, s3SourceConfig);
+        // assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("")
+        // .describedAs("The schema registry URL should be an empty string");
 
     }
 
@@ -137,7 +132,7 @@ final class AvroTransformerTest {
         return outputStream;
     }
 
-    static  Map<String, String> getBasicProperties() {
+    static Map<String, String> getBasicProperties() {
         Map<String, String> properties = new HashMap<>();
         properties.put(S3SourceConfig.OUTPUT_FORMAT_KEY, "avro");
         properties.put("name", "test_source_connector");
@@ -153,8 +148,8 @@ final class AvroTransformerTest {
     }
 
     /**
-     * Since the real KafkaAvroSerializer makes calls to the SCHEMA_REGISTRY_URL this class just returns the
-     * record data enclosed in "TestOutput[]".
+     * Since the real KafkaAvroSerializer makes calls to the SCHEMA_REGISTRY_URL this class just returns the record data
+     * enclosed in "TestOutput[]".
      */
     static class TestingAvroSerializer extends KafkaAvroSerializer {
         @Override

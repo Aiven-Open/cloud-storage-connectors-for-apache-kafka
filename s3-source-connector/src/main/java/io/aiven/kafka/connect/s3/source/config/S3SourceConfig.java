@@ -19,19 +19,18 @@ package io.aiven.kafka.connect.s3.source.config;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
 import io.aiven.kafka.connect.common.config.validators.UrlValidator;
+import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Region;
@@ -40,8 +39,6 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.AUTO_REGISTER_SCHEMAS;
 
 @SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports" })
 final public class S3SourceConfig extends AbstractConfig {
@@ -151,8 +148,8 @@ final public class S3SourceConfig extends AbstractConfig {
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_OTHER,
                 srCounter++, ConfigDef.Width.NONE, VALUE_CONVERTER_SCHEMA_REGISTRY_URL);
         configDef.define(OUTPUT_FORMAT_KEY, ConfigDef.Type.STRING, TransformerFactory.DEFAULT_TRANSFORMER_NAME,
-                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "Output format avro/json/parquet/bytes or other registered transformer.",
-                GROUP_OTHER, srCounter++, // NOPMD
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM,
+                "Output format avro/json/parquet/bytes or other registered transformer.", GROUP_OTHER, srCounter++, // NOPMD
                 ConfigDef.Width.NONE, OUTPUT_FORMAT_KEY);
 
         configDef.define(VALUE_SERIALIZER, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM, "Value serializer",

@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.s3.source.output;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -45,7 +44,8 @@ public class ByteArrayTransformer implements Transformer {
     }
 
     @Override
-    public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig) throws BadDataException {
+    public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic, S3SourceConfig s3SourceConfig)
+            throws BadDataException {
         try {
             return new SingletonIterator<>(IOUtils.toByteArray(inputStream));
         } catch (IOException e) {

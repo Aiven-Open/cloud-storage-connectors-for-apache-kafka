@@ -23,9 +23,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 
+import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
+
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
-import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
 import org.junit.jupiter.api.Test;
 
 final class S3SourceConfigTest {
