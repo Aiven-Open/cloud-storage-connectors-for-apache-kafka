@@ -46,7 +46,8 @@ public class AvroWriter implements OutputWriter {
     }
 
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
+            final S3SourceConfig s3SourceConfig) {
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
         return readAvroRecords(inputStream, datumReader);
     }
