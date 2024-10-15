@@ -23,6 +23,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.AUTO
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.*;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 

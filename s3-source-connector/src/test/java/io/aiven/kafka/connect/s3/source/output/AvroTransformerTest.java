@@ -16,6 +16,10 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -68,17 +72,6 @@ final class AvroTransformerTest {
         underTest.configureValueConverter(config, s3SourceConfig);
         assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("http://localhost:8081")
                 .describedAs("The schema registry URL should be correctly set in the config.");
-
-        // // test null
-        // underTest.configureValueConverter(config, s3SourceConfig);
-        // assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo(null)
-        // .describedAs("The schema registry URL should be null");
-        //
-        // // test empty String
-        // underTest.configureValueConverter(config, s3SourceConfig);
-        // assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("")
-        // .describedAs("The schema registry URL should be an empty string");
-
     }
 
     @Test

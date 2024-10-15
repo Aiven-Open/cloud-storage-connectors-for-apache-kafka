@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.*;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.*;
 import static io.aiven.kafka.connect.s3.source.output.TransformerFactory.DEFAULT_TRANSFORMER_NAME;
 import static io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecordIterator.OFFSET_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +30,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
@@ -199,7 +202,7 @@ public class AivenS3SourceRecordIteratorTest {
 
             @Override
             public Iterator<byte[]> byteArrayIterator(InputStream inputStream, String topic,
-                    S3SourceConfig s3SourceConfig) throws BadDataException {
+                                                      S3SourceConfig s3SourceConfig) throws BadDataException {
                 try {
                     List<byte[]> result = new ArrayList<>();
                     for (String s : IOUtils.readInputStreamToString(inputStream).split(System.lineSeparator())) {

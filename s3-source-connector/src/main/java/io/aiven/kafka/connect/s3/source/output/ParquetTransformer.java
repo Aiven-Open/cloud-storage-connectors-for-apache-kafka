@@ -25,6 +25,10 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 

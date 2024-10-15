@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.s3.source.utils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -93,8 +94,8 @@ public final class AivenS3SourceRecordIterator implements Iterator<AivenS3Source
      *            a consumer for S3 key that represent objects that could not be processed by the transformer.
      */
     public AivenS3SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client,
-            final String bucketName, final SourceTaskContext context, final Transformer transformer,
-            final Iterator<S3ObjectSummary> s3ObjectSummaryIterator, final Consumer<String> badS3ObjectConsumer) {
+                                       final String bucketName, final SourceTaskContext context, final Transformer transformer,
+                                       final Iterator<S3ObjectSummary> s3ObjectSummaryIterator, final Consumer<String> badS3ObjectConsumer) {
         this.s3SourceConfig = s3SourceConfig;
         this.bucketName = bucketName;
         this.transformer = transformer;

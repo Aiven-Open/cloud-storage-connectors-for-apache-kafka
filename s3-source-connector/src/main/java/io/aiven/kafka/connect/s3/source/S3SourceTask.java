@@ -17,9 +17,11 @@
 package io.aiven.kafka.connect.s3.source;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
+import io.aiven.kafka.connect.s3.source.utils.*;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
@@ -31,12 +33,15 @@ import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.output.Transformer;
 import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
+import io.aiven.kafka.connect.s3.source.utils.FilterIterator;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.*;
 
 /**
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
