@@ -16,14 +16,16 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_MESSAGE_BYTES_SIZE;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import com.amazonaws.util.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,18 +37,34 @@ public class ByteArrayWriter implements OutputWriter {
 
     }
 
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
-        return List.of(inputStream);
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
+            final S3SourceConfig s3SourceConfig) {
+
+        final int maxMessageBytesSize = s3SourceConfig.getInt(MAX_MESSAGE_BYTES_SIZE);
+        final byte[] buffer = new byte[maxMessageBytesSize];
+        int bytesRead;
+
+        final List<Object> chunks = new ArrayList<>();
+        try {
+            bytesRead = inputStream.read(buffer);
+            while (bytesRead != -1) {
+                // Create a byte array with the exact number of bytes read
+                final byte[] chunk = new byte[bytesRead];
+                System.arraycopy(buffer, 0, chunk, 0, bytesRead);
+                chunks.add(chunk);
+                bytesRead = inputStream.read(buffer);
+            }
+        } catch (IOException e) {
+            LOGGER.error("Error reading from input stream: " + e.getMessage(), e);
+        }
+
+        return chunks;
     }
 
     @Override
     public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
-        try {
-            return IOUtils.toByteArray((InputStream) record);
-        } catch (IOException e) {
-            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
-            return new byte[0];
-        }
+        return (byte[]) record;
     }
 }

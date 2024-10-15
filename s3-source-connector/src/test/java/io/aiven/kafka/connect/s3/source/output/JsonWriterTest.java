@@ -65,8 +65,8 @@ final class JsonWriterTest {
     void testHandleValueDataWithValidJson() {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
-
-        final List<Object> jsonNodes = jsonWriter.getRecords(validJsonInputStream, "testtopic", 1);
+        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
+        final List<Object> jsonNodes = jsonWriter.getRecords(validJsonInputStream, "testtopic", 1, s3SourceConfig);
 
         assertThat(jsonNodes.size()).isEqualTo(1);
     }
@@ -75,8 +75,9 @@ final class JsonWriterTest {
     void testHandleValueDataWithInvalidJson() {
         final InputStream invalidJsonInputStream = new ByteArrayInputStream(
                 "invalid-json".getBytes(StandardCharsets.UTF_8));
+        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
-        final List<Object> jsonNodes = jsonWriter.getRecords(invalidJsonInputStream, "testtopic", 1);
+        final List<Object> jsonNodes = jsonWriter.getRecords(invalidJsonInputStream, "testtopic", 1, s3SourceConfig);
 
         assertThat(jsonNodes.size()).isEqualTo(0);
     }
@@ -86,7 +87,7 @@ final class JsonWriterTest {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
-        final List<Object> jsonNodes = jsonWriter.getRecords(validJsonInputStream, "testtopic", 1);
+        final List<Object> jsonNodes = jsonWriter.getRecords(validJsonInputStream, "testtopic", 1, s3SourceConfig);
 
         final byte[] serializedData = jsonWriter.getValueBytes(jsonNodes.get(0), "testtopic", s3SourceConfig);
 

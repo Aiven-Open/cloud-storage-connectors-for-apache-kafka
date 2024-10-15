@@ -86,6 +86,8 @@ final public class S3SourceConfig extends AbstractConfig {
     public static final String TARGET_TOPICS = "topics";
     public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
     public static final String MAX_POLL_RECORDS = "max.poll.records";
+
+    public static final String MAX_MESSAGE_BYTES_SIZE = "max.message.bytes";
     public static final String KEY_CONVERTER = "key.converter";
     public static final String VALUE_CONVERTER = "value.converter";
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
@@ -179,6 +181,11 @@ final public class S3SourceConfig extends AbstractConfig {
                 "Value converter", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
                 // UnusedAssignment
                 ConfigDef.Width.NONE, VALUE_CONVERTER);
+        configDef.define(MAX_MESSAGE_BYTES_SIZE, ConfigDef.Type.INT, 1_048_588, ConfigDef.Importance.MEDIUM,
+                "The largest record batch size allowed by Kafka config max.message.bytes", GROUP_OTHER,
+                awsOtherGroupCounter++, // NOPMD
+                // UnusedAssignment
+                ConfigDef.Width.NONE, MAX_MESSAGE_BYTES_SIZE);
     }
 
     private static void addAwsStsConfigGroup(final ConfigDef configDef) {
