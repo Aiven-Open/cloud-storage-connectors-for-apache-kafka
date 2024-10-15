@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
@@ -49,8 +48,6 @@ final class AvroWriterTest {
 
     @Mock
     private S3SourceConfig s3SourceConfig;
-    @Mock
-    private OffsetManager offsetManager;
 
     private AvroWriter avroWriter;
     private Map<String, String> config;

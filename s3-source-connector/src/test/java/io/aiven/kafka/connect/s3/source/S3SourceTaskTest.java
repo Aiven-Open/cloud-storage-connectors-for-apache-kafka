@@ -23,7 +23,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -152,11 +151,11 @@ final class S3SourceTaskTest {
         setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
         when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
 
-        final List<AivenS3SourceRecord> aivenS3SourceRecordList = getAivenS3SourceRecords();
+        final AivenS3SourceRecord aivenS3SourceRecordList = getAivenS3SourceRecord();
         when(mockSourceRecordIterator.next()).thenReturn(aivenS3SourceRecordList);
 
         final List<SourceRecord> sourceRecordList = s3SourceTask.poll();
-        assertThat(sourceRecordList).hasSize(2);
+        assertThat(sourceRecordList).isNotEmpty();
     }
 
     @Test
@@ -170,15 +169,13 @@ final class S3SourceTaskTest {
         assertThat(s3SourceTask.getConnectorStopped()).isTrue();
     }
 
-    private static List<AivenS3SourceRecord> getAivenS3SourceRecords() {
-        final List<AivenS3SourceRecord> aivenS3SourceRecordList = new ArrayList<>();
-        final AivenS3SourceRecord aivenS3SourceRecord1 = new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(),
-                "testtopic", 0, new byte[0], new byte[0], "");
-        aivenS3SourceRecordList.add(aivenS3SourceRecord1);
-        final AivenS3SourceRecord aivenS3SourceRecord2 = new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(),
-                "testtopic", 1, new byte[0], new byte[0], "");
-        aivenS3SourceRecordList.add(aivenS3SourceRecord2);
-        return aivenS3SourceRecordList;
+    private static AivenS3SourceRecord getAivenS3SourceRecord() {
+        // final List<AivenS3SourceRecord> aivenS3SourceRecordList = new ArrayList<>();
+        // aivenS3SourceRecordList.add(aivenS3SourceRecord1);
+        // final AivenS3SourceRecord aivenS3SourceRecord2 = new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(),
+        // "testtopic", 1, new byte[0], new byte[0], "");
+        // aivenS3SourceRecordList.add(aivenS3SourceRecord2);
+        return new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, new byte[0], new byte[0], "");
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")

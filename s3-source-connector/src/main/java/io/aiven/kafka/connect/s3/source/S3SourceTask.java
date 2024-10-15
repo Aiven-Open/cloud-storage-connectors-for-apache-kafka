@@ -40,6 +40,7 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.output.OutputWriter;
 import io.aiven.kafka.connect.s3.source.output.OutputWriterFactory;
 import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
+import io.aiven.kafka.connect.s3.source.utils.FileReader;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
@@ -54,7 +55,7 @@ import org.slf4j.LoggerFactory;
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
  * Connect records.
  */
-@SuppressWarnings("PMD.TooManyMethods")
+@SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports" })
 public class S3SourceTask extends SourceTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
@@ -71,7 +72,7 @@ public class S3SourceTask extends SourceTask {
     private S3SourceConfig s3SourceConfig;
     private AmazonS3 s3Client;
 
-    private Iterator<List<AivenS3SourceRecord>> sourceRecordIterator;
+    private Iterator<AivenS3SourceRecord> sourceRecordIterator;
     private Optional<Converter> keyConverter;
 
     private Converter valueConverter;
@@ -132,8 +133,9 @@ public class S3SourceTask extends SourceTask {
     }
 
     private void prepareReaderFromOffsetStorageReader() {
+        final FileReader fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys);
         sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
-                this.outputWriter, failedObjectKeys);
+                this.outputWriter, fileReader);
     }
 
     @Override
