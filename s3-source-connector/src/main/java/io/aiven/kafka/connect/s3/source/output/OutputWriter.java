@@ -31,7 +31,7 @@ public interface OutputWriter {
 
     void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
 
-    List<Object> getRecords(InputStream inputStream, String topic, int topicPartition);
+    List<Object> getRecords(InputStream inputStream, String topic, int topicPartition, S3SourceConfig s3SourceConfig);
 
     byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
 }
