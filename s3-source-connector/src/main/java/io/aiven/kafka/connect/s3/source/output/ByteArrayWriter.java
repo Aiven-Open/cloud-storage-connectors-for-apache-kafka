@@ -50,7 +50,6 @@ public class ByteArrayWriter implements OutputWriter {
         try {
             bytesRead = inputStream.read(buffer);
             while (bytesRead != -1) {
-                // Create a byte array with the exact number of bytes read
                 final byte[] chunk = new byte[bytesRead];
                 System.arraycopy(buffer, 0, chunk, 0, bytesRead);
                 chunks.add(chunk);
