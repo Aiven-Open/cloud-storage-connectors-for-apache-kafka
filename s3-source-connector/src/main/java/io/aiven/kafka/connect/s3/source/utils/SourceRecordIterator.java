@@ -78,7 +78,6 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
         this.bucketName = bucketName;
         this.outputWriter = outputWriter;
         this.fileReader = fileReader;
-        // final FileReader fileReader = new FileReader(s3SourceConfig, bucketName, failedObjectKeys);
         try {
             final List<S3ObjectSummary> chunks = fileReader.fetchObjectSummaries(s3Client);
             nextFileIterator = chunks.iterator();
