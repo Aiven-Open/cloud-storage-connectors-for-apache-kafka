@@ -146,7 +146,8 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
 
                 int numOfProcessedRecs = 1;
                 boolean checkOffsetMap = true;
-                for (final Object record : outputWriter.getRecords(valueInputStream, topic, topicPartition)) {
+                for (final Object record : outputWriter.getRecords(valueInputStream, topic, topicPartition,
+                        s3SourceConfig)) {
 
                     if (offsetManager.getOffsets().containsKey(partitionMap) && checkOffsetMap) {
                         final Map<String, Object> offsetVal = offsetManager.getOffsets().get(partitionMap);

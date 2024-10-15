@@ -50,7 +50,8 @@ public class ParquetWriter implements OutputWriter {
     }
 
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
+            final S3SourceConfig s3SourceConfig) {
         return getParquetRecords(inputStream, topic, topicPartition);
     }
 

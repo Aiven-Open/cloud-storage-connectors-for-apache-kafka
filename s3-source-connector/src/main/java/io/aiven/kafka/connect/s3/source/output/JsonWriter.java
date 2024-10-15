@@ -43,7 +43,8 @@ public class JsonWriter implements OutputWriter {
     }
 
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
+            final S3SourceConfig s3SourceConfig) {
         final List<Object> jsonNodeList = new ArrayList<>();
         JsonNode jsonNode;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
