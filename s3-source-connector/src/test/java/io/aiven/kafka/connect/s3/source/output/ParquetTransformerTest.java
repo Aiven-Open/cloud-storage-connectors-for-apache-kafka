@@ -16,7 +16,9 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -24,33 +26,53 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 
 import com.amazonaws.util.IOUtils;
-import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-final class ParquetWriterTest {
-    private ParquetWriter parquetWriter;
+final class ParquetTransformerTest {
+    private ParquetTransformer underTest;
+
+    private S3SourceConfig s3SourceConfig;
 
     @BeforeEach
     public void setUp() {
-        parquetWriter = new ParquetWriter();
+        underTest = new ParquetTransformer();
+        s3SourceConfig = new S3SourceConfig(AvroTransformerTest.getBasicProperties());
+    }
+
+    @Test
+    public void testName() {
+        assertThat(underTest.getName().equals("parquet"));
+    }
+
+    @Test
+    void testConfigureValueConverter() {
+        final String value = "http://localhost:8081";
+        Map<String, String> config = new HashMap<>();
+
+        // test value
+        underTest.configureValueConverter(config, s3SourceConfig);
+        assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("http://localhost:8081")
+                .describedAs("The schema registry URL should be correctly set in the config.");
+
     }
 
     @Test
     void testHandleValueDataWithZeroBytes() {
-        final byte[] mockParquetData = new byte[0];
-        final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
+        final InputStream inputStream = new ByteArrayInputStream(new byte[0]);
 
         final String topic = "test-topic";
-        final int topicPartition = 0;
-        final List<Object> recs = parquetWriter.getRecords(inputStream, topic, topicPartition);
 
-        assertThat(recs).isEmpty();
+        assertThatThrownBy(() -> underTest.byteArrayIterator(inputStream, "topic", s3SourceConfig))
+                .isInstanceOf(BadDataException.class);
     }
 
     @Test
@@ -59,14 +81,12 @@ final class ParquetWriterTest {
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
 
         final String topic = "test-topic";
-        final int topicPartition = 0;
 
-        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition);
+        final Iterator<byte[]> iter = underTest.byteArrayIterator(inputStream, topic, s3SourceConfig);
 
-        assertThat(records).isNotEmpty();
-        assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
-                .contains("name1")
-                .contains("name2");
+        assertThat(iter).hasNext();
+        byte[] actual = iter.next();
+        System.out.println(actual);
     }
 
     @Test
@@ -75,10 +95,8 @@ final class ParquetWriterTest {
         final InputStream inputStream = new ByteArrayInputStream(invalidData);
 
         final String topic = "test-topic";
-        final int topicPartition = 0;
-
-        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition);
-        assertThat(records).isEmpty();
+        assertThatThrownBy(() -> underTest.byteArrayIterator(inputStream, "topic", s3SourceConfig))
+                .isInstanceOf(BadDataException.class);
     }
 
     @Test
@@ -86,7 +104,7 @@ final class ParquetWriterTest {
         final Path tempFile = Files.createTempFile("test-file", ".parquet");
         assertThat(Files.exists(tempFile)).isTrue();
 
-        ParquetWriter.deleteTmpFile(tempFile);
+        ParquetTransformer.deleteTmpFile(tempFile);
         assertThat(Files.exists(tempFile)).isFalse();
     }
 

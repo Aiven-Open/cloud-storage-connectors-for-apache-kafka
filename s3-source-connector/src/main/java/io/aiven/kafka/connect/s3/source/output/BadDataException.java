@@ -16,23 +16,19 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
-import java.util.Locale;
-
-public enum OutputFormat {
-    AVRO("avro"), PARQUET("parquet"), JSON("json"), BYTES("bytes");
-
-    private final String format;
-
-    OutputFormat(final String format) {
-        this.format = format;
+public class BadDataException extends Exception {
+    public BadDataException() {
     }
 
-    public String getValue() {
-        return format.toLowerCase(Locale.ROOT);
+    public BadDataException(String message) {
+        super(message);
     }
 
-    @Override
-    public String toString() {
-        return format;
+    public BadDataException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public BadDataException(Throwable cause) {
+        super(cause);
     }
 }

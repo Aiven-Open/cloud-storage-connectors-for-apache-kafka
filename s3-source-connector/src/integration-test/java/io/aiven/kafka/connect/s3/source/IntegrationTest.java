@@ -45,7 +45,6 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.admin.AdminClient;
 
-import io.aiven.kafka.connect.s3.source.output.OutputFormat;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
@@ -147,7 +146,7 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
         connectRunner.createConnector(connectorConfig);
-        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.BYTES.getValue());
+        connectorConfig.put(OUTPUT_FORMAT_KEY, "bytes");
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
@@ -190,7 +189,7 @@ final class IntegrationTest implements IntegrationBase {
     void avroTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.AVRO.getValue());
+        connectorConfig.put(OUTPUT_FORMAT_KEY, "avro");
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
@@ -236,7 +235,7 @@ final class IntegrationTest implements IntegrationBase {
     void parquetTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.PARQUET.getValue());
+        connectorConfig.put(OUTPUT_FORMAT_KEY, "parquet");
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
@@ -268,7 +267,7 @@ final class IntegrationTest implements IntegrationBase {
     void jsonTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.JSON.getValue());
+        connectorConfig.put(OUTPUT_FORMAT_KEY, "json");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
 
         connectRunner.createConnector(connectorConfig);

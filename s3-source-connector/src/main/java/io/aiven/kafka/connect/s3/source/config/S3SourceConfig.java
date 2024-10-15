@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.s3.source.config;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -31,7 +30,7 @@ import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
 import io.aiven.kafka.connect.common.config.validators.UrlValidator;
-import io.aiven.kafka.connect.s3.source.output.OutputFormat;
+import io.aiven.kafka.connect.s3.source.output.TransformerFactory;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Region;
@@ -73,7 +72,6 @@ final public class S3SourceConfig extends AbstractConfig {
     public static final int AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT = 100;
     public static final int AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 20_000;
     public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
-
     public static final String VALUE_CONVERTER_SCHEMA_REGISTRY_URL = "value.converter.schema.registry.url";
     public static final String VALUE_SERIALIZER = "value.serializer";
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
@@ -149,9 +147,9 @@ final public class S3SourceConfig extends AbstractConfig {
         configDef.define(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, ConfigDef.Type.STRING, null,
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_OTHER,
                 srCounter++, ConfigDef.Width.NONE, VALUE_CONVERTER_SCHEMA_REGISTRY_URL);
-        configDef.define(OUTPUT_FORMAT_KEY, ConfigDef.Type.STRING, OutputFormat.BYTES.getValue(),
-                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "Output format avro/json/parquet/bytes",
-                GROUP_OTHER, srCounter++, // NOPMD
+        configDef.define(OUTPUT_FORMAT_KEY, ConfigDef.Type.STRING, TransformerFactory.DEFAULT_TRANSFORMER_NAME,
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM,
+                "Output format avro/json/parquet/bytes or other registered transformer.", GROUP_OTHER, srCounter++, // NOPMD
                 ConfigDef.Width.NONE, OUTPUT_FORMAT_KEY);
 
         configDef.define(VALUE_SERIALIZER, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM, "Value serializer",
@@ -338,10 +336,6 @@ final public class S3SourceConfig extends AbstractConfig {
 
     public String getAwsS3BucketName() {
         return getString(AWS_S3_BUCKET_NAME_CONFIG);
-    }
-
-    public OutputFormat getOutputFormat() {
-        return OutputFormat.valueOf(getString(OUTPUT_FORMAT_KEY).toUpperCase(Locale.ROOT));
     }
 
     Region getAwsS3Region() {

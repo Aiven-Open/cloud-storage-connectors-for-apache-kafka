@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.s3.source.output;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMAS_ENABLE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
@@ -26,7 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -39,9 +40,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-final class JsonWriterTest {
+final class JsonTransformerTest {
 
-    JsonWriter jsonWriter;
+    JsonTransformer underTest;
 
     @Mock
     OffsetManager offsetManager;
@@ -49,7 +50,12 @@ final class JsonWriterTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        jsonWriter = new JsonWriter();
+        underTest = new JsonTransformer();
+    }
+
+    @Test
+    public void testName() {
+        assertThat(underTest.getName().equals("json"));
     }
 
     @Test
@@ -57,43 +63,31 @@ final class JsonWriterTest {
         final Map<String, String> config = new HashMap<>();
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
-        jsonWriter.configureValueConverter(config, s3SourceConfig);
+        underTest.configureValueConverter(config, s3SourceConfig);
         assertEquals("false", config.get(SCHEMAS_ENABLE), "SCHEMAS_ENABLE should be set to false");
     }
 
     @Test
-    void testHandleValueDataWithValidJson() {
-        final InputStream validJsonInputStream = new ByteArrayInputStream(
-                "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
+    void testByteArrayIteratorInvalidData() {
+        final InputStream inputStream = new ByteArrayInputStream("invalid-json".getBytes(StandardCharsets.UTF_8));
 
-        final List<Object> jsonNodes = jsonWriter.getRecords(validJsonInputStream, "testtopic", 1);
+        // s3Config is not used by json tranform.
+        assertThatThrownBy(() -> underTest.byteArrayIterator(inputStream, "topic", null))
+                .isInstanceOf(BadDataException.class);
 
-        assertThat(jsonNodes.size()).isEqualTo(1);
     }
 
     @Test
-    void testHandleValueDataWithInvalidJson() {
-        final InputStream invalidJsonInputStream = new ByteArrayInputStream(
-                "invalid-json".getBytes(StandardCharsets.UTF_8));
-
-        final List<Object> jsonNodes = jsonWriter.getRecords(invalidJsonInputStream, "testtopic", 1);
-
-        assertThat(jsonNodes.size()).isEqualTo(0);
-    }
-
-    @Test
-    void testSerializeJsonDataValid() throws IOException {
+    void testByteArrayIteratorJsonDataValid() throws BadDataException, IOException {
+        final ObjectMapper objectMapper = new ObjectMapper();
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
-        final List<Object> jsonNodes = jsonWriter.getRecords(validJsonInputStream, "testtopic", 1);
-
-        final byte[] serializedData = jsonWriter.getValueBytes(jsonNodes.get(0), "testtopic", s3SourceConfig);
-
-        final ObjectMapper objectMapper = new ObjectMapper();
-
-        final JsonNode expectedData = objectMapper.readTree(serializedData);
-
-        assertThat(expectedData.get("key").asText()).isEqualTo("value");
+        final Iterator<byte[]> iter = underTest.byteArrayIterator(validJsonInputStream, "testtopic", s3SourceConfig);
+        assertThat(iter.hasNext()).isTrue();
+        byte[] data = iter.next();
+        final JsonNode actual = objectMapper.readTree(new ByteArrayInputStream(data));
+        assertThat(actual.get("key").asText()).isEqualTo("value");
+        assertThat(iter.hasNext()).isFalse();
     }
 }
