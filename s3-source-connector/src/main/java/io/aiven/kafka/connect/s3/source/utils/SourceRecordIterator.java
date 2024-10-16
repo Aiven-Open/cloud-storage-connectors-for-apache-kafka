@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.OutputWriter;
+import io.aiven.kafka.connect.s3.source.output.Transformer;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -51,7 +51,6 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
     private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
     public static final String PATTERN_TOPIC_KEY = "topicName";
     public static final String PATTERN_PARTITION_KEY = "partitionId";
-    public static final String OFFSET_KEY = "offset";
 
     public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
             + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
@@ -66,21 +65,20 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
     private final String bucketName;
     private final AmazonS3 s3Client;
 
-    private final OutputWriter outputWriter;
+    private final Transformer transformer;
 
     private final FileReader fileReader; // NOPMD
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
-            final OffsetManager offsetManager, final OutputWriter outputWriter, final FileReader fileReader) {
+            final OffsetManager offsetManager, final Transformer transformer, final FileReader fileReader) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
         this.s3Client = s3Client;
         this.bucketName = bucketName;
-        this.outputWriter = outputWriter;
+        this.transformer = transformer;
         this.fileReader = fileReader;
         try {
-            final List<S3ObjectSummary> chunks = fileReader.fetchObjectSummaries(s3Client);
-            nextFileIterator = chunks.iterator();
+            nextFileIterator = fileReader.fetchObjectSummaries(s3Client);
         } catch (IOException e) {
             throw new AmazonClientException("Failed to initialize S3 file reader", e);
         }
@@ -113,7 +111,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
                 topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
                 defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
             } else {
-                LOGGER.error("File naming doesn't match to any topic. " + currentObjectKey);
+                LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
                 inputStream.abort();
                 s3Object.close();
                 return Collections.emptyIterator();
@@ -125,14 +123,14 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
             final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
                     bucketName);
 
-            return getObjectIterator(inputStream, finalTopic, defaultPartitionId, defaultStartOffsetId, outputWriter,
+            return getObjectIterator(inputStream, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
                     partitionMap);
         }
     }
 
     @SuppressWarnings("PMD.CognitiveComplexity")
     private Iterator<ConsumerRecord<byte[], byte[]>> getObjectIterator(final InputStream valueInputStream,
-            final String topic, final int topicPartition, final long startOffset, final OutputWriter outputWriter,
+            final String topic, final int topicPartition, final long startOffset, final Transformer transformer,
             final Map<String, Object> partitionMap) {
         return new Iterator<>() {
             private final Iterator<ConsumerRecord<byte[], byte[]>> internalIterator = readNext().iterator();
@@ -145,21 +143,15 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
 
                 int numOfProcessedRecs = 1;
                 boolean checkOffsetMap = true;
-                for (final Object record : outputWriter.getRecords(valueInputStream, topic, topicPartition,
+                for (final Object record : transformer.getRecords(valueInputStream, topic, topicPartition,
                         s3SourceConfig)) {
-
-                    if (offsetManager.getOffsets().containsKey(partitionMap) && checkOffsetMap) {
-                        final Map<String, Object> offsetVal = offsetManager.getOffsets().get(partitionMap);
-                        if (offsetVal.containsKey(offsetManager.getObjectMapKey(currentObjectKey))) {
-                            final long offsetValue = (long) offsetVal
-                                    .get(offsetManager.getObjectMapKey(currentObjectKey));
-                            if (numOfProcessedRecs <= offsetValue) {
-                                numOfProcessedRecs++;
-                                continue;
-                            }
-                        }
+                    if (offsetManager.shouldSkipRecord(partitionMap, currentObjectKey, numOfProcessedRecs)
+                            && checkOffsetMap) {
+                        numOfProcessedRecs++;
+                        continue;
                     }
-                    final byte[] valueBytes = outputWriter.getValueBytes(record, topic, s3SourceConfig);
+
+                    final byte[] valueBytes = transformer.getValueBytes(record, topic, s3SourceConfig);
                     checkOffsetMap = false;
                     consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition,
                             offsetManager, startOffset, partitionMap));

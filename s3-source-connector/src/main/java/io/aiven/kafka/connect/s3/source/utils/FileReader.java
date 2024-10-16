@@ -20,7 +20,9 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -42,16 +44,22 @@ public class FileReader {
     private final String bucketName;
 
     private final Set<String> failedObjectKeys;
+    private final Set<String> inProcessObjectKeys;
 
-    public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName,
-            final Set<String> failedObjectKeys) {
+    public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName, final Set<String> failedObjectKeys,
+            final Set<String> inProcessObjectKeys) {
         this.s3SourceConfig = s3SourceConfig;
         this.bucketName = bucketName;
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
+        this.inProcessObjectKeys = new HashSet<>(inProcessObjectKeys);
+    }
+
+    public Set<String> getInProcessObjectKeys() {
+        return Collections.unmodifiableSet(this.inProcessObjectKeys);
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
+    Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
         final List<S3ObjectSummary> allSummaries = new ArrayList<>();
         String continuationToken = null;
         ListObjectsV2Result objectListing;
@@ -70,17 +78,29 @@ public class FileReader {
                     .stream()
                     .filter(objectSummary -> objectSummary.getSize() > 0)
                     .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()))
+                    .filter(objectSummary -> !inProcessObjectKeys.contains(objectSummary.getKey()))
                     .collect(Collectors.toList());
 
             allSummaries.addAll(filteredSummaries); // Add the filtered summaries to the main list
 
+            // TO BE REMOVED before release
             allSummaries.forEach(objSummary -> LOGGER.info("Objects to be processed {} ", objSummary.getKey()));
+
+            // Objects being processed
+            allSummaries.forEach(objSummary -> this.inProcessObjectKeys.add(objSummary.getKey()));
 
             // Check if there are more objects to fetch
             continuationToken = objectListing.getNextContinuationToken();
         } while (objectListing.isTruncated()); // Continue fetching if the result is truncated
 
-        return allSummaries;
+        return allSummaries.iterator();
     }
 
+    public void addFailedObjectKeys(final String objectKey) {
+        this.failedObjectKeys.add(objectKey);
+    }
+
+    public void removeProcessedObjectKeys(final String objectKey) {
+        this.inProcessObjectKeys.remove(objectKey);
+    }
 }
