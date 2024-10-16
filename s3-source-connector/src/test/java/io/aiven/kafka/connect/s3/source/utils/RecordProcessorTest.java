@@ -29,7 +29,6 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -41,13 +40,15 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.OutputWriter;
+import io.aiven.kafka.connect.s3.source.output.Transformer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class RecordProcessorTest {
 
     @Mock
@@ -55,18 +56,20 @@ class RecordProcessorTest {
     @Mock
     private Converter valueConverter;
     @Mock
-    private OutputWriter outputWriter;
+    private Transformer transformer;
     @Mock
     private Converter keyConverter;
     @Mock
     private OffsetManager offsetManager;
+
+    @Mock
+    private FileReader fileReader;
 
     private AtomicBoolean connectorStopped;
     private Iterator<AivenS3SourceRecord> sourceRecordIterator;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         connectorStopped = new AtomicBoolean(false);
         sourceRecordIterator = mock(Iterator.class);
     }
@@ -84,7 +87,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            outputWriter, Collections.emptySet(), offsetManager
+            transformer, fileReader, offsetManager
         );
 
         assertTrue(processedRecords.isEmpty(), "Processed records should be empty when there are no records.");
@@ -106,7 +109,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            outputWriter, Collections.emptySet(), offsetManager
+            transformer, fileReader, offsetManager
         );
 
         assertThat(results.size()).isEqualTo(1);
@@ -126,7 +129,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            outputWriter, Collections.emptySet(), offsetManager
+            transformer, fileReader, offsetManager
         );
 
         assertTrue(processedRecords.isEmpty(), "Processed records should be empty when connector is stopped.");
@@ -136,7 +139,7 @@ class RecordProcessorTest {
     @Test
     void testCreateSourceRecords() {
         final AivenS3SourceRecord mockRecord = mock(AivenS3SourceRecord.class);
-        when(mockRecord.getToTopic()).thenReturn("test-topic");
+        when(mockRecord.getTopic()).thenReturn("test-topic");
         when(mockRecord.key()).thenReturn("mock-key".getBytes(StandardCharsets.UTF_8));
         when(mockRecord.value()).thenReturn("mock-value".getBytes(StandardCharsets.UTF_8));
 
@@ -145,8 +148,7 @@ class RecordProcessorTest {
         when(mockRecord.getSourceRecord(anyString(), any(), any())).thenReturn(mock(SourceRecord.class));
 
         final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig,
-                Optional.of(keyConverter), valueConverter, new HashMap<>(), outputWriter, Collections.emptySet(),
-                offsetManager);
+                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, fileReader, offsetManager);
 
         assertThat(sourceRecords).isNotNull();
     }

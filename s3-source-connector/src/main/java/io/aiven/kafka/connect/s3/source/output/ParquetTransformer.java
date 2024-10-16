@@ -40,9 +40,9 @@ import org.apache.parquet.io.LocalInputFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ParquetWriter implements OutputWriter {
+public class ParquetTransformer implements Transformer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ParquetWriter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ParquetTransformer.class);
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
@@ -57,7 +57,7 @@ public class ParquetWriter implements OutputWriter {
 
     @Override
     public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
-        return OutputUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
+        return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
                 s3SourceConfig);
     }
 
@@ -69,7 +69,7 @@ public class ParquetWriter implements OutputWriter {
         try {
             parquetFile = File.createTempFile(topic + "_" + topicPartition + "_" + timestamp, ".parquet");
         } catch (IOException e) {
-            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
             return records;
         }
 
@@ -85,7 +85,7 @@ public class ParquetWriter implements OutputWriter {
                 }
             }
         } catch (IOException | RuntimeException e) { // NOPMD
-            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
         } finally {
             deleteTmpFile(parquetFile.toPath());
         }
@@ -97,7 +97,7 @@ public class ParquetWriter implements OutputWriter {
             try {
                 Files.delete(parquetFile);
             } catch (IOException e) {
-                LOGGER.error("Error in deleting tmp file " + e.getMessage());
+                LOGGER.error("Error in deleting tmp file {}", e.getMessage(), e);
             }
         }
     }

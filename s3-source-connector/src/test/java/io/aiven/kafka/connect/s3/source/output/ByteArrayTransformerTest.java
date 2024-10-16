@@ -30,20 +30,21 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-class ByteArrayWriterTest {
+@ExtendWith(MockitoExtension.class)
+final class ByteArrayTransformerTest {
 
-    private ByteArrayWriter byteArrayWriter;
+    private ByteArrayTransformer byteArrayTransformer;
 
     @Mock
     private S3SourceConfig s3SourceConfig;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        byteArrayWriter = new ByteArrayWriter();
+        byteArrayTransformer = new ByteArrayTransformer();
     }
 
     @Test
@@ -53,7 +54,7 @@ class ByteArrayWriterTest {
 
         when(s3SourceConfig.getInt(MAX_MESSAGE_BYTES_SIZE)).thenReturn(10_000); // Larger than data size
 
-        final List<Object> records = byteArrayWriter.getRecords(inputStream, "test-topic", 0, s3SourceConfig);
+        final List<Object> records = byteArrayTransformer.getRecords(inputStream, "test-topic", 0, s3SourceConfig);
 
         assertEquals(1, records.size());
         assertArrayEquals(data, (byte[]) records.get(0));
@@ -66,7 +67,7 @@ class ByteArrayWriterTest {
 
         when(s3SourceConfig.getInt(MAX_MESSAGE_BYTES_SIZE)).thenReturn(5); // Smaller than data size
 
-        final List<Object> records = byteArrayWriter.getRecords(inputStream, "test-topic", 0, s3SourceConfig);
+        final List<Object> records = byteArrayTransformer.getRecords(inputStream, "test-topic", 0, s3SourceConfig);
 
         assertEquals(2, records.size());
         assertArrayEquals(new byte[] { 1, 2, 3, 4, 5 }, (byte[]) records.get(0));
@@ -79,7 +80,7 @@ class ByteArrayWriterTest {
 
         when(s3SourceConfig.getInt(MAX_MESSAGE_BYTES_SIZE)).thenReturn(5);
 
-        final List<Object> records = byteArrayWriter.getRecords(inputStream, "test-topic", 0, s3SourceConfig);
+        final List<Object> records = byteArrayTransformer.getRecords(inputStream, "test-topic", 0, s3SourceConfig);
 
         assertEquals(0, records.size());
     }
@@ -87,7 +88,7 @@ class ByteArrayWriterTest {
     @Test
     void testGetValueBytes() {
         final byte[] record = { 1, 2, 3 };
-        final byte[] result = byteArrayWriter.getValueBytes(record, "test-topic", s3SourceConfig);
+        final byte[] result = byteArrayTransformer.getValueBytes(record, "test-topic", s3SourceConfig);
 
         assertArrayEquals(record, result);
     }

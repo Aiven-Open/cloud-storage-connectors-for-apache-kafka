@@ -32,7 +32,7 @@ import java.util.Collections;
 import java.util.List;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.OutputWriter;
+import io.aiven.kafka.connect.s3.source.output.Transformer;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
@@ -47,7 +47,7 @@ final class SourceRecordIteratorTest {
     private AmazonS3 mockS3Client;
     private S3SourceConfig mockConfig;
     private OffsetManager mockOffsetManager;
-    private OutputWriter mockOutputWriter;
+    private Transformer mockTransformer;
 
     private FileReader mockFileReader;
 
@@ -56,7 +56,7 @@ final class SourceRecordIteratorTest {
         mockS3Client = mock(AmazonS3.class);
         mockConfig = mock(S3SourceConfig.class);
         mockOffsetManager = mock(OffsetManager.class);
-        mockOutputWriter = mock(OutputWriter.class);
+        mockTransformer = mock(Transformer.class);
         mockFileReader = mock(FileReader.class);
     }
 
@@ -67,6 +67,7 @@ final class SourceRecordIteratorTest {
 
         // Mock list of S3 object summaries
         final List<S3ObjectSummary> mockObjectSummaries = Collections.singletonList(mockSummary);
+
         final ListObjectsV2Result result = mockListObjectsResult(mockObjectSummaries);
         when(mockS3Client.listObjectsV2(anyString())).thenReturn(result);
 
@@ -77,26 +78,26 @@ final class SourceRecordIteratorTest {
             when(mockS3Client.getObject(anyString(), anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
 
-            when(mockOutputWriter.getRecords(any(), anyString(), anyInt(), any()))
+            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any()))
                     .thenReturn(Collections.singletonList(new Object()));
 
             final String outStr = "this is a test";
-            when(mockOutputWriter.getValueBytes(any(), anyString(), any()))
+            when(mockTransformer.getValueBytes(any(), anyString(), any()))
                     .thenReturn(outStr.getBytes(StandardCharsets.UTF_8));
 
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
-            when(mockFileReader.fetchObjectSummaries(any())).thenReturn(Collections.emptyList());
+            when(mockFileReader.fetchObjectSummaries(any())).thenReturn(Collections.emptyIterator());
             SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockS3Client, "test-bucket",
-                    mockOffsetManager, mockOutputWriter, mockFileReader);
+                    mockOffsetManager, mockTransformer, mockFileReader);
 
             assertFalse(iterator.hasNext());
             assertNull(iterator.next());
 
-            when(mockFileReader.fetchObjectSummaries(any())).thenReturn(mockObjectSummaries);
+            when(mockFileReader.fetchObjectSummaries(any())).thenReturn(mockObjectSummaries.listIterator());
 
             iterator = new SourceRecordIterator(mockConfig, mockS3Client, "test-bucket", mockOffsetManager,
-                    mockOutputWriter, mockFileReader);
+                    mockTransformer, mockFileReader);
 
             assertTrue(iterator.hasNext());
             assertNotNull(iterator.next());
