@@ -16,23 +16,17 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
-import java.util.Locale;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
-public enum OutputFormat {
-    AVRO("avro"), PARQUET("parquet"), JSON("json"), BYTES("bytes");
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-    private final String format;
+public interface Transformer {
 
-    OutputFormat(final String format) {
-        this.format = format;
-    }
+    void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
 
-    public String getValue() {
-        return format.toLowerCase(Locale.ROOT);
-    }
+    List<Object> getRecords(InputStream inputStream, String topic, int topicPartition, S3SourceConfig s3SourceConfig);
 
-    @Override
-    public String toString() {
-        return format;
-    }
+    byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
 }

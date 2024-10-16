@@ -33,10 +33,10 @@ import org.apache.avro.generic.GenericRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-final public class OutputUtils {
-    private static final Logger LOGGER = LoggerFactory.getLogger(OutputUtils.class);
+final public class TransformationUtils {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransformationUtils.class);
 
-    private OutputUtils() {
+    private TransformationUtils() {
         // hidden
     }
 
@@ -55,7 +55,7 @@ final public class OutputUtils {
             return out.toByteArray();
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException
                 | IOException e) {
-            LOGGER.error("Error in reading s3 object stream for topic " + topic + " with error : " + e.getMessage());
+            LOGGER.error("Error in reading s3 object stream for topic {} with error : {}", topic, e.getMessage(), e);
         }
         return new byte[0];
     }

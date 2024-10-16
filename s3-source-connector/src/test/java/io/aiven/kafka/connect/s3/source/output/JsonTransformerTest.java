@@ -30,34 +30,32 @@ import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-final class JsonWriterTest {
+@ExtendWith(MockitoExtension.class)
+final class JsonTransformerTest {
 
-    JsonWriter jsonWriter;
+    JsonTransformer jsonTransformer;
 
-    @Mock
-    OffsetManager offsetManager;
+    S3SourceConfig s3SourceConfig;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        jsonWriter = new JsonWriter();
+        jsonTransformer = new JsonTransformer();
+        s3SourceConfig = mock(S3SourceConfig.class);
     }
 
     @Test
     void testConfigureValueConverter() {
         final Map<String, String> config = new HashMap<>();
-        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
-        jsonWriter.configureValueConverter(config, s3SourceConfig);
+        jsonTransformer.configureValueConverter(config, s3SourceConfig);
         assertEquals("false", config.get(SCHEMAS_ENABLE), "SCHEMAS_ENABLE should be set to false");
     }
 
@@ -65,8 +63,7 @@ final class JsonWriterTest {
     void testHandleValueDataWithValidJson() {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
-        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
-        final List<Object> jsonNodes = jsonWriter.getRecords(validJsonInputStream, "testtopic", 1, s3SourceConfig);
+        final List<Object> jsonNodes = jsonTransformer.getRecords(validJsonInputStream, "testtopic", 1, s3SourceConfig);
 
         assertThat(jsonNodes.size()).isEqualTo(1);
     }
@@ -75,9 +72,9 @@ final class JsonWriterTest {
     void testHandleValueDataWithInvalidJson() {
         final InputStream invalidJsonInputStream = new ByteArrayInputStream(
                 "invalid-json".getBytes(StandardCharsets.UTF_8));
-        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
-        final List<Object> jsonNodes = jsonWriter.getRecords(invalidJsonInputStream, "testtopic", 1, s3SourceConfig);
+        final List<Object> jsonNodes = jsonTransformer.getRecords(invalidJsonInputStream, "testtopic", 1,
+                s3SourceConfig);
 
         assertThat(jsonNodes.size()).isEqualTo(0);
     }
@@ -86,13 +83,10 @@ final class JsonWriterTest {
     void testSerializeJsonDataValid() throws IOException {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
-        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
-        final List<Object> jsonNodes = jsonWriter.getRecords(validJsonInputStream, "testtopic", 1, s3SourceConfig);
-
-        final byte[] serializedData = jsonWriter.getValueBytes(jsonNodes.get(0), "testtopic", s3SourceConfig);
+        final List<Object> jsonNodes = jsonTransformer.getRecords(validJsonInputStream, "testtopic", 1, s3SourceConfig);
+        final byte[] serializedData = jsonTransformer.getValueBytes(jsonNodes.get(0), "testtopic", s3SourceConfig);
 
         final ObjectMapper objectMapper = new ObjectMapper();
-
         final JsonNode expectedData = objectMapper.readTree(serializedData);
 
         assertThat(expectedData.get("key").asText()).isEqualTo("value");
