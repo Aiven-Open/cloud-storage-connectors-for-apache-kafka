@@ -16,22 +16,23 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
-import java.io.InputStream;
-import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+public enum InputFormat {
+    AVRO("avro"), PARQUET("parquet"), JSONL("jsonl"), BYTES("bytes");
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+    private final String format;
 
-public interface OutputWriter {
+    InputFormat(final String format) {
+        this.format = format;
+    }
 
-    Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
+    public String getValue() {
+        return format.toLowerCase(Locale.ROOT);
+    }
 
-    void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
-
-    List<Object> getRecords(InputStream inputStream, String topic, int topicPartition, S3SourceConfig s3SourceConfig);
-
-    byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
+    @Override
+    public String toString() {
+        return format;
+    }
 }

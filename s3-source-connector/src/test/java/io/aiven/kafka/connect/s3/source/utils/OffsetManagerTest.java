@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
-import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.OFFSET_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -69,7 +68,7 @@ final class OffsetManagerTest {
         partitionKey.put("bucket", TEST_BUCKET);
 
         final Map<String, Object> offsetValue = new HashMap<>();
-        offsetValue.put(OFFSET_KEY, 5L);
+        offsetValue.put("object_key_file", 5L);
         final Map<Map<String, Object>, Map<String, Object>> offsets = new HashMap<>();
         offsets.put(partitionKey, offsetValue);
 
@@ -79,7 +78,7 @@ final class OffsetManagerTest {
 
         final Map<Map<String, Object>, Map<String, Object>> retrievedOffsets = offsetManager.getOffsets();
         assertThat(retrievedOffsets.size()).isEqualTo(1);
-        assertThat(retrievedOffsets.values().iterator().next().get(OFFSET_KEY)).isEqualTo(5L);
+        assertThat(retrievedOffsets.values().iterator().next().get("object_key_file")).isEqualTo(5L);
     }
 
     @Test

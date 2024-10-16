@@ -16,29 +16,29 @@
 
 package io.aiven.kafka.connect.s3.source.output;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT_KEY;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.INPUT_FORMAT_KEY;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-public final class OutputWriterFactory {
+public final class TransformerFactory {
 
-    private OutputWriterFactory() {
+    private TransformerFactory() {
         // hidden
     }
-    public static OutputWriter getWriter(final S3SourceConfig s3SourceConfig) {
-        final OutputFormat outputFormatEnum = s3SourceConfig.getOutputFormat();
-        switch (outputFormatEnum) {
+    public static Transformer getWriter(final S3SourceConfig s3SourceConfig) {
+        final InputFormat inputFormatEnum = s3SourceConfig.getOutputFormat();
+        switch (inputFormatEnum) {
             case AVRO :
-                return new AvroWriter();
+                return new AvroTransformer();
             case PARQUET :
-                return new ParquetWriter();
-            case JSON :
-                return new JsonWriter();
+                return new ParquetTransformer();
+            case JSONL :
+                return new JsonTransformer();
             case BYTES :
-                return new ByteArrayWriter();
+                return new ByteArrayTransformer();
             default :
                 throw new IllegalArgumentException(
-                        "Unknown output format " + s3SourceConfig.getString(OUTPUT_FORMAT_KEY));
+                        "Unknown output format " + s3SourceConfig.getString(INPUT_FORMAT_KEY));
         }
     }
 }

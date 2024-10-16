@@ -29,12 +29,12 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ByteArrayWriter implements OutputWriter {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayWriter.class);
+public class ByteArrayTransformer implements Transformer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayTransformer.class);
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
-
+        // For byte array transformations, no explicit converter is configured.
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
@@ -56,7 +56,7 @@ public class ByteArrayWriter implements OutputWriter {
                 bytesRead = inputStream.read(buffer);
             }
         } catch (IOException e) {
-            LOGGER.error("Error reading from input stream: " + e.getMessage(), e);
+            LOGGER.error("Error reading from input stream: {}", e.getMessage(), e);
         }
 
         return chunks;

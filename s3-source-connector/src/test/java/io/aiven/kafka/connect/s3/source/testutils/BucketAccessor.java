@@ -76,8 +76,8 @@ public class BucketAccessor {
                         err.getMessage()));
             }
         } catch (final AmazonClientException e) {
-            LOGGER.error(
-                    "Couldn't delete objects: " + Arrays.stream(chunk).reduce(" ", String::concat) + e.getMessage());
+            LOGGER.error("Couldn't delete objects: {}",
+                    Arrays.stream(chunk).reduce(" ", String::concat) + e.getMessage());
         }
         s3Client.deleteBucket(bucketName);
     }
