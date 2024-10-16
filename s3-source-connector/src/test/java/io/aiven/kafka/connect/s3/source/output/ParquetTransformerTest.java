@@ -34,13 +34,16 @@ import com.amazonaws.util.IOUtils;
 import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-final class ParquetWriterTest {
-    private ParquetWriter parquetWriter;
+@ExtendWith(MockitoExtension.class)
+final class ParquetTransformerTest {
+    private ParquetTransformer parquetWriter;
 
     @BeforeEach
     public void setUp() {
-        parquetWriter = new ParquetWriter();
+        parquetWriter = new ParquetTransformer();
     }
 
     @Test
@@ -91,7 +94,7 @@ final class ParquetWriterTest {
         final Path tempFile = Files.createTempFile("test-file", ".parquet");
         assertThat(Files.exists(tempFile)).isTrue();
 
-        ParquetWriter.deleteTmpFile(tempFile);
+        ParquetTransformer.deleteTmpFile(tempFile);
         assertThat(Files.exists(tempFile)).isFalse();
     }
 

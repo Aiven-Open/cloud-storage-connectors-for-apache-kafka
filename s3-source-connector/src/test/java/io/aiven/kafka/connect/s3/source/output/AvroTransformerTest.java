@@ -41,21 +41,22 @@ import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-final class AvroWriterTest {
+@ExtendWith(MockitoExtension.class)
+final class AvroTransformerTest {
 
     @Mock
     private S3SourceConfig s3SourceConfig;
 
-    private AvroWriter avroWriter;
+    private AvroTransformer avroTransformer;
     private Map<String, String> config;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        avroWriter = new AvroWriter();
+        avroTransformer = new AvroTransformer();
         config = new HashMap<>();
     }
 
@@ -63,7 +64,7 @@ final class AvroWriterTest {
     void testConfigureValueConverter() {
         final String value = "http://localhost:8081";
         when(s3SourceConfig.getString(SCHEMA_REGISTRY_URL)).thenReturn(value);
-        avroWriter.configureValueConverter(config, s3SourceConfig);
+        avroTransformer.configureValueConverter(config, s3SourceConfig);
         assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("http://localhost:8081")
                 .describedAs("The schema registry URL should be correctly set in the config.");
     }
@@ -73,7 +74,7 @@ final class AvroWriterTest {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
 
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-        final List<Object> records = avroWriter.readAvroRecords(inputStream, datumReader);
+        final List<Object> records = avroTransformer.readAvroRecords(inputStream, datumReader);
 
         assertThat(records.size()).isEqualTo(0);
     }
@@ -84,7 +85,7 @@ final class AvroWriterTest {
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-        final List<Object> records = avroWriter.readAvroRecords(inputStream, datumReader);
+        final List<Object> records = avroTransformer.readAvroRecords(inputStream, datumReader);
 
         assertThat(records.size()).isEqualTo(2);
     }
