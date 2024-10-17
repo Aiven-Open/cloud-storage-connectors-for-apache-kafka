@@ -32,7 +32,7 @@ import java.util.Collections;
 import java.util.List;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.Transformer;
+import io.aiven.kafka.connect.s3.source.input.Transformer;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
