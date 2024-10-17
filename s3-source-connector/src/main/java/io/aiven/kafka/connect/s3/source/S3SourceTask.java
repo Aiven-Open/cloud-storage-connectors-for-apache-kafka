@@ -142,6 +142,7 @@ public class S3SourceTask extends SourceTask {
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException {
+        LOGGER.info("Polling again");
         synchronized (pollLock) {
             final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
 
