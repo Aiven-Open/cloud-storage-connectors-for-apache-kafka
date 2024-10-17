@@ -79,7 +79,8 @@ public final class RecordProcessor {
             final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, aivenS3SourceRecord.value());
             offsetManager.updateCurrentOffsets(aivenS3SourceRecord.getPartitionMap(),
                     aivenS3SourceRecord.getOffsetMap());
-            fileReader.removeProcessedObjectKeys(aivenS3SourceRecord.getObjectKey());
+            // TODO
+            // fileReader.removeProcessedObjectKeys(aivenS3SourceRecord.getObjectKey());
             aivenS3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(aivenS3SourceRecord.getPartitionMap()));
             return aivenS3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
         } catch (DataException e) {

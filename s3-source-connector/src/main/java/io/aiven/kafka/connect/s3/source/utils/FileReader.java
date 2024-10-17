@@ -20,7 +20,6 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -54,16 +53,11 @@ public class FileReader {
         this.inProcessObjectKeys = new HashSet<>(inProcessObjectKeys);
     }
 
-    public Set<String> getInProcessObjectKeys() {
-        return Collections.unmodifiableSet(this.inProcessObjectKeys);
-    }
-
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
         final List<S3ObjectSummary> allSummaries = new ArrayList<>();
         String continuationToken = null;
         ListObjectsV2Result objectListing;
-
         do {
             // Create the request for listing objects
             final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
@@ -78,7 +72,7 @@ public class FileReader {
                     .stream()
                     .filter(objectSummary -> objectSummary.getSize() > 0)
                     .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()))
-                    .filter(objectSummary -> !inProcessObjectKeys.contains(objectSummary.getKey()))
+                    // .filter(objectSummary -> !inProcessObjectKeys.contains(objectSummary.getKey()))
                     .collect(Collectors.toList());
 
             allSummaries.addAll(filteredSummaries); // Add the filtered summaries to the main list
@@ -86,8 +80,9 @@ public class FileReader {
             // TO BE REMOVED before release
             allSummaries.forEach(objSummary -> LOGGER.info("Objects to be processed {} ", objSummary.getKey()));
 
+            // TODO handle objects in process
             // Objects being processed
-            allSummaries.forEach(objSummary -> this.inProcessObjectKeys.add(objSummary.getKey()));
+            // allSummaries.forEach(objSummary -> this.inProcessObjectKeys.add(objSummary.getKey()));
 
             // Check if there are more objects to fetch
             continuationToken = objectListing.getNextContinuationToken();
