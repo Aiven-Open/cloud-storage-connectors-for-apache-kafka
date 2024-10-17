@@ -23,6 +23,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREF
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_MESSAGE_BYTES_SIZE;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
@@ -176,13 +177,15 @@ final class IntegrationTest implements IntegrationBase {
     @Test
     void bytesTestBasedOnMaxMessageBytes(final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
+        final String testData = "AABBCCDDEE";
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
-        connectorConfig.put(MAX_MESSAGE_BYTES_SIZE, "2");
-        connectRunner.createConnector(connectorConfig);
+        connectorConfig.put(MAX_MESSAGE_BYTES_SIZE, "2"); // For above test data of 10 bytes length, with 2 bytes each
+                                                          // in source record, we expect 5 records.
+        connectorConfig.put(MAX_POLL_RECORDS, "2"); // In 3 polls all the 5 records should be processed
 
-        final String testData = "AABBCCDDEE";
+        connectRunner.createConnector(connectorConfig);
 
         writeToS3(topicName, testData.getBytes(StandardCharsets.UTF_8), "00000");
 

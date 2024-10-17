@@ -160,7 +160,7 @@ final public class S3SourceConfig extends AbstractConfig {
                 ConfigDef.Importance.MEDIUM, "Fetch page size", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
                                                                                                      // UnusedAssignment
                 ConfigDef.Width.NONE, FETCH_PAGE_SIZE);
-        configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 5, ConfigDef.Range.atLeast(1),
+        configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
                                                                                                       // UnusedAssignment
                 ConfigDef.Width.NONE, MAX_POLL_RECORDS);
