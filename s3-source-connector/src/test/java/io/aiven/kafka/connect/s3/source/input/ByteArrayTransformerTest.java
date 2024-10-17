@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.output;
+package io.aiven.kafka.connect.s3.source.input;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_MESSAGE_BYTES_SIZE;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
