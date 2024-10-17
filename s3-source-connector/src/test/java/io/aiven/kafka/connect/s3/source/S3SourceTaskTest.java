@@ -36,9 +36,9 @@ import org.apache.kafka.connect.storage.Converter;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.ByteArrayTransformer;
-import io.aiven.kafka.connect.s3.source.output.InputFormat;
-import io.aiven.kafka.connect.s3.source.output.Transformer;
+import io.aiven.kafka.connect.s3.source.input.ByteArrayTransformer;
+import io.aiven.kafka.connect.s3.source.input.InputFormat;
+import io.aiven.kafka.connect.s3.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;

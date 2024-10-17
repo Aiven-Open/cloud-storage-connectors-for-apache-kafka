@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 
-import io.aiven.kafka.connect.s3.source.output.InputFormat;
+import io.aiven.kafka.connect.s3.source.input.InputFormat;
 
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;

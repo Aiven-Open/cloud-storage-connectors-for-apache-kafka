@@ -22,6 +22,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDP
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.INPUT_FORMAT_KEY;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_MESSAGE_BYTES_SIZE;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
@@ -45,7 +46,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.admin.AdminClient;
 
-import io.aiven.kafka.connect.s3.source.output.InputFormat;
+import io.aiven.kafka.connect.s3.source.input.InputFormat;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
@@ -170,6 +171,31 @@ final class IntegrationTest implements IntegrationBase {
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).contains(testData1).contains(testData2);
+    }
+
+    @Test
+    void bytesTestBasedOnMaxMessageBytes(final TestInfo testInfo)
+            throws ExecutionException, InterruptedException, IOException {
+        final var topicName = IntegrationBase.topicName(testInfo);
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
+        connectorConfig.put(MAX_MESSAGE_BYTES_SIZE, "2");
+        connectRunner.createConnector(connectorConfig);
+
+        final String testData = "AABBCCDDEE";
+
+        writeToS3(topicName, testData.getBytes(StandardCharsets.UTF_8), "00000");
+
+        // Poll messages from the Kafka topic and verify the consumed data
+        final List<String> records = IntegrationBase.consumeMessages(topicName, 5, KAFKA_CONTAINER);
+
+        // Verify that the correct data is read from the S3 bucket and pushed to Kafka
+        assertThat(records.size()).isEqualTo(5);
+        assertThat(records.get(0)).isEqualTo("AA");
+        assertThat(records.get(1)).isEqualTo("BB");
+        assertThat(records.get(2)).isEqualTo("CC");
+        assertThat(records.get(3)).isEqualTo("DD");
+        assertThat(records.get(4)).isEqualTo("EE");
     }
 
     @Test
