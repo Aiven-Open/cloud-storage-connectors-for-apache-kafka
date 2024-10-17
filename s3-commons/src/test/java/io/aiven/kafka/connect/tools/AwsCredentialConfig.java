@@ -20,18 +20,36 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.connect.common.config.AivenCommonConfig;
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.s3.S3BaseConfig;
 
 public class AwsCredentialConfig extends S3BaseConfig {
     public AwsCredentialConfig(final Map<String, String> properties) {
-        super(configDef(new ConfigDef()), properties);
+        super(configDef(), properties);
     }
 
-    public static ConfigDef configDef(ConfigDef configDef) { // NOPMD UnusedAssignment
+    public static ConfigDef configDef() { // NOPMD UnusedAssignment
+        final ConfigDef configDef = getBaseConfigDefinition();
         addS3RetryPolicies(configDef);
         addAwsConfigGroup(configDef);
         addAwsStsConfigGroup(configDef);
         addDeprecatedConfiguration(configDef);
         return configDef;
     }
+
+    private static ConfigDef getBaseConfigDefinition() {
+        final ConfigDef definition = new ConfigDef();
+        addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
+        definition.define(AivenCommonConfig.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
+                ConfigDef.Importance.MEDIUM, "File name template");
+        definition.define(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
+                CompressionType.NONE.name, ConfigDef.Importance.MEDIUM, "File compression");
+        definition.define(AivenCommonConfig.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, ConfigDef.Importance.MEDIUM,
+                "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
+                        + "0 is interpreted as \"unlimited\", which is the default.");
+        return definition;
+    }
+
 }

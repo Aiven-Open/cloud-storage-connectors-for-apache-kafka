@@ -39,8 +39,8 @@ final class AwsCredentialProviderFactoryTest {
     public void setUp() {
         factory = new AwsCredentialProviderFactory();
         props = new HashMap<>();
-        props.put(S3BaseConfig.AWS_S3_BUCKET_NAME_CONFIG, "anyBucket");
         props.put(S3BaseConfig.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        props.put(S3BaseConfig.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
     }
 
     @Test

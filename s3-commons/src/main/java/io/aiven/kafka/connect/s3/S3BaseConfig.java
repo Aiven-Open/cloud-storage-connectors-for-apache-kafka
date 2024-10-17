@@ -24,12 +24,12 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
@@ -47,7 +47,7 @@ import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class S3BaseConfig extends AbstractConfig {
+public class S3BaseConfig extends AivenCommonConfig {
     public static final Logger LOGGER = LoggerFactory.getLogger(S3BaseConfig.class);
 
     @Deprecated
@@ -87,6 +87,10 @@ public class S3BaseConfig extends AbstractConfig {
     @Deprecated
     public static final String AWS_S3_PREFIX = "aws_s3_prefix";
 
+    // FIXME since we support so far both old style and new style of property names
+    // Importance was set to medium,
+    // as soon we will migrate to new values it must be set to HIGH
+    // same for default value
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     public static final String AWS_CREDENTIALS_PROVIDER_CONFIG = "aws.credentials.provider";
@@ -376,10 +380,12 @@ public class S3BaseConfig extends AbstractConfig {
     public BasicAWSCredentials getAwsCredentials() {
         if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID_CONFIG))
                 && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
+
             return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
                     getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value());
         } else if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID))
                 && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY))) {
+            LOGGER.warn("Config options {} and {} are deprecated", AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY);
             return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(),
                     getPassword(AWS_SECRET_ACCESS_KEY).value());
         }

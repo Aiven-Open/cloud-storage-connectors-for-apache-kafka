@@ -65,6 +65,7 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
+  implementation(project(":s3-commons"))
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -73,6 +74,7 @@ dependencies {
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
+  testImplementation(project(":s3-commons"))
 
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
