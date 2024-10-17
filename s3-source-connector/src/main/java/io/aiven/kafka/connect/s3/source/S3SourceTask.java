@@ -37,9 +37,10 @@ import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.OutputWriter;
-import io.aiven.kafka.connect.s3.source.output.OutputWriterFactory;
+import io.aiven.kafka.connect.s3.source.input.Transformer;
+import io.aiven.kafka.connect.s3.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
+import io.aiven.kafka.connect.s3.source.utils.FileReader;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
@@ -54,7 +55,7 @@ import org.slf4j.LoggerFactory;
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
  * Connect records.
  */
-@SuppressWarnings("PMD.TooManyMethods")
+@SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports" })
 public class S3SourceTask extends SourceTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
@@ -71,12 +72,12 @@ public class S3SourceTask extends SourceTask {
     private S3SourceConfig s3SourceConfig;
     private AmazonS3 s3Client;
 
-    private Iterator<List<AivenS3SourceRecord>> sourceRecordIterator;
+    private Iterator<AivenS3SourceRecord> sourceRecordIterator;
     private Optional<Converter> keyConverter;
 
     private Converter valueConverter;
 
-    private OutputWriter outputWriter;
+    private Transformer transformer;
 
     private String s3Bucket;
 
@@ -86,7 +87,9 @@ public class S3SourceTask extends SourceTask {
     private final S3ClientFactory s3ClientFactory = new S3ClientFactory();
 
     private final Object pollLock = new Object();
+    private FileReader fileReader;
     private final Set<String> failedObjectKeys = new HashSet<>();
+    private final Set<String> inProcessObjectKeys = new HashSet<>();
 
     private OffsetManager offsetManager;
 
@@ -107,8 +110,9 @@ public class S3SourceTask extends SourceTask {
         initializeConverters();
         initializeS3Client();
         this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
-        this.outputWriter = OutputWriterFactory.getWriter(s3SourceConfig);
+        this.transformer = TransformerFactory.getWriter(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
+        fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys, inProcessObjectKeys);
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;
     }
@@ -133,11 +137,12 @@ public class S3SourceTask extends SourceTask {
 
     private void prepareReaderFromOffsetStorageReader() {
         sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
-                this.outputWriter, failedObjectKeys);
+                this.transformer, fileReader);
     }
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException {
+        LOGGER.info("Polling again");
         synchronized (pollLock) {
             final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
 
@@ -184,7 +189,7 @@ public class S3SourceTask extends SourceTask {
             return results;
         }
         return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
-                valueConverter, connectorStopped, this.outputWriter, failedObjectKeys, offsetManager);
+                valueConverter, connectorStopped, this.transformer, fileReader, offsetManager);
     }
 
     private void waitForObjects() throws InterruptedException {
@@ -217,8 +222,8 @@ public class S3SourceTask extends SourceTask {
         return valueConverter;
     }
 
-    public OutputWriter getOutputWriter() {
-        return outputWriter;
+    public Transformer getOutputWriter() {
+        return transformer;
     }
 
     public boolean isTaskInitialized() {
