@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.output;
+package io.aiven.kafka.connect.s3.source.input;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_MESSAGE_BYTES_SIZE;
 
@@ -34,7 +34,7 @@ public class ByteArrayTransformer implements Transformer {
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
-        // For byte array transformations, no explicit converter is configured.
+        // For byte array transformations, ByteArrayConverter is the converter which is the default config.
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")

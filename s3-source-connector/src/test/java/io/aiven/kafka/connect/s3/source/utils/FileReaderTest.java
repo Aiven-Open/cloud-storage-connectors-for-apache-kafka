@@ -35,7 +35,7 @@ import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.AivenKafkaConnectS3SourceConnector;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.InputFormat;
+import io.aiven.kafka.connect.s3.source.input.InputFormat;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;

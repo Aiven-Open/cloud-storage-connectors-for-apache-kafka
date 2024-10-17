@@ -31,7 +31,7 @@ import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
 import io.aiven.kafka.connect.common.config.validators.UrlValidator;
-import io.aiven.kafka.connect.s3.source.output.InputFormat;
+import io.aiven.kafka.connect.s3.source.input.InputFormat;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Region;
