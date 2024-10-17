@@ -14,24 +14,14 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.tools;
+package io.aiven.kafka.connect.common.config;
 
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.connect.s3.S3BaseConfig;
-
-public class AwsCredentialConfig extends S3BaseConfig {
-    public AwsCredentialConfig(final Map<String, String> properties) {
-        super(configDef(new ConfigDef()), properties);
-    }
-
-    public static ConfigDef configDef(ConfigDef configDef) { // NOPMD UnusedAssignment
-        addS3RetryPolicies(configDef);
-        addAwsConfigGroup(configDef);
-        addAwsStsConfigGroup(configDef);
-        addDeprecatedConfiguration(configDef);
-        return configDef;
+public class SourceCommonConfig extends CommonConfig {
+    public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
+        super(definition, originals);
     }
 }

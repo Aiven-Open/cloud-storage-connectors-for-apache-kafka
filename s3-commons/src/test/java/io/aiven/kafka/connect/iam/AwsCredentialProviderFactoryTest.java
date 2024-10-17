@@ -21,8 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.aiven.kafka.connect.s3.S3BaseConfig;
-import io.aiven.kafka.connect.tools.AwsCredentialConfig;
+import io.aiven.kafka.connect.s3.S3CommonConfig;
+import io.aiven.kafka.connect.s3.S3SinkBaseConfig;
+import io.aiven.kafka.connect.tools.AwsCredentialBaseConfig;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
@@ -39,21 +40,21 @@ final class AwsCredentialProviderFactoryTest {
     public void setUp() {
         factory = new AwsCredentialProviderFactory();
         props = new HashMap<>();
-        props.put(S3BaseConfig.AWS_S3_BUCKET_NAME_CONFIG, "anyBucket");
-        props.put(S3BaseConfig.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        props.put(S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        props.put(S3SinkBaseConfig.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
     }
 
     @Test
     void createsStsCredentialProviderIfSpecified() {
 
-        props.put(S3BaseConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3BaseConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3BaseConfig.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
-        props.put(S3BaseConfig.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
-        props.put(S3BaseConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
-        props.put(S3BaseConfig.AWS_STS_CONFIG_ENDPOINT, "https://sts.us-east-1.amazonaws.com");
+        props.put(S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3CommonConfig.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
+        props.put(S3CommonConfig.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
+        props.put(S3CommonConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3CommonConfig.AWS_STS_CONFIG_ENDPOINT, "https://sts.us-east-1.amazonaws.com");
 
-        final var config = new AwsCredentialConfig(props);
+        final var config = new AwsCredentialBaseConfig(props);
 
         final var credentialProvider = factory.getProvider(config);
         assertThat(credentialProvider).isInstanceOf(STSAssumeRoleSessionCredentialsProvider.class);
@@ -61,10 +62,10 @@ final class AwsCredentialProviderFactoryTest {
 
     @Test
     void createStaticCredentialProviderByDefault() {
-        props.put(S3BaseConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3BaseConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
 
-        final var config = new AwsCredentialConfig(props);
+        final var config = new AwsCredentialBaseConfig(props);
 
         final var credentialProvider = factory.getProvider(config);
         assertThat(credentialProvider).isInstanceOf(AWSStaticCredentialsProvider.class);
@@ -72,7 +73,7 @@ final class AwsCredentialProviderFactoryTest {
 
     @Test
     void createDefaultCredentialsWhenNoCredentialsSpecified() {
-        final var config = new AwsCredentialConfig(props);
+        final var config = new AwsCredentialBaseConfig(props);
 
         final var credentialProvider = factory.getProvider(config);
         assertThat(credentialProvider).isInstanceOf(DefaultAWSCredentialsProviderChain.class);

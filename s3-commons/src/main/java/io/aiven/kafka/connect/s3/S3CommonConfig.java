@@ -24,10 +24,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigDef.Importance;
-import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
@@ -37,9 +34,6 @@ import io.aiven.kafka.connect.common.config.validators.UrlValidator;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
@@ -47,9 +41,8 @@ import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class S3BaseConfig extends AbstractConfig {
-    public static final Logger LOGGER = LoggerFactory.getLogger(S3BaseConfig.class);
-
+public final class S3CommonConfig {
+    public static final Logger LOGGER = LoggerFactory.getLogger(S3CommonConfig.class);
     @Deprecated
     public static final String OUTPUT_COMPRESSION = "output_compression";
     @Deprecated
@@ -87,6 +80,10 @@ public class S3BaseConfig extends AbstractConfig {
     @Deprecated
     public static final String AWS_S3_PREFIX = "aws_s3_prefix";
 
+    // FIXME since we support so far both old style and new style of property names
+    // Importance was set to medium,
+    // as soon we will migrate to new values it must be set to HIGH
+    // same for default value
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     public static final String AWS_CREDENTIALS_PROVIDER_CONFIG = "aws.credentials.provider";
@@ -126,11 +123,11 @@ public class S3BaseConfig extends AbstractConfig {
     // in other words we can't use values greater than 30
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
 
-    protected S3BaseConfig(ConfigDef definition, Map<String, String> originals) { // NOPMD UnusedAssignment
-        super(definition, handleDeprecatedYyyyUppercase(originals));
+    private S3CommonConfig() {
+
     }
 
-    private static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
+    public static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
         if (!properties.containsKey(AWS_S3_PREFIX_CONFIG)) {
             return properties;
         }
@@ -157,7 +154,7 @@ public class S3BaseConfig extends AbstractConfig {
         return result;
     }
 
-    protected static void addS3RetryPolicies(final ConfigDef configDef) {
+    static void addS3RetryPolicies(final ConfigDef configDef) {
         var retryPolicyGroupCounter = 0;
         configDef.define(AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
                 AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT, ConfigDef.Range.atLeast(1L), ConfigDef.Importance.MEDIUM,
@@ -180,15 +177,16 @@ public class S3BaseConfig extends AbstractConfig {
                 ConfigDef.Width.NONE, AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
     }
 
-    protected static void addAwsConfigGroup(final ConfigDef configDef) {
+    static void addAwsConfigGroup(final ConfigDef configDef) {
         int awsGroupCounter = 0;
 
-        configDef.define(AWS_ACCESS_KEY_ID_CONFIG, Type.PASSWORD, null, new NonEmptyPassword(), Importance.MEDIUM,
-                "AWS Access Key ID", GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE, AWS_ACCESS_KEY_ID_CONFIG);
+        configDef.define(AWS_ACCESS_KEY_ID_CONFIG, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword(),
+                ConfigDef.Importance.MEDIUM, "AWS Access Key ID", GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE,
+                AWS_ACCESS_KEY_ID_CONFIG);
 
-        configDef.define(AWS_SECRET_ACCESS_KEY_CONFIG, Type.PASSWORD, null, new NonEmptyPassword(), Importance.MEDIUM,
-                "AWS Secret Access Key", GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE,
-                AWS_SECRET_ACCESS_KEY_CONFIG);
+        configDef.define(AWS_SECRET_ACCESS_KEY_CONFIG, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword(),
+                ConfigDef.Importance.MEDIUM, "AWS Secret Access Key", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Width.NONE, AWS_SECRET_ACCESS_KEY_CONFIG);
 
         configDef.define(AWS_CREDENTIALS_PROVIDER_CONFIG, ConfigDef.Type.CLASS, AWS_CREDENTIAL_PROVIDER_DEFAULT,
                 ConfigDef.Importance.MEDIUM,
@@ -199,125 +197,130 @@ public class S3BaseConfig extends AbstractConfig {
 
                 GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE, AWS_CREDENTIALS_PROVIDER_CONFIG);
 
-        configDef.define(AWS_S3_BUCKET_NAME_CONFIG, Type.STRING, null, new BucketNameValidator(), Importance.MEDIUM,
-                "AWS S3 Bucket name", GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_BUCKET_NAME_CONFIG);
+        configDef.define(AWS_S3_BUCKET_NAME_CONFIG, ConfigDef.Type.STRING, null, new BucketNameValidator(),
+                ConfigDef.Importance.MEDIUM, "AWS S3 Bucket name", GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE,
+                AWS_S3_BUCKET_NAME_CONFIG);
 
         // AWS S3 Server Side Encryption Algorithm configuration
         // Example values: 'AES256' for S3-managed keys, 'aws:kms' for AWS KMS-managed keys
-        configDef.define(AWS_S3_SSE_ALGORITHM_CONFIG, Type.STRING, null, new ConfigDef.NonEmptyString(),
-                Importance.MEDIUM, "AWS S3 Server Side Encryption Algorithm. Example values: 'AES256', 'aws:kms'.",
-                GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_SSE_ALGORITHM_CONFIG);
+        configDef.define(AWS_S3_SSE_ALGORITHM_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.MEDIUM,
+                "AWS S3 Server Side Encryption Algorithm. Example values: 'AES256', 'aws:kms'.", GROUP_AWS,
+                awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_SSE_ALGORITHM_CONFIG);
 
-        configDef.define(AWS_S3_ENDPOINT_CONFIG, Type.STRING, null, new UrlValidator(), Importance.LOW,
-                "Explicit AWS S3 Endpoint Address, mainly for testing", GROUP_AWS, awsGroupCounter++,
-                ConfigDef.Width.NONE, AWS_S3_ENDPOINT_CONFIG);
+        configDef.define(AWS_S3_ENDPOINT_CONFIG, ConfigDef.Type.STRING, null, new UrlValidator(),
+                ConfigDef.Importance.LOW, "Explicit AWS S3 Endpoint Address, mainly for testing", GROUP_AWS,
+                awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_ENDPOINT_CONFIG);
 
-        configDef.define(AWS_S3_REGION_CONFIG, Type.STRING, null, new AwsRegionValidator(), Importance.MEDIUM,
-                "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD UnusedAssignment
+        configDef.define(AWS_S3_REGION_CONFIG, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
+                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD
+                                                                                                            // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
     }
 
-    protected static void addAwsStsConfigGroup(final ConfigDef configDef) {
+    static void addAwsStsConfigGroup(final ConfigDef configDef) {
         int awsStsGroupCounter = 0;
         configDef.define(AWS_STS_ROLE_ARN, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "AWS STS Role", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
-                                                                                                  // UnusedAssignment
+                // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_STS_ROLE_ARN);
 
         configDef.define(AWS_STS_ROLE_SESSION_NAME, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                Importance.MEDIUM, "AWS STS Session name", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
+                ConfigDef.Importance.MEDIUM, "AWS STS Session name", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
                 // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_STS_ROLE_SESSION_NAME);
 
         configDef.define(AWS_STS_ROLE_SESSION_DURATION, ConfigDef.Type.INT, 3600,
                 ConfigDef.Range.between(AwsStsRole.MIN_SESSION_DURATION, AwsStsRole.MAX_SESSION_DURATION),
-                Importance.MEDIUM, "AWS STS Session duration", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
+                ConfigDef.Importance.MEDIUM, "AWS STS Session duration", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
                 // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_STS_ROLE_SESSION_DURATION);
 
         configDef.define(AWS_STS_ROLE_EXTERNAL_ID, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                Importance.MEDIUM, "AWS STS External Id", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD UnusedAssignment
+                ConfigDef.Importance.MEDIUM, "AWS STS External Id", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
+                                                                                                         // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_STS_ROLE_EXTERNAL_ID);
 
         configDef.define(AWS_STS_CONFIG_ENDPOINT, ConfigDef.Type.STRING, AwsStsEndpointConfig.AWS_STS_GLOBAL_ENDPOINT,
-                new ConfigDef.NonEmptyString(), Importance.MEDIUM, "AWS STS Config Endpoint", GROUP_AWS_STS,
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "AWS STS Config Endpoint", GROUP_AWS_STS,
                 awsStsGroupCounter++, // NOPMD UnusedAssignment
                 ConfigDef.Width.NONE, AWS_STS_CONFIG_ENDPOINT);
     }
 
-    protected static void addDeprecatedConfiguration(final ConfigDef configDef) {
-        configDef.define(AWS_S3_PREFIX_CONFIG, Type.STRING, null, new ConfigDef.NonEmptyString(), Importance.MEDIUM,
+    static void addDeprecatedConfiguration(final ConfigDef configDef) {
+        configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.MEDIUM,
                 "[Deprecated] Use `file.name.template` instead. Prefix for stored objects, e.g. cluster-1/", GROUP_AWS,
                 0, ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
-        configDef.define(AWS_ACCESS_KEY_ID, Type.PASSWORD, null, new NonEmptyPassword() {
+        configDef.define(AWS_ACCESS_KEY_ID, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword() {
             @Override
             public void ensureValid(final String name, final Object value) {
                 LOGGER.info(AWS_ACCESS_KEY_ID + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, value);
             }
-        }, Importance.MEDIUM, "AWS Access Key ID");
+        }, ConfigDef.Importance.MEDIUM, "AWS Access Key ID");
 
-        configDef.define(AWS_SECRET_ACCESS_KEY, Type.PASSWORD, null, new NonEmptyPassword() {
+        configDef.define(AWS_SECRET_ACCESS_KEY, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword() {
             @Override
             public void ensureValid(final String name, final Object value) {
                 LOGGER.info(
                         AWS_SECRET_ACCESS_KEY + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, value);
             }
-        }, Importance.MEDIUM, "AWS Secret Access Key");
+        }, ConfigDef.Importance.MEDIUM, "AWS Secret Access Key");
 
-        configDef.define(AWS_S3_BUCKET, Type.STRING, null, new BucketNameValidator() {
+        configDef.define(AWS_S3_BUCKET, ConfigDef.Type.STRING, null, new BucketNameValidator() {
             @Override
             public void ensureValid(final String name, final Object object) {
                 LOGGER.info(AWS_S3_BUCKET + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, object);
             }
-        }, Importance.MEDIUM, "AWS S3 Bucket name");
+        }, ConfigDef.Importance.MEDIUM, "AWS S3 Bucket name");
 
-        configDef.define(AWS_S3_ENDPOINT, Type.STRING, null, new UrlValidator() {
+        configDef.define(AWS_S3_ENDPOINT, ConfigDef.Type.STRING, null, new UrlValidator() {
             @Override
             public void ensureValid(final String name, final Object object) {
                 LOGGER.info(AWS_S3_ENDPOINT + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, object);
             }
-        }, Importance.LOW, "Explicit AWS S3 Endpoint Address, mainly for testing");
+        }, ConfigDef.Importance.LOW, "Explicit AWS S3 Endpoint Address, mainly for testing");
 
-        configDef.define(AWS_S3_REGION, Type.STRING, null, new AwsRegionValidator() {
+        configDef.define(AWS_S3_REGION, ConfigDef.Type.STRING, null, new AwsRegionValidator() {
             @Override
             public void ensureValid(final String name, final Object object) {
                 LOGGER.info(AWS_S3_REGION + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, object);
             }
-        }, Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1");
+        }, ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1");
 
-        configDef.define(AWS_S3_PREFIX, Type.STRING, null, new ConfigDef.NonEmptyString() {
+        configDef.define(AWS_S3_PREFIX, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString() {
             @Override
             public void ensureValid(final String name, final Object object) {
                 LOGGER.info(AWS_S3_PREFIX + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, object);
             }
-        }, Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/");
+        }, ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/");
 
-        configDef.define(OUTPUT_FIELDS, Type.LIST, null, new OutputFieldsValidator() {
+        configDef.define(OUTPUT_FIELDS, ConfigDef.Type.LIST, null, new OutputFieldsValidator() {
             @Override
             public void ensureValid(final String name, final Object value) {
                 LOGGER.info(OUTPUT_FIELDS + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, value);
             }
-        }, Importance.MEDIUM,
+        }, ConfigDef.Importance.MEDIUM,
                 "Output fields. A comma separated list of one or more: " + OUTPUT_FIELD_NAME_KEY + ", "
                         + OUTPUT_FIELD_NAME_OFFSET + ", " + OUTPUT_FIELD_NAME_TIMESTAMP + ", " + OUTPUT_FIELD_NAME_VALUE
                         + ", " + OUTPUT_FIELD_NAME_HEADERS);
 
-        configDef.define(OUTPUT_COMPRESSION, Type.STRING, null, new FileCompressionTypeValidator() {
+        configDef.define(OUTPUT_COMPRESSION, ConfigDef.Type.STRING, null, new FileCompressionTypeValidator() {
             @Override
             public void ensureValid(final String name, final Object value) {
                 LOGGER.info(OUTPUT_COMPRESSION + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, value);
             }
-        }, Importance.MEDIUM, "Output compression. Valid values are: " + OUTPUT_COMPRESSION_TYPE_GZIP + " and "
-                + OUTPUT_COMPRESSION_TYPE_NONE);
+        }, ConfigDef.Importance.MEDIUM, "Output compression. Valid values are: " + OUTPUT_COMPRESSION_TYPE_GZIP
+                + " and " + OUTPUT_COMPRESSION_TYPE_NONE);
     }
 
     // Custom Validators
@@ -350,94 +353,4 @@ public class S3BaseConfig extends AbstractConfig {
             }
         }
     }
-
-    public AwsStsRole getStsRole() {
-        return new AwsStsRole(getString(AWS_STS_ROLE_ARN), getString(AWS_STS_ROLE_EXTERNAL_ID),
-                getString(AWS_STS_ROLE_SESSION_NAME), getInt(AWS_STS_ROLE_SESSION_DURATION));
-    }
-
-    public boolean hasAwsStsRole() {
-        return getStsRole().isValid();
-    }
-
-    public boolean hasStsEndpointConfig() {
-        return getStsEndpointConfig().isValid();
-    }
-
-    public AwsStsEndpointConfig getStsEndpointConfig() {
-        return new AwsStsEndpointConfig(getString(AWS_STS_CONFIG_ENDPOINT), getString(AWS_S3_REGION_CONFIG));
-    }
-
-    public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
-        final AwsStsEndpointConfig config = getStsEndpointConfig();
-        return new AwsClientBuilder.EndpointConfiguration(config.getServiceEndpoint(), config.getSigningRegion());
-    }
-
-    public BasicAWSCredentials getAwsCredentials() {
-        if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID_CONFIG))
-                && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
-            return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
-                    getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value());
-        } else if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID))
-                && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY))) {
-            return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(),
-                    getPassword(AWS_SECRET_ACCESS_KEY).value());
-        }
-        return null;
-    }
-
-    public String getAwsS3EndPoint() {
-        return Objects.nonNull(getString(AWS_S3_ENDPOINT_CONFIG))
-                ? getString(AWS_S3_ENDPOINT_CONFIG)
-                : getString(AWS_S3_ENDPOINT);
-    }
-
-    public Region getAwsS3Region() {
-        // we have priority of properties if old one not set or both old and new one set
-        // the new property value will be selected
-        if (Objects.nonNull(getString(AWS_S3_REGION_CONFIG))) {
-            return RegionUtils.getRegion(getString(AWS_S3_REGION_CONFIG));
-        } else if (Objects.nonNull(getString(AWS_S3_REGION))) {
-            return RegionUtils.getRegion(getString(AWS_S3_REGION));
-        } else {
-            return RegionUtils.getRegion(Regions.US_EAST_1.getName());
-        }
-    }
-
-    public String getAwsS3BucketName() {
-        return Objects.nonNull(getString(AWS_S3_BUCKET_NAME_CONFIG))
-                ? getString(AWS_S3_BUCKET_NAME_CONFIG)
-                : getString(AWS_S3_BUCKET);
-    }
-
-    public String getServerSideEncryptionAlgorithmName() {
-        return getString(AWS_S3_SSE_ALGORITHM_CONFIG);
-    }
-
-    public String getAwsS3Prefix() {
-        return Objects.nonNull(getString(AWS_S3_PREFIX_CONFIG))
-                ? getString(AWS_S3_PREFIX_CONFIG)
-                : getString(AWS_S3_PREFIX);
-    }
-
-    public int getAwsS3PartSize() {
-        return getInt(AWS_S3_PART_SIZE);
-    }
-
-    public long getS3RetryBackoffDelayMs() {
-        return getLong(AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG);
-    }
-
-    public long getS3RetryBackoffMaxDelayMs() {
-        return getLong(AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG);
-    }
-
-    public int getS3RetryBackoffMaxRetries() {
-        return getInt(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
-    }
-
-    public AWSCredentialsProvider getCustomCredentialsProvider() {
-        return getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
-    }
-
 }

@@ -16,9 +16,11 @@
 
 package io.aiven.kafka.connect.s3.config;
 
-import static io.aiven.kafka.connect.s3.config.S3SinkConfig.AWS_ACCESS_KEY_ID;
-import static io.aiven.kafka.connect.s3.config.S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG;
-import static io.aiven.kafka.connect.s3.config.S3SinkConfig.AWS_SECRET_ACCESS_KEY;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_ACCESS_KEY_ID;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_SECRET_ACCESS_KEY;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -39,7 +41,7 @@ final class S3SinkCredentialsConfigTest {
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [hidden] for configuration aws_access_key_id: Password must be non-empty");
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "");
+        props.put(AWS_ACCESS_KEY_ID_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [hidden] for configuration aws.access.key.id: Password must be non-empty");
     }
@@ -54,8 +56,8 @@ final class S3SinkCredentialsConfigTest {
                 .hasMessage(
                         "Invalid value [hidden] for configuration aws_secret_access_key: Password must be non-empty");
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "");
+        props.put(AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(AWS_SECRET_ACCESS_KEY_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage(
                         "Invalid value [hidden] for configuration aws.secret.access.key: Password must be non-empty");
@@ -69,7 +71,7 @@ final class S3SinkCredentialsConfigTest {
     void defaultCredentials() {
         final Map<String, String> props = Map.of(AWS_S3_BUCKET_NAME_CONFIG, "test-bucket");
         final S3SinkConfig config = new S3SinkConfig(props);
-        assertThat(config.getAwsCredentials().isValid()).isFalse();
+        assertThat(config.getAwsCredentials()).isNull();
         assertThat(config.getCustomCredentialsProvider()).isInstanceOf(DefaultAWSCredentialsProviderChain.class);
     }
 }
