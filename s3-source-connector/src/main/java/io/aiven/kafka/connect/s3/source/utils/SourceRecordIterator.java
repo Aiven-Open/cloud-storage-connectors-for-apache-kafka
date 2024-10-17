@@ -30,8 +30,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 
@@ -57,7 +55,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
     private String currentObjectKey;
 
     private Iterator<S3ObjectSummary> nextFileIterator;
-    private Iterator<ConsumerRecord<byte[], byte[]>> recordIterator = Collections.emptyIterator();
+    private Iterator<AivenS3SourceRecord> recordIterator = Collections.emptyIterator();
 
     private final OffsetManager offsetManager;
 
@@ -99,7 +97,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
         }
     }
 
-    private Iterator<ConsumerRecord<byte[], byte[]>> createIteratorForCurrentFile() throws IOException {
+    private Iterator<AivenS3SourceRecord> createIteratorForCurrentFile() throws IOException {
         try (S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);
                 S3ObjectInputStream inputStream = s3Object.getObjectContent()) {
 
@@ -129,17 +127,17 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
     }
 
     @SuppressWarnings("PMD.CognitiveComplexity")
-    private Iterator<ConsumerRecord<byte[], byte[]>> getObjectIterator(final InputStream valueInputStream,
-            final String topic, final int topicPartition, final long startOffset, final Transformer transformer,
+    private Iterator<AivenS3SourceRecord> getObjectIterator(final InputStream valueInputStream, final String topic,
+            final int topicPartition, final long startOffset, final Transformer transformer,
             final Map<String, Object> partitionMap) {
         return new Iterator<>() {
-            private final Iterator<ConsumerRecord<byte[], byte[]>> internalIterator = readNext().iterator();
+            private final Iterator<AivenS3SourceRecord> internalIterator = readNext().iterator();
 
-            private List<ConsumerRecord<byte[], byte[]>> readNext() {
+            private List<AivenS3SourceRecord> readNext() {
 
                 final Optional<byte[]> optionalKeyBytes = Optional.ofNullable(currentObjectKey)
                         .map(k -> k.getBytes(StandardCharsets.UTF_8));
-                final List<ConsumerRecord<byte[], byte[]>> consumerRecordList = new ArrayList<>();
+                final List<AivenS3SourceRecord> sourceRecords = new ArrayList<>();
 
                 int numOfProcessedRecs = 1;
                 boolean checkOffsetMap = true;
@@ -153,18 +151,18 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
 
                     final byte[] valueBytes = transformer.getValueBytes(record, topic, s3SourceConfig);
                     checkOffsetMap = false;
-                    consumerRecordList.add(getConsumerRecord(optionalKeyBytes, valueBytes, topic, topicPartition,
+                    sourceRecords.add(getSourceRecord(optionalKeyBytes, valueBytes, topic, topicPartition,
                             offsetManager, startOffset, partitionMap));
-                    if (consumerRecordList.size() >= s3SourceConfig.getInt(MAX_POLL_RECORDS)) {
+                    if (sourceRecords.size() >= s3SourceConfig.getInt(MAX_POLL_RECORDS)) {
                         break;
                     }
 
                     numOfProcessedRecs++;
                 }
-                return consumerRecordList;
+                return sourceRecords;
             }
 
-            private ConsumerRecord<byte[], byte[]> getConsumerRecord(final Optional<byte[]> key, final byte[] value,
+            private AivenS3SourceRecord getSourceRecord(final Optional<byte[]> key, final byte[] value,
                     final String topic, final int topicPartition, final OffsetManager offsetManager,
                     final long startOffset, final Map<String, Object> partitionMap) {
 
@@ -180,7 +178,10 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
                     offsetManager.createNewOffsetMap(partitionMap, currentObjectKey, currentOffset);
                 }
 
-                return new ConsumerRecord<>(topic, topicPartition, currentOffset, key.orElse(null), value);
+                final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey, currentOffset);
+
+                return new AivenS3SourceRecord(partitionMap, offsetMap, topic, topicPartition, key.orElse(null), value,
+                        currentObjectKey);
             }
 
             @Override
@@ -189,7 +190,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
             }
 
             @Override
-            public ConsumerRecord<byte[], byte[]> next() {
+            public AivenS3SourceRecord next() {
                 return internalIterator.next();
             }
         };
@@ -211,14 +212,14 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
             return null; // Or throw new NoSuchElementException();
         }
 
-        final ConsumerRecord<byte[], byte[]> consumerRecord = recordIterator.next();
-        final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(consumerRecord.topic(),
-                consumerRecord.partition(), bucketName);
-        final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey,
-                consumerRecord.offset());
-
-        return new AivenS3SourceRecord(partitionMap, offsetMap, consumerRecord.topic(), consumerRecord.partition(),
-                consumerRecord.key(), consumerRecord.value(), currentObjectKey);
+        return recordIterator.next();
+        // final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(consumerRecord.topic(),
+        // consumerRecord.partition(), bucketName);
+        // final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey,
+        // consumerRecord.offset());
+        //
+        // return new AivenS3SourceRecord(partitionMap, offsetMap, consumerRecord.topic(), consumerRecord.partition(),
+        // consumerRecord.key(), consumerRecord.value(), currentObjectKey);
     }
 
     @Override
