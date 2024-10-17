@@ -148,8 +148,8 @@ final class IntegrationTest implements IntegrationBase {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
-        connectRunner.createConnector(connectorConfig);
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
+        connectRunner.createConnector(connectorConfig);
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
