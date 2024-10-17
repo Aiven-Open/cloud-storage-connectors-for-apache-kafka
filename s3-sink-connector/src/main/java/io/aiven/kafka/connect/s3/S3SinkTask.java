@@ -41,7 +41,7 @@ import io.aiven.kafka.connect.common.grouper.RecordGrouper;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.output.OutputWriter;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
-import io.aiven.kafka.connect.s3.config.AwsCredentialProviderFactory;
+import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.config.S3SinkConfig;
 
 import com.amazonaws.PredefinedClientConfigurations;
