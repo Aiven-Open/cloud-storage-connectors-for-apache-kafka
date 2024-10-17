@@ -213,13 +213,6 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
         }
 
         return recordIterator.next();
-        // final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(consumerRecord.topic(),
-        // consumerRecord.partition(), bucketName);
-        // final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey,
-        // consumerRecord.offset());
-        //
-        // return new AivenS3SourceRecord(partitionMap, offsetMap, consumerRecord.topic(), consumerRecord.partition(),
-        // consumerRecord.key(), consumerRecord.value(), currentObjectKey);
     }
 
     @Override
