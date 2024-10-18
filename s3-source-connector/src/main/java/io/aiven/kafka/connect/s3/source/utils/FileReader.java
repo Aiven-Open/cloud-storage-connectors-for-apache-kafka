@@ -43,14 +43,12 @@ public class FileReader {
     private final String bucketName;
 
     private final Set<String> failedObjectKeys;
-    private final Set<String> inProcessObjectKeys;
 
-    public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName, final Set<String> failedObjectKeys,
-            final Set<String> inProcessObjectKeys) {
+    public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName,
+            final Set<String> failedObjectKeys) {
         this.s3SourceConfig = s3SourceConfig;
         this.bucketName = bucketName;
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
-        this.inProcessObjectKeys = new HashSet<>(inProcessObjectKeys);
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
@@ -72,17 +70,11 @@ public class FileReader {
                     .stream()
                     .filter(objectSummary -> objectSummary.getSize() > 0)
                     .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()))
-                    // .filter(objectSummary -> !inProcessObjectKeys.contains(objectSummary.getKey()))
                     .collect(Collectors.toList());
 
             allSummaries.addAll(filteredSummaries); // Add the filtered summaries to the main list
 
-            // TO BE REMOVED before release
-            allSummaries.forEach(objSummary -> LOGGER.info("Objects to be processed {} ", objSummary.getKey()));
-
-            // TODO handle objects in process
-            // Objects being processed
-            // allSummaries.forEach(objSummary -> this.inProcessObjectKeys.add(objSummary.getKey()));
+            allSummaries.forEach(objSummary -> LOGGER.debug("Objects to be processed {} ", objSummary.getKey()));
 
             // Check if there are more objects to fetch
             continuationToken = objectListing.getNextContinuationToken();
@@ -93,9 +85,5 @@ public class FileReader {
 
     public void addFailedObjectKeys(final String objectKey) {
         this.failedObjectKeys.add(objectKey);
-    }
-
-    public void removeProcessedObjectKeys(final String objectKey) {
-        this.inProcessObjectKeys.remove(objectKey);
     }
 }

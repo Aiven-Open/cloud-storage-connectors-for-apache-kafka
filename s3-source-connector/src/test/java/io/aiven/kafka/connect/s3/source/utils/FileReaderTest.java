@@ -28,7 +28,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +63,7 @@ class FileReaderTest {
         setBasicProperties();
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(properties);
         offsetManager = mock(OffsetManager.class);
-        fileReader = new FileReader(s3SourceConfig, TEST_BUCKET, Collections.emptySet(), new HashSet<>());
+        fileReader = new FileReader(s3SourceConfig, TEST_BUCKET, Collections.emptySet());
         s3Client = mock(AmazonS3.class);
     }
 
