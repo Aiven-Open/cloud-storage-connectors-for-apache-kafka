@@ -25,7 +25,7 @@ public final class TransformerFactory {
     private TransformerFactory() {
         // hidden
     }
-    public static Transformer getWriter(final S3SourceConfig s3SourceConfig) {
+    public static Transformer getTransformer(final S3SourceConfig s3SourceConfig) {
         final InputFormat inputFormatEnum = s3SourceConfig.getInputFormat();
         switch (inputFormatEnum) {
             case AVRO :

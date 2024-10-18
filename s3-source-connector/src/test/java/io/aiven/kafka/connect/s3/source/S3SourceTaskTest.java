@@ -136,7 +136,7 @@ final class S3SourceTaskTest {
         final Converter valueConverter = s3SourceTask.getValueConverter();
         assertThat(valueConverter).isInstanceOf(ByteArrayConverter.class);
 
-        final Transformer transformer = s3SourceTask.getOutputWriter();
+        final Transformer transformer = s3SourceTask.getTransformer();
         assertThat(transformer).isInstanceOf(ByteArrayTransformer.class);
 
         final boolean taskInitialized = s3SourceTask.isTaskInitialized();
