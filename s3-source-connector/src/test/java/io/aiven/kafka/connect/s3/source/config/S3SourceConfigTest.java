@@ -57,7 +57,7 @@ final class S3SourceConfigTest {
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
         assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion("us-east-1"));
 
-        assertThat(conf.getOutputFormat()).isEqualTo(InputFormat.AVRO);
+        assertThat(conf.getInputFormat()).isEqualTo(InputFormat.AVRO);
         assertThat(conf.getTargetTopics()).isEqualTo("testtopic");
         assertThat(conf.getTargetTopicPartitions()).isEqualTo("0,1");
         assertThat(conf.getSchemaRegistryUrl()).isEqualTo("localhost:8081");
