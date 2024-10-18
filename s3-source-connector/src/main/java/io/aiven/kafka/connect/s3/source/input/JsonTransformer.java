@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.output;
+package io.aiven.kafka.connect.s3.source.input;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMAS_ENABLE;
 
@@ -32,8 +32,12 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class JsonWriter implements OutputWriter {
+public class JsonTransformer implements Transformer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(JsonTransformer.class);
 
     final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -43,7 +47,8 @@ public class JsonWriter implements OutputWriter {
     }
 
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
+            final S3SourceConfig s3SourceConfig) {
         final List<Object> jsonNodeList = new ArrayList<>();
         JsonNode jsonNode;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
@@ -56,14 +61,14 @@ public class JsonWriter implements OutputWriter {
                         jsonNode = objectMapper.readTree(line.trim()); // Parse the current line into a JsonNode
                         jsonNodeList.add(jsonNode); // Add parsed JSON object to the list
                     } catch (IOException e) {
-                        LOGGER.error("Error parsing JSON record from S3 input stream: " + e.getMessage());
+                        LOGGER.error("Error parsing JSON record from S3 input stream: {}", e.getMessage(), e);
                     }
                 }
 
                 line = reader.readLine();
             }
         } catch (IOException e) {
-            LOGGER.error("Error reading S3 object stream: " + e.getMessage());
+            LOGGER.error("Error reading S3 object stream: {}", e.getMessage());
         }
         return jsonNodeList;
     }
@@ -73,7 +78,7 @@ public class JsonWriter implements OutputWriter {
         try {
             return objectMapper.writeValueAsBytes(record);
         } catch (JsonProcessingException e) {
-            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
             return new byte[0];
         }
     }

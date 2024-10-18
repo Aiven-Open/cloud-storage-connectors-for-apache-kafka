@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.output;
+package io.aiven.kafka.connect.s3.source.input;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 
@@ -36,9 +36,9 @@ import org.apache.avro.io.DatumReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AvroWriter implements OutputWriter {
+public class AvroTransformer implements Transformer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AvroTransformer.class);
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
@@ -46,14 +46,15 @@ public class AvroWriter implements OutputWriter {
     }
 
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition) {
+    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
+            final S3SourceConfig s3SourceConfig) {
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
         return readAvroRecords(inputStream, datumReader);
     }
 
     @Override
     public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
-        return OutputUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
+        return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
                 s3SourceConfig);
     }
 
@@ -63,10 +64,10 @@ public class AvroWriter implements OutputWriter {
             try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
                 reader.forEach(records::add);
             } catch (IOException e) {
-                LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+                LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
             }
         } catch (IOException e) {
-            LOGGER.error("Error in reading s3 object stream " + e.getMessage());
+            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
         }
         return records;
     }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.output;
+package io.aiven.kafka.connect.s3.source.input;
 
 import java.io.InputStream;
 import java.util.List;
@@ -22,16 +22,11 @@ import java.util.Map;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-public interface OutputWriter {
-
-    Logger LOGGER = LoggerFactory.getLogger(AvroWriter.class);
+public interface Transformer {
 
     void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
 
-    List<Object> getRecords(InputStream inputStream, String topic, int topicPartition);
+    List<Object> getRecords(InputStream inputStream, String topic, int topicPartition, S3SourceConfig s3SourceConfig);
 
     byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
 }

@@ -21,6 +21,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -51,11 +52,10 @@ public class FileReader {
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
+    Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
         final List<S3ObjectSummary> allSummaries = new ArrayList<>();
         String continuationToken = null;
         ListObjectsV2Result objectListing;
-
         do {
             // Create the request for listing objects
             final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
@@ -74,13 +74,16 @@ public class FileReader {
 
             allSummaries.addAll(filteredSummaries); // Add the filtered summaries to the main list
 
-            allSummaries.forEach(objSummary -> LOGGER.info("Objects to be processed {} ", objSummary.getKey()));
+            allSummaries.forEach(objSummary -> LOGGER.debug("Objects to be processed {} ", objSummary.getKey()));
 
             // Check if there are more objects to fetch
             continuationToken = objectListing.getNextContinuationToken();
         } while (objectListing.isTruncated()); // Continue fetching if the result is truncated
 
-        return allSummaries;
+        return allSummaries.iterator();
     }
 
+    public void addFailedObjectKeys(final String objectKey) {
+        this.failedObjectKeys.add(objectKey);
+    }
 }
