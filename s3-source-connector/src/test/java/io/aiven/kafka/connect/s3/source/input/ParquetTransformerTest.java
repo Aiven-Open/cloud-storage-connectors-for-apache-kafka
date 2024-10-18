@@ -39,11 +39,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 final class ParquetTransformerTest {
-    private ParquetTransformer parquetWriter;
+    private ParquetTransformer parquetTransformer;
 
     @BeforeEach
     public void setUp() {
-        parquetWriter = new ParquetTransformer();
+        parquetTransformer = new ParquetTransformer();
     }
 
     @Test
@@ -54,7 +54,7 @@ final class ParquetTransformerTest {
 
         final String topic = "test-topic";
         final int topicPartition = 0;
-        final List<Object> recs = parquetWriter.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
+        final List<Object> recs = parquetTransformer.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
 
         assertThat(recs).isEmpty();
     }
@@ -68,7 +68,7 @@ final class ParquetTransformerTest {
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
+        final List<Object> records = parquetTransformer.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
 
         assertThat(records).isNotEmpty();
         assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
@@ -85,7 +85,7 @@ final class ParquetTransformerTest {
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final List<Object> records = parquetWriter.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
+        final List<Object> records = parquetTransformer.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
         assertThat(records).isEmpty();
     }
 
