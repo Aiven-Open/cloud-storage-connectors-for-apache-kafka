@@ -110,7 +110,7 @@ public class S3SourceTask extends SourceTask {
         initializeConverters();
         initializeS3Client();
         this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
-        this.transformer = TransformerFactory.getWriter(s3SourceConfig);
+        this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
         fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys);
         prepareReaderFromOffsetStorageReader();
@@ -222,7 +222,7 @@ public class S3SourceTask extends SourceTask {
         return valueConverter;
     }
 
-    public Transformer getOutputWriter() {
+    public Transformer getTransformer() {
         return transformer;
     }
 
