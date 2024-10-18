@@ -339,7 +339,7 @@ final public class S3SourceConfig extends AbstractConfig {
         return getString(AWS_S3_BUCKET_NAME_CONFIG);
     }
 
-    public InputFormat getOutputFormat() {
+    public InputFormat getInputFormat() {
         return InputFormat.valueOf(getString(INPUT_FORMAT_KEY).toUpperCase(Locale.ROOT));
     }
 
