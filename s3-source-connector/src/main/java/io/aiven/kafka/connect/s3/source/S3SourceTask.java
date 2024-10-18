@@ -112,7 +112,7 @@ public class S3SourceTask extends SourceTask {
         this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
         this.transformer = TransformerFactory.getWriter(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
-        fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys, inProcessObjectKeys);
+        fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys);
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;
     }
