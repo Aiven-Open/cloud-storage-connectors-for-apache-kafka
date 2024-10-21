@@ -16,6 +16,23 @@
 
 package io.aiven.kafka.connect.s3.config;
 
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_CREDENTIALS_PROVIDER_CONFIG;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_S3_BUCKET;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_S3_PART_SIZE;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_S3_PREFIX;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_S3_PREFIX_CONFIG;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_S3_REGION_CONFIG;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_STS_CONFIG_ENDPOINT;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_STS_ROLE_ARN;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_STS_ROLE_SESSION_NAME;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.OUTPUT_COMPRESSION;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.OUTPUT_FIELDS;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.TIMESTAMP_SOURCE;
+import static io.aiven.kafka.connect.s3.S3CommonConfig.TIMESTAMP_TIMEZONE;
+
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
@@ -44,8 +61,8 @@ import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
-import io.aiven.kafka.connect.s3.S3BaseConfig;
 import io.aiven.kafka.connect.s3.S3OutputStream;
+import io.aiven.kafka.connect.s3.S3SinkBaseConfig;
 
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Region;
@@ -55,8 +72,8 @@ import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports" })
-final public class S3SinkConfig extends S3BaseConfig {
+@SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
+final public class S3SinkConfig extends S3SinkBaseConfig {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SinkConfig.class);
 

@@ -25,9 +25,9 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
 import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import io.aiven.kafka.connect.common.templating.Template;
 
 import com.google.common.collect.Sets;
@@ -141,7 +141,7 @@ public final class RecordGrouperFactory {
     }
 
     @SuppressWarnings("PMD.CognitiveComplexity")
-    public static RecordGrouper newRecordGrouper(final AivenCommonConfig config) {
+    public static RecordGrouper newRecordGrouper(final SinkCommonConfig config) {
         final Template fileNameTemplate = config.getFilenameTemplate();
         final String grType = resolveRecordGrouperType(fileNameTemplate);
         if (KEY_RECORD.equals(grType)) {
