@@ -69,8 +69,8 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAccessKeyId().value()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getSecretAccessKey().value()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3Prefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
@@ -113,8 +113,8 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAccessKeyId().value()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getSecretAccessKey().value()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3Prefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
@@ -161,8 +161,8 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAccessKeyId().value()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getSecretAccessKey().value()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3Prefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");

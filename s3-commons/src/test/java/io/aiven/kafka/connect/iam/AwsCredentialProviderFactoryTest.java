@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3;
+package io.aiven.kafka.connect.iam;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import io.aiven.kafka.connect.s3.config.AwsCredentialProviderFactory;
-import io.aiven.kafka.connect.s3.config.S3SinkConfig;
+import io.aiven.kafka.connect.s3.S3SinkBaseConfig;
+import io.aiven.kafka.connect.tools.AwsCredentialBaseConfig;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
@@ -32,7 +32,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 final class AwsCredentialProviderFactoryTest {
-
     private AwsCredentialProviderFactory factory;
     private Map<String, String> props;
 
@@ -40,20 +39,21 @@ final class AwsCredentialProviderFactoryTest {
     public void setUp() {
         factory = new AwsCredentialProviderFactory();
         props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "anyBucket");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        props.put(S3SinkBaseConfig.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        props.put(S3SinkBaseConfig.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
     }
 
     @Test
     void createsStsCredentialProviderIfSpecified() {
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
-        props.put(S3SinkConfig.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
-        props.put(S3SinkConfig.AWS_STS_CONFIG_ENDPOINT, "https://sts.us-east-1.amazonaws.com");
 
-        final var config = new S3SinkConfig(props);
+        props.put(S3SinkBaseConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3SinkBaseConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3SinkBaseConfig.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
+        props.put(S3SinkBaseConfig.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
+        props.put(S3SinkBaseConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3SinkBaseConfig.AWS_STS_CONFIG_ENDPOINT, "https://sts.us-east-1.amazonaws.com");
+
+        final var config = new AwsCredentialBaseConfig(props);
 
         final var credentialProvider = factory.getProvider(config);
         assertThat(credentialProvider).isInstanceOf(STSAssumeRoleSessionCredentialsProvider.class);
@@ -61,10 +61,10 @@ final class AwsCredentialProviderFactoryTest {
 
     @Test
     void createStaticCredentialProviderByDefault() {
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3SinkBaseConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3SinkBaseConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
 
-        final var config = new S3SinkConfig(props);
+        final var config = new AwsCredentialBaseConfig(props);
 
         final var credentialProvider = factory.getProvider(config);
         assertThat(credentialProvider).isInstanceOf(AWSStaticCredentialsProvider.class);
@@ -72,9 +72,10 @@ final class AwsCredentialProviderFactoryTest {
 
     @Test
     void createDefaultCredentialsWhenNoCredentialsSpecified() {
-        final var config = new S3SinkConfig(props);
+        final var config = new AwsCredentialBaseConfig(props);
 
         final var credentialProvider = factory.getProvider(config);
         assertThat(credentialProvider).isInstanceOf(DefaultAWSCredentialsProviderChain.class);
     }
+
 }

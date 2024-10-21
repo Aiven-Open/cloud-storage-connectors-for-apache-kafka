@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,30 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.config;
+package io.aiven.kafka.connect.iam;
 
 import java.util.Objects;
 
-import org.apache.kafka.common.config.types.Password;
+public final class AwsStsEndpointConfig {
+    public static final String AWS_STS_GLOBAL_ENDPOINT = "https://sts.amazonaws.com";
 
-final class AwsAccessSecret {
-    private final Password accessKeyId;
-    private final Password secretAccessKey;
+    private final String serviceEndpoint;
+    private final String signingRegion;
 
-    public AwsAccessSecret(final Password accessKeyId, final Password secretAccessKey) {
-        this.accessKeyId = accessKeyId;
-        this.secretAccessKey = secretAccessKey;
+    public AwsStsEndpointConfig(final String serviceEndpoint, final String signingRegion) {
+        this.serviceEndpoint = serviceEndpoint;
+        this.signingRegion = signingRegion;
     }
 
-    public Password getAccessKeyId() {
-        return accessKeyId;
+    public String getServiceEndpoint() {
+        return serviceEndpoint;
     }
 
-    public Password getSecretAccessKey() {
-        return secretAccessKey;
+    public String getSigningRegion() {
+        return signingRegion;
     }
 
     public Boolean isValid() {
-        return Objects.nonNull(accessKeyId) && Objects.nonNull(secretAccessKey);
+        return Objects.nonNull(signingRegion);
     }
 }

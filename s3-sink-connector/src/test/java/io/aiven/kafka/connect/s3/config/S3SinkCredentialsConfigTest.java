@@ -69,7 +69,7 @@ final class S3SinkCredentialsConfigTest {
     void defaultCredentials() {
         final Map<String, String> props = Map.of(AWS_S3_BUCKET_NAME_CONFIG, "test-bucket");
         final S3SinkConfig config = new S3SinkConfig(props);
-        assertThat(config.getAwsCredentials().isValid()).isFalse();
+        assertThat(config.getAwsCredentials()).isNull();
         assertThat(config.getCustomCredentialsProvider()).isInstanceOf(DefaultAWSCredentialsProviderChain.class);
     }
 }
