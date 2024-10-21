@@ -32,7 +32,7 @@ public class S3Utility {
 
     private final AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
 
-    public AmazonS3 createAmazonS3Client(final S3BaseConfig config) {
+    public AmazonS3 createAmazonS3Client(final S3SinkBaseConfig config) {
         final var awsEndpointConfig = newEndpointConfiguration(config);
         final var clientConfig = PredefinedClientConfigurations.defaultConfig()
                 .withRetryPolicy(new RetryPolicy(PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
@@ -51,7 +51,7 @@ public class S3Utility {
         return s3ClientBuilder.build();
     }
 
-    private AwsClientBuilder.EndpointConfiguration newEndpointConfiguration(final S3BaseConfig config) {
+    private AwsClientBuilder.EndpointConfiguration newEndpointConfiguration(final S3SinkBaseConfig config) {
         if (Objects.isNull(config.getAwsS3EndPoint())) {
             return null;
         }

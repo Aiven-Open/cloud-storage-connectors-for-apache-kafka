@@ -18,7 +18,7 @@ package io.aiven.kafka.connect.iam;
 
 import java.util.Objects;
 
-import io.aiven.kafka.connect.s3.S3BaseConfig;
+import io.aiven.kafka.connect.s3.S3SinkBaseConfig;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -29,7 +29,7 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 
 public class AwsCredentialProviderFactory {
 
-    public AWSCredentialsProvider getProvider(final S3BaseConfig config) {
+    public AWSCredentialsProvider getProvider(final S3SinkBaseConfig config) {
         if (config.hasAwsStsRole()) {
             return getStsProvider(config);
         }
@@ -40,7 +40,7 @@ public class AwsCredentialProviderFactory {
         return new AWSStaticCredentialsProvider(awsCredentials);
     }
 
-    private AWSCredentialsProvider getStsProvider(final S3BaseConfig config) {
+    private AWSCredentialsProvider getStsProvider(final S3SinkBaseConfig config) {
         final AwsStsRole awsstsRole = config.getStsRole();
         final AWSSecurityTokenService sts = securityTokenService(config);
         return new STSAssumeRoleSessionCredentialsProvider.Builder(awsstsRole.getArn(), awsstsRole.getSessionName())
@@ -50,7 +50,7 @@ public class AwsCredentialProviderFactory {
                 .build();
     }
 
-    private AWSSecurityTokenService securityTokenService(final S3BaseConfig config) {
+    private AWSSecurityTokenService securityTokenService(final S3SinkBaseConfig config) {
         if (config.hasStsEndpointConfig()) {
             final AWSSecurityTokenServiceClientBuilder stsBuilder = AWSSecurityTokenServiceClientBuilder.standard();
             stsBuilder.setEndpointConfiguration(config.getAwsEndpointConfiguration());

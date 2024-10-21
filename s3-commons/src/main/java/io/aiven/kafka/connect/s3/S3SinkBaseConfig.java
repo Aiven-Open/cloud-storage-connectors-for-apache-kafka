@@ -29,7 +29,7 @@ import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.connect.common.config.AivenCommonConfig;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
@@ -47,8 +47,8 @@ import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class S3BaseConfig extends AivenCommonConfig {
-    public static final Logger LOGGER = LoggerFactory.getLogger(S3BaseConfig.class);
+public class S3SinkBaseConfig extends SinkCommonConfig {
+    public static final Logger LOGGER = LoggerFactory.getLogger(S3SinkBaseConfig.class);
 
     @Deprecated
     public static final String OUTPUT_COMPRESSION = "output_compression";
@@ -130,7 +130,7 @@ public class S3BaseConfig extends AivenCommonConfig {
     // in other words we can't use values greater than 30
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
 
-    protected S3BaseConfig(ConfigDef definition, Map<String, String> originals) { // NOPMD UnusedAssignment
+    protected S3SinkBaseConfig(ConfigDef definition, Map<String, String> originals) { // NOPMD UnusedAssignment
         super(definition, handleDeprecatedYyyyUppercase(originals));
     }
 

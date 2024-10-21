@@ -44,8 +44,8 @@ import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
-import io.aiven.kafka.connect.s3.S3BaseConfig;
 import io.aiven.kafka.connect.s3.S3OutputStream;
+import io.aiven.kafka.connect.s3.S3SinkBaseConfig;
 
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Region;
@@ -56,7 +56,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports" })
-final public class S3SinkConfig extends S3BaseConfig {
+final public class S3SinkConfig extends S3SinkBaseConfig {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SinkConfig.class);
 

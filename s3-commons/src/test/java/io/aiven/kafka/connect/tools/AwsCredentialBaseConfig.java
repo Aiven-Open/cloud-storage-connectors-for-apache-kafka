@@ -23,10 +23,10 @@ import org.apache.kafka.common.config.ConfigDef;
 import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.s3.S3BaseConfig;
+import io.aiven.kafka.connect.s3.S3SinkBaseConfig;
 
-public class AwsCredentialConfig extends S3BaseConfig {
-    public AwsCredentialConfig(final Map<String, String> properties) {
+public class AwsCredentialBaseConfig extends S3SinkBaseConfig {
+    public AwsCredentialBaseConfig(final Map<String, String> properties) {
         super(configDef(), properties);
     }
 
