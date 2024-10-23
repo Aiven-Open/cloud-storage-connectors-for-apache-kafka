@@ -120,11 +120,13 @@ public class S3SourceTask extends SourceTask {
     private void initializeConverters() {
         try {
             keyConverter = Optional
-                    .of((Converter) s3SourceConfig.getClass("key.converter").getDeclaredConstructor().newInstance());
-            valueConverter = (Converter) s3SourceConfig.getClass("value.converter")
+                    .of((Converter) Class.forName((String) s3SourceConfig.originals().get("key.converter"))
+                            .getDeclaredConstructor()
+                            .newInstance());
+            valueConverter = (Converter) Class.forName((String) s3SourceConfig.originals().get("value.converter"))
                     .getDeclaredConstructor()
                     .newInstance();
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException
                 | NoSuchMethodException e) {
             throw new ConnectException("Connect converters could not be instantiated.", e);
         }
@@ -152,7 +154,8 @@ public class S3SourceTask extends SourceTask {
 
             while (!connectorStopped.get()) {
                 try {
-                    return extractSourceRecords(results);
+                    LOGGER.info("Number of records sent {}", extractSourceRecords(results).size());
+                    return results;
                 } catch (AmazonS3Exception | DataException exception) {
                     if (handleException(exception)) {
                         return null; // NOPMD
@@ -172,6 +175,7 @@ public class S3SourceTask extends SourceTask {
             if (((AmazonS3Exception) exception).isRetryable()) {
                 LOGGER.warn("Retryable error while polling. Will sleep and try again.", exception);
                 Thread.sleep(ERROR_BACKOFF);
+
                 prepareReaderFromOffsetStorageReader();
             } else {
                 return true;
