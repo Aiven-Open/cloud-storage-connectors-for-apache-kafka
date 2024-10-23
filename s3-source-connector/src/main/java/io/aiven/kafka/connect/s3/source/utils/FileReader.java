@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_SIZE;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -52,37 +51,59 @@ public class FileReader {
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
-        final List<S3ObjectSummary> allSummaries = new ArrayList<>();
-        String continuationToken = null;
-        ListObjectsV2Result objectListing;
-        do {
-            // Create the request for listing objects
-            final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
-                    .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR)
-                    .withContinuationToken(continuationToken); // Set continuation token for pagination
+    Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) {
+        return new Iterator<>() {
+            private String continuationToken = null; // NOPMD
+            private List<S3ObjectSummary> currentBatch = new ArrayList<>();
+            private int currentIndex = 0; // NOPMD
+            private boolean isTruncated = true;
 
-            // List objects from S3
-            objectListing = s3Client.listObjectsV2(request);
+            @Override
+            public boolean hasNext() {
+                // If there are unprocessed objects in the current batch, we return true
+                if (currentIndex < currentBatch.size()) {
+                    return true;
+                }
 
-            // Filter out zero-byte objects and add to the list
-            final List<S3ObjectSummary> filteredSummaries = objectListing.getObjectSummaries()
-                    .stream()
-                    .filter(objectSummary -> objectSummary.getSize() > 0)
-                    .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()))
-                    .collect(Collectors.toList());
+                if (isTruncated) {
+                    fetchNextBatch();
+                    return !currentBatch.isEmpty();
+                }
 
-            allSummaries.addAll(filteredSummaries); // Add the filtered summaries to the main list
+                return false;
+            }
 
-            allSummaries.forEach(objSummary -> LOGGER.debug("Objects to be processed {} ", objSummary.getKey()));
+            @Override
+            public S3ObjectSummary next() {
+                if (!hasNext()) {
+                    return null;
+                }
 
-            // Check if there are more objects to fetch
-            continuationToken = objectListing.getNextContinuationToken();
-        } while (objectListing.isTruncated()); // Continue fetching if the result is truncated
+                return currentBatch.get(currentIndex++);
+            }
 
-        return allSummaries.iterator();
+            private void fetchNextBatch() {
+                currentBatch.clear();
+                currentIndex = 0;
+
+                final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
+                        .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR)
+                        .withContinuationToken(continuationToken);
+
+                final ListObjectsV2Result objectListing = s3Client.listObjectsV2(request);
+                currentBatch = objectListing.getObjectSummaries()
+                        .stream()
+                        .filter(objectSummary -> objectSummary.getSize() > 0)
+                        .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()))
+                        .collect(Collectors.toList());
+
+                continuationToken = objectListing.getNextContinuationToken();
+                isTruncated = objectListing.isTruncated();
+
+                currentBatch.forEach(objSummary -> LOGGER.debug("Objects to be processed {} ", objSummary.getKey()));
+            }
+        };
     }
-
     public void addFailedObjectKeys(final String objectKey) {
         this.failedObjectKeys.add(objectKey);
     }
