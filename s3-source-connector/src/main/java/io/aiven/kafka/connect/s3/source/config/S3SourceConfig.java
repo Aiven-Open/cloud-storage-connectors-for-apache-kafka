@@ -79,9 +79,7 @@ final public class S3SourceConfig extends AbstractConfig {
     public static final String TARGET_TOPICS = "topics";
     public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
     public static final String MAX_POLL_RECORDS = "max.poll.records";
-    public static final String MAX_MESSAGE_BYTES_SIZE = "max.message.bytes";
-    public static final String KEY_CONVERTER = "key.converter";
-    public static final String VALUE_CONVERTER = "value.converter";
+    public static final String EXPECTED_MAX_MESSAGE_BYTES = "expected.max.message.bytes";
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
     public static final String INPUT_FORMAT_KEY = "input.format";
     public static final String SCHEMAS_ENABLE = "schemas.enable";
@@ -164,20 +162,11 @@ final public class S3SourceConfig extends AbstractConfig {
                 ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
                                                                                                       // UnusedAssignment
                 ConfigDef.Width.NONE, MAX_POLL_RECORDS);
-        configDef.define(KEY_CONVERTER, ConfigDef.Type.CLASS, "org.apache.kafka.connect.converters.ByteArrayConverter",
-                ConfigDef.Importance.MEDIUM, "Key converter", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
-                // UnusedAssignment
-                ConfigDef.Width.NONE, KEY_CONVERTER);
-        configDef.define(VALUE_CONVERTER, ConfigDef.Type.CLASS,
-                "org.apache.kafka.connect.converters.ByteArrayConverter", ConfigDef.Importance.MEDIUM,
-                "Value converter", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
-                // UnusedAssignment
-                ConfigDef.Width.NONE, VALUE_CONVERTER);
-        configDef.define(MAX_MESSAGE_BYTES_SIZE, ConfigDef.Type.INT, 1_048_588, ConfigDef.Importance.MEDIUM,
+        configDef.define(EXPECTED_MAX_MESSAGE_BYTES, ConfigDef.Type.INT, 1_048_588, ConfigDef.Importance.MEDIUM,
                 "The largest record batch size allowed by Kafka config max.message.bytes", GROUP_OTHER,
                 awsOtherGroupCounter++, // NOPMD
                 // UnusedAssignment
-                ConfigDef.Width.NONE, MAX_MESSAGE_BYTES_SIZE);
+                ConfigDef.Width.NONE, EXPECTED_MAX_MESSAGE_BYTES);
     }
 
     private static void addAwsStsConfigGroup(final ConfigDef configDef) {

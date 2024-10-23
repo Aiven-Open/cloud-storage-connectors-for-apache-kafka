@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,8 +42,9 @@ public class AivenS3SourceRecord {
 
         this.topic = topic;
         this.topicPartition = topicPartition;
-        this.recordKey = Arrays.copyOf(recordKey, recordKey.length);
-        this.recordValue = Arrays.copyOf(recordValue, recordValue.length);
+        this.recordKey = recordKey.clone(); // Defensive copy
+        this.recordValue = recordValue.clone(); // Defensive copy
+
         this.objectKey = objectKey;
     }
 
@@ -65,11 +65,11 @@ public class AivenS3SourceRecord {
     }
 
     public byte[] key() {
-        return recordKey.clone();
+        return (recordKey == null) ? null : recordKey.clone(); // Return a defensive copy
     }
 
     public byte[] value() {
-        return recordValue.clone();
+        return (recordValue == null) ? null : recordValue.clone(); // Return a defensive copy
     }
 
     public String getObjectKey() {
