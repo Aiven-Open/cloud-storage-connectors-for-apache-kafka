@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.output;
+package io.aiven.kafka.connect.s3.source.input;
 
 import java.util.Locale;
 
-public enum OutputFormat {
-    AVRO("avro"), PARQUET("parquet"), JSON("json"), BYTES("bytes");
+public enum InputFormat {
+    AVRO("avro"), PARQUET("parquet"), JSONL("jsonl"), BYTES("bytes");
 
     private final String format;
 
-    OutputFormat(final String format) {
+    InputFormat(final String format) {
         this.format = format;
     }
 

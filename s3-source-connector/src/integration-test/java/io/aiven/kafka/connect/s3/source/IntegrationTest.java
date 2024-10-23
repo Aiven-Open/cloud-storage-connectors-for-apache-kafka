@@ -21,7 +21,9 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCK
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.OUTPUT_FORMAT_KEY;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.EXPECTED_MAX_MESSAGE_BYTES;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.INPUT_FORMAT_KEY;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
@@ -45,7 +47,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.admin.AdminClient;
 
-import io.aiven.kafka.connect.s3.source.output.OutputFormat;
+import io.aiven.kafka.connect.s3.source.input.InputFormat;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
@@ -146,8 +148,8 @@ final class IntegrationTest implements IntegrationBase {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
 
+        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         connectRunner.createConnector(connectorConfig);
-        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.BYTES.getValue());
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
@@ -173,6 +175,34 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Test
+    void bytesTestBasedOnMaxMessageBytes(final TestInfo testInfo)
+            throws ExecutionException, InterruptedException, IOException {
+        final String testData = "AABBCCDDEE";
+        final var topicName = IntegrationBase.topicName(testInfo);
+        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
+        connectorConfig.put(EXPECTED_MAX_MESSAGE_BYTES, "2"); // For above test data of 10 bytes length, with 2 bytes
+                                                              // each
+        // in source record, we expect 5 records.
+        connectorConfig.put(MAX_POLL_RECORDS, "2"); // In 3 polls all the 5 records should be processed
+
+        connectRunner.createConnector(connectorConfig);
+
+        writeToS3(topicName, testData.getBytes(StandardCharsets.UTF_8), "00000");
+
+        // Poll messages from the Kafka topic and verify the consumed data
+        final List<String> records = IntegrationBase.consumeMessages(topicName, 5, KAFKA_CONTAINER);
+
+        // Verify that the correct data is read from the S3 bucket and pushed to Kafka
+        assertThat(records.size()).isEqualTo(5);
+        assertThat(records.get(0)).isEqualTo("AA");
+        assertThat(records.get(1)).isEqualTo("BB");
+        assertThat(records.get(2)).isEqualTo("CC");
+        assertThat(records.get(3)).isEqualTo("DD");
+        assertThat(records.get(4)).isEqualTo("EE");
+    }
+
+    @Test
     void multiPartUploadBytesTest(final TestInfo testInfo) throws ExecutionException, InterruptedException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
@@ -190,7 +220,7 @@ final class IntegrationTest implements IntegrationBase {
     void avroTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.AVRO.getValue());
+        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
@@ -236,7 +266,7 @@ final class IntegrationTest implements IntegrationBase {
     void parquetTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.PARQUET.getValue());
+        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.PARQUET.getValue());
         connectorConfig.put(SCHEMA_REGISTRY_URL, SCHEMA_REGISTRY.getSchemaRegistryUrl());
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
@@ -252,7 +282,7 @@ final class IntegrationTest implements IntegrationBase {
         try {
             s3Client.putObject(TEST_BUCKET_NAME, fileName, Files.newInputStream(path), null);
         } catch (final Exception e) { // NOPMD broad exception caught
-            LOGGER.error("Error in reading file" + e.getMessage());
+            LOGGER.error("Error in reading file {}", e.getMessage(), e);
         } finally {
             Files.delete(path);
         }
@@ -268,7 +298,7 @@ final class IntegrationTest implements IntegrationBase {
     void jsonTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(OUTPUT_FORMAT_KEY, OutputFormat.JSON.getValue());
+        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.JSONL.getValue());
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
 
         connectRunner.createConnector(connectorConfig);
@@ -317,7 +347,6 @@ final class IntegrationTest implements IntegrationBase {
     private static void writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId)
             throws IOException {
         final String filePrefix = topicName + "-" + partitionId + "-" + System.currentTimeMillis();
-        // final String filePrefix = topicName + "-" + partitionId + "-" + "1234567891010";
         final String fileSuffix = ".txt";
 
         final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
@@ -369,19 +398,4 @@ final class IntegrationTest implements IntegrationBase {
             LOGGER.error(e.getMessage());
         }
     }
-
-    // private Map<Map<String, Object>, Map<String, Object>> getTmpData() {
-    // final Map<Map<String, Object>, Map<String, Object>> tmpOffsets = new HashMap<>();
-    // final Map<String, Object> partitionKeyMap = new HashMap<>();
-    // partitionKeyMap.put("topic", "avroTest");
-    // partitionKeyMap.put("bucket", "test-bucket0");
-    // partitionKeyMap.put("topicPartition", 1);
-    //
-    // final Map<String, Object> offsetValMap = new HashMap<>();
-    // offsetValMap.put(OBJECT_KEY + ":" + "avroTest-00001-1234567891010.txt", 4L);
-    //
-    // tmpOffsets.put(partitionKeyMap, offsetValMap);
-    //
-    // return tmpOffsets;
-    // }
 }

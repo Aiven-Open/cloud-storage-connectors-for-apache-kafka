@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +27,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 public class AivenS3SourceRecord {
     private final Map<String, Object> partitionMap;
     private Map<String, Object> offsetMap;
-    private final String toTopic;
+    private final String topic;
     private final Integer topicPartition;
     private final byte[] recordKey;
     private final byte[] recordValue;
@@ -36,15 +35,16 @@ public class AivenS3SourceRecord {
     private final String objectKey;
 
     public AivenS3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
-            final String toTopic, final Integer topicPartition, final byte[] recordKey, final byte[] recordValue,
+            final String topic, final Integer topicPartition, final byte[] recordKey, final byte[] recordValue,
             final String objectKey) {
         this.partitionMap = new HashMap<>(partitionMap);
         this.offsetMap = new HashMap<>(offsetMap);
 
-        this.toTopic = toTopic;
+        this.topic = topic;
         this.topicPartition = topicPartition;
-        this.recordKey = Arrays.copyOf(recordKey, recordKey.length);
-        this.recordValue = Arrays.copyOf(recordValue, recordValue.length);
+        this.recordKey = recordKey.clone(); // Defensive copy
+        this.recordValue = recordValue.clone(); // Defensive copy
+
         this.objectKey = objectKey;
     }
 
@@ -56,8 +56,8 @@ public class AivenS3SourceRecord {
         return Collections.unmodifiableMap(offsetMap);
     }
 
-    public String getToTopic() {
-        return toTopic;
+    public String getTopic() {
+        return topic;
     }
 
     public Integer partition() {
@@ -65,11 +65,11 @@ public class AivenS3SourceRecord {
     }
 
     public byte[] key() {
-        return recordKey.clone();
+        return (recordKey == null) ? null : recordKey.clone(); // Return a defensive copy
     }
 
     public byte[] value() {
-        return recordValue.clone();
+        return (recordValue == null) ? null : recordValue.clone(); // Return a defensive copy
     }
 
     public String getObjectKey() {

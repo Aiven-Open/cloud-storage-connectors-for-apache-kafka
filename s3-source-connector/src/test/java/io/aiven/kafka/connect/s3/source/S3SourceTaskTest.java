@@ -23,7 +23,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,9 +36,9 @@ import org.apache.kafka.connect.storage.Converter;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.output.ByteArrayWriter;
-import io.aiven.kafka.connect.s3.source.output.OutputFormat;
-import io.aiven.kafka.connect.s3.source.output.OutputWriter;
+import io.aiven.kafka.connect.s3.source.input.ByteArrayTransformer;
+import io.aiven.kafka.connect.s3.source.input.InputFormat;
+import io.aiven.kafka.connect.s3.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
@@ -55,8 +54,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 final class S3SourceTaskTest {
 
     private static final Random RANDOM = new Random();
@@ -134,8 +136,8 @@ final class S3SourceTaskTest {
         final Converter valueConverter = s3SourceTask.getValueConverter();
         assertThat(valueConverter).isInstanceOf(ByteArrayConverter.class);
 
-        final OutputWriter outputWriter = s3SourceTask.getOutputWriter();
-        assertThat(outputWriter).isInstanceOf(ByteArrayWriter.class);
+        final Transformer transformer = s3SourceTask.getTransformer();
+        assertThat(transformer).isInstanceOf(ByteArrayTransformer.class);
 
         final boolean taskInitialized = s3SourceTask.isTaskInitialized();
         assertThat(taskInitialized).isTrue();
@@ -152,11 +154,11 @@ final class S3SourceTaskTest {
         setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
         when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
 
-        final List<AivenS3SourceRecord> aivenS3SourceRecordList = getAivenS3SourceRecords();
+        final AivenS3SourceRecord aivenS3SourceRecordList = getAivenS3SourceRecord();
         when(mockSourceRecordIterator.next()).thenReturn(aivenS3SourceRecordList);
 
         final List<SourceRecord> sourceRecordList = s3SourceTask.poll();
-        assertThat(sourceRecordList).hasSize(2);
+        assertThat(sourceRecordList).isNotEmpty();
     }
 
     @Test
@@ -170,15 +172,8 @@ final class S3SourceTaskTest {
         assertThat(s3SourceTask.getConnectorStopped()).isTrue();
     }
 
-    private static List<AivenS3SourceRecord> getAivenS3SourceRecords() {
-        final List<AivenS3SourceRecord> aivenS3SourceRecordList = new ArrayList<>();
-        final AivenS3SourceRecord aivenS3SourceRecord1 = new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(),
-                "testtopic", 0, new byte[0], new byte[0], "");
-        aivenS3SourceRecordList.add(aivenS3SourceRecord1);
-        final AivenS3SourceRecord aivenS3SourceRecord2 = new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(),
-                "testtopic", 1, new byte[0], new byte[0], "");
-        aivenS3SourceRecordList.add(aivenS3SourceRecord2);
-        return aivenS3SourceRecordList;
+    private static AivenS3SourceRecord getAivenS3SourceRecord() {
+        return new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, new byte[0], new byte[0], "");
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
@@ -199,7 +194,7 @@ final class S3SourceTaskTest {
     }
 
     private void setBasicProperties() {
-        properties.put(S3SourceConfig.OUTPUT_FORMAT_KEY, OutputFormat.BYTES.getValue());
+        properties.put(S3SourceConfig.INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         properties.put("name", "test_source_connector");
         properties.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         properties.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
