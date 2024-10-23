@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.input;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_MESSAGE_BYTES_SIZE;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.EXPECTED_MAX_MESSAGE_BYTES;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
@@ -52,7 +52,7 @@ final class ByteArrayTransformerTest {
         final byte[] data = { 1, 2, 3, 4, 5 };
         final InputStream inputStream = new ByteArrayInputStream(data);
 
-        when(s3SourceConfig.getInt(MAX_MESSAGE_BYTES_SIZE)).thenReturn(10_000); // Larger than data size
+        when(s3SourceConfig.getInt(EXPECTED_MAX_MESSAGE_BYTES)).thenReturn(10_000); // Larger than data size
 
         final List<Object> records = byteArrayTransformer.getRecords(inputStream, "test-topic", 0, s3SourceConfig);
 
@@ -65,7 +65,7 @@ final class ByteArrayTransformerTest {
         final byte[] data = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         final InputStream inputStream = new ByteArrayInputStream(data);
 
-        when(s3SourceConfig.getInt(MAX_MESSAGE_BYTES_SIZE)).thenReturn(5); // Smaller than data size
+        when(s3SourceConfig.getInt(EXPECTED_MAX_MESSAGE_BYTES)).thenReturn(5); // Smaller than data size
 
         final List<Object> records = byteArrayTransformer.getRecords(inputStream, "test-topic", 0, s3SourceConfig);
 
@@ -78,7 +78,7 @@ final class ByteArrayTransformerTest {
     void testGetRecordsEmptyInputStream() throws IOException {
         final InputStream inputStream = new ByteArrayInputStream(new byte[] {});
 
-        when(s3SourceConfig.getInt(MAX_MESSAGE_BYTES_SIZE)).thenReturn(5);
+        when(s3SourceConfig.getInt(EXPECTED_MAX_MESSAGE_BYTES)).thenReturn(5);
 
         final List<Object> records = byteArrayTransformer.getRecords(inputStream, "test-topic", 0, s3SourceConfig);
 

@@ -60,7 +60,6 @@ public final class RecordProcessor {
             }
         }
 
-        LOGGER.info("Number of records sent {}", results.size());
         return results;
     }
 

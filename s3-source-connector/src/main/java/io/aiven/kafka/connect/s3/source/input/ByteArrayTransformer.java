@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.input;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_MESSAGE_BYTES_SIZE;
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.EXPECTED_MAX_MESSAGE_BYTES;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,7 +42,7 @@ public class ByteArrayTransformer implements Transformer {
     public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
             final S3SourceConfig s3SourceConfig) {
 
-        final int maxMessageBytesSize = s3SourceConfig.getInt(MAX_MESSAGE_BYTES_SIZE);
+        final int maxMessageBytesSize = s3SourceConfig.getInt(EXPECTED_MAX_MESSAGE_BYTES);
         final byte[] buffer = new byte[maxMessageBytesSize];
         int bytesRead;
 
