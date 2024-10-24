@@ -125,6 +125,7 @@ final class ParquetIntegrationTest implements IntegrationBase {
     private KafkaProducer<byte[], byte[]> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
+        producerProps.put("linger.ms", 1000);
         return new KafkaProducer<>(producerProps, new ByteArraySerializer(), new ByteArraySerializer());
     }
 

@@ -719,6 +719,7 @@ final class S3SinkTaskTest {
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
         properties.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "prefix-");
+        properties.put(S3SinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
 
         final S3SinkTask task = new S3SinkTask();
         task.start(properties);
@@ -783,6 +784,88 @@ final class S3SinkTaskTest {
                 "prefix-topic0-1-00000000000000000023" + compressionType.extension(),
                 "prefix-topic1-0-00000000000000000033" + compressionType.extension());
         assertThat(expectedBlobs).allMatch(blobName -> testBucketAccessor.doesObjectExist(blobName));
+
+    }
+
+    @Test
+    void mutliPartUploadUsingKeyPartitioning() throws IOException {
+        final String compression = "none";
+        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
+        properties.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "prefix-");
+        // Compact/key 'mode' value only updated
+        properties.put(S3SinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{key}}-{{topic}}");
+
+        final S3SinkTask task = new S3SinkTask();
+        task.start(properties);
+        int timestamp = 1000;
+        int offset1 = 10;
+        int offset2 = 20;
+        int offset3 = 30;
+        final List<List<SinkRecord>> allRecords = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            allRecords.add(List.of(
+                    createRecordWithStructValueSchema("topic0", 0, "key0", "name0" + i, offset1++, timestamp++),
+                    createRecordWithStructValueSchema("topic0", 1, "key1", "name1" + i, offset2++, timestamp++),
+                    createRecordWithStructValueSchema("topic1", 0, "key2", "name2" + i, offset3++, timestamp++)));
+        }
+        final TopicPartition tp00 = new TopicPartition("topic0", 0);
+        final TopicPartition tp01 = new TopicPartition("topic0", 1);
+        final TopicPartition tp10 = new TopicPartition("topic1", 0);
+        final Collection<TopicPartition> tps = List.of(tp00, tp01, tp10);
+        task.open(tps);
+
+        allRecords.forEach(task::put);
+
+        final Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
+        offsets.put(tp00, new OffsetAndMetadata(offset1));
+        offsets.put(tp01, new OffsetAndMetadata(offset2));
+        offsets.put(tp10, new OffsetAndMetadata(offset3));
+        task.flush(offsets);
+
+        final CompressionType compressionType = CompressionType.forName(compression);
+
+        List<String> expectedBlobs = Lists.newArrayList(
+                "prefix-topic0-0-00000000000000000012" + compressionType.extension(),
+                "prefix-topic0-1-00000000000000000022" + compressionType.extension(),
+                "prefix-topic1-0-00000000000000000032" + compressionType.extension());
+
+        assertThat(expectedBlobs).allMatch(blobName -> testBucketAccessor.doesObjectExist(blobName));
+
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000012", compression))
+                .containsExactly("[", "{\"name\":\"name02\"}", "]");
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000022", compression))
+                .containsExactly("[", "{\"name\":\"name12\"}", "]");
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000032", compression))
+                .containsExactly("[", "{\"name\":\"name22\"}", "]");
+        // Reset and send another batch of records to S3
+        allRecords.clear();
+        for (int i = 0; i < 3; i++) {
+            allRecords.add(List.of(
+                    createRecordWithStructValueSchema("topic0", 0, "key0", "name01" + i, offset1++, timestamp++),
+                    createRecordWithStructValueSchema("topic0", 1, "key1", "name11" + i, offset2++, timestamp++),
+                    createRecordWithStructValueSchema("topic1", 0, "key2", "name21" + i, offset3++, timestamp++)));
+        }
+        allRecords.forEach(task::put);
+        offsets.clear();
+        offsets.put(tp00, new OffsetAndMetadata(offset1));
+        offsets.put(tp01, new OffsetAndMetadata(offset2));
+        offsets.put(tp10, new OffsetAndMetadata(offset3));
+        task.flush(offsets);
+        expectedBlobs.clear();
+
+        expectedBlobs = Lists.newArrayList("prefix-topic0-0-00000000000000000015" + compressionType.extension(),
+                "prefix-topic0-1-00000000000000000025" + compressionType.extension(),
+                "prefix-topic1-0-00000000000000000035" + compressionType.extension());
+        assertThat(expectedBlobs).allMatch(blobName -> testBucketAccessor.doesObjectExist(blobName));
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000015", compression))
+                .containsExactly("[", "{\"name\":\"name012\"}", "]");
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000025", compression))
+                .containsExactly("[", "{\"name\":\"name112\"}", "]");
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000035", compression))
+                .containsExactly("[", "{\"name\":\"name212\"}", "]");
 
     }
 
