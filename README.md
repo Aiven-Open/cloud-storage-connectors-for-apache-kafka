@@ -6,6 +6,7 @@
 - [Aiven GCS Sink Connector](./gcs-sink-connector/README.md)
 - [Aiven S3 Sink Connector](./s3-sink-connector/README.md)
 - [Aiven Azure Blob Sink Connector](./azure-sink-connector/README.md)
+- [Aiven S3 Source Connector](./s3-source-connector/README.md)
 
 # Development
 
