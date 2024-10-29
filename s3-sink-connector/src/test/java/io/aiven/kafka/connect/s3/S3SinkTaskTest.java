@@ -34,7 +34,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -718,7 +717,7 @@ final class S3SinkTaskTest {
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
-        properties.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "prefix-");
+        properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
         properties.put(S3SinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
 
         final S3SinkTask task = new S3SinkTask();
@@ -794,7 +793,7 @@ final class S3SinkTaskTest {
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
-        properties.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "prefix-");
+        properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
         // Compact/key 'mode' value only updated
         properties.put(S3SinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{key}}-{{topic}}");
 

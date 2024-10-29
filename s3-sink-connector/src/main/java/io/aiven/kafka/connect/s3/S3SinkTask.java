@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -136,46 +135,25 @@ public final class S3SinkTask extends SinkTask {
         LOGGER.info("Processing {} records", records.size());
         records.forEach(recordGrouper::put);
         if (!isKeyRecordGrouper) {
-            recordGrouper.records().forEach((filename, groupedRecords) -> writeToS3(filename, groupedRecords, records));
+            recordGrouper.records().forEach(this::writeToS3);
         }
     }
 
     /**
-     * Flush is used alongside the KeyRecordGroupers to initate and complete file writes to S3. When not using a key
+     * Flush is used alongside the KeyRecordGroupers to initiate and complete file writes to S3. When not using a key
      * record grouper, the S3 upload will be initiated by the put command and flush will be used to write the files and
-     * roll over the files/
+     * roll over the files if any records remain in the record grouper for completion.
      *
      * @param offsets
      *            the latest offset sent to put and that is now ready to be flushed.
      */
     @Override
     public void flush(final Map<TopicPartition, OffsetAndMetadata> offsets) {
-        if (isKeyRecordGrouper) {
-            try {
-                recordGrouper.records().forEach(this::flushToS3);
-            } finally {
-                recordGrouper.clear();
-            }
-        } else {
-            // On Flush Get Active writers
-            final Collection<OutputWriter> activeWriters = writers.values();
-            // Clear recordGrouper so it restarts OFFSET HEADS etc and on next put new writers will be created.
+        try {
+            recordGrouper.records().forEach(this::flushToS3);
+        } finally {
             recordGrouper.clear();
-            // Close
-            activeWriters.forEach(writer -> {
-                try {
-                    // Close active writers && remove from writers Map
-                    // Calling close will write anything in the buffer before closing and complete the S3 multi part
-                    // upload
-                    writer.close();
-                    // Remove once closed
-                    writers.remove(writer);
-                } catch (IOException e) {
-                    throw new ConnectException(e);
-                }
-            });
         }
-
     }
 
     /**
@@ -214,19 +192,20 @@ public final class S3SinkTask extends SinkTask {
      * @param records
      *            all records in this record grouping, including those already written to S3
      */
-    private void writeToS3(final String filename, final List<SinkRecord> records,
-            final Collection<SinkRecord> recordToBeWritten) {
+    private void writeToS3(final String filename, final List<SinkRecord> records) {
+        // If no new records are supplied in this put operation return immediately
+        if (records.isEmpty()) {
+            return;
+        }
         final SinkRecord sinkRecord = records.get(0);
-        // This writer is being left open until a flush occurs.
-        final OutputWriter writer; // NOPMD CloseResource
+        // Record Grouper returns all records for that filename, all we want is the new batch of records to be added
+        // to the multi part upload.
         try {
-            writer = getOutputWriter(filename, sinkRecord);
-            // Record Grouper returns all records for that filename, all we want is the new batch of records to be added
-            // to the multi part upload.
-            writer.writeRecords(records.stream().filter(recordToBeWritten::contains).collect(Collectors.toList()));
-
+            // This writer is being left open until a flush occurs.
+            getOutputWriter(filename, sinkRecord).writeRecords(records);
+            recordGrouper.clearProcessedRecords(filename, records);
         } catch (IOException e) {
-            throw new ConnectException(e);
+            LOGGER.warn("Unable to write record, will retry on next put or flush operation.", e);
         }
 
     }
@@ -241,7 +220,8 @@ public final class S3SinkTask extends SinkTask {
      *            all records in this record grouping, including those already written to S3
      */
     private void flushToS3(final String filename, final List<SinkRecord> records) {
-        final SinkRecord sinkRecord = records.get(0);
+
+        final SinkRecord sinkRecord = records.isEmpty() ? null : records.get(0);
         try (var writer = getOutputWriter(filename, sinkRecord)) {
             // For Key based files Record Grouper returns only one record for that filename
             // to the multi part upload.
