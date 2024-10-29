@@ -16,12 +16,8 @@
 
 package io.aiven.kafka.connect.gcs;
 
-import java.lang.reflect.InvocationTargetException;
 import java.nio.channels.Channels;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Stream;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -32,25 +28,25 @@ import org.apache.kafka.connect.sink.SinkTask;
 
 import io.aiven.kafka.connect.common.grouper.RecordGrouper;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
-import io.aiven.kafka.connect.common.output.OutputWriter;
 
 import com.google.api.gax.retrying.RetrySettings;
 import com.google.api.gax.rpc.FixedHeaderProvider;
-import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class GcsSinkTask extends SinkTask {
+public class GcsSinkTask extends SinkTask {
     private static final Logger LOG = LoggerFactory.getLogger(GcsSinkConnector.class);
     private static final String USER_AGENT_HEADER_KEY = "user-agent";
 
-    private RecordGrouper recordGrouper;
+    protected RecordGrouper recordGrouper;
 
     private GcsSinkConfig config;
 
     private Storage storage;
+    private WriteHelper writeHelper;
+
 
     // required by Connect
     public GcsSinkTask() {
@@ -60,10 +56,11 @@ public final class GcsSinkTask extends SinkTask {
     // for testing
     public GcsSinkTask(final Map<String, String> props, final Storage storage) {
         super();
+
         Objects.requireNonNull(props, "props cannot be null");
         Objects.requireNonNull(storage, "storage cannot be null");
 
-        this.config = new GcsSinkConfig(props);
+        parseConfig(props);
         this.storage = storage;
         initRest();
     }
@@ -72,7 +69,7 @@ public final class GcsSinkTask extends SinkTask {
     public void start(final Map<String, String> props) {
         Objects.requireNonNull(props, "props cannot be null");
 
-        this.config = new GcsSinkConfig(props);
+        parseConfig(props);
         StorageOptions.Builder builder = StorageOptions.newBuilder()
                 .setHost(config.getGcsEndpoint())
                 .setCredentials(config.getCredentials())
@@ -93,6 +90,15 @@ public final class GcsSinkTask extends SinkTask {
         if (Objects.nonNull(config.getKafkaRetryBackoffMs())) {
             context.timeout(config.getKafkaRetryBackoffMs());
         }
+        this.writeHelper = new WriteHelper(storage, config);
+    }
+
+    protected void setConfig(GcsSinkConfig gcsSinkConfig) {
+        this.config = gcsSinkConfig;
+    }
+
+    protected void parseConfig(Map<String, String> props) {
+        setConfig(new GcsSinkConfig(props));
     }
 
     private void initRest() {
@@ -122,26 +128,9 @@ public final class GcsSinkTask extends SinkTask {
             } else {
                 stream = recordGrouper.records().entrySet().stream();
             }
-            stream.forEach(entry -> flushFile(entry.getKey(), entry.getValue()));
+            stream.forEach(entry -> writeHelper.flushFile(entry.getKey(), entry.getValue()));
         } finally {
             recordGrouper.clear();
-        }
-    }
-
-    private void flushFile(final String filename, final List<SinkRecord> records) {
-        final BlobInfo blob = BlobInfo.newBuilder(config.getBucketName(), config.getPrefix() + filename)
-                .setContentEncoding(config.getObjectContentEncoding())
-                .build();
-        try (var out = Channels.newOutputStream(storage.writer(blob));
-             var writer = OutputWriter.builder()
-                     .withExternalProperties(config.originalsStrings())
-                     .withOutputFields(config.getOutputFields())
-                     .withCompressionType(config.getCompressionType())
-                     .withEnvelopeEnabled(config.envelopeEnabled())
-                     .build(out, config.getFormatType())) {
-            writer.writeRecords(records);
-        } catch (final Exception e) { // NOPMD broad exception catched
-            throw new ConnectException(e);
         }
     }
 
@@ -154,4 +143,8 @@ public final class GcsSinkTask extends SinkTask {
     public String version() {
         return Version.VERSION;
     }
+    protected WriteHelper writeHelper() {
+        return writeHelper;
+    }
+
 }

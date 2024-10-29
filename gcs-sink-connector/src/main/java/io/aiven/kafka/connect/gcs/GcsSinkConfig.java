@@ -44,7 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.threeten.bp.Duration;
 
-public final class GcsSinkConfig extends AivenCommonConfig {
+public class GcsSinkConfig extends AivenCommonConfig {
     private static final Logger LOG = LoggerFactory.getLogger(GcsSinkConfig.class);
     private static final String USER_AGENT_HEADER_FORMAT = "Google GCS Sink/%s (GPN: Aiven;)";
     public static final String USER_AGENT_HEADER_VALUE = String.format(USER_AGENT_HEADER_FORMAT, Version.VERSION);
@@ -237,9 +237,13 @@ public final class GcsSinkConfig extends AivenCommonConfig {
 
     }
 
-    public GcsSinkConfig(final Map<String, String> properties) {
-        super(configDef(), handleDeprecatedYyyyUppercase(properties));
+    protected GcsSinkConfig(ConfigDef configDef, Map<String, String> properties) {
+        super(configDef, handleDeprecatedYyyyUppercase(properties));
         validate();
+    }
+
+    public GcsSinkConfig(final Map<String, String> properties) {
+        this(configDef(), properties);
     }
 
     static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
