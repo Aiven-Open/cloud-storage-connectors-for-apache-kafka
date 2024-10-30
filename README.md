@@ -9,7 +9,7 @@
 
 # Development
 
-This is a combined repository for Aiven Apache Kafka Connectors.
+This is a combined repository for Aiven Apache Kafka Connectors.  This repository uses [semantic versioning](https://semver.org/) with the caveat that all connectors are released together, thus it is possible that the version number on a connector may change without any associated programattic changes.  Please read the release notes for information about specific connectors.
 
 # License
 
