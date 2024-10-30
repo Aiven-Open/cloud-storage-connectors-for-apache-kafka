@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.Date;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -173,6 +174,8 @@ public interface TimestampSource {
                 return null;
             } else if (rawValue instanceof Long) {
                 return withZone((Long) rawValue);
+            } else if (rawValue instanceof Date) {
+                return withZone(((Date) rawValue).getTime());
             } else if (rawValue instanceof ZonedDateTime) {
                 return (ZonedDateTime) rawValue;
             } else if (rawValue instanceof Instant) {
