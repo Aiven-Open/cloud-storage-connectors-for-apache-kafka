@@ -38,10 +38,15 @@ public interface TimestampSource {
 
     enum Type {
 
+        /** Use the current wallclock time */
         WALLCLOCK,
+        /** Use the event timestamp */
         EVENT,
+        /** Use a header value to specify the date */
         HEADER,
+        /** Extract the timestamp from the payload */
         SIMPLE_DATA,
+        /** Use a custom timestamp source */
         CUSTOM
 
     }
