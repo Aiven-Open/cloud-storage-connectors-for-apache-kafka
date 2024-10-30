@@ -31,15 +31,7 @@ public final class OldFullKeyFormatters {
                     ? String.format("%020d", sinkRecord.kafkaOffset())
                     : Long.toString(sinkRecord.kafkaOffset());
 
-    private static final Map<String, DateTimeFormatter> TIMESTAMP_FORMATTERS = Map.of("yyyy",
-            DateTimeFormatter.ofPattern("yyyy"), "MM", DateTimeFormatter.ofPattern("MM"), "dd",
-            DateTimeFormatter.ofPattern("dd"), "HH", DateTimeFormatter.ofPattern("HH"));
-
     private OldFullKeyFormatters() {
         /* hide constructor */ }
 
-    public static String timestamp(final SinkRecord record, final TimestampSource tsSource,
-            final VariableTemplatePart.Parameter parameter) {
-        return tsSource.time(record).format(TIMESTAMP_FORMATTERS.get(parameter.getValue()));
-    }
 }

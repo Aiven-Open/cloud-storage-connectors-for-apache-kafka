@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -167,8 +168,7 @@ public final class S3SinkTask extends SinkTask {
     private String oldFullKey(final SinkRecord record) {
         final var prefix = config.getPrefixTemplate()
                 .instance()
-                .bindVariable(FilenameTemplateVariable.TIMESTAMP.name,
-                        parameter -> OldFullKeyFormatters.timestamp(record, config.getTimestampSource(), parameter))
+                .bindVariable(FilenameTemplateVariable.TIMESTAMP.name, new StableTimeFormatter(config.getTimestampSource()).apply(record))
                 .bindVariable(FilenameTemplateVariable.PARTITION.name, () -> record.kafkaPartition().toString())
                 .bindVariable(FilenameTemplateVariable.START_OFFSET.name,
                         parameter -> OldFullKeyFormatters.KAFKA_OFFSET.apply(record, parameter))

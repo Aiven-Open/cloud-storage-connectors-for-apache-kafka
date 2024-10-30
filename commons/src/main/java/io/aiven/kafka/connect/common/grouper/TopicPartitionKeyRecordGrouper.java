@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
+import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -46,7 +47,7 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
 
     private final Map<String, List<SinkRecord>> fileBuffers = new HashMap<>();
 
-    private final Function<SinkRecord, Function<Parameter, String>> setTimestampBasedOnRecord;
+    private final StableTimeFormatter timeFormatter;
 
     private final Rotator<List<SinkRecord>> rotator;
 
@@ -56,8 +57,7 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
         Objects.requireNonNull(tsSource, "tsSource cannot be null");
         this.filenameTemplate = filenameTemplate;
 
-        this.setTimestampBasedOnRecord = record -> parameter -> tsSource.time(record)
-                .format(TIMESTAMP_FORMATTERS.get(parameter.getValue()));
+        this.timeFormatter = new StableTimeFormatter(tsSource);
 
         this.rotator = buffer -> {
             final var unlimited = maxRecordsPerFile == null;
@@ -116,7 +116,7 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
                 .bindVariable(FilenameTemplateVariable.PARTITION.name, setKafkaPartition)
                 .bindVariable(FilenameTemplateVariable.KEY.name, tpk::getKey)
                 .bindVariable(FilenameTemplateVariable.START_OFFSET.name, setKafkaOffset)
-                .bindVariable(FilenameTemplateVariable.TIMESTAMP.name, setTimestampBasedOnRecord.apply(currentRecord))
+                .bindVariable(FilenameTemplateVariable.TIMESTAMP.name, timeFormatter.apply(currentRecord))
                 .render();
     }
 
