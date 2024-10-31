@@ -123,8 +123,7 @@ final class GcsSinkTaskTest {
         for (final Record record : records) {
             final int offset = topicPartitionMinimumOffset.get(record.topic + "-" + record.partition);
             final String key = record.topic + "-" + record.partition + "-" + offset + extension;
-            blobNameWithRecordsMap
-                    .computeIfAbsent(key, ignored -> new ArrayList<>()) // NOPMD
+            blobNameWithRecordsMap.computeIfAbsent(key, ignored -> new ArrayList<>()) // NOPMD
                     .add(record);
         }
         return blobNameWithRecordsMap;
