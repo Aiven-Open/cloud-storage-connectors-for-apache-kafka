@@ -42,7 +42,7 @@ public final class GoogleCredentialsBuilder {
      * non-{@code null}), this is an error.
      *
      * <p>
-     * If either @code credentialsPath} or {@code credentialsJson} is provided, it's used to construct the credentials.
+     * If either {@code credentialsPath} or {@code credentialsJson} is provided, it's used to construct the credentials.
      *
      * <p>
      * If none are provided, the default GCP SDK credentials acquisition mechanism is used.

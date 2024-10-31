@@ -141,7 +141,7 @@ final class GcsSinkCredentialsConfigTest {
         final GcsSinkConfig config = new GcsSinkConfig(properties);
 
         // Note that we're using a mock here since the Google credentials are not part of the environment when running
-        // in github actions. It's better to use a mock here and make the test self-contained than it is to make things
+        // in GitHub actions. It's better to use a mock here and make the test self-contained than it is to make things
         // more complicated and making it rely on the environment it's executing within.
         try (MockedStatic<GoogleCredentials> mocked = mockStatic(GoogleCredentials.class)) {
             final GoogleCredentials googleCredentials = mock(GoogleCredentials.class);

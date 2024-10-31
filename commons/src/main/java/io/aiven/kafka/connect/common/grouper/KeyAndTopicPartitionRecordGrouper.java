@@ -66,10 +66,8 @@ public final class KeyAndTopicPartitionRecordGrouper implements RecordGrouper {
 
         final String recordKey = generateRecordKey(record);
 
-        fileBuffers.putIfAbsent(recordKey, new ArrayList<>());
-
+        final List<SinkRecord> records = fileBuffers.computeIfAbsent(recordKey, ignored -> new ArrayList<>(1));
         // one record per file
-        final List<SinkRecord> records = fileBuffers.get(recordKey);
         records.clear();
         records.add(record);
     }
