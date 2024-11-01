@@ -224,11 +224,11 @@ final class GcsSinkConfigTest {
                 "Invalid value -1 for configuration gcs.retry.backoff.total.timeout.ms: " + "Value must be at least 0",
                 totalTimeoutE.getMessage());
 
-        final var tooBigTotoalTimeoutProp = Map.of("gcs.bucket.name", "test-bucket",
+        final var tooBigTotalTimeoutProp = Map.of("gcs.bucket.name", "test-bucket",
                 "gcs.retry.backoff.total.timeout.ms", String.valueOf(TimeUnit.HOURS.toMillis(25)));
 
         final var tooBigTotalTimeoutE = assertThrows(ConfigException.class,
-                () -> new GcsSinkConfig(tooBigTotoalTimeoutProp));
+                () -> new GcsSinkConfig(tooBigTotalTimeoutProp));
         assertEquals("Invalid value 90000000 for configuration gcs.retry.backoff.total.timeout.ms: "
                 + "Value must be no more than 86400000 (24 hours)", tooBigTotalTimeoutE.getMessage());
     }

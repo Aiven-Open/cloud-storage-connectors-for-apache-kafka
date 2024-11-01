@@ -44,7 +44,7 @@ import net.jqwik.api.Property;
  * <a href="https://jqwik.net/docs/current/user-guide.html">jqwik</a>.
  *
  * <p>
- * The idea is to generate random batches of {@link SinkRecord} (see {@link PbtBase#recordBatches()}, put them into a
+ * The idea is to generate random batches of {@link SinkRecord} (see {@link PbtBase#recordBatches()}), put them into a
  * task, and check certain properties of the written files afterwards. Files are written virtually using the in-memory
  * GCS mock.
  */

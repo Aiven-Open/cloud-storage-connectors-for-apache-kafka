@@ -44,7 +44,7 @@ GitHub provides additional document on [forking a repository](https://help.githu
 
 All connectors for Apache Kafka in this repository are open source products released under the Apache 2.0 license (see either [the Apache site](https://www.apache.org/licenses/LICENSE-2.0) or the [LICENSE.txt file](LICENSE.txt)). The Apache 2.0 license allows you to freely use, modify, distribute, and sell your own products that include Apache 2.0 licensed software.
 
-We respect intellectual property rights of others and we want to make sure all incoming contributions are correctly attributed and licensed. A Developer Certificate of Origin (DCO) is a lightweight mechanism to do that.
+We respect intellectual property rights of others, and we want to make sure all incoming contributions are correctly attributed and licensed. A Developer Certificate of Origin (DCO) is a lightweight mechanism to do that.
 
 So we require by making a contribution every contributor certifies that:
 ```
@@ -62,7 +62,7 @@ For more information see the [Code of Conduct FAQ](https://www.contributor-coven
 
 
 ## Security issue notifications
-If you discover a potential security issue in this project we ask that you report it according to [Security Policy](SECURITY.md). Please do **not** create a public github issue.
+If you discover a potential security issue in this project we ask that you report it according to [Security Policy](SECURITY.md). Please do **not** create a public GitHub issue.
 
 ## Licensing
 
