@@ -231,26 +231,26 @@ publishing {
   }
 }
 
-signing {
-  sign(publishing.publications["publishMavenJavaArtifact"])
-  useGpgCmd()
-  // Some issue in the plugin:
-  // GPG outputs already armored signatures. The plugin also does armoring for `asc` files.
-  // This results in double armored signatures, i.e. garbage.
-  // Override the signature type provider to use unarmored output for `asc` files, which works well
-  // with GPG.
-  class ASCSignatureProvider : AbstractSignatureTypeProvider() {
-    val binary =
-        object : BinarySignatureType() {
-          override fun getExtension(): String {
-            return "asc"
-          }
-        }
-
-    init {
-      register(binary)
-      setDefaultType(binary.extension)
-    }
-  }
-  signatureTypes = ASCSignatureProvider()
-}
+//signing {
+//  sign(publishing.publications["publishMavenJavaArtifact"])
+//  useGpgCmd()
+//  // Some issue in the plugin:
+//  // GPG outputs already armored signatures. The plugin also does armoring for `asc` files.
+//  // This results in double armored signatures, i.e. garbage.
+//  // Override the signature type provider to use unarmored output for `asc` files, which works well
+//  // with GPG.
+//  class ASCSignatureProvider : AbstractSignatureTypeProvider() {
+//    val binary =
+//        object : BinarySignatureType() {
+//          override fun getExtension(): String {
+//            return "asc"
+//          }
+//        }
+//
+//    init {
+//      register(binary)
+//      setDefaultType(binary.extension)
+//    }
+//  }
+//  signatureTypes = ASCSignatureProvider()
+//}

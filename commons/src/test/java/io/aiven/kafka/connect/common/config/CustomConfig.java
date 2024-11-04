@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,14 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.config.validators;
+package io.aiven.kafka.connect.common.config;
 
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.connect.common.config.TimestampSource;
-
-public class TimestampSourceValidator implements ConfigDef.Validator {
-
+public class CustomConfig implements ExtraConfiguration {
     @Override
-    public void ensureValid(final String name, final Object value) {
-        try {
-            new TimestampSource.Builder().configuration(value.toString()).build();
-        } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
-            throw new ConfigException(name, value, e.getMessage());
-        }
+    public void configure(final ConfigDef configDef) {
+        configDef.define("a.custom.property", ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW,
+                "Custom configuration for autoloading test");
     }
-
 }

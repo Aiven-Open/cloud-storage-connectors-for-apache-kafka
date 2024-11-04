@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -143,6 +144,26 @@ public final class RecordGrouperFactory {
     @SuppressWarnings("PMD.CognitiveComplexity")
     public static RecordGrouper newRecordGrouper(final AivenCommonConfig config) {
         final Template fileNameTemplate = config.getFilenameTemplate();
+        final boolean isSchemaBased = config.getFormatType() == FormatType.PARQUET
+                || config.getFormatType() == FormatType.AVRO;
+        if (config.getCustomRecordGrouperBuilder() != null) {
+            try {
+                final CustomRecordGrouperBuilder builder = config.getCustomRecordGrouperBuilder()
+                        .getDeclaredConstructor()
+                        .newInstance();
+
+                builder.configure(config);
+                builder.setMaxRecordsPerFile(config.getMaxRecordsPerFile());
+                builder.setFilenameTemplate(fileNameTemplate);
+                builder.setSchemaBased(isSchemaBased);
+                builder.setTimestampSource(config.getFilenameTimestampSource());
+
+                return builder.build();
+            } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException
+                    | InvocationTargetException e) {
+                throw new IllegalArgumentException("Failed to create custom record grouper", e);
+            }
+        }
         final String grType = resolveRecordGrouperType(fileNameTemplate);
         if (KEY_RECORD.equals(grType)) {
             return new KeyRecordGrouper(fileNameTemplate);
@@ -151,13 +172,13 @@ public final class RecordGrouperFactory {
         } else {
             final Integer maxRecordsPerFile = config.getMaxRecordsPerFile() == 0 ? null : config.getMaxRecordsPerFile();
             if (TOPIC_PARTITION_KEY_RECORD.equals(grType)) {
-                return config.getFormatType() == FormatType.PARQUET || config.getFormatType() == FormatType.AVRO
+                return isSchemaBased
                         ? new SchemaBasedTopicPartitionKeyRecordGrouper(fileNameTemplate, maxRecordsPerFile,
                                 config.getFilenameTimestampSource())
                         : new TopicPartitionKeyRecordGrouper(fileNameTemplate, maxRecordsPerFile,
                                 config.getFilenameTimestampSource());
             } else {
-                return config.getFormatType() == FormatType.PARQUET || config.getFormatType() == FormatType.AVRO
+                return isSchemaBased
                         ? new SchemaBasedTopicPartitionRecordGrouper(fileNameTemplate, maxRecordsPerFile,
                                 config.getFilenameTimestampSource())
                         : new TopicPartitionRecordGrouper(fileNameTemplate, maxRecordsPerFile,

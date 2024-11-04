@@ -16,29 +16,26 @@
 
 package io.aiven.kafka.connect.gcs;
 
-import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.api.gax.tracing.ApiTracerFactory;
+import io.aiven.kafka.connect.common.config.validators.ClassValidator;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
 
 import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.config.FixedSetRecommender;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.common.config.TimestampSource;
-import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.OAuth2Credentials;
@@ -47,7 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.threeten.bp.Duration;
 
-public final class GcsSinkConfig extends AivenCommonConfig {
+public class GcsSinkConfig extends AivenCommonConfig {
     private static final Logger LOG = LoggerFactory.getLogger(GcsSinkConfig.class);
     private static final String USER_AGENT_HEADER_FORMAT = "Google GCS Sink/%s (GPN: Aiven;)";
     public static final String USER_AGENT_HEADER_VALUE = String.format(USER_AGENT_HEADER_FORMAT, Version.VERSION);
@@ -59,6 +56,7 @@ public final class GcsSinkConfig extends AivenCommonConfig {
     public static final String GCS_BUCKET_NAME_CONFIG = "gcs.bucket.name";
     public static final String GCS_OBJECT_CONTENT_ENCODING_CONFIG = "gcs.object.content.encoding";
     public static final String GCS_USER_AGENT = "gcs.user.agent";
+    public static final String GCS_METRICS = "gcs.metrics.class";
     private static final String GROUP_FILE = "File";
     public static final String FILE_NAME_PREFIX_CONFIG = "file.name.prefix";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
@@ -104,9 +102,9 @@ public final class GcsSinkConfig extends AivenCommonConfig {
         addGcsConfigGroup(configDef);
         addFileConfigGroup(configDef);
         addOutputFieldsFormatConfigGroup(configDef, OutputFieldType.VALUE);
-        addKafkaBackoffPolicy(configDef);
         addGcsRetryPolicies(configDef);
         addUserAgentConfig(configDef);
+        AivenCommonConfig.addCommonConfig(configDef);
         return configDef;
     }
 
@@ -152,6 +150,16 @@ public final class GcsSinkConfig extends AivenCommonConfig {
                                                                                                                      // never
                                                                                                                      // used
                 GCS_BUCKET_NAME_CONFIG);
+        configDef.define(GCS_METRICS, ConfigDef.Type.CLASS,
+                null, new ClassValidator(ApiTracerFactory.class),
+                ConfigDef.Importance.LOW,
+                "class for GCS metrics. Default is not to attache metrics",
+                GROUP_GCS, gcsGroupCounter++, ConfigDef.Width.NONE, // NOPMD
+                // retryPolicyGroupCounter
+                // updated value never
+                // used
+                GCS_METRICS);
+
     }
 
     private static void addGcsRetryPolicies(final ConfigDef configDef) {
@@ -200,9 +208,9 @@ public final class GcsSinkConfig extends AivenCommonConfig {
                 "Retry total timeout in milliseconds. The default value is "
                         + GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT,
                 GROUP_GCS_RETRY_BACKOFF_POLICY, retryPolicyGroupCounter++, ConfigDef.Width.NONE, // NOPMD
-                                                                                                 // retryPolicyGroupCounter
-                                                                                                 // updated value never
-                                                                                                 // used
+                // retryPolicyGroupCounter
+                // updated value never
+                // used
                 GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_CONFIG);
     }
 
@@ -225,83 +233,17 @@ public final class GcsSinkConfig extends AivenCommonConfig {
         }, ConfigDef.Importance.MEDIUM, "The prefix to be added to the name of each file put on GCS.", GROUP_FILE,
                 fileGroupCounter++, ConfigDef.Width.NONE, FILE_NAME_PREFIX_CONFIG);
 
-        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-                new FilenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
-                "The template for file names on GCS. "
-                        + "Supports `{{ variable }}` placeholders for substituting variables. "
-                        + "Currently supported variables are `topic`, `partition`, and `start_offset` "
-                        + "(the offset of the first record in the file). "
-                        + "Only some combinations of variables are valid, which currently are:\n"
-                        + "- `topic`, `partition`, `start_offset`.",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
-
-        final String supportedCompressionTypes = CompressionType.names()
-                .stream()
-                .map(f -> "'" + f + "'")
-                .collect(Collectors.joining(", "));
-        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, CompressionType.NONE.name,
-                new ConfigDef.Validator() {
-                    @Override
-                    public void ensureValid(final String name, final Object value) {
-                        assert value instanceof String;
-                        final String valueStr = (String) value;
-                        if (!CompressionType.names().contains(valueStr)) {
-                            throw new ConfigException(FILE_COMPRESSION_TYPE_CONFIG, valueStr,
-                                    "supported values are: " + supportedCompressionTypes);
-                        }
-                    }
-                }, ConfigDef.Importance.MEDIUM,
-                "The compression type used for files put on GCS. " + "The supported values are: "
-                        + supportedCompressionTypes + ".",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
-                FixedSetRecommender.ofSupportedValues(CompressionType.names()));
-
-        configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, new ConfigDef.Validator() {
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                assert value instanceof Integer;
-                if ((Integer) value < 0) {
-                    throw new ConfigException(FILE_MAX_RECORDS, value, "must be a non-negative integer number");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM,
-                "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
-                        + "0 is interpreted as \"unlimited\", which is the default.",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
-
-        configDef.define(FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(),
-                new ConfigDef.Validator() {
-                    @Override
-                    public void ensureValid(final String name, final Object value) {
-                        try {
-                            ZoneId.of(value.toString());
-                        } catch (final Exception e) { // NOPMD broad exception catched
-                            throw new ConfigException(FILE_NAME_TIMESTAMP_TIMEZONE, value, e.getMessage());
-                        }
-                    }
-                }, ConfigDef.Importance.LOW,
-                "Specifies the timezone in which the dates and time for the timestamp variable will be treated. "
-                        + "Use standard shot and long names. Default is UTC",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_TIMEZONE);
-
-        configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
-                new ConfigDef.Validator() {
-                    @Override
-                    public void ensureValid(final String name, final Object value) {
-                        try {
-                            TimestampSource.Type.of(value.toString());
-                        } catch (final Exception e) { // NOPMD broad exception catched
-                            throw new ConfigException(FILE_NAME_TIMESTAMP_SOURCE, value, e.getMessage());
-                        }
-                    }
-                }, ConfigDef.Importance.LOW, "Specifies the the timestamp variable source. Default is wall-clock.",
-                GROUP_FILE, fileGroupCounter, ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_SOURCE);
+        AivenCommonConfig.addFileConfigGroup(configDef, GROUP_FILE, "GCS", fileGroupCounter, CompressionType.NONE);
 
     }
 
-    public GcsSinkConfig(final Map<String, String> properties) {
-        super(configDef(), handleDeprecatedYyyyUppercase(properties));
+    protected GcsSinkConfig(ConfigDef configDef, Map<String, String> properties) {
+        super(configDef, handleDeprecatedYyyyUppercase(properties));
         validate();
+    }
+
+    public GcsSinkConfig(final Map<String, String> properties) {
+        this(configDef(), properties);
     }
 
     static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
@@ -437,5 +379,16 @@ public final class GcsSinkConfig extends AivenCommonConfig {
 
     public String getUserAgent() {
         return getString(GCS_USER_AGENT);
+    }
+
+    public ApiTracerFactory getApiTracerFactory() {
+        if (getClass(GCS_METRICS) == null) {
+            return null;
+        }
+        try {
+            return getClass(GCS_METRICS).asSubclass(ApiTracerFactory.class).getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

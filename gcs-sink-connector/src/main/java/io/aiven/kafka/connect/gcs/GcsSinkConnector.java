@@ -30,7 +30,7 @@ import org.apache.kafka.connect.sink.SinkConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class GcsSinkConnector extends SinkConnector {
+public class GcsSinkConnector extends SinkConnector {
     private static final Logger LOG = LoggerFactory.getLogger(GcsSinkConnector.class);
 
     private Map<String, String> configProps;
@@ -51,8 +51,16 @@ public final class GcsSinkConnector extends SinkConnector {
         Objects.requireNonNull(props, "props cannot be null");
 
         this.configProps = Collections.unmodifiableMap(props);
-        this.config = new GcsSinkConfig(props);
+        parseConfig(props);
         LOG.info("Starting connector {}", config.getConnectorName());
+    }
+
+    protected void setConfig(GcsSinkConfig config) {
+        this.config = config ;
+    }
+
+    protected void parseConfig(Map<String, String> props) {
+        setConfig(new GcsSinkConfig(props));
     }
 
     @Override

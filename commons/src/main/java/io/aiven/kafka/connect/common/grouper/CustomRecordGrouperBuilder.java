@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,17 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.config.validators;
+package io.aiven.kafka.connect.common.grouper;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
-
+import io.aiven.kafka.connect.common.config.Configurable;
 import io.aiven.kafka.connect.common.config.TimestampSource;
+import io.aiven.kafka.connect.common.templating.Template;
 
-public class TimestampSourceValidator implements ConfigDef.Validator {
+public interface CustomRecordGrouperBuilder extends Configurable {
+    void setFilenameTemplate(Template filenameTemplate);
+    void setMaxRecordsPerFile(Integer maxRecordsPerFile);
+    void setTimestampSource(TimestampSource timestampSource);
+    void setSchemaBased(boolean schemaBased);
 
-    @Override
-    public void ensureValid(final String name, final Object value) {
-        try {
-            new TimestampSource.Builder().configuration(value.toString()).build();
-        } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
-            throw new ConfigException(name, value, e.getMessage());
-        }
-    }
-
+    RecordGrouper build();
 }

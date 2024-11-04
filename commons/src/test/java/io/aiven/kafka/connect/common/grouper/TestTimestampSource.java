@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.config.validators;
+package io.aiven.kafka.connect.common.grouper;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
+import java.time.ZoneOffset;
 
 import io.aiven.kafka.connect.common.config.TimestampSource;
 
-public class TimestampSourceValidator implements ConfigDef.Validator {
-
-    @Override
-    public void ensureValid(final String name, final Object value) {
-        try {
-            new TimestampSource.Builder().configuration(value.toString()).build();
-        } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
-            throw new ConfigException(name, value, e.getMessage());
-        }
+public final class TestTimestampSource {
+    private TestTimestampSource() {
+    }
+    @SuppressWarnings("PMD.ShortMethodName")
+    public static TimestampSource of(final TimestampSource.Type type) {
+        return of(type, ZoneOffset.UTC);
     }
 
+    @SuppressWarnings("PMD.ShortMethodName")
+    public static TimestampSource of(final TimestampSource.Type type, final ZoneOffset timeZone) {
+        return new TimestampSource.Builder().configuration(type.toString()).zoneId(timeZone).build();
+    }
 }
