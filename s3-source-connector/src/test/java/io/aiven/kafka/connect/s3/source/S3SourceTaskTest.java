@@ -40,7 +40,7 @@ import io.aiven.kafka.connect.s3.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.s3.source.input.InputFormat;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
-import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -154,8 +154,8 @@ final class S3SourceTaskTest {
         setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
         when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
 
-        final AivenS3SourceRecord aivenS3SourceRecordList = getAivenS3SourceRecord();
-        when(mockSourceRecordIterator.next()).thenReturn(aivenS3SourceRecordList);
+        final S3SourceRecord s3SourceRecordList = getAivenS3SourceRecord();
+        when(mockSourceRecordIterator.next()).thenReturn(s3SourceRecordList);
 
         final List<SourceRecord> sourceRecordList = s3SourceTask.poll();
         assertThat(sourceRecordList).isNotEmpty();
@@ -172,8 +172,8 @@ final class S3SourceTaskTest {
         assertThat(s3SourceTask.getConnectorStopped()).isTrue();
     }
 
-    private static AivenS3SourceRecord getAivenS3SourceRecord() {
-        return new AivenS3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, new byte[0], new byte[0], "");
+    private static S3SourceRecord getAivenS3SourceRecord() {
+        return new S3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, new byte[0], new byte[0], "");
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
