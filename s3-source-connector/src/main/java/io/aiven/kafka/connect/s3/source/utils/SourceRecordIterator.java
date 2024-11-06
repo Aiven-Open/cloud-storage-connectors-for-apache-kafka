@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
  * Parquet).
  */
-public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord> {
+public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
     public static final String PATTERN_TOPIC_KEY = "topicName";
     public static final String PATTERN_PARTITION_KEY = "partitionId";
@@ -54,7 +54,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
     private String currentObjectKey;
 
     private final Iterator<S3ObjectSummary> s3ObjectSummaryIterator;
-    private Iterator<AivenS3SourceRecord> recordIterator = Collections.emptyIterator();
+    private Iterator<S3SourceRecord> recordIterator = Collections.emptyIterator();
 
     private final OffsetManager offsetManager;
 
@@ -94,7 +94,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
         }
     }
 
-    private Iterator<AivenS3SourceRecord> createIteratorForCurrentFile() throws IOException {
+    private Iterator<S3SourceRecord> createIteratorForCurrentFile() throws IOException {
         try (S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);
                 S3ObjectInputStream inputStream = s3Object.getObjectContent()) {
 
@@ -124,15 +124,15 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
     }
 
     @SuppressWarnings("PMD.CognitiveComplexity")
-    private Iterator<AivenS3SourceRecord> getObjectIterator(final InputStream valueInputStream, final String topic,
+    private Iterator<S3SourceRecord> getObjectIterator(final InputStream valueInputStream, final String topic,
             final int topicPartition, final long startOffset, final Transformer transformer,
             final Map<String, Object> partitionMap) {
         return new Iterator<>() {
-            private final Iterator<AivenS3SourceRecord> internalIterator = readNext().iterator();
+            private final Iterator<S3SourceRecord> internalIterator = readNext().iterator();
 
-            private List<AivenS3SourceRecord> readNext() {
+            private List<S3SourceRecord> readNext() {
                 final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
-                final List<AivenS3SourceRecord> sourceRecords = new ArrayList<>();
+                final List<S3SourceRecord> sourceRecords = new ArrayList<>();
 
                 int numOfProcessedRecs = 1;
                 boolean checkOffsetMap = true;
@@ -157,7 +157,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
                 return sourceRecords;
             }
 
-            private AivenS3SourceRecord getSourceRecord(final byte[] key, final byte[] value, final String topic,
+            private S3SourceRecord getSourceRecord(final byte[] key, final byte[] value, final String topic,
                     final int topicPartition, final OffsetManager offsetManager, final long startOffset,
                     final Map<String, Object> partitionMap) {
 
@@ -175,8 +175,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
 
                 final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey, currentOffset);
 
-                return new AivenS3SourceRecord(partitionMap, offsetMap, topic, topicPartition, key, value,
-                        currentObjectKey);
+                return new S3SourceRecord(partitionMap, offsetMap, topic, topicPartition, key, value, currentObjectKey);
             }
 
             @Override
@@ -185,7 +184,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
             }
 
             @Override
-            public AivenS3SourceRecord next() {
+            public S3SourceRecord next() {
                 return internalIterator.next();
             }
         };
@@ -197,7 +196,7 @@ public final class SourceRecordIterator implements Iterator<AivenS3SourceRecord>
     }
 
     @Override
-    public AivenS3SourceRecord next() {
+    public S3SourceRecord next() {
         if (!recordIterator.hasNext()) {
             nextS3Object();
         }

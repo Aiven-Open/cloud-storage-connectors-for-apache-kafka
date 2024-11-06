@@ -78,7 +78,7 @@ public class JsonTransformer implements Transformer {
         try {
             return objectMapper.writeValueAsBytes(record);
         } catch (JsonProcessingException e) {
-            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
+            LOGGER.error("Failed to serialize record to JSON bytes. Error: {}", e.getMessage(), e);
             return new byte[0];
         }
     }

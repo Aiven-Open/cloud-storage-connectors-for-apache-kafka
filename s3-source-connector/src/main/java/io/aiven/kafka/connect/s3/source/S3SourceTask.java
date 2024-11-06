@@ -39,10 +39,10 @@ import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.input.TransformerFactory;
-import io.aiven.kafka.connect.s3.source.utils.AivenS3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.FileReader;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
@@ -72,7 +72,7 @@ public class S3SourceTask extends SourceTask {
     private S3SourceConfig s3SourceConfig;
     private AmazonS3 s3Client;
 
-    private Iterator<AivenS3SourceRecord> sourceRecordIterator;
+    private Iterator<S3SourceRecord> sourceRecordIterator;
     private Optional<Converter> keyConverter;
 
     private Converter valueConverter;
@@ -144,47 +144,41 @@ public class S3SourceTask extends SourceTask {
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException {
-        LOGGER.info("Polling again");
+        LOGGER.info("Polling for new records...");
         synchronized (pollLock) {
             final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
 
             if (connectorStopped.get()) {
+                LOGGER.info("Connector has been stopped. Returning empty result list.");
                 return results;
             }
 
             while (!connectorStopped.get()) {
                 try {
-                    LOGGER.info("Number of records sent {}", extractSourceRecords(results).size());
+                    final int sizeOfExtractedRecs = extractSourceRecords(results).size();
+                    LOGGER.info("Number of records extracted and sent: {}", sizeOfExtractedRecs);
                     return results;
-                } catch (AmazonS3Exception | DataException exception) {
-                    if (handleException(exception)) {
+                } catch (AmazonS3Exception exception) {
+                    if (exception.isRetryable()) {
+                        LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
+                                exception);
+                        pollLock.wait(ERROR_BACKOFF);
+
+                        prepareReaderFromOffsetStorageReader();
+                    } else {
+                        LOGGER.warn("Non-retryable AmazonS3Exception occurred. Stopping polling.", exception);
                         return null; // NOPMD
                     }
+                } catch (DataException exception) {
+                    LOGGER.warn("DataException occurred during polling. No retries will be attempted.", exception);
                 } catch (final Throwable t) { // NOPMD
-                    // This task has failed, so close any resources (may be reopened if needed) before throwing
+                    LOGGER.error("Unexpected error encountered. Closing resources and stopping task.", t);
                     closeResources();
                     throw t;
                 }
             }
             return results;
         }
-    }
-
-    private boolean handleException(final RuntimeException exception) throws InterruptedException {
-        if (exception instanceof AmazonS3Exception) {
-            if (((AmazonS3Exception) exception).isRetryable()) {
-                LOGGER.warn("Retryable error while polling. Will sleep and try again.", exception);
-                Thread.sleep(ERROR_BACKOFF);
-
-                prepareReaderFromOffsetStorageReader();
-            } else {
-                return true;
-            }
-        }
-        if (exception instanceof DataException) {
-            LOGGER.warn("DataException. Will NOT try again.", exception);
-        }
-        return false;
     }
 
     private List<SourceRecord> extractSourceRecords(final List<SourceRecord> results) throws InterruptedException {
