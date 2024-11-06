@@ -64,10 +64,12 @@ public class AvroTransformer implements Transformer {
             try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
                 reader.forEach(records::add);
             } catch (IOException e) {
-                LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
+                LOGGER.error("Failed to read records from DataFileReader for S3 object stream. Error: {}",
+                        e.getMessage(), e);
             }
         } catch (IOException e) {
-            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
+            LOGGER.error("Failed to initialize SeekableByteArrayInput for S3 object stream. Error: {}", e.getMessage(),
+                    e);
         }
         return records;
     }

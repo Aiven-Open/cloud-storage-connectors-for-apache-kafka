@@ -42,7 +42,7 @@ public final class RecordProcessor {
 
     }
 
-    public static List<SourceRecord> processRecords(final Iterator<AivenS3SourceRecord> sourceRecordIterator,
+    public static List<SourceRecord> processRecords(final Iterator<S3SourceRecord> sourceRecordIterator,
             final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
             final Optional<Converter> keyConverter, final Converter valueConverter,
             final AtomicBoolean connectorStopped, final Transformer transformer, final FileReader fileReader,
@@ -52,9 +52,9 @@ public final class RecordProcessor {
         final int maxPollRecords = s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS);
 
         for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
-            final AivenS3SourceRecord aivenS3SourceRecord = sourceRecordIterator.next();
-            if (aivenS3SourceRecord != null) {
-                final SourceRecord sourceRecord = createSourceRecord(aivenS3SourceRecord, s3SourceConfig, keyConverter,
+            final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
+            if (s3SourceRecord != null) {
+                final SourceRecord sourceRecord = createSourceRecord(s3SourceRecord, s3SourceConfig, keyConverter,
                         valueConverter, conversionConfig, transformer, fileReader, offsetManager);
                 results.add(sourceRecord);
             }
@@ -63,26 +63,24 @@ public final class RecordProcessor {
         return results;
     }
 
-    static SourceRecord createSourceRecord(final AivenS3SourceRecord aivenS3SourceRecord,
-            final S3SourceConfig s3SourceConfig, final Optional<Converter> keyConverter, final Converter valueConverter,
+    static SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord, final S3SourceConfig s3SourceConfig,
+            final Optional<Converter> keyConverter, final Converter valueConverter,
             final Map<String, String> conversionConfig, final Transformer transformer, final FileReader fileReader,
             final OffsetManager offsetManager) {
 
-        final String topic = aivenS3SourceRecord.getTopic();
-        final Optional<SchemaAndValue> keyData = keyConverter
-                .map(c -> c.toConnectData(topic, aivenS3SourceRecord.key()));
+        final String topic = s3SourceRecord.getTopic();
+        final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(topic, s3SourceRecord.key()));
 
         transformer.configureValueConverter(conversionConfig, s3SourceConfig);
         valueConverter.configure(conversionConfig, false);
         try {
-            final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, aivenS3SourceRecord.value());
-            offsetManager.updateCurrentOffsets(aivenS3SourceRecord.getPartitionMap(),
-                    aivenS3SourceRecord.getOffsetMap());
-            aivenS3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(aivenS3SourceRecord.getPartitionMap()));
-            return aivenS3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
+            final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, s3SourceRecord.value());
+            offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
+            s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
+            return s3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
         } catch (DataException e) {
             LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
-            fileReader.addFailedObjectKeys(aivenS3SourceRecord.getObjectKey());
+            fileReader.addFailedObjectKeys(s3SourceRecord.getObjectKey());
             throw e;
         }
     }

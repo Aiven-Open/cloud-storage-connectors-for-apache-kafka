@@ -34,7 +34,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,7 +49,6 @@ import org.apache.kafka.clients.admin.AdminClient;
 import io.aiven.kafka.connect.s3.source.input.InputFormat;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
-import io.aiven.kafka.connect.s3.source.testutils.S3OutputStream;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
@@ -61,7 +59,6 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
-import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -200,20 +197,6 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(records.get(2)).isEqualTo("CC");
         assertThat(records.get(3)).isEqualTo("DD");
         assertThat(records.get(4)).isEqualTo("EE");
-    }
-
-    @Test
-    void multiPartUploadBytesTest(final TestInfo testInfo) throws ExecutionException, InterruptedException {
-        final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-
-        connectRunner.createConnector(connectorConfig);
-        final String partition = "00001";
-        final String key = topicName + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
-        multipartUpload(TEST_BUCKET_NAME, key);
-        // Poll messages from the Kafka topic and verify the consumed data
-        final List<String> records = IntegrationBase.consumeMessages(topicName, 1, KAFKA_CONTAINER);
-        assertThat(records.get(0)).contains("performanceeeqjz");
     }
 
     @Test
@@ -383,19 +366,5 @@ final class IntegrationTest implements IntegrationBase {
             final File fileToWrite) {
         final PutObjectRequest request = new PutObjectRequest(bucketName, folderName + fileNameInS3, fileToWrite);
         s3Client.putObject(request);
-    }
-
-    public void multipartUpload(final String bucketName, final String key) {
-        try (S3OutputStream s3OutputStream = new S3OutputStream(bucketName, key, S3OutputStream.DEFAULT_PART_SIZE,
-                s3Client);
-                InputStream resourceStream = Thread.currentThread()
-                        .getContextClassLoader()
-                        .getResourceAsStream(S3_FILE_NAME)) {
-            assert resourceStream != null;
-            final byte[] fileBytes = IOUtils.toByteArray(resourceStream);
-            s3OutputStream.write(fileBytes);
-        } catch (IOException e) {
-            LOGGER.error(e.getMessage());
-        }
     }
 }

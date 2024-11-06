@@ -66,7 +66,7 @@ class RecordProcessorTest {
     private FileReader fileReader;
 
     private AtomicBoolean connectorStopped;
-    private Iterator<AivenS3SourceRecord> sourceRecordIterator;
+    private Iterator<S3SourceRecord> sourceRecordIterator;
 
     @BeforeEach
     void setUp() {
@@ -98,7 +98,7 @@ class RecordProcessorTest {
         when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
         when(sourceRecordIterator.hasNext()).thenReturn(true, false); // One iteration with records
 
-        final AivenS3SourceRecord mockRecord = mock(AivenS3SourceRecord.class);
+        final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
         when(sourceRecordIterator.next()).thenReturn(mockRecord);
 
         final List<SourceRecord> results = new ArrayList<>();
@@ -138,7 +138,7 @@ class RecordProcessorTest {
 
     @Test
     void testCreateSourceRecords() {
-        final AivenS3SourceRecord mockRecord = mock(AivenS3SourceRecord.class);
+        final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
         when(mockRecord.getTopic()).thenReturn("test-topic");
         when(mockRecord.key()).thenReturn("mock-key".getBytes(StandardCharsets.UTF_8));
         when(mockRecord.value()).thenReturn("mock-value".getBytes(StandardCharsets.UTF_8));
