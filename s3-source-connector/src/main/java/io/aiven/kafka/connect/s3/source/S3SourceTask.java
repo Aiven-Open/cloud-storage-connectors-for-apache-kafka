@@ -155,8 +155,8 @@ public class S3SourceTask extends SourceTask {
 
             while (!connectorStopped.get()) {
                 try {
-                    final int sizeOfExtractedRecs = extractSourceRecords(results).size();
-                    LOGGER.info("Number of records extracted and sent: {}", sizeOfExtractedRecs);
+                    extractSourceRecords(results);
+                    LOGGER.info("Number of records extracted and sent: {}", results.size());
                     return results;
                 } catch (AmazonS3Exception exception) {
                     if (exception.isRetryable()) {
