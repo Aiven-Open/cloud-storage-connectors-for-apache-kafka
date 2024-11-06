@@ -59,6 +59,8 @@ import org.testcontainers.utility.DockerImageName;
 public interface IntegrationBase {
 
     String DOCKER_IMAGE_KAFKA = "confluentinc/cp-kafka:7.7.0";
+    String PLUGINS_S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA = "plugins/s3-source-connector-for-apache-kafka/";
+    String S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST = "s3-source-connector-for-apache-kafka-test-";
 
     default AdminClient newAdminClient(final KafkaContainer kafka) {
         final Properties adminClientConfig = new Properties();
@@ -81,9 +83,9 @@ public interface IntegrationBase {
     }
 
     static File getPluginDir() throws IOException {
-        final File testDir = Files.createTempDirectory("s3-source-connector-for-apache-kafka-test-").toFile();
+        final File testDir = Files.createTempDirectory(S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST).toFile();
 
-        final File pluginDir = new File(testDir, "plugins/s3-source-connector-for-apache-kafka/");
+        final File pluginDir = new File(testDir, PLUGINS_S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA);
         assert pluginDir.mkdirs();
         return pluginDir;
     }
@@ -98,7 +100,7 @@ public interface IntegrationBase {
     }
 
     static String topicName(final TestInfo testInfo) {
-        return testInfo.getTestMethod().get().getName();// + "-" + testInfo.getDisplayName().hashCode();
+        return testInfo.getTestMethod().get().getName();
     }
 
     static void createTopics(final AdminClient adminClient, final List<String> topicNames)
