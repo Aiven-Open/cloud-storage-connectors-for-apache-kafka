@@ -16,26 +16,11 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
+import java.util.Properties;
 
-import org.apache.kafka.common.utils.Time;
-import org.apache.kafka.connect.runtime.Connect;
-import org.apache.kafka.connect.runtime.ConnectorConfig;
-import org.apache.kafka.connect.runtime.Herder;
-import org.apache.kafka.connect.runtime.Worker;
-import org.apache.kafka.connect.runtime.isolation.Plugins;
-import org.apache.kafka.connect.runtime.rest.RestServer;
-import org.apache.kafka.connect.runtime.rest.entities.ConnectorInfo;
-import org.apache.kafka.connect.runtime.standalone.StandaloneConfig;
-import org.apache.kafka.connect.runtime.standalone.StandaloneHerder;
-import org.apache.kafka.connect.storage.MemoryOffsetBackingStore;
-import org.apache.kafka.connect.util.FutureCallback;
+import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,25 +28,55 @@ import org.slf4j.LoggerFactory;
 final class ConnectRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectRunner.class);
 
-    private final File pluginDir;
-    private final String bootstrapServers;
-    private final int offsetFlushInterval;
+    private EmbeddedConnectCluster connectCluster;
 
-    private Herder herder;
-    private Connect connect;
+    private final int offsetFlushIntervalMs;
 
-    public ConnectRunner(final File pluginDir, final String bootstrapServers, final int offsetFlushIntervalMs) {
-        this.pluginDir = pluginDir;
-        this.bootstrapServers = bootstrapServers;
-        this.offsetFlushInterval = offsetFlushIntervalMs;
+    public ConnectRunner(final int offsetFlushIntervalMs) {
+        this.offsetFlushIntervalMs = offsetFlushIntervalMs;
     }
 
-    void start() throws IOException {
-        final Map<String, String> workerProps = new HashMap<>();
-        final File tempFile = File.createTempFile("connect", "offsets");
-        workerProps.put("bootstrap.servers", bootstrapServers);
+    void startConnectCluster(final String connectorName, final int localPort, final int containerPort) {
 
-        workerProps.put("offset.flush.interval.ms", Integer.toString(offsetFlushInterval));
+        final Properties brokerProperties = new Properties();
+        brokerProperties.put("advertised.listeners", "PLAINTEXT://localhost:" + localPort
+                + ",TESTCONATAINERS://host.testcontainers.internal:" + containerPort);
+        brokerProperties.put("listeners",
+                "PLAINTEXT://localhost:" + localPort + ",TESTCONATAINERS://localhost:" + containerPort);
+        brokerProperties.put("listener.security.protocol.map", "PLAINTEXT:PLAINTEXT,TESTCONATAINERS:PLAINTEXT");
+
+        connectCluster = new EmbeddedConnectCluster.Builder().name(connectorName)
+                .brokerProps(brokerProperties)
+                .workerProps(getWorkerProperties())
+                .build();
+        connectCluster.start();
+        LOGGER.info("connectCluster started");
+    }
+
+    String getBootstrapServers() {
+        return connectCluster.kafka().bootstrapServers();
+    }
+
+    void deleteConnector(final String connectorName) {
+        connectCluster.deleteConnector(connectorName);
+    }
+
+    void stopConnectCluster() {
+        // stop all Connect, Kafka and Zk threads.
+        if (connectCluster != null) {
+            connectCluster.stop();
+        }
+        LOGGER.info("connectCluster stopped");
+    }
+
+    String configureConnector(final String connName, final Map<String, String> connConfig) {
+        return connectCluster.configureConnector(connName, connConfig);
+    }
+
+    private Map<String, String> getWorkerProperties() {
+        final Map<String, String> workerProps = new HashMap<>();
+
+        workerProps.put("offset.flush.interval.ms", Integer.toString(offsetFlushIntervalMs));
 
         // These don't matter much (each connector sets its own converters), but need to be filled with valid classes.
         workerProps.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
@@ -71,50 +86,8 @@ final class ConnectRunner {
         workerProps.put("internal.value.converter", "org.apache.kafka.connect.json.JsonConverter");
         workerProps.put("internal.value.converter.schemas.enable", "true");
 
-        workerProps.put("offset.storage.file.filename", tempFile.getCanonicalPath());
+        workerProps.put("plugin.discovery", "hybrid_warn");
 
-        workerProps.put("plugin.path", pluginDir.getPath());
-
-        final Time time = Time.SYSTEM;
-        final String workerId = "test-worker";
-        final String kafkaClusterId = "test-cluster";
-
-        final Plugins plugins = new Plugins(workerProps);
-        final StandaloneConfig config = new StandaloneConfig(workerProps);
-
-        final Worker worker = new Worker(workerId, time, plugins, config, new MemoryOffsetBackingStore());
-        herder = new StandaloneHerder(worker, kafkaClusterId);
-
-        final RestServer rest = new RestServer(config);
-
-        connect = new Connect(herder, rest);
-
-        connect.start();
-    }
-
-    void createConnector(final Map<String, String> config) throws ExecutionException, InterruptedException {
-        assert herder != null;
-
-        final FutureCallback<Herder.Created<ConnectorInfo>> callback = new FutureCallback<>((error, info) -> {
-            if (error != null) {
-                LOGGER.error("Failed to create job");
-            } else {
-                LOGGER.info("Created connector {}", info.result().name());
-            }
-        });
-        herder.putConnectorConfig(config.get(ConnectorConfig.NAME_CONFIG), config, false, callback);
-
-        final Herder.Created<ConnectorInfo> connectorInfoCreated = callback.get();
-        assert connectorInfoCreated.created();
-        assertThat(connectorInfoCreated.result().config().get("connector.class"))
-                .isEqualTo(AivenKafkaConnectS3SourceConnector.class.getName());
-    }
-
-    void stop() {
-        connect.stop();
-    }
-
-    void awaitStop() {
-        connect.awaitStop();
+        return workerProps;
     }
 }
