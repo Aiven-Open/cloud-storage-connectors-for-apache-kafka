@@ -53,6 +53,9 @@ public class AivenCommonConfig extends AbstractConfig {
     private static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
     public static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
 
+    private static final String GROUP_OVERLOAD = "Overload Control";
+    private static final String OVERLOAD_MAX_RECORDS_HARD_LIMIT = "overload.hard.record.limit";
+
     protected AivenCommonConfig(final ConfigDef definition, final Map<?, ?> originals) {
         super(definition, originals);
         // TODO: calls getOutputFields, can be overridden in subclasses.
@@ -74,23 +77,23 @@ public class AivenCommonConfig extends AbstractConfig {
     protected static void addKafkaBackoffPolicy(final ConfigDef configDef) {
         configDef.define(KAFKA_RETRY_BACKOFF_MS_CONFIG, ConfigDef.Type.LONG, null, new ConfigDef.Validator() {
 
-            final long maximumBackoffPolicy = TimeUnit.HOURS.toMillis(24);
+                    final long maximumBackoffPolicy = TimeUnit.HOURS.toMillis(24);
 
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                if (Objects.isNull(value)) {
-                    return;
-                }
-                assert value instanceof Long;
-                final var longValue = (Long) value;
-                if (longValue < 0) {
-                    throw new ConfigException(name, value, "Value must be at least 0");
-                } else if (longValue > maximumBackoffPolicy) {
-                    throw new ConfigException(name, value,
-                            "Value must be no more than " + maximumBackoffPolicy + " (24 hours)");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM,
+                    @Override
+                    public void ensureValid(final String name, final Object value) {
+                        if (Objects.isNull(value)) {
+                            return;
+                        }
+                        assert value instanceof Long;
+                        final var longValue = (Long) value;
+                        if (longValue < 0) {
+                            throw new ConfigException(name, value, "Value must be at least 0");
+                        } else if (longValue > maximumBackoffPolicy) {
+                            throw new ConfigException(name, value,
+                                    "Value must be no more than " + maximumBackoffPolicy + " (24 hours)");
+                        }
+                    }
+                }, ConfigDef.Importance.MEDIUM,
                 "The retry backoff in milliseconds. "
                         + "This config is used to notify Kafka Connect to retry delivering a message batch or "
                         + "performing recovery in case of transient exceptions. Maximum value is "
@@ -103,7 +106,7 @@ public class AivenCommonConfig extends AbstractConfig {
     }
 
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
-            final OutputFieldType defaultFieldType) {
+                                                           final OutputFieldType defaultFieldType) {
         int formatGroupCounter = 0;
 
         addFormatTypeConfig(configDef, formatGroupCounter);
@@ -145,7 +148,7 @@ public class AivenCommonConfig extends AbstractConfig {
     }
 
     protected static void addCompressionTypeConfig(final ConfigDef configDef,
-            final CompressionType defaultCompressionType) {
+                                                   final CompressionType defaultCompressionType) {
         configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
                 Objects.isNull(defaultCompressionType) ? null : defaultCompressionType.name, // NOPMD NullAssignment
                 new FileCompressionTypeValidator(), ConfigDef.Importance.MEDIUM,
@@ -228,5 +231,17 @@ public class AivenCommonConfig extends AbstractConfig {
     private Boolean isKeyBased(final String groupType) {
         return RecordGrouperFactory.KEY_RECORD.equals(groupType)
                 || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
+    }
+
+    public long getBackPressureHardLimit() {
+        return getLong(OVERLOAD_MAX_RECORDS_HARD_LIMIT);
+    }
+
+    protected static void addOverloadConfigGroup(final ConfigDef configDef) {
+        int groupCounter = 0;
+
+        configDef.define(OVERLOAD_MAX_RECORDS_HARD_LIMIT, ConfigDef.Type.LONG, 1000000L, ConfigDef.Importance.MEDIUM,
+                "The maximum number of records to buffer before requesting a flush.", GROUP_OVERLOAD, groupCounter++,
+                ConfigDef.Width.NONE, OVERLOAD_MAX_RECORDS_HARD_LIMIT);
     }
 }

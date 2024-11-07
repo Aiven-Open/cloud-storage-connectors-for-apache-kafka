@@ -66,6 +66,9 @@ public final class S3SinkTask extends SinkTask {
 
     AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
 
+    private long backPressureHardLimit;
+    private long backPressureCurrentBuffer;
+
     @SuppressWarnings("PMD.UnnecessaryConstructor") // required by Connect
     public S3SinkTask() {
         super();
@@ -84,6 +87,7 @@ public final class S3SinkTask extends SinkTask {
         if (Objects.nonNull(config.getKafkaRetryBackoffMs())) {
             context.timeout(config.getKafkaRetryBackoffMs());
         }
+        backPressureHardLimit = config.getBackPressureHardLimit();
     }
 
     private AmazonS3 createAmazonS3Client(final S3SinkConfig config) {
@@ -110,6 +114,11 @@ public final class S3SinkTask extends SinkTask {
         Objects.requireNonNull(records, "records cannot be null");
         LOGGER.info("Processing {} records", records.size());
         records.forEach(recordGrouper::put);
+        backPressureCurrentBuffer += records.size();
+        if (backPressureCurrentBuffer >= backPressureHardLimit) {
+            LOGGER.warn("Back pressure limit reached, requesting flush");
+            context.requestCommit();
+        }
     }
 
     @Override
@@ -119,6 +128,7 @@ public final class S3SinkTask extends SinkTask {
         } finally {
             recordGrouper.clear();
         }
+        backPressureCurrentBuffer = 0;
     }
 
     private void flushFile(final String filename, final List<SinkRecord> records) {

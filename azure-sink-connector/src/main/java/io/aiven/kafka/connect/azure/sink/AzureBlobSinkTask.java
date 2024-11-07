@@ -57,6 +57,9 @@ public final class AzureBlobSinkTask extends SinkTask {
     private BlobContainerClient containerClient;
     private final Map<String, BlockBlobClient> blobClientMap = new ConcurrentHashMap<>();
 
+    private long backPressureHardLimit;
+    private long backPressureCurrentBuffer;
+
     // required by Connect
     public AzureBlobSinkTask() {
         super();
@@ -104,6 +107,7 @@ public final class AzureBlobSinkTask extends SinkTask {
         if (Objects.nonNull(config.getKafkaRetryBackoffMs())) {
             context.timeout(config.getKafkaRetryBackoffMs());
         }
+        backPressureHardLimit = config.getBackPressureHardLimit();
     }
 
     private void initRecordGrouper() {
@@ -122,6 +126,11 @@ public final class AzureBlobSinkTask extends SinkTask {
         for (final SinkRecord record : records) {
             recordGrouper.put(record);
         }
+        backPressureCurrentBuffer += records.size();
+        if (backPressureCurrentBuffer >= backPressureHardLimit) {
+            LOG.warn("Back pressure limit reached, requesting flush");
+            context.requestCommit();
+        }
     }
 
     @Override
@@ -131,6 +140,7 @@ public final class AzureBlobSinkTask extends SinkTask {
         } finally {
             recordGrouper.clear();
         }
+        backPressureCurrentBuffer = 0;
     }
 
     private void flushFile(final String filename, final List<SinkRecord> records) {

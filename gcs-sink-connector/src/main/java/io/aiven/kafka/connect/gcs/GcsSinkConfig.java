@@ -107,6 +107,7 @@ public final class GcsSinkConfig extends AivenCommonConfig {
         addKafkaBackoffPolicy(configDef);
         addGcsRetryPolicies(configDef);
         addUserAgentConfig(configDef);
+        addOverloadConfigGroup(configDef);
         return configDef;
     }
 

@@ -49,6 +49,8 @@ public final class GcsSinkTask extends SinkTask {
     private GcsSinkConfig config;
 
     private Storage storage;
+    private long backPressureHardLimit;
+    private long backPressureCurrentBuffer;
 
     // required by Connect
     public GcsSinkTask() {
@@ -88,6 +90,7 @@ public final class GcsSinkTask extends SinkTask {
         if (Objects.nonNull(config.getKafkaRetryBackoffMs())) {
             context.timeout(config.getKafkaRetryBackoffMs());
         }
+        backPressureHardLimit = config.getBackPressureHardLimit();
     }
 
     private void initRest() {
@@ -106,6 +109,11 @@ public final class GcsSinkTask extends SinkTask {
         for (final SinkRecord record : records) {
             recordGrouper.put(record);
         }
+        backPressureCurrentBuffer += records.size();
+        if (backPressureCurrentBuffer >= backPressureHardLimit) {
+            LOG.warn("Back pressure limit reached, requesting flush");
+            context.requestCommit();
+        }
     }
 
     @Override
@@ -115,6 +123,7 @@ public final class GcsSinkTask extends SinkTask {
         } finally {
             recordGrouper.clear();
         }
+        backPressureCurrentBuffer = 0;
     }
 
     private void flushFile(final String filename, final List<SinkRecord> records) {
