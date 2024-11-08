@@ -20,26 +20,19 @@ import java.util.List;
 
 import com.github.dockerjava.api.model.Ulimit;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.utility.Base58;
 
 public final class SchemaRegistryContainer extends GenericContainer<SchemaRegistryContainer> {
     public static final int SCHEMA_REGISTRY_PORT = 8081;
 
-    public SchemaRegistryContainer(final KafkaContainer kafka) {
-        this("5.0.4", kafka);
+    public SchemaRegistryContainer(final String bootstrapServer) {
+        this("5.0.4", bootstrapServer);
     }
 
-    public SchemaRegistryContainer(final String confluentPlatformVersion, final KafkaContainer kafka) {
+    public SchemaRegistryContainer(final String confluentPlatformVersion, final String bootstrapServer) {
         super("confluentinc/cp-schema-registry:" + confluentPlatformVersion);
-
-        dependsOn(kafka);
-        withNetwork(kafka.getNetwork());
-        withNetworkAliases("schema-registry-" + Base58.randomString(6));
-
-        withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS",
-                String.format("PLAINTEXT://%s:%s", kafka.getNetworkAliases().get(0), 9092));
-
+        withAccessToHost(true);
+        withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", "PLAINTEXT://" + bootstrapServer);
+        withEnv("SCHEMA_REGISTRY_LOG4J_LOGLEVEL=DEBUG", "DEBUG");
         withExposedPorts(SCHEMA_REGISTRY_PORT);
         withEnv("SCHEMA_REGISTRY_HOST_NAME", "localhost");
 

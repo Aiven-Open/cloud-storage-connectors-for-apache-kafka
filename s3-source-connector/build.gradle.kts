@@ -22,6 +22,7 @@ val amazonS3Version by extra("1.12.729")
 val amazonSTSVersion by extra("1.12.729")
 val s3mockVersion by extra("0.2.6")
 val parquetVersion by extra("1.14.3")
+val testKafkaVersion by extra("3.7.1")
 
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
@@ -148,7 +149,9 @@ dependencies {
 
   testRuntimeOnly(logginglibs.logback.classic)
 
-  integrationTestImplementation(testinglibs.localstack)
+  integrationTestImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testcontainers.localstack)
@@ -196,6 +199,12 @@ dependencies {
     exclude(group = "com.google.inject.extensions", module = "guice-servlet")
     exclude(group = "io.netty", module = "netty")
   }
+
+  integrationTestImplementation("org.apache.kafka:connect-runtime:${testKafkaVersion}:test")
+  integrationTestImplementation("org.apache.kafka:connect-runtime:${testKafkaVersion}")
+  integrationTestImplementation("org.apache.kafka:kafka-clients:${testKafkaVersion}:test")
+  integrationTestImplementation("org.apache.kafka:kafka_2.13:${testKafkaVersion}:test")
+  integrationTestImplementation("org.apache.kafka:kafka_2.13:${testKafkaVersion}")
 
   // Make test utils from 'test' available in 'integration-test'
   integrationTestImplementation(sourceSets["test"].output)
