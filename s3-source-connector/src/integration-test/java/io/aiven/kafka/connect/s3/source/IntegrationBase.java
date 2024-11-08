@@ -20,13 +20,16 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -47,7 +50,10 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.TestInfo;
@@ -56,9 +62,9 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
 public interface IntegrationBase {
-
-    String PLUGINS_S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA = "plugins/s3-source-connector-for-apache-kafka/";
-    String S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST = "s3-source-connector-for-apache-kafka-test-";
+    String PLUGINS_S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA = "plugins/s3-source-connector-for-apache-kafka/";
+    String S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST = "s3-source-connector-for-apache-kafka-test-";
+    ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     default AdminClient newAdminClient(final String bootstrapServers) {
         final Properties adminClientConfig = new Properties();
@@ -76,9 +82,9 @@ public interface IntegrationBase {
     }
 
     static File getPluginDir() throws IOException {
-        final File testDir = Files.createTempDirectory(S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST).toFile();
+        final File testDir = Files.createTempDirectory(S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST).toFile();
 
-        final File pluginDir = new File(testDir, PLUGINS_S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA);
+        final File pluginDir = new File(testDir, PLUGINS_S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA);
         assert pluginDir.mkdirs();
         return pluginDir;
     }
@@ -201,5 +207,36 @@ public interface IntegrationBase {
 
             return recordsList;
         }
+    }
+
+    static Map<String, Object> consumeOffsetStorageMessages(final String topic, final int expectedMessageCount,
+            final String bootstrapServer) throws ConnectException {
+        final Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        final Map<String, Object> messages = new HashMap<>();
+        Map<String, Object> offsetRec;
+        try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(Collections.singletonList(topic));
+
+            // Poll messages from the topic
+            while (messages.size() < expectedMessageCount) {
+                final ConsumerRecords<byte[], byte[]> records = consumer.poll(5L);
+                for (final ConsumerRecord<byte[], byte[]> record : records) {
+                    offsetRec = OBJECT_MAPPER.readValue(new String(record.value(), StandardCharsets.UTF_8), // NOPMD
+                            new TypeReference<>() { // NOPMD
+                            });
+                    messages.putAll(offsetRec);
+                }
+            }
+
+        } catch (JsonProcessingException e) {
+            throw new ConnectException("Error while consuming messages " + e.getMessage());
+        }
+        return messages;
     }
 }
