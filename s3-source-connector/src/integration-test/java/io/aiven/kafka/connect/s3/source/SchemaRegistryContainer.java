@@ -25,16 +25,27 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
     public static final int SCHEMA_REGISTRY_PORT = 8081;
 
     public SchemaRegistryContainer(final String bootstrapServer) {
-        this("5.0.4", bootstrapServer);
+        this("4.0.0", bootstrapServer);
     }
 
     public SchemaRegistryContainer(final String confluentPlatformVersion, final String bootstrapServer) {
         super("confluentinc/cp-schema-registry:" + confluentPlatformVersion);
         withAccessToHost(true);
-        withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", "PLAINTEXT://" + bootstrapServer);
-        withEnv("SCHEMA_REGISTRY_LOG4J_LOGLEVEL=DEBUG", "DEBUG");
+        withEnv("KARAPACE_ADVERTISED_HOSTNAME", "karapace-registry");
+        withEnv("KARAPACE_BOOTSTRAP_URI", "PLAINTEXT://" + bootstrapServer);
+        withEnv("KARAPACE_PORT", String.valueOf(SCHEMA_REGISTRY_PORT));
+        withEnv("KARAPACE_HOST", "localhost");
+        withEnv("KARAPACE_CLIENT_ID", "karapace");
+        withEnv("KARAPACE_GROUP_ID", "karapace-registry");
+        withEnv("KARAPACE_MASTER_ELIGIBILITY", "true");
+        withEnv("KARAPACE_TOPIC_NAME", "_schemas");
+        withEnv("KARAPACE_LOG_LEVEL", "DEBUG");
+        withEnv("KARAPACE_COMPATIBILITY", "FULL");
+        withEnv("KARAPACE_STATSD_HOST", "statsd-exporter");
+        withEnv("KARAPACE_STATSD_PORT", "8125");
+        withEnv("KARAPACE_KAFKA_SCHEMA_READER_STRICT_MODE", "false");
+        withEnv("KARAPACE_KAFKA_RETRIABLE_ERRORS_SILENCED", "true");
         withExposedPorts(SCHEMA_REGISTRY_PORT);
-        withEnv("SCHEMA_REGISTRY_HOST_NAME", "localhost");
 
         withCreateContainerCmdModifier(
                 cmd -> cmd.getHostConfig().withUlimits(List.of(new Ulimit("nofile", 30_000L, 30_000L))));
