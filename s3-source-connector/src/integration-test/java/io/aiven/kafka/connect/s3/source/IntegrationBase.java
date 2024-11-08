@@ -16,14 +16,20 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static org.awaitility.Awaitility.await;
+
 import java.io.File;
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -44,33 +50,26 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.github.dockerjava.api.model.Ulimit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import org.apache.avro.generic.GenericRecord;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.Container;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.Network;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
 public interface IntegrationBase {
+    String PLUGINS_S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA = "plugins/s3-source-connector-for-apache-kafka/";
+    String S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST = "s3-source-connector-for-apache-kafka-test-";
+    ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    String DOCKER_IMAGE_KAFKA = "confluentinc/cp-kafka:7.7.0";
-    String PLUGINS_S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA = "plugins/s3-source-connector-for-apache-kafka/";
-    String S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST = "s3-source-connector-for-apache-kafka-test-";
-
-    default AdminClient newAdminClient(final KafkaContainer kafka) {
+    default AdminClient newAdminClient(final String bootstrapServers) {
         final Properties adminClientConfig = new Properties();
-        adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         return AdminClient.create(adminClientConfig);
-    }
-
-    default ConnectRunner newConnectRunner(final KafkaContainer kafka, final File pluginDir,
-            final int offsetFlushIntervalMs) {
-        return new ConnectRunner(pluginDir, kafka.getBootstrapServers(), offsetFlushIntervalMs);
     }
 
     static void extractConnectorPlugin(File pluginDir) throws IOException, InterruptedException {
@@ -83,20 +82,11 @@ public interface IntegrationBase {
     }
 
     static File getPluginDir() throws IOException {
-        final File testDir = Files.createTempDirectory(S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST).toFile();
+        final File testDir = Files.createTempDirectory(S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST).toFile();
 
-        final File pluginDir = new File(testDir, PLUGINS_S_3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA);
+        final File pluginDir = new File(testDir, PLUGINS_S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA);
         assert pluginDir.mkdirs();
         return pluginDir;
-    }
-
-    static KafkaContainer createKafkaContainer() {
-        return new KafkaContainer(DockerImageName.parse(DOCKER_IMAGE_KAFKA))
-                .withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "false")
-                .withNetwork(Network.newNetwork())
-                .withExposedPorts(KafkaContainer.KAFKA_PORT, 9092)
-                .withCreateContainerCmdModifier(
-                        cmd -> cmd.getHostConfig().withUlimits(List.of(new Ulimit("nofile", 30_000L, 30_000L))));
     }
 
     static String topicName(final TestInfo testInfo) {
@@ -109,8 +99,8 @@ public interface IntegrationBase {
         adminClient.createTopics(newTopics).all().get();
     }
 
-    static void waitForRunningContainer(final Container<?> kafka) {
-        Awaitility.await().atMost(Duration.ofMinutes(1)).until(kafka::isRunning);
+    static void waitForRunningContainer(final Container<?> container) {
+        await().atMost(Duration.ofMinutes(1)).until(container::isRunning);
     }
 
     static AmazonS3 createS3Client(final LocalStackContainer localStackContainer) {
@@ -128,10 +118,18 @@ public interface IntegrationBase {
                 .withServices(LocalStackContainer.Service.S3);
     }
 
+    static int getRandomPort() throws IOException {
+        try (ServerSocket socket = new ServerSocket(0)) {
+            return socket.getLocalPort();
+        } catch (IOException e) {
+            throw new IOException("Failed to allocate port for test", e);
+        }
+    }
+
     static List<String> consumeMessages(final String topic, final int expectedMessageCount,
-            final KafkaContainer kafka) {
+            final String bootstrapServers) {
         final Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
@@ -154,9 +152,9 @@ public interface IntegrationBase {
     }
 
     static List<GenericRecord> consumeAvroMessages(final String topic, final int expectedMessageCount,
-            final KafkaContainer kafka, final String schemaRegistryUrl) {
+            final String bootstrapServers, final String schemaRegistryUrl) {
         final Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group-avro");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()); // Assuming string
                                                                                                      // key
@@ -184,10 +182,10 @@ public interface IntegrationBase {
     }
 
     static List<JsonNode> consumeJsonMessages(final String topic, final int expectedMessageCount,
-            final KafkaContainer kafka) {
+            final String bootstrapServers) {
         final Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group-avro");
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group-json");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName()); // Assuming string
         // key
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class.getName()); // Json
@@ -209,5 +207,36 @@ public interface IntegrationBase {
 
             return recordsList;
         }
+    }
+
+    static Map<String, Object> consumeOffsetStorageMessages(final String topic, final int expectedMessageCount,
+            final String bootstrapServer) throws ConnectException {
+        final Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServer);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        final Map<String, Object> messages = new HashMap<>();
+        Map<String, Object> offsetRec;
+        try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(Collections.singletonList(topic));
+
+            // Poll messages from the topic
+            while (messages.size() < expectedMessageCount) {
+                final ConsumerRecords<byte[], byte[]> records = consumer.poll(5L);
+                for (final ConsumerRecord<byte[], byte[]> record : records) {
+                    offsetRec = OBJECT_MAPPER.readValue(new String(record.value(), StandardCharsets.UTF_8), // NOPMD
+                            new TypeReference<>() { // NOPMD
+                            });
+                    messages.putAll(offsetRec);
+                }
+            }
+
+        } catch (JsonProcessingException e) {
+            throw new ConnectException("Error while consuming messages " + e.getMessage());
+        }
+        return messages;
     }
 }
