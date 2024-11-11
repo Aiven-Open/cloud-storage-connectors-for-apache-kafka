@@ -445,13 +445,16 @@ public final class GcsSinkConfig extends AivenCommonConfig {
     }
 
     public ApiTracerFactory getApiTracerFactory() {
-        if (getClass(GCS_METRICS) == null) {
+        final Class<?> cls = getClass(GCS_METRICS);
+        if (cls == null) {
             return null;
         }
         try {
-            return getClass(GCS_METRICS).asSubclass(ApiTracerFactory.class).getDeclaredConstructor().newInstance();
+            return cls.asSubclass(ApiTracerFactory.class).getDeclaredConstructor().newInstance();
         } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
+            var ex =  new ConfigException("Failed to create GCS metrics for "+cls+" : " + e.getMessage());
+            ex.initCause(e);
+            throw ex;
         }
     }
 }
