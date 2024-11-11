@@ -29,18 +29,13 @@ public class AivenCommonConfig extends SinkCommonConfig {
         super(definition, originals);
     }
 
-    protected static void addKafkaBackoffPolicy(final ConfigDef configDef) {
-        SinkCommonConfig.addKafkaBackoffPolicy(configDef);
-    }
+
 
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
             final OutputFieldType defaultFieldType) {
         SinkCommonConfig.addOutputFieldsFormatConfigGroup(configDef, defaultFieldType);
     }
 
-    protected static void addFormatTypeConfig(final ConfigDef configDef, final int formatGroupCounter) {
-        SinkCommonConfig.addFormatTypeConfig(configDef, formatGroupCounter);
-    }
 
     protected static void addCompressionTypeConfig(final ConfigDef configDef,
             final CompressionType defaultCompressionType) {
