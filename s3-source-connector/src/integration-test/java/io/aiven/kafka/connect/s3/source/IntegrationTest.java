@@ -163,16 +163,11 @@ final class IntegrationTest implements IntegrationBase {
         final Set<String> offsetKeys = new HashSet<>();
 
         // write 2 objects to s3
-        String offsetKey = writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000");
-        offsetKeys.add(offsetKey);
-        offsetKey = writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000");
-        offsetKeys.add(offsetKey);
-        offsetKey = writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001");
-        offsetKeys.add(offsetKey);
-        offsetKey = writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001");
-        offsetKeys.add(offsetKey);
-        offsetKey = writeToS3(topicName, new byte[0], "00003"); // this should be ignored.
-        offsetKeys.add(offsetKey);
+        offsetKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
+        offsetKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
+        offsetKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
+        offsetKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
+        offsetKeys.add(writeToS3(topicName, new byte[0], "00003"));
 
         final List<String> objects = testBucketAccessor.listObjects();
         assertThat(objects.size()).isEqualTo(5);
@@ -206,8 +201,7 @@ final class IntegrationTest implements IntegrationBase {
 
         final Set<String> offsetKeys = new HashSet<>();
 
-        final String offsetKey = writeToS3(topicName, testData.getBytes(StandardCharsets.UTF_8), "00000");
-        offsetKeys.add(offsetKey);
+        offsetKeys.add(writeToS3(topicName, testData.getBytes(StandardCharsets.UTF_8), "00000"));
 
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeMessages(topicName, 5, connectRunner.getBootstrapServers());
@@ -248,16 +242,11 @@ final class IntegrationTest implements IntegrationBase {
 
         final Set<String> offsetKeys = new HashSet<>();
 
-        String offsetKey = writeToS3(topicName, outputStream1.toByteArray(), "00001");
-        offsetKeys.add(offsetKey);
-        offsetKey = writeToS3(topicName, outputStream2.toByteArray(), "00001");
-        offsetKeys.add(offsetKey);
-        offsetKey = writeToS3(topicName, outputStream1.toByteArray(), "00002");
-        offsetKeys.add(offsetKey);
-        offsetKey = writeToS3(topicName, outputStream2.toByteArray(), "00002");
-        offsetKeys.add(offsetKey);
-        offsetKey = writeToS3(topicName, outputStream2.toByteArray(), "00002");
-        offsetKeys.add(offsetKey);
+        offsetKeys.add(writeToS3(topicName, outputStream1.toByteArray(), "00001"));
+        offsetKeys.add(writeToS3(topicName, outputStream2.toByteArray(), "00001"));
+        offsetKeys.add(writeToS3(topicName, outputStream1.toByteArray(), "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream2.toByteArray(), "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream2.toByteArray(), "00002"));
 
         final List<String> objects = testBucketAccessor.listObjects();
         assertThat(objects.size()).isEqualTo(5);
@@ -329,8 +318,7 @@ final class IntegrationTest implements IntegrationBase {
         final byte[] jsonBytes = jsonBuilder.toString().getBytes(StandardCharsets.UTF_8);
         final Set<String> offsetKeys = new HashSet<>();
 
-        final String offsetKey = writeToS3(topicName, jsonBytes, "00001");
-        offsetKeys.add(offsetKey);
+        offsetKeys.add(writeToS3(topicName, jsonBytes, "00001"));
         // Poll Json messages from the Kafka topic and deserialize them
         final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 500,
                 connectRunner.getBootstrapServers());
