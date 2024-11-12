@@ -66,8 +66,8 @@ public final class RecordProcessor {
 
     static SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord, final S3SourceConfig s3SourceConfig,
             final Optional<Converter> keyConverter, final Converter valueConverter,
-            final Map<String, String> conversionConfig, final Transformer transformer, final Set<String> failedObjectKeys,
-            final OffsetManager offsetManager) {
+            final Map<String, String> conversionConfig, final Transformer transformer,
+            final Set<String> failedObjectKeys, final OffsetManager offsetManager) {
 
         final String topic = s3SourceRecord.getTopic();
         final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(topic, s3SourceRecord.key()));

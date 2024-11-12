@@ -31,8 +31,8 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.collections4.IteratorUtils;
 
 /**
- * Class to read the S3 connection and return lists of object summaries.
- * Package private so that is it not a public interface.
+ * Class to read the S3 connection and return lists of object summaries. Package private so that is it not a public
+ * interface.
  */
 public class FileReader {
 
@@ -44,9 +44,13 @@ public class FileReader {
 
     /**
      * Concstructs the File reader
-     * @param s3SourceConfig the S3Source configuration to use to access S3.
-     * @param bucketName the bucket name to retrive
-     * @param failedObjectKeys The set of failed object keys.
+     *
+     * @param s3SourceConfig
+     *            the S3Source configuration to use to access S3.
+     * @param bucketName
+     *            the bucket name to retrive
+     * @param failedObjectKeys
+     *            The set of failed object keys.
      */
     public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName,
             final Set<String> failedObjectKeys) {
@@ -57,16 +61,20 @@ public class FileReader {
 
     /**
      * Creates an iterator over the files in S3.
-     * @param s3Client The client.
+     *
+     * @param s3Client
+     *            The client.
      * @return An iterator.
      */
     Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) {
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
                 .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR);
 
-        // the predicate to filter the results of the base iterator.  Additional filters can be applied with Predicate.or and/or Predicate.and
+        // the predicate to filter the results of the base iterator. Additional filters can be applied with Predicate.or
+        // and/or Predicate.and
         // this predicate removes empty document and any that are already listed in the failedObjectKeys
-        final Predicate<S3ObjectSummary> filter = objectSummary -> objectSummary.getSize() > 0 && !failedObjectKeys.contains(objectSummary.getKey());
+        final Predicate<S3ObjectSummary> filter = objectSummary -> objectSummary.getSize() > 0
+                && !failedObjectKeys.contains(objectSummary.getKey());
 
         final S3ObjectSummaryIterator s3ObjectSummaryIterator = new S3ObjectSummaryIterator(s3Client, request);
 

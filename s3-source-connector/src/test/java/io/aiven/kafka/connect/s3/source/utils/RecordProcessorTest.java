@@ -73,7 +73,7 @@ class RecordProcessorTest {
     void setUp() {
         connectorStopped = new AtomicBoolean(false);
         sourceRecordIterator = mock(Iterator.class);
-        failedObjectKeys =  new HashSet<>();
+        failedObjectKeys = new HashSet<>();
     }
 
     @Test
@@ -150,7 +150,8 @@ class RecordProcessorTest {
         when(mockRecord.getSourceRecord(anyString(), any(), any())).thenReturn(mock(SourceRecord.class));
 
         final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig,
-                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, failedObjectKeys, offsetManager);
+                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, failedObjectKeys,
+                offsetManager);
 
         assertThat(sourceRecords).isNotNull();
     }
