@@ -48,7 +48,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
     private String currentObjectKey;
 
-    private Iterator<String> objectListIterator;
+    private final Iterator<S3ObjectSummary> s3ObjectSummaryIterator;
     private Iterator<S3SourceRecord> recordIterator = Collections.emptyIterator();
 
     private final OffsetManager offsetManager;
@@ -73,18 +73,15 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     }
 
     private void nextS3Object() {
-        if (!objectListIterator.hasNext()) {
-            // Start after the object Key we have just finished with.
-            objectListIterator = sourceClient.getListOfObjectKeys(currentObjectKey);
-            if (!objectListIterator.hasNext()) {
-                recordIterator = Collections.emptyIterator();
-                return;
-            }
+        if (!s3ObjectSummaryIterator.hasNext()) {
+            recordIterator = Collections.emptyIterator();
+            return;
         }
 
         try {
-            currentObjectKey = objectListIterator.next();
-            if (currentObjectKey != null) {
+            final S3ObjectSummary file = s3ObjectSummaryIterator.next();
+            if (file != null) {
+                currentObjectKey = file.getKey();
                 recordIterator = createIteratorForCurrentFile();
             }
         } catch (IOException e) {
@@ -199,7 +196,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     @Override
     public boolean hasNext() {
-        return recordIterator.hasNext() || objectListIterator.hasNext();
+        return recordIterator.hasNext() || s3ObjectSummaryIterator.hasNext();
     }
 
     @Override
