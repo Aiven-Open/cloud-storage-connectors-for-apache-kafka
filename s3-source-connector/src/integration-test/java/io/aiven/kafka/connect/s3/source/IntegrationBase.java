@@ -218,8 +218,8 @@ public interface IntegrationBase {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-        final Map<String, Object> messages = new HashMap<>();
         try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(props)) {
+            final Map<String, Object> messages = new HashMap<>();
             consumer.subscribe(Collections.singletonList(topic));
 
             // Poll messages from the topic
@@ -231,10 +231,10 @@ public interface IntegrationBase {
                             }));
                 }
             }
+            return messages;
 
         } catch (JsonProcessingException e) {
             throw new ConnectException("Error while consuming messages " + e.getMessage());
         }
-        return messages;
     }
 }
