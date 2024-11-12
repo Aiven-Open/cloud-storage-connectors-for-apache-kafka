@@ -574,8 +574,8 @@ final public class S3SinkConfig extends AivenCommonConfig {
     /**
      * Gets the list of output fields.
      * Will check {@link AivenCommonConfig#FORMAT_OUTPUT_FIELDS_CONFIG} and then {@link #OUTPUT_FIELDS}.  If neither
-     * is set will cereate an output field of {@link OutputField(OutputFieldType#VALUE} and
-     * {@Link OutputFieldEncodingType#BASE64}.
+     * is set will cereate an output field of {@link OutputFieldType#VALUE} and
+     * {@link OutputFieldEncodingType#BASE64}.
      * @return The list of output fields.  WIll not be {@code null}.
      */
     @Override
