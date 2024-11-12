@@ -571,19 +571,34 @@ final public class S3SinkConfig extends AivenCommonConfig {
         return CompressionType.GZIP;
     }
 
+    /**
+     * Gets the list of output fields.
+     * Will check {@link AivenCommonConfig#FORMAT_OUTPUT_FIELDS_CONFIG} and then {@link #OUTPUT_FIELDS}.  If neither
+     * is set will cereate an output field of {@link OutputField(OutputFieldType#VALUE} and
+     * {@Link OutputFieldEncodingType#BASE64}.
+     * @return The list of output fields.  WIll not be {@code null}.
+     */
     @Override
     public List<OutputField> getOutputFields() {
-        if (Objects.nonNull(getList(FORMAT_OUTPUT_FIELDS_CONFIG))
-                && !get(FORMAT_OUTPUT_FIELDS_CONFIG).equals(ConfigDef.NO_DEFAULT_VALUE)) {
-            return getOutputFields(FORMAT_OUTPUT_FIELDS_CONFIG);
+        List<OutputField> result = getOutputFields(FORMAT_OUTPUT_FIELDS_CONFIG);
+        if (result == null) {
+            result = getOutputFields(OUTPUT_FIELDS);
+            if (result == null) {
+               result = List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
+            }
         }
-        if (Objects.nonNull(getList(OUTPUT_FIELDS)) && !get(OUTPUT_FIELDS).equals(ConfigDef.NO_DEFAULT_VALUE)) {
-            return getOutputFields(OUTPUT_FIELDS);
-        }
-        return List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
+        return result;
     }
 
+    /**
+     * Gets the list of output fields for the specified name
+     * @param format the name of the configuration key to check.
+     * @return a list of output fields as defined in the configuration or {@code null} if not defined.
+     */
     public List<OutputField> getOutputFields(final String format) {
+        if (get(format) == null) {
+            return null;
+        }
         return getList(format).stream().map(fieldName -> {
             final var type = OutputFieldType.forName(fieldName);
             final var encoding = type == OutputFieldType.KEY || type == OutputFieldType.VALUE
