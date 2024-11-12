@@ -17,22 +17,18 @@
 package io.aiven.kafka.connect.common.config;
 
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 public abstract class CommonConfig extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";
     protected static final String GROUP_FORMAT = "Format";
-
 
     /**
      * @deprecated No longer needed.
      */
     @Deprecated
-    protected static void addKafkaBackoffPolicy(final ConfigDef configDef) {
+    protected static void addKafkaBackoffPolicy(final ConfigDef configDef) { // NOPMD
         // not required since it is loaded in
     }
 

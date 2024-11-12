@@ -43,19 +43,22 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-<<<<<<< HEAD
+
 import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import io.aiven.kafka.connect.s3.S3CommonConfig;
-=======
-import io.aiven.kafka.connect.common.config.*;
->>>>>>> 1cc9fdf (partial refactoring)
+
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.OutputField;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.common.config.TimestampSource;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
-import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.templating.Template;
@@ -248,22 +251,15 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
      */
     @Override
     public List<OutputField> getOutputFields() {
-<<<<<<< HEAD
-        if (get(FORMAT_OUTPUT_FIELDS_CONFIG) != null) {
-            return getOutputFields(FORMAT_OUTPUT_FIELDS_CONFIG);
-        }
-        if (get(OUTPUT_FIELDS) != null) {
-            return getOutputFields(OUTPUT_FIELDS);
-        }
-        return List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
-=======
         List<OutputField> result = super.getOutputFields();
 
         if (result == null) {
             result = new OutputFormatFragment(this).getOutputFields(OUTPUT_FIELDS);
         }
-        return result != null ? result :  List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
->>>>>>> 1cc9fdf (partial refactoring)
+
+        return result != null
+                ? result
+                : List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
     }
 
     /**
@@ -284,12 +280,12 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
     }
 
     // TODO : remove this
-//    @Override
-//    public OutputFieldEncodingType getOutputFieldEncodingType() {
-//        return Objects.nonNull(getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG))
-//                ? OutputFieldEncodingType.forName(getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG))
-//                : OutputFieldEncodingType.BASE64;
-//    }
+    // @Override
+    // public OutputFieldEncodingType getOutputFieldEncodingType() {
+    // return Objects.nonNull(getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG))
+    // ? OutputFieldEncodingType.forName(getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG))
+    // : OutputFieldEncodingType.BASE64;
+    // }
 
     public Template getPrefixTemplate() {
         final var template = Template.of(getAwsS3Prefix());

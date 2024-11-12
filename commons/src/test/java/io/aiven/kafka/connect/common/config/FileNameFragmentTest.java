@@ -1,13 +1,25 @@
+/*
+ * Copyright 2024 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.connect.common.config;
 
-
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -18,130 +30,138 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 
-public class FileNameFragmentTest {
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+public class FileNameFragmentTest {// NOPMD
 
     /**
      * An enumeration to expose the FileNameFragment properties names to test cases
      */
     public enum FileNameArgs {
-        GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG),
-        FILE_MAX_RECORDS(FileNameFragment.FILE_MAX_RECORDS),
-        FILE_NAME_TIMESTAMP_TIMEZONE(FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE),
-        FILE_NAME_TIMESTAMP_SOURCE(FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE),
-        FILE_NAME_TEMPLATE_CONFIG(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG),
-        DEFAULT_FILENAME_TEMPLATE(FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
-        String key;
+        GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
+                FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
+                FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
+                FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(
+                FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE), FILE_NAME_TEMPLATE_CONFIG(
+                FileNameFragment.FILE_NAME_TEMPLATE_CONFIG), DEFAULT_FILENAME_TEMPLATE(
+                FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
+        private final String keyValue;
 
-        FileNameArgs(String key) {
-            this.key = key;
+        FileNameArgs(final String key) {
+            this.keyValue = key;
         }
 
         public String key() {
-            return key;
+            return keyValue;
         }
     }
 
-    @ParameterizedTest( name = "{index} {0}")
+    @ParameterizedTest(name = "{index} {0}")
     @MethodSource("configDefSource")
-    public void configDefTest(FileNameArgs arg, ConfigDef.Type type, Object defaultValue, boolean validatorPresent, ConfigDef.Importance importance,  String group, int orderInGroup, ConfigDef.Width width, boolean recommenderPresent ) {
-        ConfigDef configDef = FileNameFragment.update(new ConfigDef());
-        ConfigDef.ConfigKey key = configDef.configKeys().get(arg.key());
+    void configDefTest(final FileNameArgs arg, final ConfigDef.Type type, final Object defaultValue,
+                       final boolean validatorPresent, final ConfigDef.Importance importance, final String group,
+                       final int orderInGroup, final ConfigDef.Width width, final boolean recommenderPresent) {
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final ConfigDef.ConfigKey key = configDef.configKeys().get(arg.key());
 
         assertEquals(arg.key(), key.name, "Wrong key name");
         assertEquals(type, key.type, "Wrong key type");
         assertEquals(defaultValue, key.defaultValue, "Wrong default value");
-        assertEquals(validatorPresent, key.validator != null, () -> String.format("Validator was %spresent.", key.validator == null ? "not " : ""));
+        assertEquals(validatorPresent, key.validator != null,
+                () -> String.format("Validator was %spresent.", key.validator == null ? "not " : ""));
         assertEquals(importance, key.importance, "Wrong importance");
         assertNotNull(key.documentation, "Documenttion not included");
         assertEquals(group, key.group, "Wrong group");
         assertEquals(orderInGroup, key.orderInGroup, "Wrong order in group");
         assertEquals(width, key.width, "Wrong width");
         assertEquals(key.name, key.displayName);
-        assertEquals(recommenderPresent, key.recommender != null, () -> String.format("Recommender was %spresent.", key.recommender == null ? "not " : ""));
+        assertEquals(recommenderPresent, key.recommender != null,
+                () -> String.format("Recommender was %spresent.", key.recommender == null ? "not " : ""));
     }
 
     @Test
-    public void allConfigDefsAccountForTest() {
+    void allConfigDefsAccountForTest() {
         // create a modifiable list.
-        List<FileNameArgs> argList = new ArrayList<>(Arrays.asList(FileNameArgs.values()));
+        final List<FileNameArgs> argList = new ArrayList<>(Arrays.asList(FileNameArgs.values()));
         // remove the non-argument values
         argList.remove(FileNameArgs.GROUP_FILE);
         argList.remove(FileNameArgs.DEFAULT_FILENAME_TEMPLATE);
-        configDefSource().map(a -> (FileNameArgs)(a.get()[0])).forEach(argList::remove);
-        assertTrue(argList.isEmpty(), () -> "Tests do not process the following arguments: " + String.join(", ", argList.stream().map(arg -> arg.toString()).collect(Collectors.toList())));
+        configDefSource().map(a -> (FileNameArgs) (a.get()[0])).forEach(argList::remove);
+        assertTrue(argList.isEmpty(), () -> "Tests do not process the following arguments: "
+                + String.join(", ", argList.stream().map(arg -> arg.toString()).collect(Collectors.toList())));
     }
 
-    private static Stream<Arguments> configDefSource(){
-        List<Arguments> args = new ArrayList<>();
+    private static Stream<Arguments> configDefSource() {
+        final List<Arguments> args = new ArrayList<>();
 
-        args.add(Arguments.of( FileNameArgs.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, true, ConfigDef.Importance.MEDIUM,
-                FileNameArgs.GROUP_FILE.key(), 0, ConfigDef.Width.LONG, false));
+        args.add(Arguments.of(FileNameArgs.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, true,
+                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 0, ConfigDef.Width.LONG, false));
 
-       args.add(Arguments.of(FileNameArgs.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true, ConfigDef.Importance.MEDIUM,
-               FileNameArgs.GROUP_FILE.key(), 1, ConfigDef.Width.NONE, true));
+        args.add(Arguments.of(FileNameArgs.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
+                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 1, ConfigDef.Width.NONE, true));
 
         args.add(Arguments.of(FileNameArgs.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM,
                 FileNameArgs.GROUP_FILE.key(), 2, ConfigDef.Width.SHORT, false));
 
-        args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW,
-                FileNameArgs.GROUP_FILE.key(), 3, ConfigDef.Width.SHORT, false));
+        args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
+                ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 3,
+                ConfigDef.Width.SHORT, false));
 
-
-        args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW,
-                FileNameArgs.GROUP_FILE.key(), 4, ConfigDef.Width.SHORT, false));
+        args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING,
+                TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 4,
+                ConfigDef.Width.SHORT, false));
 
         return args.stream();
     }
 
     @Test
-    public void validateTest() {
-        ConfigDef configDef = FileNameFragment.update(OutputFormatFragment.update(new ConfigDef(), null));
-        Map<String, String> props = new HashMap<>();
+    void validateTest() {
+        final ConfigDef configDef = FileNameFragment.update(OutputFormatFragment.update(new ConfigDef(), null));
+        final Map<String, String> props = new HashMap<>();
         props.put(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, "my-file-name-template-{{key}}");
         props.put(FileNameFragment.FILE_MAX_RECORDS, "50");
-        AbstractConfig cfg = new AbstractConfig(configDef, props);
-
-        FileNameFragment underTest = new FileNameFragment(cfg);
+        final AbstractConfig cfg = new AbstractConfig(configDef, props);
+        final FileNameFragment underTest = new FileNameFragment(cfg);
         assertThrows(ConfigException.class, () -> underTest.validate());
     }
 
-    @ParameterizedTest( name = "{index} {0}")
+    @ParameterizedTest(name = "{index} {0}")
     @MethodSource("fieldNameSource")
-    public void getFilenameTest(String expected, Map<String,String> props) {
-        ConfigDef configDef = FileNameFragment.update(OutputFormatFragment.update(new ConfigDef(), null));
-        AbstractConfig cfg = new AbstractConfig(configDef, props);
-
-        FileNameFragment underTest = new FileNameFragment(cfg);
+    void testGetFilename(final String expected, final Map<String, String> props) {
+        final ConfigDef configDef = FileNameFragment.update(OutputFormatFragment.update(new ConfigDef(), null));
+        final AbstractConfig cfg = new AbstractConfig(configDef, props);
+        final FileNameFragment underTest = new FileNameFragment(cfg);
         assertEquals(expected, underTest.getFilename());
     }
 
-    private  static Stream<Arguments> fieldNameSource() {
-        List<Arguments> args = new ArrayList<>();
+    private static Stream<Arguments> fieldNameSource() {
+        final List<Arguments> args = new ArrayList<>();
+        // we have to make new instances of props or the tests will fail.
         Map<String, String> props = new HashMap<>();
-        props.put(FileNameArgs.FILE_NAME_TEMPLATE_CONFIG.key, "my-file-name-template-{{key}}");
+        props.put(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, "my-file-name-template-{{key}}");
         args.add(Arguments.of("my-file-name-template-{{key}}", props));
 
         props = new HashMap<>();
         props.put(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.CSV.name);
-        args.add(Arguments.of(FileNameArgs.DEFAULT_FILENAME_TEMPLATE.key, props));
+        args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE, props));
 
-        for (CompressionType compressionType : CompressionType.values()) {
-            props = new HashMap<>();
-            props.put(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.CSV.name);
-            props.put(CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name);
-            args.add(Arguments.of(FileNameArgs.DEFAULT_FILENAME_TEMPLATE.key + compressionType.extension(), props));
+        for (final CompressionType compressionType : CompressionType.values()) {
+            args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + compressionType.extension(),
+                    Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.CSV.name,
+                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
-        for (CompressionType compressionType : CompressionType.values()) {
-            props = new HashMap<>();
-            props.put(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.AVRO.name);
-            props.put(CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name);
-            args.add(Arguments.of(FileNameArgs.DEFAULT_FILENAME_TEMPLATE.key + ".avro" + compressionType.extension(), props));
+        for (final CompressionType compressionType : CompressionType.values()) {
+            args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + ".avro" + compressionType.extension(),
+                    Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.AVRO.name,
+                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         return args.stream();
@@ -149,19 +169,18 @@ public class FileNameFragmentTest {
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("fieldNameSource")
-    public void getFilenameTemplateTest(String expected, Map<String,String> props) {
-        ConfigDef configDef = FileNameFragment.update(OutputFormatFragment.update(new ConfigDef(), null));
-        AbstractConfig cfg = new AbstractConfig(configDef, props);
-
-        FileNameFragment underTest = new FileNameFragment(cfg);
+    void testGetFilenameTemplate(final String expected, final Map<String, String> props) {
+        final ConfigDef configDef = FileNameFragment.update(OutputFormatFragment.update(new ConfigDef(), null));
+        final AbstractConfig cfg = new AbstractConfig(configDef, props);
+        final FileNameFragment underTest = new FileNameFragment(cfg);
         // template does not implement equality
         assertEquals(expected, underTest.getFilenameTemplate().originalTemplate());
     }
 
     @Test
-    public void getFilenameTimezoneTest() {
+    void testGetFilenameTimezone() {
         final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
-        Map<String, String> props = new HashMap<>();
+        final Map<String, String> props = new HashMap<>();
         props.put(FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE, "Europe/Dublin");
         AbstractConfig cfg = new AbstractConfig(configDef, props);
         FileNameFragment underTest = new FileNameFragment(cfg);
@@ -178,14 +197,13 @@ public class FileNameFragmentTest {
     }
 
     @Test
-    public void getFilenameTimestampSource() {
+    void testGetFilenameTimestampSource() {
         final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
-        Map<String, String> props = new HashMap<>();
+        final Map<String, String> props = new HashMap<>();
         AbstractConfig cfg = new AbstractConfig(configDef, props);
         FileNameFragment underTest = new FileNameFragment(cfg);
         TimestampSource src = underTest.getFilenameTimestampSource();
         assertEquals(TimestampSource.Type.WALLCLOCK, src.type());
-
 
         props.put(FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE, TimestampSource.Type.EVENT.name());
         cfg = new AbstractConfig(configDef, props);
@@ -198,9 +216,9 @@ public class FileNameFragmentTest {
     }
 
     @Test
-    public void getMaxRecordsPerFile() {
+    void testGetMaxRecordsPerFile() {
         final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
-        Map<String, String> props = new HashMap<>();
+        final Map<String, String> props = new HashMap<>();
         AbstractConfig cfg = new AbstractConfig(configDef, props);
         FileNameFragment underTest = new FileNameFragment(cfg);
         int count = underTest.getMaxRecordsPerFile();
@@ -217,6 +235,7 @@ public class FileNameFragmentTest {
 
         props.put(FileNameFragment.FILE_MAX_RECORDS, "-1");
         assertThrows(ConfigException.class, () -> new AbstractConfig(configDef, props));
+
     }
 
 }

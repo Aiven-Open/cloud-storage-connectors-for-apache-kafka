@@ -30,22 +30,16 @@ public class AivenCommonConfig extends SinkCommonConfig {
     public static final String FORMAT_OUTPUT_ENVELOPE_CONFIG = "format.output.envelope";
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
-    public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
-    public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
-    public static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
 
     protected AivenCommonConfig(final ConfigDef definition, final Map<?, ?> originals) {
         super(definition, originals);
     }
 
-
-
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
             final OutputFieldType defaultFieldType) {
         SinkCommonConfig.addOutputFieldsFormatConfigGroup(configDef, defaultFieldType);
     }
-
 
     protected static void addCompressionTypeConfig(final ConfigDef configDef,
             final CompressionType defaultCompressionType) {

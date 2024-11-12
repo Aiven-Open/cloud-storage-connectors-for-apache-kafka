@@ -16,13 +16,13 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
-
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 
 public abstract class CommonConfigFragment extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";

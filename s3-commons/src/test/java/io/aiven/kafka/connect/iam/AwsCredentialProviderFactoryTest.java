@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.aiven.kafka.connect.s3.S3CommonConfig;
-import io.aiven.kafka.connect.s3.S3SinkBaseConfig;
 import io.aiven.kafka.connect.tools.AwsCredentialBaseConfig;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -41,7 +40,6 @@ final class AwsCredentialProviderFactoryTest {
         factory = new AwsCredentialProviderFactory();
         props = new HashMap<>();
         props.put(S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
-        props.put(S3SinkBaseConfig.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
     }
 
     @Test

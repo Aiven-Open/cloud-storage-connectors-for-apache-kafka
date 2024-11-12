@@ -17,19 +17,11 @@
 package io.aiven.kafka.connect.common.config;
 
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
-import io.aiven.kafka.connect.common.config.validators.OutputFieldsEncodingValidator;
-import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
-import io.aiven.kafka.connect.common.config.validators.OutputTypeValidator;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.templating.Template;
 
@@ -40,75 +32,47 @@ public abstract class SinkCommonConfig extends CommonConfig {
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
-    private FileNameFragment fileNameFragment;
+    private final FileNameFragment fileNameFragment;
+    private final OutputFormatFragment outputFormatFragment;
     @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
     public SinkCommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
-        super(update(definition), originals);
-//        Construct FileNameFragment
+        super(definition, originals);
+        // Construct FileNameFragment
         fileNameFragment = new FileNameFragment(this);
+        outputFormatFragment = new OutputFormatFragment(this);
         // TODO: calls getOutputFields, can be overridden in subclasses.
         validate(); // NOPMD ConstructorCallsOverridableMethod
     }
 
-    private static ConfigDef update(final ConfigDef def) {
-        return FileNameFragment.update(def);
-    }
-
     private void validate() {
-        new OutputFormatFragment(this).validate();
+        outputFormatFragment.validate();
         fileNameFragment.validate();
     }
 
-    /**
-     * @deprecated use {@link OutputFormatFragment#update(ConfigDef, OutputFieldType)}
-     */
-    @Deprecated
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
             final OutputFieldType defaultFieldType) {
         OutputFormatFragment.update(configDef, defaultFieldType);
     }
 
-
-    /**
-     * @deprecated use {@link OutputFormatFragment#getFormatType()}
-     */
-    @Deprecated
     public FormatType getFormatType() {
-        return new OutputFormatFragment(this).getFormatType();
+        return outputFormatFragment.getFormatType();
     }
 
-
-    /**
-     * @deprecated use {@link CompressionFragment#update(ConfigDef, CompressionType)}
-     */
-    @Deprecated
     protected static void addCompressionTypeConfig(final ConfigDef configDef,
             final CompressionType defaultCompressionType) {
         CompressionFragment.update(configDef, defaultCompressionType);
     }
 
-    /**
-     * @deprecated use {@link CompressionFragment#getCompressionType()}
-     */
-    @Deprecated
     public CompressionType getCompressionType() {
         return new CompressionFragment(this).getCompressionType();
     }
 
-    /**
-     * @deprecated use {@link OutputFormatFragment#envelopeEnabled()}
-     */
-    @Deprecated
     public Boolean envelopeEnabled() {
-        return new OutputFormatFragment(this).envelopeEnabled();
+        return outputFormatFragment.envelopeEnabled();
     }
 
-    /**
-     * @deprecated use {@link OutputFormatFragment#getOutputFieldEncodingType()}
-     */
-    @Deprecated
     public OutputFieldEncodingType getOutputFieldEncodingType() {
-        return new OutputFormatFragment(this).getOutputFieldEncodingType();
+        return outputFormatFragment.getOutputFieldEncodingType();
     }
 
     public final Template getFilenameTemplate() {
@@ -131,17 +95,13 @@ public abstract class SinkCommonConfig extends CommonConfig {
         return getInt(FILE_MAX_RECORDS);
     }
 
-    private Boolean isKeyBased(final String groupType) {
+    private Boolean isKeyBased(final String groupType) { // NOPMD
         return RecordGrouperFactory.KEY_RECORD.equals(groupType)
                 || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
     }
 
-    /**
-     * @deprecated use {@link OutputFormatFragment#getOutputFields()}
-     */
-    @Deprecated
     public List<OutputField> getOutputFields() {
-        return new OutputFormatFragment(this).getOutputFields();
+        return outputFormatFragment.getOutputFields();
     }
 
 }

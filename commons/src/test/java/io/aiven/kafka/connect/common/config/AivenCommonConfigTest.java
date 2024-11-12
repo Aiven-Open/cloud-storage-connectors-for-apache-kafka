@@ -98,14 +98,18 @@ class AivenCommonConfigTest {
         final Map<String, String> propertiesWithTopicPartitionKey = Map.of("file.name.template",
                 "{{topic}}-{{partition}}-{{key}}.gz", "file.max.records", "10");
 
-        assertThatThrownBy(() -> new AivenCommonConfig(definition, propertiesWithTopicPartitionKey))
+        // reset definition as some config settings were previously sent before the exception was thrown,
+        // This will cause a duplicate config exception instead of testing the desied behaviour
+        final ConfigDef definitionWithKey = getBaseConfigDefinition();
+
+        assertThatThrownBy(() -> new AivenCommonConfig(definitionWithKey, propertiesWithTopicPartitionKey))
                 .isInstanceOf(ConfigException.class)
                 .hasMessage("When file.name.template is {{topic}}-{{partition}}-{{key}}.gz, "
                         + "file.max.records must be either 1 or not set");
 
         final Map<String, String> propertiesWithoutKey = Map.of("file.max.records", "10");
-
-        final AivenCommonConfig config = new AivenCommonConfig(definition, propertiesWithoutKey);
+        final ConfigDef definitionWithoutKey = getBaseConfigDefinition();
+        final AivenCommonConfig config = new AivenCommonConfig(definitionWithoutKey, propertiesWithoutKey);
         assertThat(config.getFilename()).isEqualTo("{{topic}}-{{partition}}-{{start_offset}}");
         assertThat(config.getMaxRecordsPerFile()).isEqualTo(10);
     }
