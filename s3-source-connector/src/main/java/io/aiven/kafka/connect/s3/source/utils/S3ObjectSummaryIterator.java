@@ -36,7 +36,7 @@ public class S3ObjectSummaryIterator implements Iterator<S3ObjectSummary> {
     private Iterator<S3ObjectSummary> innerIterator;
 
     /** the ObjectRequest initially to start the iteration from later to retrieve more records */
-    private ListObjectsV2Request request;
+    private final ListObjectsV2Request request;
 
     /**
      * Constructs the s3ObjectSummaryIterator based on the Amazon se client.
