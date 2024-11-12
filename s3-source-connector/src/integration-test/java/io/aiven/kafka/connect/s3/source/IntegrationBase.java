@@ -219,7 +219,6 @@ public interface IntegrationBase {
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         final Map<String, Object> messages = new HashMap<>();
-        Map<String, Object> offsetRec;
         try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(props)) {
             consumer.subscribe(Collections.singletonList(topic));
 
@@ -227,10 +226,9 @@ public interface IntegrationBase {
             while (messages.size() < expectedMessageCount) {
                 final ConsumerRecords<byte[], byte[]> records = consumer.poll(5L);
                 for (final ConsumerRecord<byte[], byte[]> record : records) {
-                    offsetRec = OBJECT_MAPPER.readValue(new String(record.value(), StandardCharsets.UTF_8), // NOPMD
+                    messages.putAll(OBJECT_MAPPER.readValue(new String(record.value(), StandardCharsets.UTF_8), // NOPMD
                             new TypeReference<>() { // NOPMD
-                            });
-                    messages.putAll(offsetRec);
+                            }));
                 }
             }
 
