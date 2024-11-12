@@ -63,6 +63,7 @@ public final class Template {
 
     /**
      * Creates a new list of variable names.
+     *
      * @return A new list of variable names.
      */
     public List<String> variables() {
@@ -71,6 +72,7 @@ public final class Template {
 
     /**
      * Creates a new set of variable names.
+     *
      * @return A new set of variable names.
      */
     public Set<String> variablesSet() {

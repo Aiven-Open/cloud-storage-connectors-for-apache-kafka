@@ -25,8 +25,8 @@ import org.apache.kafka.common.config.ConfigException;
 
 public class BackoffPolicyConfig extends ConfigFragment {
 
-    private static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
-    private static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
+    static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
+    static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
 
     protected BackoffPolicyConfig(final AbstractConfig cfg) {
         super(cfg);

@@ -162,6 +162,17 @@ public final class FileNameFragment extends ConfigFragment {
      *
      * @return The timezone specified for filenames.
      */
+    private String resolveFilenameTemplate() {
+        String fileNameTemplate = cfg.getString(FILE_NAME_TEMPLATE_CONFIG);
+        if (fileNameTemplate == null) {
+            final CompressionType compressionType = new CompressionFragment(cfg).getCompressionType();
+            fileNameTemplate = FormatType.AVRO.equals(new OutputFormatFragment(cfg).getFormatType())
+                    ? DEFAULT_FILENAME_TEMPLATE + ".avro" + compressionType.extension()
+                    : DEFAULT_FILENAME_TEMPLATE + compressionType.extension();
+        }
+        return fileNameTemplate;
+    }
+
     public ZoneId getFilenameTimezone() {
         return ZoneId.of(cfg.getString(FILE_NAME_TIMESTAMP_TIMEZONE));
     }

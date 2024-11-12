@@ -16,7 +16,10 @@ import com.github.spotbugs.snom.SpotBugsTask
  * limitations under the License.
  */
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+  id("aiven-apache-kafka-connectors-all.java-conventions")
+  id("java-test-fixtures")
+}
 
 val amazonS3Version by extra("1.12.777")
 val amazonSTSVersion by extra("1.12.777")
@@ -32,6 +35,14 @@ val integrationTest: SourceSet =
 
 val integrationTestImplementation: Configuration by
     configurations.getting { extendsFrom(configurations.implementation.get()) }
+
+val javaComponent = components["java"] as AdhocComponentWithVariants
+
+javaComponent.withVariantsFromConfiguration(configurations["testFixturesApiElements"]) { skip() }
+
+javaComponent.withVariantsFromConfiguration(configurations["testFixturesRuntimeElements"]) {
+  skip()
+}
 
 tasks.register<Test>("integrationTest") {
   description = "Runs the integration tests."
@@ -65,6 +76,7 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
+  testImplementation(testFixtures(project(":commons")))
   implementation(project(":s3-commons"))
 
   implementation(tools.spotbugs.annotations)

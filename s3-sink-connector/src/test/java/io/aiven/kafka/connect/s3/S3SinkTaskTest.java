@@ -58,8 +58,9 @@ import org.apache.kafka.connect.header.Header;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTaskContext;
 
+import io.aiven.kafka.connect.common.config.BackoffPolicyFragmentFixture.BackoffPolicyArgs;
 import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.config.FileNameFragmentTest.FileNameArgs;
+import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.config.S3SinkConfig;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
@@ -280,11 +281,11 @@ final class S3SinkTaskTest {
     void setKafkaBackoffTimeout() {
         final S3SinkTask task = new S3SinkTask();
         task.initialize(mockedSinkTaskContext);
-        final var props = Map.of(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value",
-                FileNameArgs.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl", S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG,
+        final var props = Map.of(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value",
+                OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl", S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG,
                 "AWS_ACCESS_KEY_ID_CONFIG", S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY_CONFIG",
                 S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG, "aws-s3-bucket-name-config",
-                S3SinkConfig.KAFKA_RETRY_BACKOFF_MS_CONFIG, "3000");
+                BackoffPolicyArgs.KAFKA_RETRY_BACKOFF_MS_CONFIG.key(), "3000");
         task.start(props);
 
         verify(mockedSinkTaskContext).timeout(3000L);
@@ -294,8 +295,8 @@ final class S3SinkTaskTest {
     void skipKafkaBackoffTimeout() {
         final S3SinkTask task = new S3SinkTask();
         task.initialize(mockedSinkTaskContext);
-        final var props = Map.of(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value",
-                FileNameArgs.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl", S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG,
+        final var props = Map.of(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value",
+                OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl", S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG,
                 "AWS_ACCESS_KEY_ID_CONFIG", S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY_CONFIG",
                 S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG, "aws-s3-bucket-name-config");
         task.start(props);
@@ -307,8 +308,8 @@ final class S3SinkTaskTest {
     void setupDefaultS3Policy() {
         final S3SinkTask task = new S3SinkTask();
         task.initialize(mockedSinkTaskContext);
-        final var props = Map.of(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value",
-                FileNameArgs.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl", S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG,
+        final var props = Map.of(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value",
+                OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl", S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG,
                 "AWS_ACCESS_KEY_ID_CONFIG", S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY_CONFIG",
                 S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG, "aws-s3-bucket-name-config");
         task.start(props);
@@ -333,8 +334,8 @@ final class S3SinkTaskTest {
     void setupCustomS3Policy() {
         final S3SinkTask task = new S3SinkTask();
         task.initialize(mockedSinkTaskContext);
-        final var props = Map.of(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value",
-                FileNameArgs.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl", S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG,
+        final var props = Map.of(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value",
+                OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl", S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG,
                 "AWS_ACCESS_KEY_ID_CONFIG", S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY_CONFIG",
                 S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket", "aws.s3.backoff.delay.ms", "1",
                 "aws.s3.backoff.max.delay.ms", "2", "aws.s3.backoff.max.retries", "3");
@@ -422,7 +423,7 @@ final class S3SinkTaskTest {
 
         final String compression = "none";
         properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(S3CommonConfig.AWS_S3_PREFIX_CONFIG, "any_prefix");
         task.start(properties);
 
@@ -445,8 +446,8 @@ final class S3SinkTaskTest {
 
         final String compression = "none";
         properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        properties.put(FileNameArgs.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(S3CommonConfig.AWS_S3_PREFIX_CONFIG, "prefix-");
         task.start(properties);
 
@@ -494,7 +495,7 @@ final class S3SinkTaskTest {
 
         final String compression = "none";
         properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(S3CommonConfig.AWS_S3_PREFIX_CONFIG, "prefix-");
         task.start(properties);
 
@@ -515,8 +516,8 @@ final class S3SinkTaskTest {
 
         final String compression = "none";
         properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        properties.put(FileNameArgs.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(S3CommonConfig.AWS_S3_PREFIX_CONFIG, "prefix-");
         task.start(properties);
 
@@ -563,9 +564,9 @@ final class S3SinkTaskTest {
     void supportUnwrappedJsonEnvelopeForStructAndJsonL() throws IOException {
         final String compression = "none";
         properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
-        properties.put(FileNameArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG, "false");
-        properties.put(FileNameArgs.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(S3CommonConfig.AWS_S3_PREFIX_CONFIG, "prefix-");
 
         final S3SinkTask task = new S3SinkTask();
@@ -612,8 +613,8 @@ final class S3SinkTaskTest {
 
         final String compression = "none";
         properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        properties.put(FileNameArgs.FORMAT_OUTPUT_TYPE_CONFIG, "json");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
         task.start(properties);
 
         final List<SinkRecord> records = List.of(
@@ -644,9 +645,9 @@ final class S3SinkTaskTest {
     void supportUnwrappedJsonEnvelopeForStructAndClassicJson() throws IOException {
         final String compression = "none";
         properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(FileNameArgs.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
-        properties.put(FileNameArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG, "false");
-        properties.put(FileNameArgs.FORMAT_OUTPUT_TYPE_CONFIG, "json");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
         properties.put(S3CommonConfig.AWS_S3_PREFIX_CONFIG, "prefix-");
 
         final S3SinkTask task = new S3SinkTask();

@@ -32,8 +32,15 @@ public abstract class SinkCommonConfig extends CommonConfig {
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
-    private final FileNameFragment fileNameFragment;
-    private final OutputFormatFragment outputFormatFragment;
+    /**
+     * FileNameFragment to handle FileName based configuration queries.
+     */
+    protected final FileNameFragment fileNameFragment;
+    /**
+     * OutputFormatFragment to handle Output format base configuration queries.
+     */
+    protected final OutputFormatFragment outputFormatFragment;
+
     @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
     public SinkCommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
         super(definition, originals);

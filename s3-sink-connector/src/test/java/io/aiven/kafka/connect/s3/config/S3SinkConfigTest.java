@@ -34,6 +34,8 @@ import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.StableTimeFormatter;
+import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
+
 import io.aiven.kafka.connect.s3.S3CommonConfig;
 import io.aiven.kafka.connect.s3.S3OutputStream;
 
@@ -60,12 +62,12 @@ final class S3SinkConfigTest {
         props.put(S3CommonConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
         props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.GZIP.name);
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG,
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(),
                 Arrays.stream(OutputFieldType.values())
                         .map(OutputFieldType::name)
                         .map(String::toLowerCase)
                         .collect(Collectors.joining(",")));
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, OutputFieldEncodingType.NONE.name);
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG.key(), OutputFieldEncodingType.NONE.name);
 
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
@@ -142,12 +144,12 @@ final class S3SinkConfigTest {
         props.put(S3CommonConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
         props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.GZIP.name);
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG,
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(),
                 Arrays.stream(OutputFieldType.values())
                         .map(OutputFieldType::name)
                         .map(String::toLowerCase)
                         .collect(Collectors.joining(",")));
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, OutputFieldEncodingType.NONE.name);
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG.key(), OutputFieldEncodingType.NONE.name);
 
         props.put(S3CommonConfig.AWS_ACCESS_KEY_ID, "AWS_ACCESS_KEY_ID_#1");
         props.put(S3CommonConfig.AWS_SECRET_ACCESS_KEY, "AWS_SECRET_ACCESS_KEY_#1");
@@ -359,7 +361,7 @@ final class S3SinkConfigTest {
                 .hasMessage("Invalid value [] for configuration output_fields: cannot be empty");
 
         props.remove(S3CommonConfig.OUTPUT_FIELDS);
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "");
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [] for configuration format.output.fields: cannot be empty");
@@ -375,7 +377,7 @@ final class S3SinkConfigTest {
         props.put(S3CommonConfig.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
 
         props.put(S3CommonConfig.OUTPUT_FIELDS, "key,value,offset,timestamp");
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key");
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key");
 
         final var conf = new S3SinkConfig(props);
 
@@ -398,7 +400,7 @@ final class S3SinkConfigTest {
                         + "supported values are: 'key', 'value', 'offset', 'timestamp', 'headers'");
 
         props.remove(S3CommonConfig.OUTPUT_FIELDS);
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset,timestamp,unsupported");
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp,unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [key, value, offset, timestamp, unsupported] "
@@ -511,7 +513,7 @@ final class S3SinkConfigTest {
         props.put(S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
         props.put(S3CommonConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset,timestamp");
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp");
         props.put(S3CommonConfig.OUTPUT_COMPRESSION, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
@@ -541,7 +543,7 @@ final class S3SinkConfigTest {
         props.put(S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
         props.put(S3CommonConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset,timestamp,headers");
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp,headers");
         props.put(S3CommonConfig.TIMESTAMP_TIMEZONE, "Europe/Berlin");
         props.put(S3CommonConfig.TIMESTAMP_SOURCE, "wallclock");
         props.put(S3CommonConfig.AWS_S3_PREFIX_CONFIG, prefix);
@@ -572,7 +574,7 @@ final class S3SinkConfigTest {
         properties.put(S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key");
         properties.put(S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
         properties.put(S3CommonConfig.AWS_S3_PREFIX_CONFIG, "any_prefix");
-        properties.put(S3SinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, formatType);
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), formatType);
 
         final S3SinkConfig s3SinkConfig = new S3SinkConfig(properties);
         final FormatType expectedFormatType = FormatType.forName(formatType);
@@ -583,7 +585,7 @@ final class S3SinkConfigTest {
     @Test
     void wrongFormatTypeConfig() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "unknown");
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "unknown");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value unknown for configuration format.output.type: "
