@@ -20,7 +20,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.FETCH_PAGE_
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -60,9 +60,8 @@ class FileReader {
      * Creates an iterator over the files in S3.
      * @param s3Client The client.
      * @return An iterator.
-     * @throws IOException on error
      */
-    List<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) throws IOException {
+    Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) {
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
                 .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR);
 
@@ -72,7 +71,7 @@ class FileReader {
 
         final S3ObjectSummaryIterator s3ObjectSummaryIterator = new S3ObjectSummaryIterator(s3Client, request);
 
-        return IteratorUtils.toList(IteratorUtils.filteredIterator(s3ObjectSummaryIterator, s -> filter.test(s)));
+        return IteratorUtils.filteredIterator(s3ObjectSummaryIterator, s -> filter.test(s));
     }
 
 }
