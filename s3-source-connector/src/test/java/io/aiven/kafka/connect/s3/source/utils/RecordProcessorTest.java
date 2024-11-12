@@ -30,9 +30,11 @@ import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -62,8 +64,7 @@ class RecordProcessorTest {
     @Mock
     private OffsetManager offsetManager;
 
-    @Mock
-    private FileReader fileReader;
+    private Set<String> failedObjectKeys;
 
     private AtomicBoolean connectorStopped;
     private Iterator<S3SourceRecord> sourceRecordIterator;
@@ -72,6 +73,7 @@ class RecordProcessorTest {
     void setUp() {
         connectorStopped = new AtomicBoolean(false);
         sourceRecordIterator = mock(Iterator.class);
+        failedObjectKeys =  new HashSet<>();
     }
 
     @Test
@@ -87,7 +89,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            transformer, fileReader, offsetManager
+            transformer, failedObjectKeys, offsetManager
         );
 
         assertTrue(processedRecords.isEmpty(), "Processed records should be empty when there are no records.");
@@ -109,7 +111,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            transformer, fileReader, offsetManager
+            transformer, failedObjectKeys, offsetManager
         );
 
         assertThat(results.size()).isEqualTo(1);
@@ -129,7 +131,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            transformer, fileReader, offsetManager
+            transformer, failedObjectKeys, offsetManager
         );
 
         assertTrue(processedRecords.isEmpty(), "Processed records should be empty when connector is stopped.");
@@ -148,7 +150,7 @@ class RecordProcessorTest {
         when(mockRecord.getSourceRecord(anyString(), any(), any())).thenReturn(mock(SourceRecord.class));
 
         final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig,
-                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, fileReader, offsetManager);
+                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, failedObjectKeys, offsetManager);
 
         assertThat(sourceRecords).isNotNull();
     }

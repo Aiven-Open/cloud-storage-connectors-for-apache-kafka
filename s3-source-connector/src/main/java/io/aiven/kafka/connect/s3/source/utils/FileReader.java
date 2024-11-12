@@ -35,7 +35,7 @@ import org.apache.commons.collections4.IteratorUtils;
  * Class to read the S3 connection and return lists of object summaries.
  * Package private so that is it not a public interface.
  */
-class FileReader {
+public class FileReader {
 
     public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
