@@ -169,7 +169,7 @@ final public class S3SinkConfig extends AivenCommonConfig {
 
                 if (!template.equals(originalTemplate)) {
                     LOGGER.warn("{{timestamp:unit=YYYY}} is no longer supported, "
-                            + "please use {{timestamp:unit=yyyy}} instead. " + "It was automatically replaced: {}",
+                                    + "please use {{timestamp:unit=yyyy}} instead. " + "It was automatically replaced: {}",
                             template);
                 }
 
@@ -230,23 +230,23 @@ final public class S3SinkConfig extends AivenCommonConfig {
 
         configDef.define(AWS_S3_PART_SIZE, Type.INT, S3OutputStream.DEFAULT_PART_SIZE, new ConfigDef.Validator() {
 
-            static final int MAX_BUFFER_SIZE = 2_000_000_000;
+                    static final int MAX_BUFFER_SIZE = 2_000_000_000;
 
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                if (value == null) {
-                    throw new ConfigException(name, null, "Part size must be non-null");
-                }
-                final var number = (Number) value;
-                if (number.longValue() <= 0) {
-                    throw new ConfigException(name, value, "Part size must be greater than 0");
-                }
-                if (number.longValue() > MAX_BUFFER_SIZE) {
-                    throw new ConfigException(name, value,
-                            "Part size must be no more: " + MAX_BUFFER_SIZE + " bytes (2GB)");
-                }
-            }
-        }, Importance.MEDIUM,
+                    @Override
+                    public void ensureValid(final String name, final Object value) {
+                        if (value == null) {
+                            throw new ConfigException(name, null, "Part size must be non-null");
+                        }
+                        final var number = (Number) value;
+                        if (number.longValue() <= 0) {
+                            throw new ConfigException(name, value, "Part size must be greater than 0");
+                        }
+                        if (number.longValue() > MAX_BUFFER_SIZE) {
+                            throw new ConfigException(name, value,
+                                    "Part size must be no more: " + MAX_BUFFER_SIZE + " bytes (2GB)");
+                        }
+                    }
+                }, Importance.MEDIUM,
                 "The Part Size in S3 Multi-part Uploads in bytes. Maximum is " + Integer.MAX_VALUE
                         + " (2GB) and default is " + S3OutputStream.DEFAULT_PART_SIZE + " (5MB)",
                 GROUP_AWS, awsGroupCounter++, // NOPMD UnusedAssignment
@@ -298,13 +298,13 @@ final public class S3SinkConfig extends AivenCommonConfig {
 
         configDef.define(AWS_STS_ROLE_SESSION_NAME, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 Importance.MEDIUM, "AWS STS Session name", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
-                                                                                                // UnusedAssignment
+                // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_STS_ROLE_SESSION_NAME);
 
         configDef.define(AWS_STS_ROLE_SESSION_DURATION, ConfigDef.Type.INT, 3600,
                 ConfigDef.Range.between(AwsStsRole.MIN_SESSION_DURATION, AwsStsRole.MAX_SESSION_DURATION),
                 Importance.MEDIUM, "AWS STS Session duration", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
-                                                                                                    // UnusedAssignment
+                // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_STS_ROLE_SESSION_DURATION);
 
         configDef.define(AWS_STS_ROLE_EXTERNAL_ID, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
@@ -346,14 +346,14 @@ final public class S3SinkConfig extends AivenCommonConfig {
                 FixedSetRecommender.ofSupportedValues(CompressionType.names()));
 
         configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, new ConfigDef.Validator() {
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                assert value instanceof Integer;
-                if ((Integer) value < 0) {
-                    throw new ConfigException(FILE_MAX_RECORDS, value, "must be a non-negative integer number");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM,
+                    @Override
+                    public void ensureValid(final String name, final Object value) {
+                        assert value instanceof Integer;
+                        if ((Integer) value < 0) {
+                            throw new ConfigException(FILE_MAX_RECORDS, value, "must be a non-negative integer number");
+                        }
+                    }
+                }, ConfigDef.Importance.MEDIUM,
                 "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.",
                 GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment
@@ -369,7 +369,7 @@ final public class S3SinkConfig extends AivenCommonConfig {
         configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
                 new TimestampSourceValidator(), ConfigDef.Importance.LOW,
                 "Specifies the the timestamp variable source. Default is wall-clock.", GROUP_FILE, fileGroupCounter++, // NOPMD
-                                                                                                                       // UnusedAssignment
+                // UnusedAssignment
                 ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_SOURCE);
     }
 
@@ -443,12 +443,12 @@ final public class S3SinkConfig extends AivenCommonConfig {
         }, Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/");
 
         configDef.define(OUTPUT_FIELDS, Type.LIST, null, new OutputFieldsValidator() {
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                LOGGER.info(OUTPUT_FIELDS + " property is deprecated please read documentation for the new name");
-                super.ensureValid(name, value);
-            }
-        }, Importance.MEDIUM,
+                    @Override
+                    public void ensureValid(final String name, final Object value) {
+                        LOGGER.info(OUTPUT_FIELDS + " property is deprecated please read documentation for the new name");
+                        super.ensureValid(name, value);
+                    }
+                }, Importance.MEDIUM,
                 "Output fields. A comma separated list of one or more: " + OUTPUT_FIELD_NAME_KEY + ", "
                         + OUTPUT_FIELD_NAME_OFFSET + ", " + OUTPUT_FIELD_NAME_TIMESTAMP + ", " + OUTPUT_FIELD_NAME_VALUE
                         + ", " + OUTPUT_FIELD_NAME_HEADERS);
@@ -574,20 +574,20 @@ final public class S3SinkConfig extends AivenCommonConfig {
     /**
      * Gets the list of output fields.
      * Will check {@link AivenCommonConfig#FORMAT_OUTPUT_FIELDS_CONFIG} and then {@link #OUTPUT_FIELDS}.  If neither
-     * is set will cereate an output field of {@link OutputFieldType#VALUE} and
+     * is set will create an output field of {@link OutputFieldType#VALUE} and
      * {@link OutputFieldEncodingType#BASE64}.
+     *
      * @return The list of output fields.  WIll not be {@code null}.
      */
     @Override
     public List<OutputField> getOutputFields() {
-        List<OutputField> result = getOutputFields(FORMAT_OUTPUT_FIELDS_CONFIG);
-        if (result == null) {
-            result = getOutputFields(OUTPUT_FIELDS);
-            if (result == null) {
-               result = List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
-            }
+        if (get(FORMAT_OUTPUT_FIELDS_CONFIG) != null) {
+            return getOutputFields(FORMAT_OUTPUT_FIELDS_CONFIG);
         }
-        return result;
+        if (get(OUTPUT_FIELDS) != null) {
+            return getOutputFields(OUTPUT_FIELDS);
+        }
+        return List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
     }
 
     /**
@@ -596,9 +596,6 @@ final public class S3SinkConfig extends AivenCommonConfig {
      * @return a list of output fields as defined in the configuration or {@code null} if not defined.
      */
     public List<OutputField> getOutputFields(final String format) {
-        if (get(format) == null) {
-            return null;
-        }
         return getList(format).stream().map(fieldName -> {
             final var type = OutputFieldType.forName(fieldName);
             final var encoding = type == OutputFieldType.KEY || type == OutputFieldType.VALUE
