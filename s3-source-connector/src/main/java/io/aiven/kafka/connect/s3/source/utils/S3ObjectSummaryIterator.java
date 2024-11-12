@@ -22,6 +22,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Implements a ObjectSummaryIterator on an S3 bucket. Implementation reads summaries in blocks and iterates over each
@@ -46,6 +47,7 @@ public class S3ObjectSummaryIterator implements Iterator<S3ObjectSummary> {
      * @param request
      *            the request object that defines the starting position for the object summary retrieval.
      */
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable AmazeonS3 and ListObjectsV2Request objects")
     public S3ObjectSummaryIterator(final AmazonS3 s3Client, final ListObjectsV2Request request) {
         this.s3Client = s3Client;
         this.request = request;
