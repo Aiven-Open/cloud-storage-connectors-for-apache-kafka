@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
@@ -29,19 +30,23 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPI
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
+import static io.aiven.kafka.connect.s3.source.utils.OffsetManager.SEPARATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.admin.AdminClient;
@@ -71,6 +76,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
+@SuppressWarnings("PMD.ExcessiveImports")
 final class IntegrationTest implements IntegrationBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTest.class);
@@ -154,12 +160,14 @@ final class IntegrationTest implements IntegrationBase {
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
+        final Set<String> offsetKeys = new HashSet<>();
+
         // write 2 objects to s3
-        writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000");
-        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000");
-        writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001");
-        writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001");
-        writeToS3(topicName, new byte[0], "00003"); // this should be ignored.
+        offsetKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
+        offsetKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
+        offsetKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
+        offsetKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
+        offsetKeys.add(writeToS3(topicName, new byte[0], "00003"));
 
         final List<String> objects = testBucketAccessor.listObjects();
         assertThat(objects.size()).isEqualTo(5);
@@ -172,6 +180,9 @@ final class IntegrationTest implements IntegrationBase {
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).contains(testData1).contains(testData2);
+
+        // Verify offset positions
+        verifyOffsetPositions(offsetKeys, 4);
     }
 
     @Test
@@ -188,7 +199,9 @@ final class IntegrationTest implements IntegrationBase {
 
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
 
-        writeToS3(topicName, testData.getBytes(StandardCharsets.UTF_8), "00000");
+        final Set<String> offsetKeys = new HashSet<>();
+
+        offsetKeys.add(writeToS3(topicName, testData.getBytes(StandardCharsets.UTF_8), "00000"));
 
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeMessages(topicName, 5, connectRunner.getBootstrapServers());
@@ -200,6 +213,9 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(records.get(2)).isEqualTo("CC");
         assertThat(records.get(3)).isEqualTo("DD");
         assertThat(records.get(4)).isEqualTo("EE");
+
+        // Verify offset positions
+        verifyOffsetPositions(offsetKeys, 1);
     }
 
     @Test
@@ -224,12 +240,13 @@ final class IntegrationTest implements IntegrationBase {
         final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1, 100);
         final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2, 100);
 
-        writeToS3(topicName, outputStream1.toByteArray(), "00001");
-        writeToS3(topicName, outputStream2.toByteArray(), "00001");
+        final Set<String> offsetKeys = new HashSet<>();
 
-        writeToS3(topicName, outputStream1.toByteArray(), "00002");
-        writeToS3(topicName, outputStream2.toByteArray(), "00002");
-        writeToS3(topicName, outputStream2.toByteArray(), "00002");
+        offsetKeys.add(writeToS3(topicName, outputStream1.toByteArray(), "00001"));
+        offsetKeys.add(writeToS3(topicName, outputStream2.toByteArray(), "00001"));
+        offsetKeys.add(writeToS3(topicName, outputStream1.toByteArray(), "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream2.toByteArray(), "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream2.toByteArray(), "00002"));
 
         final List<String> objects = testBucketAccessor.listObjects();
         assertThat(objects.size()).isEqualTo(5);
@@ -247,10 +264,13 @@ final class IntegrationTest implements IntegrationBase {
                 .contains("Hello, Kafka Connect S3 Source! object 1")
                 .contains("Hello, Kafka Connect S3 Source! object 2");
         assertThat(records).extracting(record -> record.get("id").toString()).contains("1").contains("2");
+
+        // Verify offset positions
+        verifyOffsetPositions(offsetKeys, 5);
     }
 
     @Test
-    void parquetTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+    void parquetTest(final TestInfo testInfo) throws IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.PARQUET.getValue());
@@ -282,7 +302,7 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Test
-    void jsonTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+    void jsonTest(final TestInfo testInfo) throws IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.JSONL.getValue());
@@ -296,15 +316,18 @@ final class IntegrationTest implements IntegrationBase {
             jsonBuilder.append(jsonContent).append("\n"); // NOPMD
         }
         final byte[] jsonBytes = jsonBuilder.toString().getBytes(StandardCharsets.UTF_8);
+        final Set<String> offsetKeys = new HashSet<>();
 
-        writeToS3(topicName, jsonBytes, "00001");
-
+        offsetKeys.add(writeToS3(topicName, jsonBytes, "00001"));
         // Poll Json messages from the Kafka topic and deserialize them
         final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 500,
                 connectRunner.getBootstrapServers());
 
         assertThat(records).extracting(record -> record.get("payload").get("message").asText()).contains(testMessage);
         assertThat(records).extracting(record -> record.get("payload").get("id").asText()).contains("1");
+
+        // Verify offset positions
+        verifyOffsetPositions(offsetKeys, 1);
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
@@ -332,15 +355,17 @@ final class IntegrationTest implements IntegrationBase {
         return outputStream;
     }
 
-    private static void writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId)
+    private static String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId)
             throws IOException {
         final String filePrefix = topicName + "-" + partitionId + "-" + System.currentTimeMillis();
         final String fileSuffix = ".txt";
 
         final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
+        final String objectKey = filePrefix + fileSuffix;
         try {
             Files.write(testFilePath, testDataBytes);
-            saveToS3(TEST_BUCKET_NAME, "", filePrefix + fileSuffix, testFilePath.toFile());
+            saveToS3(TEST_BUCKET_NAME, "", objectKey, testFilePath.toFile());
+            return OBJECT_KEY + SEPARATOR + objectKey;
         } finally {
             Files.delete(testFilePath);
         }
@@ -371,5 +396,11 @@ final class IntegrationTest implements IntegrationBase {
             final File fileToWrite) {
         final PutObjectRequest request = new PutObjectRequest(bucketName, folderName + fileNameInS3, fileToWrite);
         s3Client.putObject(request);
+    }
+
+    private void verifyOffsetPositions(final Set<String> offsetKeys, final int messagesCount) throws ConnectException {
+        final Map<String, Object> offsetRecs = IntegrationBase.consumeOffsetStorageMessages(
+                "connect-offset-topic-" + CONNECTOR_NAME, messagesCount, connectRunner.getBootstrapServers());
+        assertThat(offsetRecs.keySet()).hasSize(messagesCount).isSubsetOf(offsetKeys);
     }
 }
