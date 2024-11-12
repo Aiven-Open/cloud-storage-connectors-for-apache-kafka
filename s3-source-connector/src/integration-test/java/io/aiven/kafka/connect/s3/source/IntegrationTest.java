@@ -31,10 +31,11 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPI
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
 import static io.aiven.kafka.connect.s3.source.utils.OffsetManager.SEPARATOR;
+import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
@@ -47,7 +48,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.kafka.clients.admin.AdminClient;
 
@@ -56,6 +58,7 @@ import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.avro.Schema;
@@ -87,13 +90,13 @@ final class IntegrationTest implements IntegrationBase {
     private static final String S3_ACCESS_KEY_ID = "test-key-id0";
     private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
 
+    private static final String VALUE_CONVERTER_KEY = "value.converter";
+
     private static final String TEST_BUCKET_NAME = "test-bucket0";
 
     private static String s3Endpoint;
     private static String s3Prefix;
     private static BucketAccessor testBucketAccessor;
-
-    private static File pluginDir;
 
     @Container
     public static final LocalStackContainer LOCALSTACK = IntegrationBase.createS3Container();
@@ -104,8 +107,6 @@ final class IntegrationTest implements IntegrationBase {
 
     private static AmazonS3 s3Client;
 
-    private String topicName;
-
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
@@ -114,7 +115,7 @@ final class IntegrationTest implements IntegrationBase {
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
 
-        pluginDir = IntegrationBase.getPluginDir();
+        final Path pluginDir = IntegrationBase.getPluginDir();
         IntegrationBase.extractConnectorPlugin(pluginDir);
     }
 
@@ -150,9 +151,9 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Test
-    void bytesTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+    void bytesTest(final TestInfo testInfo) throws IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName);
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
@@ -169,28 +170,23 @@ final class IntegrationTest implements IntegrationBase {
         offsetKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
         offsetKeys.add(writeToS3(topicName, new byte[0], "00003"));
 
-        final List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(5);
-
-        // Verify that the connector is correctly set up
-        assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
+        assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeMessages(topicName, 4, connectRunner.getBootstrapServers());
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
-        assertThat(records).contains(testData1).contains(testData2);
+        assertThat(records).containsOnly(testData1, testData2);
 
         // Verify offset positions
         verifyOffsetPositions(offsetKeys, 4);
     }
 
     @Test
-    void bytesTestBasedOnMaxMessageBytes(final TestInfo testInfo)
-            throws ExecutionException, InterruptedException, IOException {
+    void bytesTestBasedOnMaxMessageBytes(final TestInfo testInfo) throws IOException {
         final String testData = "AABBCCDDEE";
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName);
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         connectorConfig.put(EXPECTED_MAX_MESSAGE_BYTES, "2"); // For above test data of 10 bytes length, with 2 bytes
                                                               // each
@@ -207,26 +203,16 @@ final class IntegrationTest implements IntegrationBase {
         final List<String> records = IntegrationBase.consumeMessages(topicName, 5, connectRunner.getBootstrapServers());
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
-        assertThat(records.size()).isEqualTo(5);
-        assertThat(records.get(0)).isEqualTo("AA");
-        assertThat(records.get(1)).isEqualTo("BB");
-        assertThat(records.get(2)).isEqualTo("CC");
-        assertThat(records.get(3)).isEqualTo("DD");
-        assertThat(records.get(4)).isEqualTo("EE");
+        assertThat(records).containsExactly("AA", "BB", "CC", "DD", "EE");
 
         // Verify offset positions
         verifyOffsetPositions(offsetKeys, 1);
     }
 
     @Test
-    void avroTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
+    void avroTest(final TestInfo testInfo) throws IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
-        connectorConfig.put(SCHEMA_REGISTRY_URL, schemaRegistry.getSchemaRegistryUrl());
-        connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        connectorConfig.put(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, schemaRegistry.getSchemaRegistryUrl());
-        connectorConfig.put(VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
+        final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.AVRO);
 
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
 
@@ -237,22 +223,19 @@ final class IntegrationTest implements IntegrationBase {
         final Schema.Parser parser = new Schema.Parser();
         final Schema schema = parser.parse(schemaJson);
 
-        final ByteArrayOutputStream outputStream1 = getAvroRecord(schema, 1, 100);
-        final ByteArrayOutputStream outputStream2 = getAvroRecord(schema, 2, 100);
+        final byte[] outputStream1 = getAvroRecord(schema, 1, 100);
+        final byte[] outputStream2 = getAvroRecord(schema, 2, 100);
 
         final Set<String> offsetKeys = new HashSet<>();
 
-        offsetKeys.add(writeToS3(topicName, outputStream1.toByteArray(), "00001"));
-        offsetKeys.add(writeToS3(topicName, outputStream2.toByteArray(), "00001"));
-        offsetKeys.add(writeToS3(topicName, outputStream1.toByteArray(), "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream2.toByteArray(), "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream2.toByteArray(), "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream1, "00001"));
+        offsetKeys.add(writeToS3(topicName, outputStream2, "00001"));
 
-        final List<String> objects = testBucketAccessor.listObjects();
-        assertThat(objects.size()).isEqualTo(5);
+        offsetKeys.add(writeToS3(topicName, outputStream1, "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream2, "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream2, "00002"));
 
-        // Verify that the connector is correctly set up
-        assertThat(connectorConfig.get("name")).isEqualTo(CONNECTOR_NAME);
+        assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
         // Poll Avro messages from the Kafka topic and deserialize them
         final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 500,
@@ -260,10 +243,10 @@ final class IntegrationTest implements IntegrationBase {
                                                                                              // deserializes Avro
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
-        assertThat(records).extracting(record -> record.get("message").toString())
-                .contains("Hello, Kafka Connect S3 Source! object 1")
-                .contains("Hello, Kafka Connect S3 Source! object 2");
-        assertThat(records).extracting(record -> record.get("id").toString()).contains("1").contains("2");
+        assertThat(records).hasSize(500)
+                .map(record -> entry(record.get("id"), String.valueOf(record.get("message"))))
+                .contains(entry(1, "Hello, Kafka Connect S3 Source! object 1"),
+                        entry(2, "Hello, Kafka Connect S3 Source! object 2"));
 
         // Verify offset positions
         verifyOffsetPositions(offsetKeys, 5);
@@ -272,17 +255,12 @@ final class IntegrationTest implements IntegrationBase {
     @Test
     void parquetTest(final TestInfo testInfo) throws IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.PARQUET.getValue());
-        connectorConfig.put(SCHEMA_REGISTRY_URL, schemaRegistry.getSchemaRegistryUrl());
-        connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        connectorConfig.put("value.converter.schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
-        connectorConfig.put(VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
 
         final String partition = "00000";
         final String fileName = topicName + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
         final String name = "testuser";
 
+        final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.PARQUET);
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
         final Path path = ContentUtils.getTmpFilePath(name);
 
@@ -296,17 +274,29 @@ final class IntegrationTest implements IntegrationBase {
 
         final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 100,
                 connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
+        final List<String> expectedRecordNames = IntStream.range(0, 100)
+                .mapToObj(i -> name + i)
+                .collect(Collectors.toList());
         assertThat(records).extracting(record -> record.get("name").toString())
-                .contains(name + "1")
-                .contains(name + "2");
+                .containsExactlyInAnyOrderElementsOf(expectedRecordNames);
+    }
+
+    private Map<String, String> getAvroConfig(final String topicName, final InputFormat parquet) {
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName);
+        connectorConfig.put(INPUT_FORMAT_KEY, parquet.getValue());
+        connectorConfig.put(SCHEMA_REGISTRY_URL, schemaRegistry.getSchemaRegistryUrl());
+        connectorConfig.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
+        connectorConfig.put(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, schemaRegistry.getSchemaRegistryUrl());
+        connectorConfig.put(VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
+        return connectorConfig;
     }
 
     @Test
     void jsonTest(final TestInfo testInfo) throws IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName);
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.JSONL.getValue());
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        connectorConfig.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.json.JsonConverter");
 
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
         final String testMessage = "This is a test ";
@@ -323,6 +313,7 @@ final class IntegrationTest implements IntegrationBase {
         final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 500,
                 connectRunner.getBootstrapServers());
 
+        assertThat(records).hasSize(500);
         assertThat(records).extracting(record -> record.get("payload").get("message").asText()).contains(testMessage);
         assertThat(records).extracting(record -> record.get("payload").get("id").asText()).contains("1");
 
@@ -330,48 +321,34 @@ final class IntegrationTest implements IntegrationBase {
         verifyOffsetPositions(offsetKeys, 1);
     }
 
-    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    private static ByteArrayOutputStream getAvroRecord(final Schema schema, final int messageId, final int noOfAvroRecs)
+    private static byte[] getAvroRecord(final Schema schema, final int messageId, final int noOfAvroRecs)
             throws IOException {
-        // Create Avro records
-        GenericRecord avroRecord;
-
-        // Serialize Avro records to byte arrays
-        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
-        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             dataFileWriter.create(schema, outputStream);
             for (int i = 0; i < noOfAvroRecs; i++) {
-                avroRecord = new GenericData.Record(schema);
+                final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD
                 avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + i);
                 avroRecord.put("id", messageId);
-
                 dataFileWriter.append(avroRecord);
             }
 
             dataFileWriter.flush();
-        }
-        outputStream.close();
-        return outputStream;
-    }
-
-    private static String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId)
-            throws IOException {
-        final String filePrefix = topicName + "-" + partitionId + "-" + System.currentTimeMillis();
-        final String fileSuffix = ".txt";
-
-        final Path testFilePath = File.createTempFile(filePrefix, fileSuffix).toPath();
-        final String objectKey = filePrefix + fileSuffix;
-        try {
-            Files.write(testFilePath, testDataBytes);
-            saveToS3(TEST_BUCKET_NAME, "", objectKey, testFilePath.toFile());
-            return OBJECT_KEY + SEPARATOR + objectKey;
-        } finally {
-            Files.delete(testFilePath);
+            return outputStream.toByteArray();
         }
     }
 
-    private Map<String, String> getConfig(final Map<String, String> config, final String topics) {
+    private static String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
+        final String objectKey = topicName + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
+        final PutObjectRequest request = new PutObjectRequest(TEST_BUCKET_NAME, objectKey,
+                new ByteArrayInputStream(testDataBytes), new ObjectMetadata());
+        s3Client.putObject(request);
+        return OBJECT_KEY + SEPARATOR + objectKey;
+    }
+
+    private Map<String, String> getConfig(final String connectorName, final String topics) {
+        final Map<String, String> config = new HashMap<>(basicConnectorConfig(connectorName));
         config.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
         config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
         config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
@@ -387,20 +364,15 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, String> config = new HashMap<>();
         config.put("name", connectorName);
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
+        config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put("tasks.max", "1");
         return config;
-    }
-
-    public static void saveToS3(final String bucketName, final String folderName, final String fileNameInS3,
-            final File fileToWrite) {
-        final PutObjectRequest request = new PutObjectRequest(bucketName, folderName + fileNameInS3, fileToWrite);
-        s3Client.putObject(request);
     }
 
     private void verifyOffsetPositions(final Set<String> offsetKeys, final int messagesCount) throws ConnectException {
         final Map<String, Object> offsetRecs = IntegrationBase.consumeOffsetStorageMessages(
                 "connect-offset-topic-" + CONNECTOR_NAME, messagesCount, connectRunner.getBootstrapServers());
+
         assertThat(offsetRecs.keySet()).hasSize(messagesCount).isSubsetOf(offsetKeys);
     }
 }
