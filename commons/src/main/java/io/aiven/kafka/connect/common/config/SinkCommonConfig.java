@@ -40,17 +40,23 @@ public abstract class SinkCommonConfig extends CommonConfig {
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
-
+    private FileNameFragment fileNameFragment;
     @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
     public SinkCommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
-        super(definition, originals);
+        super(update(definition), originals);
+//        Construct FileNameFragment
+        fileNameFragment = new FileNameFragment(this);
         // TODO: calls getOutputFields, can be overridden in subclasses.
         validate(); // NOPMD ConstructorCallsOverridableMethod
     }
 
+    private static ConfigDef update(final ConfigDef def) {
+        return FileNameFragment.update(def);
+    }
+
     private void validate() {
         new OutputFormatFragment(this).validate();
-        new FileNameFragment(this).validate();
+        fileNameFragment.validate();
     }
 
     /**
@@ -105,37 +111,20 @@ public abstract class SinkCommonConfig extends CommonConfig {
         return new OutputFormatFragment(this).getOutputFieldEncodingType();
     }
 
-    /**
-     * @deprecated use {@link FileNameFragment#getFilenameTemplate()}
-     */
-    @Deprecated
     public final Template getFilenameTemplate() {
-        return new FileNameFragment(this).getFilenameTemplate();
+        return fileNameFragment.getFilenameTemplate();
     }
 
-    /**
-     * @deprecated use {@link FileNameFragment#getFilename()}
-     */
-    @Deprecated
     public final String getFilename() {
-        return new FileNameFragment(this).getFilename();
+        return fileNameFragment.getFilename();
     }
 
-
-    /**
-     * @deprecated use {@link FileNameFragment#getFilename()}
-     */
-    @Deprecated
     public final ZoneId getFilenameTimezone() {
-        return new FileNameFragment(this).getFilenameTimezone();
+        return fileNameFragment.getFilenameTimezone();
     }
 
-    /**
-     * @deprecated use {@link FileNameFragment#getFilenameTimestampSource()}
-     */
-    @Deprecated
     public final TimestampSource getFilenameTimestampSource() {
-        return new FileNameFragment(this).getFilenameTimestampSource();
+        return fileNameFragment.getFilenameTimestampSource();
     }
 
     public final int getMaxRecordsPerFile() {

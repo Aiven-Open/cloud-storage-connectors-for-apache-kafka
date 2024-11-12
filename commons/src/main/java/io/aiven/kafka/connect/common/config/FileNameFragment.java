@@ -21,13 +21,13 @@ import java.util.stream.Collectors;
  */
 public final class FileNameFragment extends ConfigFragment {
 
-    private static final String GROUP_FILE = "File";
-    private static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
-    private static final String FILE_MAX_RECORDS = "file.max.records";
-    private static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
-    private static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
-    private static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
-    private static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
+    static final String GROUP_FILE = "File";
+    static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
+    static final String FILE_MAX_RECORDS = "file.max.records";
+    static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
+    static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
+    static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
+    static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
 
     protected FileNameFragment(AbstractConfig cfg) {
         super(cfg);
