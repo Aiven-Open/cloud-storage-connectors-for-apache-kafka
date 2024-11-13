@@ -16,10 +16,8 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -47,11 +45,11 @@ public class FileNameFragmentTest {// NOPMD
     public enum FileNameArgs {
         GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
                 FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
-                FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
-                FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(
-                FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE), FILE_NAME_TEMPLATE_CONFIG(
-                FileNameFragment.FILE_NAME_TEMPLATE_CONFIG), DEFAULT_FILENAME_TEMPLATE(
-                FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
+                        FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
+                                FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(
+                                        FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE), FILE_NAME_TEMPLATE_CONFIG(
+                                                FileNameFragment.FILE_NAME_TEMPLATE_CONFIG), DEFAULT_FILENAME_TEMPLATE(
+                                                        FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
         private final String keyValue;
 
         FileNameArgs(final String key) {
@@ -66,24 +64,26 @@ public class FileNameFragmentTest {// NOPMD
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("configDefSource")
     void configDefTest(final FileNameArgs arg, final ConfigDef.Type type, final Object defaultValue,
-                       final boolean validatorPresent, final ConfigDef.Importance importance, final String group,
-                       final int orderInGroup, final ConfigDef.Width width, final boolean recommenderPresent) {
+            final boolean validatorPresent, final ConfigDef.Importance importance, final String group,
+            final int orderInGroup, final ConfigDef.Width width, final boolean recommenderPresent) {
         final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
         final ConfigDef.ConfigKey key = configDef.configKeys().get(arg.key());
 
-        assertEquals(arg.key(), key.name, "Wrong key name");
-        assertEquals(type, key.type, "Wrong key type");
-        assertEquals(defaultValue, key.defaultValue, "Wrong default value");
-        assertEquals(validatorPresent, key.validator != null,
-                () -> String.format("Validator was %spresent.", key.validator == null ? "not " : ""));
-        assertEquals(importance, key.importance, "Wrong importance");
-        assertNotNull(key.documentation, "Documenttion not included");
-        assertEquals(group, key.group, "Wrong group");
-        assertEquals(orderInGroup, key.orderInGroup, "Wrong order in group");
-        assertEquals(width, key.width, "Wrong width");
-        assertEquals(key.name, key.displayName);
-        assertEquals(recommenderPresent, key.recommender != null,
-                () -> String.format("Recommender was %spresent.", key.recommender == null ? "not " : ""));
+        assertThat(arg.key()).as("Wrong key name").isEqualTo(key.name);
+        assertThat(type).as("Wrong key type").isEqualTo(key.type);
+        assertThat(defaultValue).as("Wrong default value").isEqualTo(key.defaultValue);
+        assertThat(validatorPresent)
+                .as(() -> String.format("Validator was %spresent.", key.validator == null ? "not " : ""))
+                .isEqualTo(key.validator != null);
+        assertThat(importance).as("Wrong importance").isEqualTo(key.importance);
+        assertThat(key.documentation).as("Documenttion not included").isNotNull();
+        assertThat(group).as("Wrong group").isEqualTo(key.group);
+        assertThat(orderInGroup).as("Wrong order in group").isEqualTo(key.orderInGroup);
+        assertThat(width).as("Wrong width").isEqualTo(key.width);
+        assertThat(key.name).isEqualTo(key.displayName);
+        assertThat(recommenderPresent)
+                .as(() -> String.format("Recommender was %spresent.", key.recommender == null ? "not " : ""))
+                .isEqualTo(key.recommender != null);
     }
 
     @Test
@@ -94,8 +94,10 @@ public class FileNameFragmentTest {// NOPMD
         argList.remove(FileNameArgs.GROUP_FILE);
         argList.remove(FileNameArgs.DEFAULT_FILENAME_TEMPLATE);
         configDefSource().map(a -> (FileNameArgs) (a.get()[0])).forEach(argList::remove);
-        assertTrue(argList.isEmpty(), () -> "Tests do not process the following arguments: "
-                + String.join(", ", argList.stream().map(arg -> arg.toString()).collect(Collectors.toList())));
+        assertThat(argList.isEmpty())
+                .as(() -> "Tests do not process the following arguments: "
+                        + String.join(", ", argList.stream().map(arg -> arg.toString()).collect(Collectors.toList())))
+                .isTrue();
     }
 
     private static Stream<Arguments> configDefSource() {
@@ -129,7 +131,7 @@ public class FileNameFragmentTest {// NOPMD
         props.put(FileNameFragment.FILE_MAX_RECORDS, "50");
         final AbstractConfig cfg = new AbstractConfig(configDef, props);
         final FileNameFragment underTest = new FileNameFragment(cfg);
-        assertThrows(ConfigException.class, () -> underTest.validate());
+        assertThatThrownBy(() -> underTest.validate()).isInstanceOf(ConfigException.class);
     }
 
     @ParameterizedTest(name = "{index} {0}")
@@ -138,7 +140,7 @@ public class FileNameFragmentTest {// NOPMD
         final ConfigDef configDef = FileNameFragment.update(OutputFormatFragment.update(new ConfigDef(), null));
         final AbstractConfig cfg = new AbstractConfig(configDef, props);
         final FileNameFragment underTest = new FileNameFragment(cfg);
-        assertEquals(expected, underTest.getFilename());
+        assertThat(expected).isEqualTo(underTest.getFilename());
     }
 
     private static Stream<Arguments> fieldNameSource() {
@@ -174,7 +176,7 @@ public class FileNameFragmentTest {// NOPMD
         final AbstractConfig cfg = new AbstractConfig(configDef, props);
         final FileNameFragment underTest = new FileNameFragment(cfg);
         // template does not implement equality
-        assertEquals(expected, underTest.getFilenameTemplate().originalTemplate());
+        assertThat(expected).isEqualTo(underTest.getFilenameTemplate().originalTemplate());
     }
 
     @Test
@@ -184,16 +186,16 @@ public class FileNameFragmentTest {// NOPMD
         props.put(FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE, "Europe/Dublin");
         AbstractConfig cfg = new AbstractConfig(configDef, props);
         FileNameFragment underTest = new FileNameFragment(cfg);
-        assertEquals("Europe/Dublin", underTest.getFilenameTimezone().toString());
+        assertThat("Europe/Dublin").isEqualTo(underTest.getFilenameTimezone().toString());
 
         props.clear();
         cfg = new AbstractConfig(configDef, props);
         underTest = new FileNameFragment(cfg);
-        assertEquals("Z", underTest.getFilenameTimezone().toString());
+        assertThat("Z").isEqualTo(underTest.getFilenameTimezone().toString());
 
         props.clear();
         props.put(FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE, "NotARealTimezone");
-        assertThrows(ConfigException.class, () -> new AbstractConfig(configDef, props));
+        assertThatThrownBy(() -> new AbstractConfig(configDef, props)).isInstanceOf(ConfigException.class);
     }
 
     @Test
@@ -203,16 +205,16 @@ public class FileNameFragmentTest {// NOPMD
         AbstractConfig cfg = new AbstractConfig(configDef, props);
         FileNameFragment underTest = new FileNameFragment(cfg);
         TimestampSource src = underTest.getFilenameTimestampSource();
-        assertEquals(TimestampSource.Type.WALLCLOCK, src.type());
+        assertThat(TimestampSource.Type.WALLCLOCK).isEqualTo(src.type());
 
         props.put(FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE, TimestampSource.Type.EVENT.name());
         cfg = new AbstractConfig(configDef, props);
         underTest = new FileNameFragment(cfg);
         src = underTest.getFilenameTimestampSource();
-        assertEquals(TimestampSource.Type.EVENT, src.type());
+        assertThat(TimestampSource.Type.EVENT).isEqualTo(src.type());
 
         props.put(FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE, "NotATimestampSource");
-        assertThrows(ConfigException.class, () -> new AbstractConfig(configDef, props));
+        assertThatThrownBy(() -> new AbstractConfig(configDef, props)).isInstanceOf(ConfigException.class);
     }
 
     @Test
@@ -222,19 +224,19 @@ public class FileNameFragmentTest {// NOPMD
         AbstractConfig cfg = new AbstractConfig(configDef, props);
         FileNameFragment underTest = new FileNameFragment(cfg);
         int count = underTest.getMaxRecordsPerFile();
-        assertEquals(0, count);
+        assertThat(0).isEqualTo(count);
 
         props.put(FileNameFragment.FILE_MAX_RECORDS, "200");
         cfg = new AbstractConfig(configDef, props);
         underTest = new FileNameFragment(cfg);
         count = underTest.getMaxRecordsPerFile();
-        assertEquals(200, count);
+        assertThat(200).isEqualTo(count);
 
         props.put(FileNameFragment.FILE_MAX_RECORDS, "NotANumber");
-        assertThrows(ConfigException.class, () -> new AbstractConfig(configDef, props));
+        assertThatThrownBy(() -> new AbstractConfig(configDef, props)).isInstanceOf(ConfigException.class);
 
         props.put(FileNameFragment.FILE_MAX_RECORDS, "-1");
-        assertThrows(ConfigException.class, () -> new AbstractConfig(configDef, props));
+        assertThatThrownBy(() -> new AbstractConfig(configDef, props)).isInstanceOf(ConfigException.class);
 
     }
 

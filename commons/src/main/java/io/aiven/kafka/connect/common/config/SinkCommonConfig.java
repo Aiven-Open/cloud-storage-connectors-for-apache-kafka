@@ -26,7 +26,7 @@ import io.aiven.kafka.connect.common.templating.Template;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
-public abstract class SinkCommonConfig extends CommonConfig {
+public class SinkCommonConfig extends CommonConfig {
 
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";

@@ -86,14 +86,14 @@ public final class FileNameFragment extends ConfigFragment {
                 FixedSetRecommender.ofSupportedValues(CompressionType.names()));
 
         configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, new ConfigDef.Validator() {
-                    @Override
-                    public void ensureValid(final String name, final Object value) {
-                        assert value instanceof Integer;
-                        if ((Integer) value < 0) {
-                            throw new ConfigException(FILE_MAX_RECORDS, value, "must be a non-negative integer number");
-                        }
-                    }
-                }, ConfigDef.Importance.MEDIUM,
+            @Override
+            public void ensureValid(final String name, final Object value) {
+                assert value instanceof Integer;
+                if ((Integer) value < 0) {
+                    throw new ConfigException(FILE_MAX_RECORDS, value, "must be a non-negative integer number");
+                }
+            }
+        }, ConfigDef.Importance.MEDIUM,
                 "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.",
                 GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment

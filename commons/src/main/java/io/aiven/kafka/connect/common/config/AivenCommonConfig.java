@@ -17,8 +17,11 @@
 package io.aiven.kafka.connect.common.config;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.ConfigDef;
+
+import io.aiven.kafka.connect.common.config.validators.OutputTypeValidator;
 /**
  * @deprecated Use {@link SinkCommonConfig} instead
  */
@@ -36,14 +39,25 @@ public class AivenCommonConfig extends SinkCommonConfig {
         super(definition, originals);
     }
 
-    protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
-            final OutputFieldType defaultFieldType) {
-        SinkCommonConfig.addOutputFieldsFormatConfigGroup(configDef, defaultFieldType);
-    }
-
-    protected static void addCompressionTypeConfig(final ConfigDef configDef,
-            final CompressionType defaultCompressionType) {
-        SinkCommonConfig.addCompressionTypeConfig(configDef, defaultCompressionType);
+    /**
+     * This class and method is deprecated please use OutputFormatFragment instead to replace this functionality.
+     * alternatively switch to using the SinkCommonConfig and it will be automatically loaded in the super() method.
+     *
+     * @param configDef
+     *            The configuration definition
+     * @param formatGroupCounter
+     *            the counter to use to increment the config id
+     */
+    protected static void addFormatTypeConfig(final ConfigDef configDef, final int formatGroupCounter) {
+        final String supportedFormatTypes = FormatType.names()
+                .stream()
+                .map(f -> "'" + f + "'")
+                .collect(Collectors.joining(", "));
+        configDef.define(FORMAT_OUTPUT_TYPE_CONFIG, ConfigDef.Type.STRING, FormatType.CSV.name,
+                new OutputTypeValidator(), ConfigDef.Importance.MEDIUM,
+                "The format type of output content" + "The supported values are: " + supportedFormatTypes + ".",
+                GROUP_FORMAT, formatGroupCounter, ConfigDef.Width.NONE, FORMAT_OUTPUT_TYPE_CONFIG,
+                FixedSetRecommender.ofSupportedValues(FormatType.names()));
     }
 
 }

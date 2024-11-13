@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -29,7 +28,8 @@ import io.aiven.kafka.connect.common.config.validators.OutputFieldsEncodingValid
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
 import io.aiven.kafka.connect.common.config.validators.OutputTypeValidator;
 
-public class OutputFormatFragment extends ConfigFragment {
+public final class OutputFormatFragment extends ConfigFragment {
+    // package protected for testing
     static final String GROUP_FORMAT = "Format";
     static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
     static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";

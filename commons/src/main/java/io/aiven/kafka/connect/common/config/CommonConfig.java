@@ -24,7 +24,7 @@ import org.apache.kafka.common.config.ConfigDef;
 /**
  * The base configuration or all connectors.
  */
-public abstract class CommonConfig extends AbstractConfig {
+public class CommonConfig extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";
     protected static final String GROUP_FORMAT = "Format";
 
@@ -33,7 +33,8 @@ public abstract class CommonConfig extends AbstractConfig {
      */
     @Deprecated
     protected static void addKafkaBackoffPolicy(final ConfigDef configDef) { // NOPMD
-        // not required since it is loaded in
+        // not required since it is loaded in automatically when AivenCommonConfig is called, in the super method of
+        // Common Config.
     }
 
     /**

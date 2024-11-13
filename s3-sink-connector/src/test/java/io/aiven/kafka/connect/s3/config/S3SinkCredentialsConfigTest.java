@@ -16,11 +16,11 @@
 
 package io.aiven.kafka.connect.s3.config;
 
-import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_ACCESS_KEY_ID;
-import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_ACCESS_KEY_ID_CONFIG;
-import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_S3_BUCKET_NAME_CONFIG;
-import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_SECRET_ACCESS_KEY;
-import static io.aiven.kafka.connect.s3.S3CommonConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_SECRET_ACCESS_KEY;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
