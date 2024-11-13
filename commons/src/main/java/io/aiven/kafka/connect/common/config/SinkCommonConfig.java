@@ -36,16 +36,10 @@ import io.aiven.kafka.connect.common.templating.Template;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public abstract class SinkCommonConfig extends CommonConfig {
-    public static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
-    public static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
-    public static final String FORMAT_OUTPUT_TYPE_CONFIG = "format.output.type";
-    public static final String FORMAT_OUTPUT_ENVELOPE_CONFIG = "format.output.envelope";
+
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
-    public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
-    public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
-    private static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
 
     @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
     public SinkCommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
@@ -55,119 +49,93 @@ public abstract class SinkCommonConfig extends CommonConfig {
     }
 
     private void validate() {
-        // Special checks for output json envelope config.
-        final List<OutputField> outputFields = getOutputFields();
-        final Boolean outputEnvelopConfig = envelopeEnabled();
-        if (!outputEnvelopConfig && outputFields.toArray().length != 1) {
-            final String msg = String.format("When %s is %s, %s must contain only one field",
-                    FORMAT_OUTPUT_ENVELOPE_CONFIG, false, FORMAT_OUTPUT_FIELDS_CONFIG);
-            throw new ConfigException(msg);
-        }
-        validateKeyFilenameTemplate();
+        new OutputFormatFragment(this).validate();
+        new FileNameFragment(this).validate();
     }
 
+    /**
+     * @deprecated use {@link OutputFormatFragment#update(ConfigDef, OutputFieldType)}
+     */
+    @Deprecated
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
             final OutputFieldType defaultFieldType) {
-        int formatGroupCounter = 0;
-
-        addFormatTypeConfig(configDef, formatGroupCounter);
-
-        configDef.define(FORMAT_OUTPUT_FIELDS_CONFIG, ConfigDef.Type.LIST,
-                Objects.isNull(defaultFieldType) ? null : defaultFieldType.name, // NOPMD NullAssignment
-                new OutputFieldsValidator(), ConfigDef.Importance.MEDIUM,
-                "Fields to put into output files. " + "The supported values are: " + OutputField.SUPPORTED_OUTPUT_FIELDS
-                        + ".",
-                GROUP_FORMAT, formatGroupCounter++, ConfigDef.Width.NONE, FORMAT_OUTPUT_FIELDS_CONFIG,
-                FixedSetRecommender.ofSupportedValues(OutputFieldType.names()));
-
-        configDef.define(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, ConfigDef.Type.STRING,
-                OutputFieldEncodingType.BASE64.name, new OutputFieldsEncodingValidator(), ConfigDef.Importance.MEDIUM,
-                "The type of encoding for the value field. " + "The supported values are: "
-                        + OutputFieldEncodingType.SUPPORTED_FIELD_ENCODING_TYPES + ".",
-                GROUP_FORMAT, formatGroupCounter++, ConfigDef.Width.NONE, FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG,
-                FixedSetRecommender.ofSupportedValues(OutputFieldEncodingType.names()));
-
-        configDef.define(FORMAT_OUTPUT_ENVELOPE_CONFIG, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.MEDIUM,
-                "Whether to enable envelope for entries with single field.", GROUP_FORMAT, formatGroupCounter,
-                ConfigDef.Width.SHORT, FORMAT_OUTPUT_ENVELOPE_CONFIG);
+        OutputFormatFragment.update(configDef, defaultFieldType);
     }
 
-    protected static void addFormatTypeConfig(final ConfigDef configDef, final int formatGroupCounter) {
-        final String supportedFormatTypes = FormatType.names()
-                .stream()
-                .map(f -> "'" + f + "'")
-                .collect(Collectors.joining(", "));
-        configDef.define(FORMAT_OUTPUT_TYPE_CONFIG, ConfigDef.Type.STRING, FormatType.CSV.name,
-                new OutputTypeValidator(), ConfigDef.Importance.MEDIUM,
-                "The format type of output content" + "The supported values are: " + supportedFormatTypes + ".",
-                GROUP_FORMAT, formatGroupCounter, ConfigDef.Width.NONE, FORMAT_OUTPUT_TYPE_CONFIG,
-                FixedSetRecommender.ofSupportedValues(FormatType.names()));
-    }
 
+    /**
+     * @deprecated use {@link OutputFormatFragment#getFormatType()}
+     */
+    @Deprecated
     public FormatType getFormatType() {
-        return FormatType.forName(getString(FORMAT_OUTPUT_TYPE_CONFIG));
+        return new OutputFormatFragment(this).getFormatType();
     }
 
+
+    /**
+     * @deprecated use {@link CompressionFragment#update(ConfigDef, CompressionType)}
+     */
+    @Deprecated
     protected static void addCompressionTypeConfig(final ConfigDef configDef,
             final CompressionType defaultCompressionType) {
-        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
-                Objects.isNull(defaultCompressionType) ? null : defaultCompressionType.name, // NOPMD NullAssignment
-                new FileCompressionTypeValidator(), ConfigDef.Importance.MEDIUM,
-                "The compression type used for files put on GCS. " + "The supported values are: "
-                        + CompressionType.SUPPORTED_COMPRESSION_TYPES + ".",
-                GROUP_COMPRESSION, 1, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
-                FixedSetRecommender.ofSupportedValues(CompressionType.names()));
-
+        CompressionFragment.update(configDef, defaultCompressionType);
     }
 
+    /**
+     * @deprecated use {@link CompressionFragment#getCompressionType()}
+     */
+    @Deprecated
     public CompressionType getCompressionType() {
-        return CompressionType.forName(getString(FILE_COMPRESSION_TYPE_CONFIG));
+        return new CompressionFragment(this).getCompressionType();
     }
 
+    /**
+     * @deprecated use {@link OutputFormatFragment#envelopeEnabled()}
+     */
+    @Deprecated
     public Boolean envelopeEnabled() {
-        return getBoolean(FORMAT_OUTPUT_ENVELOPE_CONFIG);
+        return new OutputFormatFragment(this).envelopeEnabled();
     }
 
+    /**
+     * @deprecated use {@link OutputFormatFragment#getOutputFieldEncodingType()}
+     */
+    @Deprecated
     public OutputFieldEncodingType getOutputFieldEncodingType() {
-        return OutputFieldEncodingType.forName(getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG));
+        return new OutputFormatFragment(this).getOutputFieldEncodingType();
     }
 
+    /**
+     * @deprecated use {@link FileNameFragment#getFilenameTemplate()}
+     */
+    @Deprecated
     public final Template getFilenameTemplate() {
-        return Template.of(getFilename());
+        return new FileNameFragment(this).getFilenameTemplate();
     }
 
-    protected final void validateKeyFilenameTemplate() {
-        // Special checks for {{key}} filename template.
-        final Template filenameTemplate = getFilenameTemplate();
-        final String groupType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        if (isKeyBased(groupType) && getMaxRecordsPerFile() > 1) {
-            final String msg = String.format("When %s is %s, %s must be either 1 or not set", FILE_NAME_TEMPLATE_CONFIG,
-                    filenameTemplate, FILE_MAX_RECORDS);
-            throw new ConfigException(msg);
-        }
-    }
-
+    /**
+     * @deprecated use {@link FileNameFragment#getFilename()}
+     */
+    @Deprecated
     public final String getFilename() {
-        return resolveFilenameTemplate();
+        return new FileNameFragment(this).getFilename();
     }
 
-    private String resolveFilenameTemplate() {
-        String fileNameTemplate = getString(FILE_NAME_TEMPLATE_CONFIG);
-        if (fileNameTemplate == null) {
-            fileNameTemplate = FormatType.AVRO.equals(getFormatType())
-                    ? DEFAULT_FILENAME_TEMPLATE + ".avro" + getCompressionType().extension()
-                    : DEFAULT_FILENAME_TEMPLATE + getCompressionType().extension();
-        }
-        return fileNameTemplate;
-    }
 
+    /**
+     * @deprecated use {@link FileNameFragment#getFilename()}
+     */
+    @Deprecated
     public final ZoneId getFilenameTimezone() {
-        return ZoneId.of(getString(FILE_NAME_TIMESTAMP_TIMEZONE));
+        return new FileNameFragment(this).getFilenameTimezone();
     }
 
+    /**
+     * @deprecated use {@link FileNameFragment#getFilenameTimestampSource()}
+     */
+    @Deprecated
     public final TimestampSource getFilenameTimestampSource() {
-        return TimestampSource.of(getFilenameTimezone(),
-                TimestampSource.Type.of(getString(FILE_NAME_TIMESTAMP_SOURCE)));
+        return new FileNameFragment(this).getFilenameTimestampSource();
     }
 
     public final int getMaxRecordsPerFile() {
@@ -179,19 +147,12 @@ public abstract class SinkCommonConfig extends CommonConfig {
                 || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
     }
 
+    /**
+     * @deprecated use {@link OutputFormatFragment#getOutputFields()}
+     */
+    @Deprecated
     public List<OutputField> getOutputFields() {
-        final List<OutputField> result = new ArrayList<>();
-        for (final String outputFieldTypeStr : getList(FORMAT_OUTPUT_FIELDS_CONFIG)) {
-            final OutputFieldType fieldType = OutputFieldType.forName(outputFieldTypeStr);
-            final OutputFieldEncodingType encodingType;
-            if (fieldType == OutputFieldType.VALUE || fieldType == OutputFieldType.KEY) {
-                encodingType = getOutputFieldEncodingType();
-            } else {
-                encodingType = OutputFieldEncodingType.NONE;
-            }
-            result.add(new OutputField(fieldType, encodingType));
-        }
-        return result;
+        return new OutputFormatFragment(this).getOutputFields();
     }
 
 }

@@ -27,42 +27,21 @@ public abstract class CommonConfig extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";
     protected static final String GROUP_FORMAT = "Format";
 
-    private static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
-    public static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
 
-    public CommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
-        super(definition, originals);
+    /**
+     * @deprecated No longer needed.
+     */
+    @Deprecated
+    protected static void addKafkaBackoffPolicy(final ConfigDef configDef) {
+        // not required since it is loaded in
     }
 
-    protected static void addKafkaBackoffPolicy(final ConfigDef configDef) {
-        configDef.define(KAFKA_RETRY_BACKOFF_MS_CONFIG, ConfigDef.Type.LONG, null, new ConfigDef.Validator() {
-
-            final long maximumBackoffPolicy = TimeUnit.HOURS.toMillis(24);
-
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                if (Objects.isNull(value)) {
-                    return;
-                }
-                assert value instanceof Long;
-                final var longValue = (Long) value;
-                if (longValue < 0) {
-                    throw new ConfigException(name, value, "Value must be at least 0");
-                } else if (longValue > maximumBackoffPolicy) {
-                    throw new ConfigException(name, value,
-                            "Value must be no more than " + maximumBackoffPolicy + " (24 hours)");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM,
-                "The retry backoff in milliseconds. "
-                        + "This config is used to notify Kafka Connect to retry delivering a message batch or "
-                        + "performing recovery in case of transient exceptions. Maximum value is "
-                        + TimeUnit.HOURS.toMillis(24) + " (24 hours).",
-                GROUP_RETRY_BACKOFF_POLICY, 1, ConfigDef.Width.NONE, KAFKA_RETRY_BACKOFF_MS_CONFIG);
+    public CommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
+        super(BackoffPolicyConfig.update(definition), originals);
     }
 
     public Long getKafkaRetryBackoffMs() {
-        return getLong(KAFKA_RETRY_BACKOFF_MS_CONFIG);
+        return new BackoffPolicyConfig(this).getKafkaRetryBackoffMs();
     }
 
 }
