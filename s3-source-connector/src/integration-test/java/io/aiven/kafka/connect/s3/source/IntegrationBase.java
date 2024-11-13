@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -118,9 +119,16 @@ public interface IntegrationBase {
                 .withServices(LocalStackContainer.Service.S3);
     }
 
-    static int getRandomPort() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            return socket.getLocalPort();
+    /**
+     * Finds 2 simultaneously free port for Kafka listeners
+     *
+     * @return list of 2 ports
+     * @throws IOException
+     *             when port allocation failure happens
+     */
+    static List<Integer> getKafkaListenerPorts() throws IOException {
+        try (ServerSocket socket = new ServerSocket(0); ServerSocket socket2 = new ServerSocket(0)) {
+            return Arrays.asList(socket.getLocalPort(), socket2.getLocalPort());
         } catch (IOException e) {
             throw new IOException("Failed to allocate port for test", e);
         }
