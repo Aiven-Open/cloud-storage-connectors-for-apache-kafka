@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -124,19 +126,31 @@ public final class RecordGrouperFactory {
     private RecordGrouperFactory() {
     }
 
+    private static List<String> supportedVariableSets() {
+        List<String> result = new ArrayList<>();
+        for (List<Pair<String, Boolean>> lst : SUPPORTED_VARIABLES.values()) {
+            result.add("[" +
+            lst.stream().map( pair -> pair.getLeft() +" " + (pair.getRight() ? "required" : "not allowed")).collect(Collectors.joining(", "))
+                    +"]");
+        }
+        return result;
+    }
+
     public static String resolveRecordGrouperType(final Template template) {
-        final Supplier<Set<String>> variables = () -> new HashSet<>(template.variablesSet());
-        if (isByTopicPartitionKeyRecord(variables.get())) {
+        if (template.variablesSet().isEmpty()) {
+            throw new IllegalArgumentException(String.format("RecordGrouper requires that the template [%s] has variables defined. Supported variables are: %s", template, SUPPORTED_VARIABLES_LIST));
+        }
+        if (isByTopicPartitionKeyRecord(template.variablesSet())) {
             return TOPIC_PARTITION_KEY_RECORD;
-        } else if (isByTopicPartitionRecord(variables.get())) {
+        } else if (isByTopicPartitionRecord(template.variablesSet())) {
             return TOPIC_PARTITION_RECORD;
-        } else if (isByKeyRecord(variables.get())) {
+        } else if (isByKeyRecord(template.variablesSet())) {
             return KEY_RECORD;
-        } else if (isByKeyTopicPartitionRecord(variables.get())) {
+        } else if (isByKeyTopicPartitionRecord(template.variablesSet())) {
             return KEY_TOPIC_PARTITION_RECORD;
         } else {
             throw new IllegalArgumentException(String
-                    .format("unsupported set of template variables, supported sets are: %s", SUPPORTED_VARIABLES_LIST));
+                    .format("unsupported set of template variables[%s], supported sets are: %s", String.join(", ", template.variablesSet()), String.join(",", supportedVariableSets())));
         }
     }
 

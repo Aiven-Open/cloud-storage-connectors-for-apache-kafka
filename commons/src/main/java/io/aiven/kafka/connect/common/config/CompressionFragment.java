@@ -6,15 +6,14 @@ import org.apache.kafka.common.config.ConfigDef;
 
 import java.util.Objects;
 
-public class CompressionFragment {
+public class CompressionFragment extends ConfigFragment {
 
-    private static final String GROUP_COMPRESSION = "File Compression";
-    private static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
+    static final String GROUP_COMPRESSION = "File Compression";
+    static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
 
-    private AbstractConfig cfg;
 
     public CompressionFragment(AbstractConfig cfg) {
-        this.cfg = cfg;
+        super(cfg);
     }
 
     public static ConfigDef update(final ConfigDef configDef,  final CompressionType defaultCompressionType) {
@@ -28,7 +27,11 @@ public class CompressionFragment {
         return configDef;
     }
 
+    /**
+     * Retrieves the defiend compression type.
+     * @return the defined compression type or {@link CompressionType#NONE} if there is no defined compression type.
+     */
     public CompressionType getCompressionType() {
-        return CompressionType.forName(cfg.getString(FILE_COMPRESSION_TYPE_CONFIG));
+        return has(FILE_COMPRESSION_TYPE_CONFIG) ? CompressionType.forName(cfg.getString(FILE_COMPRESSION_TYPE_CONFIG)) : CompressionType.NONE;
     }
 }

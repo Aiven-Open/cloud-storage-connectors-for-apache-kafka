@@ -13,18 +13,23 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class OutputFormatFragment extends ConfigFragment {
-    private static final String GROUP_FORMAT = "Format";
-    private static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
-    private static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
-    private static final String FORMAT_OUTPUT_TYPE_CONFIG = "format.output.type";
-    private static final String FORMAT_OUTPUT_ENVELOPE_CONFIG = "format.output.envelope";
+    static final String GROUP_FORMAT = "Format";
+    static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
+    static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
+    static final String FORMAT_OUTPUT_TYPE_CONFIG = "format.output.type";
+    static final String FORMAT_OUTPUT_ENVELOPE_CONFIG = "format.output.envelope";
 
     public OutputFormatFragment(AbstractConfig cfg) {
         super(cfg);
     }
 
-    public static ConfigDef update(final ConfigDef configDef,
-                                                           final OutputFieldType defaultFieldType) {
+    /**
+     * Defines the parameters for the OutputFormatFragment.
+     * @param configDef the configuration definition to update.
+     * @param defaultFieldType the default FieldType.  May be {@code null}.
+     * @return The update ConfigDef.
+     */
+    public static ConfigDef update(final ConfigDef configDef, final OutputFieldType defaultFieldType) {
         int formatGroupCounter = 0;
 
         final String supportedFormatTypes = FormatType.names()

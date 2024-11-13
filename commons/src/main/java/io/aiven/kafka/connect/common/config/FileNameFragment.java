@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
  */
 public final class FileNameFragment extends ConfigFragment {
 
+    // package private so that testing can access.
     static final String GROUP_FILE = "File";
     static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     static final String FILE_MAX_RECORDS = "file.max.records";
@@ -29,7 +30,7 @@ public final class FileNameFragment extends ConfigFragment {
     static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
 
-    protected FileNameFragment(AbstractConfig cfg) {
+    public FileNameFragment(AbstractConfig cfg) {
         super(cfg);
     }
 
@@ -109,23 +110,25 @@ public final class FileNameFragment extends ConfigFragment {
                 || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
     }
 
+    /**
+     * Returns the text of the filename template.
+     * May throw {@link ConfigException} if the property {@link #FILE_NAME_TEMPLATE_CONFIG} is not set.
+     * @return the text of the filename template.
+     */
     public String getFilename() {
-        return resolveFilenameTemplate();
+        if (has(FILE_NAME_TEMPLATE_CONFIG)) {
+            return cfg.getString(FILE_NAME_TEMPLATE_CONFIG);
+        }
+        CompressionType compressionType = new CompressionFragment(cfg).getCompressionType();
+        return FormatType.AVRO.equals(new OutputFormatFragment(cfg).getFormatType())
+                ? DEFAULT_FILENAME_TEMPLATE + ".avro" + compressionType.extension()
+                : DEFAULT_FILENAME_TEMPLATE + compressionType.extension();
     }
 
     public Template getFilenameTemplate() {
         return Template.of(getFilename());
     }
-    private String resolveFilenameTemplate() {
-        String fileNameTemplate = cfg.getString(FILE_NAME_TEMPLATE_CONFIG);
-        if (fileNameTemplate == null) {
-            CompressionType compressionType = new CompressionFragment(cfg).getCompressionType();
-            fileNameTemplate = FormatType.AVRO.equals(new OutputFormatFragment(cfg).getFormatType())
-                    ? DEFAULT_FILENAME_TEMPLATE + ".avro" +compressionType.extension()
-                    : DEFAULT_FILENAME_TEMPLATE + compressionType.extension();
-        }
-        return fileNameTemplate;
-    }
+
 
     public ZoneId getFilenameTimezone() {
         return ZoneId.of(cfg.getString(FILE_NAME_TIMESTAMP_TIMEZONE));
