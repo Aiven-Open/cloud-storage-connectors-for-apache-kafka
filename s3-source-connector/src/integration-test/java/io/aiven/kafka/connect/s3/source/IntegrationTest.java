@@ -124,8 +124,9 @@ final class IntegrationTest implements IntegrationBase {
         testBucketAccessor.createBucket();
 
         connectRunner = new ConnectRunner(OFFSET_FLUSH_INTERVAL_MS);
-        final int localListenerPort = IntegrationBase.getRandomPort();
-        final int containerListenerPort = IntegrationBase.getRandomPort();
+        final List<Integer> ports = IntegrationBase.getKafkaListenerPorts();
+        final int localListenerPort = ports.get(0);
+        final int containerListenerPort = ports.get(1);
         connectRunner.startConnectCluster(CONNECTOR_NAME, localListenerPort, containerListenerPort);
 
         adminClient = newAdminClient(connectRunner.getBootstrapServers());
