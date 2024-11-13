@@ -182,7 +182,7 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
             }
         }
     }
-    
+
     private static void addDeprecatedTimestampConfig(final ConfigDef configDef) {
         int timestampGroupCounter = 0;
 
@@ -283,6 +283,7 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
         }).collect(Collectors.toUnmodifiableList());
     }
 
+    // TODO : remove this
 //    @Override
 //    public OutputFieldEncodingType getOutputFieldEncodingType() {
 //        return Objects.nonNull(getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG))
