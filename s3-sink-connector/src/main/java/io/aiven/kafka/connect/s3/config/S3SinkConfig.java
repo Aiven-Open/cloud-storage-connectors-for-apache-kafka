@@ -178,7 +178,8 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
         }
     }
 
-//    private static void addFileConfigGroup(final ConfigDef configDef) {
+// TODO REMOVE THIS
+//  private static void addFileConfigGroup(final ConfigDef configDef) {
 //        int fileGroupCounter = 0;
 //
 //        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
@@ -310,6 +311,7 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
         }).collect(Collectors.toUnmodifiableList());
     }
 
+    // TODO : remove this
 //    @Override
 //    public OutputFieldEncodingType getOutputFieldEncodingType() {
 //        return Objects.nonNull(getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG))
