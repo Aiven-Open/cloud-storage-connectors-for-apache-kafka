@@ -23,6 +23,9 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
+/**
+ * Defines the backoff policy for connectors.
+ */
 public class BackoffPolicyConfig extends ConfigFragment {
 
     static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
@@ -32,6 +35,13 @@ public class BackoffPolicyConfig extends ConfigFragment {
         super(cfg);
     }
 
+    /**
+     * Adds configuration options to the configuration definition.
+     *
+     * @param configDef
+     *            the configuration definition ot update.
+     * @return the configuraiton definition with additional options.
+     */
     public static ConfigDef update(final ConfigDef configDef) {
         configDef.define(KAFKA_RETRY_BACKOFF_MS_CONFIG, ConfigDef.Type.LONG, null, new ConfigDef.Validator() {
 
@@ -61,11 +71,11 @@ public class BackoffPolicyConfig extends ConfigFragment {
         return configDef;
     }
 
-    @Override
-    void validate() {
-        // does nothing
-    }
-
+    /**
+     * Gets the kafka retry backoff time..
+     *
+     * @return the Kafka retry backoff time in MS.
+     */
     public Long getKafkaRetryBackoffMs() {
         return cfg.getLong(KAFKA_RETRY_BACKOFF_MS_CONFIG);
     }

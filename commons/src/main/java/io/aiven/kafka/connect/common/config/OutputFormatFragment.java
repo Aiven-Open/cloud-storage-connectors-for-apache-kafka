@@ -87,9 +87,9 @@ public class OutputFormatFragment extends ConfigFragment {
     @Override
     public void validate() {
         // Special checks for output json envelope config.
-        final List<OutputField> outputFields = getOutputFields();
+        final int outputFieldCount = hasOutputFields() ? getOutputFields().size() : 0;
         final Boolean outputEnvelopConfig = envelopeEnabled();
-        if (!outputEnvelopConfig && outputFields.toArray().length != 1) {
+        if (!outputEnvelopConfig && outputFieldCount != 1) {
             final String msg = String.format("When %s is %s, %s must contain only one field",
                     FORMAT_OUTPUT_ENVELOPE_CONFIG, false, FORMAT_OUTPUT_FIELDS_CONFIG);
             throw new ConfigException(msg);

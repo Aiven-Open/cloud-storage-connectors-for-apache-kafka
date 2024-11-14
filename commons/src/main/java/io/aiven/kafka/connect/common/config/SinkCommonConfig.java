@@ -22,7 +22,6 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.templating.Template;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -100,11 +99,6 @@ public abstract class SinkCommonConfig extends CommonConfig {
 
     public final int getMaxRecordsPerFile() {
         return getInt(FILE_MAX_RECORDS);
-    }
-
-    private Boolean isKeyBased(final String groupType) { // NOPMD
-        return RecordGrouperFactory.KEY_RECORD.equals(groupType)
-                || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
     }
 
     public List<OutputField> getOutputFields() {

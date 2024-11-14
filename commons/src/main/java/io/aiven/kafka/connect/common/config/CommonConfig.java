@@ -20,6 +20,10 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+
+/**
+ * The base configuration or all connectors.
+ */
 public abstract class CommonConfig extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";
     protected static final String GROUP_FORMAT = "Format";
@@ -32,10 +36,23 @@ public abstract class CommonConfig extends AbstractConfig {
         // not required since it is loaded in
     }
 
-    public CommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
-        super(BackoffPolicyConfig.update(definition), originals);
+    /**
+     * Constructs the CommonConfig with the backoff policy.
+     *
+     * @param definition
+     *            the definition to add the backoff policy too.
+     * @param props
+     *            The properties to construct the configuration with.
+     */
+    protected CommonConfig(ConfigDef definition, Map<?, ?> props) { // NOPMD
+        super(BackoffPolicyConfig.update(definition), props);
     }
 
+    /**
+     * Gets the Kafka retry backoff time in MS.
+     *
+     * @return The Kafka retry backoff time in MS.
+     */
     public Long getKafkaRetryBackoffMs() {
         return new BackoffPolicyConfig(this).getKafkaRetryBackoffMs();
     }

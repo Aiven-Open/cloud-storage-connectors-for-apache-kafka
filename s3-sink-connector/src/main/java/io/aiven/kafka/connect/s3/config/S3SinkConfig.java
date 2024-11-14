@@ -144,7 +144,6 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
         addOutputFieldsFormatConfigGroup(configDef, null);
         addDeprecatedTimestampConfig(configDef);
         addDeprecatedConfiguration(configDef);
-        addKafkaBackoffPolicy(configDef);
         addS3RetryPolicies(configDef);
         return configDef;
     }

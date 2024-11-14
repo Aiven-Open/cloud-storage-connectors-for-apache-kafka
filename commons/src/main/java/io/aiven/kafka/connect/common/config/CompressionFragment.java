@@ -23,7 +23,10 @@ import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 
-public class CompressionFragment extends ConfigFragment {
+/**
+ * The configuration fragment that defines the compression characteristics.
+ */
+public final class CompressionFragment extends ConfigFragment {
 
     static final String GROUP_COMPRESSION = "File Compression";
     static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
@@ -38,9 +41,19 @@ public class CompressionFragment extends ConfigFragment {
         super(cfg);
     }
 
+    /**
+     * Adds the configuration options for compression to the configuration definition.
+     *
+     * @param configDef
+     *            the Configuration definition.
+     * @param defaultCompressionType
+     *            the default compression type. If {@code null}, {@link CompressionType#NONE} will be configured.
+     * @return the update configuration definition
+     */
     public static ConfigDef update(final ConfigDef configDef, final CompressionType defaultCompressionType) {
         configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
-                Objects.isNull(defaultCompressionType) ? null : defaultCompressionType.name, // NOPMD NullAssignment
+                Objects.isNull(defaultCompressionType) ? CompressionType.NONE.name : defaultCompressionType.name, // NOPMD
+                                                                                                                  // NullAssignment
                 new FileCompressionTypeValidator(), ConfigDef.Importance.MEDIUM,
                 "The compression type used for files put on GCS. " + "The supported values are: "
                         + CompressionType.SUPPORTED_COMPRESSION_TYPES + ".",
@@ -50,7 +63,7 @@ public class CompressionFragment extends ConfigFragment {
     }
 
     /**
-     * Retrieves the defiend compression type.
+     * Retrieves the defined compression type.
      *
      * @return the defined compression type or {@link CompressionType#NONE} if there is no defined compression type.
      */
