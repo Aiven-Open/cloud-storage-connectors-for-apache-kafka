@@ -26,11 +26,11 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
     public static final int SCHEMA_REGISTRY_PORT = 8081;
 
     public SchemaRegistryContainer(final String bootstrapServer) {
-        this("3.7.1", bootstrapServer);
+        this("4.1.0", bootstrapServer);
     }
 
     public SchemaRegistryContainer(final String karapaceVersion, final String bootstrapServer) {
-        super("ghcr.io/aiven/karapace:" + karapaceVersion);
+        super("ghcr.io/aiven-open/karapace:" + karapaceVersion);
         withAccessToHost(true);
         withEnv("KARAPACE_ADVERTISED_HOSTNAME", "karapace-registry");
         withEnv("KARAPACE_BOOTSTRAP_URI", bootstrapServer);
