@@ -16,13 +16,10 @@
 
 package io.aiven.kafka.connect.s3;
 
-import java.time.format.DateTimeFormatter;
-import java.util.Map;
 import java.util.function.BiFunction;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
 
 public final class OldFullKeyFormatters {

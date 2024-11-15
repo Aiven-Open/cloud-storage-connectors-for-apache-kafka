@@ -549,9 +549,12 @@ final class S3SinkConfigTest {
         // null record is fine here, because it's not needed for the wallclock timestamp source
         final var expectedTimestamp = config.getTimestampSource().time(null);
 
-        final var renderedPrefix = config.getPrefixTemplate().instance().bindVariable("timestamp",
-        // null record is fine here, because it's not needed for the wall clock timestamp source
-        new StableTimeFormatter(config.getTimestampSource()).apply(null)).render();
+        final var renderedPrefix = config.getPrefixTemplate()
+                .instance()
+                .bindVariable("timestamp",
+                        // null record is fine here, because it's not needed for the wall clock timestamp source
+                        new StableTimeFormatter(config.getTimestampSource()).apply(null))
+                .render();
 
         assertThat(renderedPrefix)
                 .isEqualTo(String.format("%s/%s/%s/", expectedTimestamp.format(DateTimeFormatter.ofPattern("yyyy")),

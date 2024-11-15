@@ -24,11 +24,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
-import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
+import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
