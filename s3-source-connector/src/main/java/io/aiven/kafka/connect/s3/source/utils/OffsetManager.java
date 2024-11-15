@@ -63,6 +63,20 @@ public class OffsetManager {
         return Collections.unmodifiableMap(offsets);
     }
 
+    /**
+     * Updates the offset map.  The {@code partitionMap} parameter is only used as a key all data is managed internally.
+     * If the {@code partitionMap} is not found in the internal map then no changes occur and the {@code startOffset} value is
+     * returned. Otherwise:
+     *  <ul>
+     *      <li>If the internal map contains a value for {@code currentObjectKey} the offset is incremented and returned.</li>
+     *      <li>If the internal map does NOT contain a value for {@code currentObjectKey} the offset set to the value of
+     *      {@code startOffset} and that value returned.</li>
+     *  </ul>
+     * @param partitionMap the key to lookup the data in the offsets table.
+     * @param currentObjectKey The object to update the offset for.
+     * @param startOffset The initial value if necessary.
+     * @return the value of the calculation outlined above.
+     */
     public long incrementAndUpdateOffsetMap(final Map<String, Object> partitionMap, final String currentObjectKey,
             final long startOffset) {
         if (offsets.containsKey(partitionMap)) {
@@ -85,24 +99,17 @@ public class OffsetManager {
         return OBJECT_KEY + SEPARATOR + currentObjectKey;
     }
 
-    public boolean shouldSkipRecord(final Map<String, Object> partitionMap, final String currentObjectKey,
-            final long numOfProcessedRecs) {
-        if (offsets.containsKey(partitionMap)) {
-            final Map<String, Object> offsetVal = offsets.get(partitionMap);
-            final String objectMapKey = getObjectMapKey(currentObjectKey);
+    public boolean shouldSkipRecord(S3OffsetManagerEntry offsetManagerEntry) {
+        if (offsets.containsKey(offsetManagerEntry.getManagerKey().getPartitionMap())) {
+            final Map<String, Object> offsetVal = offsets.get(offsetManagerEntry.getManagerKey().getPartitionMap());
+            final String objectMapKey = getObjectMapKey(offsetManagerEntry.getKey());
 
             if (offsetVal.containsKey(objectMapKey)) {
                 final long offsetValue = (long) offsetVal.get(objectMapKey);
-                return numOfProcessedRecs <= offsetValue;
+                return offsetManagerEntry.getRecordCount() <= offsetValue;
             }
         }
         return false;
-    }
-
-    public void createNewOffsetMap(final Map<String, Object> partitionMap, final String objectKey,
-            final long offsetId) {
-        final Map<String, Object> offsetMap = getOffsetValueMap(objectKey, offsetId);
-        offsets.put(partitionMap, offsetMap);
     }
 
     public Map<String, Object> getOffsetValueMap(final String currentObjectKey, final long offsetId) {
@@ -139,5 +146,41 @@ public class OffsetManager {
             partitionKeys.add(ConnectUtils.getPartitionMap(topic, partition, bucket));
         }));
         return partitionKeys;
+    }
+
+    /**
+     * The definition of an entry in the OffsetManager.
+     */
+    public static interface OffsetManagerEntry {
+        /**
+         * Extract the data from the entry in the correct format to return to Kafka.
+         * @return
+         */
+        Map<String, Object> getProperties();
+
+        /**
+         * Sets a key/value pair.  Will overwrite any existing value.
+         * Implementations of OffsetManagerEntry may declare specific keys as restricted.  These are generally keys
+         * that are managed internally by the OffsetManagerEntry and may not be set except through provided setter
+         * methods or the constructor.
+         * @param key the key to set.
+         * @param value the value to set.
+         * @throws IllegalArgumentException if the key is restricted.
+         */
+        void setProperty(String key, Object value);
+
+        /**
+         * ManagerKey getManagerKey
+         * @return The offset manager key for this entry.
+         */
+        OffsetManagerKey getManagerKey();
+    }
+
+    /**
+     * The OffsetManager Key.  Must override hashCode() and equals().
+     */
+    @FunctionalInterface
+    public interface OffsetManagerKey {
+        Map<String, Object> getPartitionMap();
     }
 }

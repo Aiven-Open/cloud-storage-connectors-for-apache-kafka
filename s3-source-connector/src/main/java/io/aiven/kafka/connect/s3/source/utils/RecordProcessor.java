@@ -45,43 +45,37 @@ public final class RecordProcessor {
     public static List<SourceRecord> processRecords(final Iterator<S3SourceRecord> sourceRecordIterator,
             final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
             final Optional<Converter> keyConverter, final Converter valueConverter,
-            final AtomicBoolean connectorStopped, final Transformer transformer, final FileReader fileReader,
-            final OffsetManager offsetManager) {
+            final AtomicBoolean connectorStopped) {
 
-        final Map<String, String> conversionConfig = new HashMap<>();
         final int maxPollRecords = s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS);
 
         for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
             final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
-            if (s3SourceRecord != null) {
-                final SourceRecord sourceRecord = createSourceRecord(s3SourceRecord, s3SourceConfig, keyConverter,
-                        valueConverter, conversionConfig, transformer, fileReader, offsetManager);
-                results.add(sourceRecord);
-            }
+            results.add(s3SourceRecord.getSourceRecord(keyConverter, valueConverter));
         }
 
         return results;
     }
-
-    static SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord, final S3SourceConfig s3SourceConfig,
-            final Optional<Converter> keyConverter, final Converter valueConverter,
-            final Map<String, String> conversionConfig, final Transformer transformer, final FileReader fileReader,
-            final OffsetManager offsetManager) {
-
-        final String topic = s3SourceRecord.getTopic();
-        final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(topic, s3SourceRecord.key()));
-
-        transformer.configureValueConverter(conversionConfig, s3SourceConfig);
-        valueConverter.configure(conversionConfig, false);
-        try {
-            final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, s3SourceRecord.value());
-            offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
-            s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
-            return s3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
-        } catch (DataException e) {
-            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
-            fileReader.addFailedObjectKeys(s3SourceRecord.getObjectKey());
-            throw e;
-        }
-    }
+//
+//    static SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord, final S3SourceConfig s3SourceConfig,
+//            final Optional<Converter> keyConverter, final Converter valueConverter,
+//            final Map<String, String> conversionConfig, final Transformer transformer, final FileReader fileReader,
+//            final OffsetManager offsetManager) {
+//
+//        final String topic = s3SourceRecord.getTopic();
+//        final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(topic, s3SourceRecord.key()));
+//
+//        transformer.configureValueConverter(conversionConfig, s3SourceConfig);
+//        valueConverter.configure(conversionConfig, false);
+//        try {
+//            final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, s3SourceRecord.value());
+//            offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
+//            s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
+//            return s3SourceRecord.getSourceRecord(keyData, schemaAndValue);
+//        } catch (DataException e) {
+//            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
+//            fileReader.addFailedObjectKeys(s3SourceRecord.getObjectKey());
+//            throw e;
+//        }
+//    }
 }

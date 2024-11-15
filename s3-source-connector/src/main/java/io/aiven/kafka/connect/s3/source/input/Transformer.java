@@ -26,10 +26,13 @@ import org.apache.commons.io.function.IOSupplier;
 
 public interface Transformer {
 
+    // TODO make this method accept an S3OffsetManagerEntry and update the values in the configuration directly.
     void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
 
+    // TODO make this method accept an S3OffsetManagerEntry to retrieve the topic an topicParitiion.
     Stream<Object> getRecords(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition,
             S3SourceConfig s3SourceConfig);
+
 
     byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
 }

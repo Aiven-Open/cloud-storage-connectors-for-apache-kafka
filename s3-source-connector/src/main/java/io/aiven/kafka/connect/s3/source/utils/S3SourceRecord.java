@@ -23,66 +23,44 @@ import java.util.Optional;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.storage.Converter;
 
+/**
+ * The Source record that contains the offset manager data as well.
+ */
 public class S3SourceRecord {
-    private final Map<String, Object> partitionMap;
-    private Map<String, Object> offsetMap;
-    private final String topic;
-    private final Integer topicPartition;
+    private final S3OffsetManagerEntry offsetManagerEntry;
     private final byte[] recordKey;
     private final byte[] recordValue;
 
-    private final String objectKey;
 
-    public S3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
-            final String topic, final Integer topicPartition, final byte[] recordKey, final byte[] recordValue,
-            final String objectKey) {
-        this.partitionMap = new HashMap<>(partitionMap);
-        this.offsetMap = new HashMap<>(offsetMap);
-
-        this.topic = topic;
-        this.topicPartition = topicPartition;
+    public S3SourceRecord(final S3OffsetManagerEntry offsetManagerEntry, final byte[] recordKey, final byte[] recordValue) {
         this.recordKey = recordKey.clone(); // Defensive copy
         this.recordValue = recordValue.clone(); // Defensive copy
-
-        this.objectKey = objectKey;
+        this.offsetManagerEntry = offsetManagerEntry;
     }
 
+
     public Map<String, Object> getPartitionMap() {
-        return Collections.unmodifiableMap(partitionMap);
+        return offsetManagerEntry.getManagerKey().getPartitionMap();
     }
 
     public Map<String, Object> getOffsetMap() {
-        return Collections.unmodifiableMap(offsetMap);
+        return offsetManagerEntry.getProperties();
     }
 
-    public String getTopic() {
-        return topic;
-    }
+    public SourceRecord getSourceRecord(final Optional<Converter> keyConverter, final Converter valueConverter) {
+        final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(offsetManagerEntry.getTopic(), recordKey));
 
-    public Integer partition() {
-        return topicPartition;
-    }
+        //transformer.configureValueConverter(conversionConfig, s3SourceConfig);
+        //valueConverter.configure(conversionConfig, false);
 
-    public byte[] key() {
-        return (recordKey == null) ? null : recordKey.clone(); // Return a defensive copy
-    }
+        final SchemaAndValue schemaAndValue = valueConverter.toConnectData(offsetManagerEntry.getTopic(), recordValue);
+//        offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
+ //       s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
+//        return s3SourceRecord.getSourceRecord(keyData, schemaAndValue);
 
-    public byte[] value() {
-        return (recordValue == null) ? null : recordValue.clone(); // Return a defensive copy
-    }
-
-    public String getObjectKey() {
-        return objectKey;
-    }
-
-    public void setOffsetMap(final Map<String, Object> offsetMap) {
-        this.offsetMap = new HashMap<>(offsetMap);
-    }
-
-    public SourceRecord getSourceRecord(final String topic, final Optional<SchemaAndValue> keyData,
-            final SchemaAndValue schemaAndValue) {
-        return new SourceRecord(getPartitionMap(), getOffsetMap(), topic, partition(),
+        return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(), offsetManagerEntry.getProperties(), offsetManagerEntry.getTopic(), offsetManagerEntry.getPartition(),
                 keyData.map(SchemaAndValue::schema).orElse(null), keyData.map(SchemaAndValue::value).orElse(null),
                 schemaAndValue.schema(), schemaAndValue.value());
     }

@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -36,6 +37,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,176 +46,59 @@ import org.slf4j.LoggerFactory;
  * Parquet).
  */
 public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
-    public static final String PATTERN_TOPIC_KEY = "topicName";
-    public static final String PATTERN_PARTITION_KEY = "partitionId";
 
-    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
-            + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
-    private String currentObjectKey;
+    /** The S3SourceRecord Iterator that we will return values from */
+    private Iterator<S3SourceRecord> outer;
+    /** The Iterator of Iterators of S3SourceRecords that we will process.  The inner iterator feeds the outer iterator*/
+    private final Iterator<Iterator<S3SourceRecord>> inner;
 
-    private final Iterator<S3ObjectSummary> s3ObjectSummaryIterator;
-    private Iterator<S3SourceRecord> recordIterator = Collections.emptyIterator();
-
-    private final OffsetManager offsetManager;
-
-    private final S3SourceConfig s3SourceConfig;
-    private final String bucketName;
-    private final AmazonS3 s3Client;
-
-    private final Transformer transformer;
-
-    private final FileReader fileReader; // NOPMD
-
-    public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
-            final OffsetManager offsetManager, final Transformer transformer, final FileReader fileReader) {
-        this.s3SourceConfig = s3SourceConfig;
-        this.offsetManager = offsetManager;
-        this.s3Client = s3Client;
-        this.bucketName = bucketName;
-        this.transformer = transformer;
-        this.fileReader = fileReader;
-        s3ObjectSummaryIterator = fileReader.fetchObjectSummaries(s3Client);
-    }
-
-    private void nextS3Object() {
-        if (!s3ObjectSummaryIterator.hasNext()) {
-            recordIterator = Collections.emptyIterator();
-            return;
-        }
-
-        try {
-            final S3ObjectSummary file = s3ObjectSummaryIterator.next();
-            if (file != null) {
-                currentObjectKey = file.getKey();
-                recordIterator = createIteratorForCurrentFile();
-            }
-        } catch (IOException e) {
-            throw new AmazonClientException(e);
-        }
-    }
-
-    private Iterator<S3SourceRecord> createIteratorForCurrentFile() throws IOException {
-        try (S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);) {
-
-            final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(currentObjectKey);
-            String topicName;
-            int defaultPartitionId;
-
-            if (fileMatcher.find()) {
-                topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
-                defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
-            } else {
-                LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
-                s3Object.close();
-                return Collections.emptyIterator();
-            }
-
-            final long defaultStartOffsetId = 1L;
-
-            final String finalTopic = topicName;
-            final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
-                    bucketName);
-
-            return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
-                    partitionMap);
-        }
-    }
-
-    @SuppressWarnings("PMD.CognitiveComplexity")
-    private Iterator<S3SourceRecord> getObjectIterator(final S3Object s3Object, final String topic,
-            final int topicPartition, final long startOffset, final Transformer transformer,
-            final Map<String, Object> partitionMap) {
-        return new Iterator<>() {
-            private final Iterator<S3SourceRecord> internalIterator = readNext().iterator();
-
-            private List<S3SourceRecord> readNext() {
-                final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
-                final List<S3SourceRecord> sourceRecords = new ArrayList<>();
-
-                int numOfProcessedRecs = 1;
-                boolean checkOffsetMap = true;
-                try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent, topic,
-                        topicPartition, s3SourceConfig)) {
-                    final Iterator<Object> recordIterator = recordStream.iterator();
-                    while (recordIterator.hasNext()) {
-                        final Object record = recordIterator.next();
-
-                        // Check if the record should be skipped based on the offset
-                        if (offsetManager.shouldSkipRecord(partitionMap, currentObjectKey, numOfProcessedRecs)
-                                && checkOffsetMap) {
-                            numOfProcessedRecs++;
-                            continue;
-                        }
-
-                        final byte[] valueBytes = transformer.getValueBytes(record, topic, s3SourceConfig);
-                        checkOffsetMap = false;
-
-                        sourceRecords.add(getSourceRecord(keyBytes, valueBytes, topic, topicPartition, offsetManager,
-                                startOffset, partitionMap));
-
-                        numOfProcessedRecs++;
-
-                        // Break if we have reached the max records per poll
-                        if (sourceRecords.size() >= s3SourceConfig.getInt(MAX_POLL_RECORDS)) {
-                            break;
-                        }
-                    }
-                }
-
-                return sourceRecords;
-            }
-
-            private S3SourceRecord getSourceRecord(final byte[] key, final byte[] value, final String topic,
-                    final int topicPartition, final OffsetManager offsetManager, final long startOffset,
-                    final Map<String, Object> partitionMap) {
-
-                long currentOffset;
-
-                if (offsetManager.getOffsets().containsKey(partitionMap)) {
-                    LOGGER.info("***** offsetManager.getOffsets() ***** {}", offsetManager.getOffsets());
-                    currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap, currentObjectKey,
-                            startOffset);
-                } else {
-                    LOGGER.info("Into else block ...");
-                    currentOffset = startOffset;
-                    offsetManager.createNewOffsetMap(partitionMap, currentObjectKey, currentOffset);
-                }
-
-                final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey, currentOffset);
-
-                return new S3SourceRecord(partitionMap, offsetMap, topic, topicPartition, key, value, currentObjectKey);
-            }
-
-            @Override
-            public boolean hasNext() {
-                return internalIterator.hasNext();
-            }
-
-            @Override
-            public S3SourceRecord next() {
-                return internalIterator.next();
-            }
-        };
+    /**
+     * Constructor.
+     * @param s3SourceConfig The S3 source configuration.
+     * @param s3Client The s3Client that we are reading from.
+     * @param offsetManager the Offset manager for this source package.
+     * @param transformer the Transformer to convert S3 data to Kafka data.
+     * @param s3ObjectSummaryIterator The iterator of S3ObjectSummaries.
+     */
+    public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client,
+                                final OffsetManager offsetManager, final Transformer transformer, final Iterator<S3ObjectSummary> s3ObjectSummaryIterator) {
+        final TopicPartitionExtractingPredicate topicPartitionExtractingPredicate = new TopicPartitionExtractingPredicate();
+        final S3ObjectToSourceRecordMapper sourceToRecordMapper = new S3ObjectToSourceRecordMapper(transformer,
+                topicPartitionExtractingPredicate, s3SourceConfig, offsetManager);
+        final Iterator<S3ObjectSummary> objectSummaryIterator = IteratorUtils.filteredIterator(s3ObjectSummaryIterator,
+                topicPartitionExtractingPredicate::test);
+        inner = IteratorUtils.transformedIterator(objectSummaryIterator, s3ObjectSummary -> sourceToRecordMapper
+                .apply(s3Client.getObject(s3ObjectSummary.getBucketName(), s3ObjectSummary.getKey())));
+        // outer is purposefully not set here.
     }
 
     @Override
     public boolean hasNext() {
-        return recordIterator.hasNext() || s3ObjectSummaryIterator.hasNext();
+        if (outer == null) {
+            if (inner.hasNext()) {
+                outer = inner.next();
+            } else {
+                return false;
+            }
+        }
+        while (!outer.hasNext()) {
+            if (inner.hasNext()) {
+                outer = inner.next();
+            } else {
+                // reset to null so we can pick up any new records from inner if they suddenly appear.
+                outer = null; // NOPMD NullAssignment
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
     public S3SourceRecord next() {
-        if (!recordIterator.hasNext()) {
-            nextS3Object();
+        if (!hasNext()) {
+            throw new NoSuchElementException();
         }
-
-        if (!recordIterator.hasNext()) {
-            // If there are still no records, return null or throw an exception
-            return null; // Or throw new NoSuchElementException();
-        }
-
-        return recordIterator.next();
+        return outer.next();
     }
 
     @Override

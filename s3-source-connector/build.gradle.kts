@@ -67,6 +67,7 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
+  implementation(apache.commons.collection4)
   implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
   implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
 

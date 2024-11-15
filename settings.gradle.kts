@@ -6,6 +6,7 @@ val avroConverterVersion by extra("7.2.2")
 val avroDataVersion by extra("7.2.2")
 val awaitilityVersion by extra("4.2.1")
 val commonsTextVersion by extra("1.11.0")
+val commonsCollections4Version by extra("4.4")
 val hadoopVersion by extra("3.4.0")
 val hamcrestVersion by extra("2.2")
 val jacksonVersion by extra("2.15.3")
@@ -30,6 +31,9 @@ dependencyResolutionManagement {
     create("apache") {
       library("avro", "org.apache.avro:avro:$avroVersion")
       library("commons-text", "org.apache.commons:commons-text:$commonsTextVersion")
+      library(
+          "commons-collection4",
+          "org.apache.commons:commons-collections4:$commonsCollections4Version")
       library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaVersion")
       library("kafka-connect-json", "org.apache.kafka:connect-json:$kafkaVersion")
       library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:$kafkaVersion")

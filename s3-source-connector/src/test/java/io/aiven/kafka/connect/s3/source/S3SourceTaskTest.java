@@ -23,12 +23,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
@@ -173,7 +175,8 @@ final class S3SourceTaskTest {
     }
 
     private static S3SourceRecord getAivenS3SourceRecord() {
-        return new S3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, new byte[0], new byte[0], "");
+        S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry("bucket", "s3ObjectKey", "testtopic", 0);
+        return new S3SourceRecord(offsetManagerEntry, "mock-key".getBytes(StandardCharsets.UTF_8), "mock-value".getBytes(StandardCharsets.UTF_8));
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")

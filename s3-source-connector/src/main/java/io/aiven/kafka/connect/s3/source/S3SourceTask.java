@@ -186,8 +186,9 @@ public class S3SourceTask extends SourceTask {
         if (connectorStopped.get()) {
             return results;
         }
+        // TODO pull RecordProcessor.processRecords into this class.
         return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
-                valueConverter, connectorStopped, this.transformer, fileReader, offsetManager);
+                valueConverter, connectorStopped);
     }
 
     private void waitForObjects() throws InterruptedException {
