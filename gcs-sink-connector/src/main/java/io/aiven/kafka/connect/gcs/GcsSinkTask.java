@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class GcsSinkTask extends SinkTask {
-    private static final Logger LOG = LoggerFactory.getLogger(GcsSinkConnector.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GcsSinkTask.class);
     private static final String USER_AGENT_HEADER_KEY = "user-agent";
 
     private RecordGrouper recordGrouper;
@@ -93,7 +93,7 @@ public final class GcsSinkTask extends SinkTask {
     private void initRest() {
         try {
             this.recordGrouper = RecordGrouperFactory.newRecordGrouper(config);
-        } catch (final Exception e) { // NOPMD broad exception catched
+        } catch (final Exception e) { // NOPMD broad exception caught
             throw new ConnectException("Unsupported file name template " + config.getFilename(), e);
         }
     }
@@ -129,7 +129,7 @@ public final class GcsSinkTask extends SinkTask {
                         .withEnvelopeEnabled(config.envelopeEnabled())
                         .build(out, config.getFormatType())) {
             writer.writeRecords(records);
-        } catch (final Exception e) { // NOPMD broad exception catched
+        } catch (final Exception e) { // NOPMD broad exception caught
             throw new ConnectException(e);
         }
     }
