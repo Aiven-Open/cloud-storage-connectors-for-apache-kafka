@@ -27,6 +27,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -66,7 +67,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
-import org.threeten.bp.Duration;
 
 final class GcsSinkTaskTest {
 
@@ -429,13 +429,13 @@ final class GcsSinkTaskTest {
 
         assertThat(headers).containsExactly(entry("user-agent", "Google GCS Sink/test-version (GPN: Aiven;)"));
         assertThat(retrySettings.isJittered()).isTrue();
-        assertThat(retrySettings.getInitialRetryDelay())
+        assertThat(retrySettings.getInitialRetryDelayDuration())
                 .isEqualTo(Duration.ofMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT));
-        assertThat(retrySettings.getMaxRetryDelay())
+        assertThat(retrySettings.getMaxRetryDelayDuration())
                 .isEqualTo(Duration.ofMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT));
         assertThat(retrySettings.getRetryDelayMultiplier())
                 .isEqualTo(GcsSinkConfig.GCS_RETRY_BACKOFF_DELAY_MULTIPLIER_DEFAULT);
-        assertThat(retrySettings.getTotalTimeout())
+        assertThat(retrySettings.getTotalTimeoutDuration())
                 .isEqualTo(Duration.ofMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT));
         assertThat(retrySettings.getMaxAttempts()).isEqualTo(GcsSinkConfig.GCS_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT);
     }
@@ -469,10 +469,10 @@ final class GcsSinkTaskTest {
         assertThat(headers).containsExactly(entry("user-agent", "foo"));
         assertThat(retrySettings.isJittered()).isTrue();
         assertThat(kafkaBackoffMsCaptor.getValue()).isEqualTo(1L);
-        assertThat(retrySettings.getInitialRetryDelay()).isEqualTo(Duration.ofMillis(2L));
-        assertThat(retrySettings.getMaxRetryDelay()).isEqualTo(Duration.ofMillis(3L));
+        assertThat(retrySettings.getInitialRetryDelayDuration()).isEqualTo(Duration.ofMillis(2L));
+        assertThat(retrySettings.getMaxRetryDelayDuration()).isEqualTo(Duration.ofMillis(3L));
         assertThat(retrySettings.getRetryDelayMultiplier()).isEqualTo(4.0D);
-        assertThat(retrySettings.getTotalTimeout()).isEqualTo(Duration.ofMillis(5L));
+        assertThat(retrySettings.getTotalTimeoutDuration()).isEqualTo(Duration.ofMillis(5L));
         assertThat(retrySettings.getMaxAttempts()).isEqualTo(6);
     }
 
