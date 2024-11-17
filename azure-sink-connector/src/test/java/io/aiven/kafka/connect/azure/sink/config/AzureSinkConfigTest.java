@@ -16,21 +16,14 @@
 
 package io.aiven.kafka.connect.azure.sink.config;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -74,11 +67,11 @@ final class AzureSinkConfigTest {
                 .stream()
                 .filter(x -> AzureBlobSinkConfig.FILE_NAME_TEMPLATE_CONFIG.equals(x.name()))
                 .findFirst()
-                .get();
-        assertFalse(configValue.errorMessages().isEmpty());
+                .orElseThrow();
+        assertThat(configValue.errorMessages()).isNotEmpty();
 
-        final var throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertTrue(throwable.getMessage().startsWith("Invalid value "));
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessageStartingWith("Invalid value ");
     }
 
     @Test
@@ -97,7 +90,7 @@ final class AzureSinkConfigTest {
                 .bindVariable("partition", () -> "p")
                 .bindVariable("start_offset", VariableTemplatePart.Parameter::getValue)
                 .render();
-        assertEquals("a-yyyy-MM-dd-p-true.gz", fileName);
+        assertThat(fileName).isEqualTo("a-yyyy-MM-dd-p-true.gz");
     }
 
     @Test
@@ -108,8 +101,9 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "azure.storage.container.name",
                 expectedErrorMessage);
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -121,8 +115,8 @@ final class AzureSinkConfigTest {
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "azure.storage.container.name",
                 expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -133,26 +127,24 @@ final class AzureSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
-        assertEquals("test-container", config.getContainerName());
-        assertEquals(CompressionType.NONE, config.getCompressionType());
-        assertEquals("", config.getPrefix());
-        assertEquals("a-b-c",
-                config.getFilenameTemplate()
-                        .instance()
-                        .bindVariable("topic", () -> "a")
-                        .bindVariable("partition", () -> "b")
-                        .bindVariable("start_offset", () -> "c")
-                        .render());
-        assertIterableEquals(
-                Collections.singleton(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64)),
-                config.getOutputFields());
-        assertEquals(FormatType.forName("csv"), config.getFormatType());
-        assertEquals(Duration.ofMillis(AzureBlobSinkConfig.AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT),
-                config.getAzureRetryBackoffInitialDelay());
-        assertEquals(Duration.ofMillis(AzureBlobSinkConfig.AZURE_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT),
-                config.getAzureRetryBackoffMaxDelay());
-        assertEquals(AzureBlobSinkConfig.AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT,
-                config.getAzureRetryBackoffMaxAttempts());
+        assertThat(config.getContainerName()).isEqualTo("test-container");
+        assertThat(config.getCompressionType()).isEqualTo(CompressionType.NONE);
+        assertThat(config.getPrefix()).isEmpty();
+        assertThat(config.getFilenameTemplate()
+                .instance()
+                .bindVariable("topic", () -> "a")
+                .bindVariable("partition", () -> "b")
+                .bindVariable("start_offset", () -> "c")
+                .render()).isEqualTo("a-b-c");
+        assertThat(config.getOutputFields())
+                .containsExactly(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
+        assertThat(config.getFormatType()).isEqualTo(FormatType.forName("csv"));
+        assertThat(config.getAzureRetryBackoffInitialDelay())
+                .hasMillis(AzureBlobSinkConfig.AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT);
+        assertThat(config.getAzureRetryBackoffMaxDelay())
+                .hasMillis(AzureBlobSinkConfig.AZURE_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT);
+        assertThat(config.getAzureRetryBackoffMaxAttempts())
+                .isEqualTo(AzureBlobSinkConfig.AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT);
     }
 
     @Test
@@ -162,10 +154,10 @@ final class AzureSinkConfigTest {
                 "azure.retry.backoff.initial.delay.ms", "2000", "azure.retry.backoff.max.delay.ms", "3000",
                 "azure.retry.backoff.max.attempts", "100");
         final var config = new AzureBlobSinkConfig(properties);
-        assertEquals(1000, config.getKafkaRetryBackoffMs());
-        assertEquals(Duration.ofMillis(2000), config.getAzureRetryBackoffInitialDelay());
-        assertEquals(Duration.ofMillis(3000), config.getAzureRetryBackoffMaxDelay());
-        assertEquals(100, config.getAzureRetryBackoffMaxAttempts());
+        assertThat(config.getKafkaRetryBackoffMs()).isEqualTo(1000);
+        assertThat(config.getAzureRetryBackoffInitialDelay()).isEqualTo(Duration.ofMillis(2000));
+        assertThat(config.getAzureRetryBackoffMaxDelay()).isEqualTo(Duration.ofMillis(3000));
+        assertThat(config.getAzureRetryBackoffMaxAttempts()).isEqualTo(100);
     }
 
     @ParameterizedTest
@@ -184,28 +176,26 @@ final class AzureSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
-        assertDoesNotThrow(config::getConnectionString);
-        assertEquals("test-container", config.getContainerName());
-        assertEquals(CompressionType.forName(compression), config.getCompressionType());
-        assertEquals(42, config.getMaxRecordsPerFile());
-        assertEquals("test-prefix", config.getPrefix());
-        assertEquals("a-b-c-d.gz",
-                config.getFilenameTemplate()
-                        .instance()
-                        .bindVariable("topic", () -> "a")
-                        .bindVariable("partition", () -> "b")
-                        .bindVariable("start_offset", () -> "c")
-                        .bindVariable("timestamp", () -> "d")
-                        .render());
-        assertIterableEquals(
-                Arrays.asList(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
-                        new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64),
-                        new OutputField(OutputFieldType.OFFSET, OutputFieldEncodingType.NONE),
-                        new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE)),
-                config.getOutputFields());
+        assertThatNoException().isThrownBy(config::getConnectionString);
+        assertThat(config.getContainerName()).isEqualTo("test-container");
+        assertThat(config.getCompressionType()).isEqualTo(CompressionType.forName(compression));
+        assertThat(config.getMaxRecordsPerFile()).isEqualTo(42);
+        assertThat(config.getPrefix()).isEqualTo("test-prefix");
+        assertThat(config.getFilenameTemplate()
+                .instance()
+                .bindVariable("topic", () -> "a")
+                .bindVariable("partition", () -> "b")
+                .bindVariable("start_offset", () -> "c")
+                .bindVariable("timestamp", () -> "d")
+                .render()).isEqualTo("a-b-c-d.gz");
+        assertThat(config.getOutputFields()).containsExactly(
+                new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
+                new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64),
+                new OutputField(OutputFieldType.OFFSET, OutputFieldEncodingType.NONE),
+                new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE));
 
-        assertEquals(ZoneOffset.UTC, config.getFilenameTimezone());
-        assertEquals(TimestampSource.WallclockTimestampSource.class, config.getFilenameTimestampSource().getClass());
+        assertThat(config.getFilenameTimezone()).isEqualTo(ZoneOffset.UTC);
+        assertThat(config.getFilenameTimestampSource()).isInstanceOf(TimestampSource.WallclockTimestampSource.class);
 
     }
 
@@ -227,7 +217,7 @@ final class AzureSinkConfigTest {
         final CompressionType expectedCompressionType = compression == null
                 ? CompressionType.NONE
                 : CompressionType.forName(compression);
-        assertEquals(expectedCompressionType, config.getCompressionType());
+        assertThat(config.getCompressionType()).isEqualTo(expectedCompressionType);
     }
 
     @Test
@@ -240,10 +230,10 @@ final class AzureSinkConfigTest {
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "file.compression.type", expectedErrorMessage);
-        assertIterableEquals(List.of("none", "gzip", "snappy", "zstd"), configValue.recommendedValues());
+        assertThat(configValue.recommendedValues()).containsExactly("none", "gzip", "snappy", "zstd");
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -255,11 +245,10 @@ final class AzureSinkConfigTest {
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "format.output.fields", expectedErrorMessage);
-        assertIterableEquals(List.of("key", "value", "offset", "timestamp", "headers"),
-                configValue.recommendedValues());
+        assertThat(configValue.recommendedValues()).containsExactly("key", "value", "offset", "timestamp", "headers");
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -274,11 +263,10 @@ final class AzureSinkConfigTest {
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "format.output.fields", expectedErrorMessage);
-        assertIterableEquals(List.of("key", "value", "offset", "timestamp", "headers"),
-                configValue.recommendedValues());
+        assertThat(configValue.recommendedValues()).containsExactly("key", "value", "offset", "timestamp", "headers");
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -289,7 +277,7 @@ final class AzureSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
-        assertEquals("test-connector", config.getConnectorName());
+        assertThat(config.getConnectorName()).isEqualTo("test-connector");
     }
 
     @Test
@@ -304,8 +292,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.prefix", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -316,7 +304,7 @@ final class AzureSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
-        assertEquals(0, config.getMaxRecordsPerFile());
+        assertThat(config.getMaxRecordsPerFile()).isZero();
     }
 
     @Test
@@ -327,7 +315,7 @@ final class AzureSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
-        assertEquals(42, config.getMaxRecordsPerFile());
+        assertThat(config.getMaxRecordsPerFile()).isEqualTo(42);
     }
 
     @Test
@@ -340,8 +328,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.max.records", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @ParameterizedTest
@@ -369,7 +357,7 @@ final class AzureSinkConfigTest {
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", () -> "c")
                 .render();
-        assertEquals(expected, actual);
+        assertThat(actual).isEqualTo(expected);
     }
 
     @Test
@@ -387,7 +375,7 @@ final class AzureSinkConfigTest {
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", () -> "c")
                 .render();
-        assertEquals("a-b-c", actual);
+        assertThat(actual).isEqualTo("a-b-c");
     }
 
     @Test
@@ -405,7 +393,7 @@ final class AzureSinkConfigTest {
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", () -> "c")
                 .render();
-        assertEquals("c-b-a", actual);
+        assertThat(actual).isEqualTo("c-b-a");
     }
 
     @Test
@@ -421,12 +409,12 @@ final class AzureSinkConfigTest {
                 .bindVariable("topic", () -> "a")
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", parameter -> {
-                    assertEquals("padding", parameter.getName());
-                    assertTrue(parameter.asBoolean());
+                    assertThat(parameter.getName()).isEqualTo("padding");
+                    assertThat(parameter.asBoolean()).isTrue();
                     return "c";
                 })
                 .render();
-        assertEquals("c-b-a", actual);
+        assertThat(actual).isEqualTo("c-b-a");
     }
 
     @Test
@@ -438,7 +426,7 @@ final class AzureSinkConfigTest {
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
         final String actual = config.getFilenameTemplate().instance().bindVariable("key", () -> "a").render();
-        assertEquals("a", actual);
+        assertThat(actual).isEqualTo("a");
     }
 
     @Test
@@ -451,8 +439,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -467,8 +455,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -481,8 +469,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -498,8 +486,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -514,8 +502,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -529,8 +517,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -544,8 +532,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -559,8 +547,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -574,8 +562,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -588,8 +576,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -602,8 +590,8 @@ final class AzureSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -612,7 +600,7 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.name.template", "{{key}}");
 
         assertConfigDefValidationPasses(properties);
-        assertDoesNotThrow(() -> new AzureBlobSinkConfig(properties));
+        assertThatNoException().isThrownBy(() -> new AzureBlobSinkConfig(properties));
     }
 
     @Test
@@ -621,7 +609,7 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.name.template", "{{key}}", "file.max.records", "1");
 
         assertConfigDefValidationPasses(properties);
-        assertDoesNotThrow(() -> new AzureBlobSinkConfig(properties));
+        assertThatNoException().isThrownBy(() -> new AzureBlobSinkConfig(properties));
     }
 
     @Test
@@ -632,9 +620,8 @@ final class AzureSinkConfigTest {
         // Should pass here, because ConfigDef validation doesn't check interdependencies.
         assertConfigDefValidationPasses(properties);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals("When file.name.template is {{key}}, file.max.records must be either 1 or not set",
-                throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage("When file.name.template is {{key}}, file.max.records must be either 1 or not set");
     }
 
     @Test
@@ -645,7 +632,7 @@ final class AzureSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig sinkConfig = new AzureBlobSinkConfig(properties);
-        assertEquals(ZoneId.of("CET"), sinkConfig.getFilenameTimezone());
+        assertThat(sinkConfig.getFilenameTimezone()).isEqualTo(ZoneId.of("CET"));
     }
 
     @Test
@@ -656,7 +643,7 @@ final class AzureSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig sinkConfig = new AzureBlobSinkConfig(properties);
-        assertEquals(ZoneId.of("Europe/Berlin"), sinkConfig.getFilenameTimezone());
+        assertThat(sinkConfig.getFilenameTimezone()).isEqualTo(ZoneId.of("Europe/Berlin"));
     }
 
     @Test
@@ -671,8 +658,8 @@ final class AzureSinkConfigTest {
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.timestamp.source",
                 expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -684,8 +671,8 @@ final class AzureSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig sinkConfig = new AzureBlobSinkConfig(properties);
-        assertEquals(TimestampSource.WallclockTimestampSource.class,
-                sinkConfig.getFilenameTimestampSource().getClass());
+        assertThat(sinkConfig.getFilenameTimestampSource().getClass())
+                .isEqualTo(TimestampSource.WallclockTimestampSource.class);
     }
 
     @ParameterizedTest
@@ -699,7 +686,7 @@ final class AzureSinkConfigTest {
         final AzureBlobSinkConfig sinkConfig = new AzureBlobSinkConfig(properties);
         final FormatType expectedFormatType = FormatType.forName(formatType);
 
-        assertEquals(expectedFormatType, sinkConfig.getFormatType());
+        assertThat(sinkConfig.getFormatType()).isEqualTo(expectedFormatType);
     }
 
     @Test
@@ -712,10 +699,10 @@ final class AzureSinkConfigTest {
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "format.output.type", expectedErrorMessage);
-        assertIterableEquals(List.of("avro", "csv", "json", "jsonl", "parquet"), configValue.recommendedValues());
+        assertThat(configValue.recommendedValues()).containsExactly("avro", "csv", "json", "jsonl", "parquet");
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @ParameterizedTest
@@ -724,13 +711,14 @@ final class AzureSinkConfigTest {
         final Map<String, String> properties = Map.of(AzureBlobSinkConfig.FILE_NAME_TEMPLATE_CONFIG, fileNameTemplate,
                 AzureBlobSinkConfig.FILE_MAX_RECORDS, "2", AzureBlobSinkConfig.AZURE_STORAGE_CONTAINER_NAME_CONFIG,
                 "any_container");
-        assertThrows(ConfigException.class, () -> new AzureBlobSinkConfig(properties), String.format(
-                "When file.name.template is %s, file.max.records must be either 1 or not set", fileNameTemplate));
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
+                        fileNameTemplate));
     }
 
     private void assertConfigDefValidationPasses(final Map<String, String> properties) {
         for (final ConfigValue configValue : AzureBlobSinkConfig.configDef().validate(properties)) {
-            assertTrue(configValue.errorMessages().isEmpty());
+            assertThat(configValue.errorMessages()).isEmpty();
         }
     }
 
@@ -739,13 +727,13 @@ final class AzureSinkConfigTest {
         ConfigValue result = null;
         for (final ConfigValue configValue : AzureBlobSinkConfig.configDef().validate(properties)) {
             if (configValue.name().equals(configuration)) {
-                assertIterableEquals(List.of(expectedErrorMessage), configValue.errorMessages());
+                assertThat(configValue.errorMessages()).containsExactly(expectedErrorMessage);
                 result = configValue;
             } else {
-                assertTrue(configValue.errorMessages().isEmpty());
+                assertThat(configValue.errorMessages()).isEmpty();
             }
         }
-        assertNotNull(result, "Not found");
+        assertThat(result).withFailMessage("Config value not found").isNotNull();
         return result;
     }
 }
