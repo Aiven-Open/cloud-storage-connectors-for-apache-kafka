@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.gcs;
 
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -45,7 +46,6 @@ import com.google.auth.oauth2.OAuth2Credentials;
 import com.google.cloud.NoCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.threeten.bp.Duration;
 
 public final class GcsSinkConfig extends AivenCommonConfig {
     private static final Logger LOG = LoggerFactory.getLogger(GcsSinkConfig.class);
