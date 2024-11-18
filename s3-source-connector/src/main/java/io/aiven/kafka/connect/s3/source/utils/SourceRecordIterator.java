@@ -16,30 +16,15 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.collections4.IteratorUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
@@ -49,19 +34,28 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     /** The S3SourceRecord Iterator that we will return values from */
     private Iterator<S3SourceRecord> outer;
-    /** The Iterator of Iterators of S3SourceRecords that we will process.  The inner iterator feeds the outer iterator*/
+    /**
+     * The Iterator of Iterators of S3SourceRecords that we will process. The inner iterator feeds the outer iterator
+     */
     private final Iterator<Iterator<S3SourceRecord>> inner;
 
     /**
      * Constructor.
-     * @param s3SourceConfig The S3 source configuration.
-     * @param s3Client The s3Client that we are reading from.
-     * @param offsetManager the Offset manager for this source package.
-     * @param transformer the Transformer to convert S3 data to Kafka data.
-     * @param s3ObjectSummaryIterator The iterator of S3ObjectSummaries.
+     *
+     * @param s3SourceConfig
+     *            The S3 source configuration.
+     * @param s3Client
+     *            The s3Client that we are reading from.
+     * @param offsetManager
+     *            the Offset manager for this source package.
+     * @param transformer
+     *            the Transformer to convert S3 data to Kafka data.
+     * @param s3ObjectSummaryIterator
+     *            The iterator of S3ObjectSummaries.
      */
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client,
-                                final OffsetManager offsetManager, final Transformer transformer, final Iterator<S3ObjectSummary> s3ObjectSummaryIterator) {
+            final OffsetManager offsetManager, final Transformer transformer,
+            final Iterator<S3ObjectSummary> s3ObjectSummaryIterator) {
         final TopicPartitionExtractingPredicate topicPartitionExtractingPredicate = new TopicPartitionExtractingPredicate();
         final S3ObjectToSourceRecordMapper sourceToRecordMapper = new S3ObjectToSourceRecordMapper(transformer,
                 topicPartitionExtractingPredicate, s3SourceConfig, offsetManager);

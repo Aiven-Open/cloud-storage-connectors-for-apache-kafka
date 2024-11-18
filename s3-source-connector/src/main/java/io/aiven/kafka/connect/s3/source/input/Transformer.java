@@ -33,6 +33,5 @@ public interface Transformer {
     Stream<Object> getRecords(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition,
             S3SourceConfig s3SourceConfig);
 
-
     byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
 }

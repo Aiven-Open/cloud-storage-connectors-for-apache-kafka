@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
@@ -42,6 +41,7 @@ import io.aiven.kafka.connect.s3.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.s3.source.input.InputFormat;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
@@ -175,8 +175,10 @@ final class S3SourceTaskTest {
     }
 
     private static S3SourceRecord getAivenS3SourceRecord() {
-        S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry("bucket", "s3ObjectKey", "testtopic", 0);
-        return new S3SourceRecord(offsetManagerEntry, "mock-key".getBytes(StandardCharsets.UTF_8), "mock-value".getBytes(StandardCharsets.UTF_8));
+        final S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry("bucket", "s3ObjectKey", "testtopic",
+                0);
+        return new S3SourceRecord(offsetManagerEntry, "mock-key".getBytes(StandardCharsets.UTF_8),
+                "mock-value".getBytes(StandardCharsets.UTF_8));
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")

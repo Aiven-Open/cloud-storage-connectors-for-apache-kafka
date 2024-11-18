@@ -45,7 +45,7 @@ public class FileReader {
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
     }
 
-    Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) {
+    public Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) {
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
                 .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR);
 

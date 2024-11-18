@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,13 +31,12 @@ public class S3SourceRecord {
     private final byte[] recordKey;
     private final byte[] recordValue;
 
-
-    public S3SourceRecord(final S3OffsetManagerEntry offsetManagerEntry, final byte[] recordKey, final byte[] recordValue) {
+    public S3SourceRecord(final S3OffsetManagerEntry offsetManagerEntry, final byte[] recordKey,
+            final byte[] recordValue) {
         this.recordKey = recordKey.clone(); // Defensive copy
         this.recordValue = recordValue.clone(); // Defensive copy
         this.offsetManagerEntry = offsetManagerEntry;
     }
-
 
     public Map<String, Object> getPartitionMap() {
         return offsetManagerEntry.getManagerKey().getPartitionMap();
@@ -50,18 +47,30 @@ public class S3SourceRecord {
     }
 
     public SourceRecord getSourceRecord(final Optional<Converter> keyConverter, final Converter valueConverter) {
-        final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(offsetManagerEntry.getTopic(), recordKey));
+        final Optional<SchemaAndValue> keyData = keyConverter
+                .map(c -> c.toConnectData(offsetManagerEntry.getTopic(), recordKey));
 
-        //transformer.configureValueConverter(conversionConfig, s3SourceConfig);
-        //valueConverter.configure(conversionConfig, false);
+        // transformer.configureValueConverter(conversionConfig, s3SourceConfig);
+        // valueConverter.configure(conversionConfig, false);
 
         final SchemaAndValue schemaAndValue = valueConverter.toConnectData(offsetManagerEntry.getTopic(), recordValue);
-//        offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
- //       s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
-//        return s3SourceRecord.getSourceRecord(keyData, schemaAndValue);
+        // offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
+        // s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
+        // return s3SourceRecord.getSourceRecord(keyData, schemaAndValue);
 
-        return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(), offsetManagerEntry.getProperties(), offsetManagerEntry.getTopic(), offsetManagerEntry.getPartition(),
+        return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(),
+                offsetManagerEntry.getProperties(), offsetManagerEntry.getTopic(), offsetManagerEntry.getPartition(),
                 keyData.map(SchemaAndValue::schema).orElse(null), keyData.map(SchemaAndValue::value).orElse(null),
                 schemaAndValue.schema(), schemaAndValue.value());
+    }
+
+    // package private for testing
+    byte[] getRecordKey() {
+        return recordKey.clone();
+    }
+
+    // package private for testing.
+    byte[] getRecordValue() {
+        return recordValue.clone();
     }
 }

@@ -138,8 +138,8 @@ public class S3SourceTask extends SourceTask {
     }
 
     private void prepareReaderFromOffsetStorageReader() {
-        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
-                this.transformer, fileReader);
+        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, offsetManager, this.transformer,
+                fileReader.fetchObjectSummaries(s3Client));
     }
 
     @Override

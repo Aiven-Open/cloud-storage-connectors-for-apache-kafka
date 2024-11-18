@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -28,7 +27,6 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -94,8 +92,9 @@ class RecordProcessorTest {
     void testProcessRecordsWithRecords() throws ConnectException {
         when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
         when(sourceRecordIterator.hasNext()).thenReturn(true, false); // One iteration with records
+        when(valueConverter.toConnectData(any(), any())).thenReturn(new SchemaAndValue(null, "Converted value".getBytes(StandardCharsets.UTF_8)));
 
-        S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry("bucket", "s3ObjectKey", "topic", 1);
+        final S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry("bucket", "s3ObjectKey", "topic", 1);
         final S3SourceRecord s3SourceRecord = new S3SourceRecord(offsetManagerEntry, new byte[0], new byte[0]);
         when(sourceRecordIterator.next()).thenReturn(s3SourceRecord);
 
