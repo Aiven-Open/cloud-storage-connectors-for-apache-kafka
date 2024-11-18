@@ -16,10 +16,7 @@
 
 package io.aiven.kafka.connect.azure.sink;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
@@ -91,7 +88,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 getBlobName(2, 0, compression), getBlobName(3, 0, compression));
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBlobAccessor.getBlobNames(azurePrefix));
+        assertThat(testBlobAccessor.getBlobNames(azurePrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
@@ -112,7 +109,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 final String blobName = getBlobName(partition, 0, compression);
                 final String actualLine = blobContents.get(blobName).get(i);
                 final String expectedLine = key + "," + value;
-                assertEquals(expectedLine, actualLine);
+                assertThat(actualLine).isEqualTo(expectedLine);
             }
         }
     }
@@ -156,7 +153,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 .collect(Collectors.toList());
 
         awaitAllBlobsWritten(expectedBlobsNames.size());
-        assertIterableEquals(expectedBlobsNames, testBlobAccessor.getBlobNames(azurePrefix));
+        assertThat(testBlobAccessor.getBlobNames(azurePrefix)).containsExactlyElementsOf(expectedBlobsNames);
 
         for (final String expectedBlobName : expectedBlobsNames) {
             final List<String> blobContent = testBlobAccessor.readAndDecodeLines(expectedBlobName, compression, 0, 1)
@@ -164,7 +161,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                     .map(fields -> String.join(",", fields).trim())
                     .collect(Collectors.toList());
 
-            assertThat(blobContent, containsInAnyOrder(expectedBlobsAndContent.get(expectedBlobName)));
+            assertThat(blobContent).containsExactlyInAnyOrder(expectedBlobsAndContent.get(expectedBlobName));
         }
     }
 
@@ -215,11 +212,11 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 .collect(Collectors.toList());
 
         awaitAllBlobsWritten(expectedBlobsNames.size());
-        assertIterableEquals(expectedBlobsNames, testBlobAccessor.getBlobNames(azurePrefix));
+        assertThat(testBlobAccessor.getBlobNames(azurePrefix)).containsExactlyElementsOf(expectedBlobsNames);
 
         for (final Map.Entry<String, String> entry : expectedBlobsAndContent.entrySet()) {
-            assertEquals(expectedBlobsAndContent.get(entry.getKey()),
-                    testBlobAccessor.readStringContent(entry.getKey(), compression));
+            assertThat(testBlobAccessor.readStringContent(entry.getKey(), compression))
+                    .isEqualTo(expectedBlobsAndContent.get(entry.getKey()));
         }
     }
 
@@ -270,7 +267,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 .collect(Collectors.toList());
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertThat(testBlobAccessor.getBlobNames(azurePrefix), containsInAnyOrder(expectedBlobs.toArray()));
+        assertThat(testBlobAccessor.getBlobNames(azurePrefix)).containsExactlyInAnyOrderElementsOf(expectedBlobs);
 
         for (final String blobName : expectedBlobs) {
             final String blobContent = testBlobAccessor.readAndDecodeLines(blobName, compression, 0, 1)
@@ -287,7 +284,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 value = lastValuePerKey.get(keyInBlobName);
                 expectedBlobContent = String.format("%s,%s", keyInBlobName, value);
             }
-            assertEquals(expectedBlobContent, blobContent);
+            assertThat(blobContent).isEqualTo(expectedBlobContent);
         }
     }
 
@@ -326,7 +323,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 getBlobName(2, 0, compression), getBlobName(3, 0, compression));
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBlobAccessor.getBlobNames(azurePrefix));
+        assertThat(testBlobAccessor.getBlobNames(azurePrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
@@ -347,7 +344,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 final String blobName = getBlobName(partition, 0, "none");
                 final String actualLine = blobContents.get(blobName).get(i);
                 final String expectedLine = "{\"value\":" + value + ",\"key\":\"" + key + "\"}";
-                assertEquals(expectedLine, actualLine);
+                assertThat(actualLine).isEqualTo(expectedLine);
             }
         }
     }
@@ -391,7 +388,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 getBlobName(2, 0, compression), getBlobName(3, 0, compression));
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBlobAccessor.getBlobNames(azurePrefix));
+        assertThat(testBlobAccessor.getBlobNames(azurePrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
@@ -399,7 +396,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
             // instantiation
             // in a
             // loop
-            assertEquals(numEpochs + 2, items.size());
+            assertThat(items).hasSize(numEpochs + 2);
             blobContents.put(blobName, items);
         }
 
@@ -408,8 +405,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         for (int partition = 0; partition < 4; partition++) {
             final String blobName = getBlobName(partition, 0, compression);
             final List<String> blobContent = blobContents.get(blobName);
-            assertEquals("[", blobContent.get(0));
-            assertEquals("]", blobContent.get(blobContent.size() - 1));
+            assertThat(blobContent).startsWith("[").endsWith("]");
             jsonContents.put(blobName, blobContent.subList(1, blobContent.size() - 1));
         }
 
@@ -426,7 +422,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 expectedLine = i < (jsonContents.get(blobName).size() - 1)
                         ? String.format("%s,", expectedLine)
                         : expectedLine;
-                assertEquals(expectedLine, actualLine);
+                assertThat(actualLine).isEqualTo(expectedLine);
             }
         }
     }
