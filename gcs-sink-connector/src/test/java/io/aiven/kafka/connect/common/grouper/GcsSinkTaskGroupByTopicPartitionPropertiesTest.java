@@ -16,15 +16,7 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -118,7 +110,7 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
             }
         }
 
-        assertThat(bucketAccessor.getBlobNames(), containsInAnyOrder(expectedFileNames.toArray()));
+        assertThat(bucketAccessor.getBlobNames()).containsExactlyInAnyOrderElementsOf(expectedFileNames);
     }
 
     /**
@@ -127,8 +119,7 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
     private void checkFileSizes(final BucketAccessor bucketAccessor, final Integer maxRecordsPerFile) {
         final int effectiveMax = effectiveMaxRecordsPerFile(maxRecordsPerFile);
         for (final String filename : bucketAccessor.getBlobNames()) {
-            assertThat(bucketAccessor.readLines(filename, "none"),
-                    hasSize(allOf(greaterThan(0), lessThanOrEqualTo(effectiveMax))));
+            assertThat(bucketAccessor.readLines(filename, "none")).isNotEmpty().hasSizeLessThan(effectiveMax);
         }
     }
 
@@ -145,11 +136,11 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
         for (final String filename : bucketAccessor.getBlobNames()) {
             for (final String line : bucketAccessor.readLines(filename, "none")) {
                 // Ensure no multiple writes.
-                assertFalse(seenRecords.contains(line));
+                assertThat(seenRecords).doesNotContain(line);
                 seenRecords.add(line);
             }
         }
-        assertEquals(expectedCount, seenRecords.size());
+        assertThat(seenRecords).hasSize(expectedCount);
     }
 
     /**
@@ -163,11 +154,11 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
                     FIELD_VALUE);
             final String firstLineTopicAndPartition = lines.get(0).get(FIELD_VALUE);
             final String firstLineOffset = lines.get(0).get(FIELD_OFFSET);
-            assertEquals(PREFIX + firstLineTopicAndPartition + "-" + firstLineOffset, filename);
+            assertThat(filename).isEqualTo(PREFIX + firstLineTopicAndPartition + "-" + firstLineOffset);
 
             for (final List<String> line : lines) {
                 final String value = line.get(FIELD_VALUE);
-                assertEquals(PREFIX + value, filenameWithoutOffset);
+                assertThat(filenameWithoutOffset).isEqualTo(PREFIX + value);
             }
         }
     }
@@ -190,7 +181,7 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
                     .map(line -> Integer.parseInt(line.get(FIELD_OFFSET)))
                     .collect(Collectors.toList());
             for (int i = 0; i < offsets.size() - 1; i++) {
-                assertTrue(offsets.get(i) < offsets.get(i + 1));
+                assertThat(offsets.get(i)).isLessThan(offsets.get(i + 1));
             }
         }
     }

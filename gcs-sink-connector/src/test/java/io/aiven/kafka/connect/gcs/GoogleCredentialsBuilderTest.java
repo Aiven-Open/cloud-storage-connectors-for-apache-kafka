@@ -16,10 +16,8 @@
 
 package io.aiven.kafka.connect.gcs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
@@ -31,19 +29,17 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.OAuth2Credentials;
 import com.google.auth.oauth2.UserCredentials;
 import com.google.common.io.Resources;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 final class GoogleCredentialsBuilderTest {
 
-    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE")
     @Test
     void testDefaultCredentials() throws IOException {
         try (MockedStatic<GoogleCredentials> mocked = mockStatic(GoogleCredentials.class)) {
             final GoogleCredentials googleCredentials = mock(GoogleCredentials.class);
             mocked.when(GoogleCredentials::getApplicationDefault).thenReturn(googleCredentials);
-            assertSame(GoogleCredentialsBuilder.build(null, null), googleCredentials);
+            assertThat(googleCredentials).isSameAs(GoogleCredentialsBuilder.build(null, null));
             mocked.verify(GoogleCredentials::getApplicationDefault);
         }
     }
@@ -55,11 +51,11 @@ final class GoogleCredentialsBuilderTest {
                 .getResource("test_gcs_credentials.json")
                 .getPath();
         final OAuth2Credentials credentials = GoogleCredentialsBuilder.build(credentialsPath, null);
-        assertTrue(credentials instanceof UserCredentials);
+        assertThat(credentials).isInstanceOf(UserCredentials.class);
 
         final UserCredentials userCredentials = (UserCredentials) credentials;
-        assertEquals("test-client-id", userCredentials.getClientId());
-        assertEquals("test-client-secret", userCredentials.getClientSecret());
+        assertThat(userCredentials.getClientId()).isEqualTo("test-client-id");
+        assertThat(userCredentials.getClientSecret()).isEqualTo("test-client-secret");
     }
 
     @Test
@@ -68,11 +64,11 @@ final class GoogleCredentialsBuilderTest {
                 Thread.currentThread().getContextClassLoader().getResource("test_gcs_credentials.json"),
                 StandardCharsets.UTF_8);
         final OAuth2Credentials credentials = GoogleCredentialsBuilder.build(null, credentialsJson);
-        assertTrue(credentials instanceof UserCredentials);
+        assertThat(credentials).isInstanceOf(UserCredentials.class);
 
         final UserCredentials userCredentials = (UserCredentials) credentials;
-        assertEquals("test-client-id", userCredentials.getClientId());
-        assertEquals("test-client-secret", userCredentials.getClientSecret());
+        assertThat(userCredentials.getClientId()).isEqualTo("test-client-id");
+        assertThat(userCredentials.getClientSecret()).isEqualTo("test-client-secret");
     }
 
     @Test
@@ -80,8 +76,9 @@ final class GoogleCredentialsBuilderTest {
         final URL credentialResource = Thread.currentThread()
                 .getContextClassLoader()
                 .getResource("test_gcs_credentials.json");
-        final Throwable throwable = assertThrows(IllegalArgumentException.class, () -> GoogleCredentialsBuilder
-                .build(credentialResource.getPath(), Resources.toString(credentialResource, StandardCharsets.UTF_8)));
-        assertEquals("Both credentialsPath and credentialsJson cannot be non-null.", throwable.getMessage());
+        assertThatThrownBy(() -> GoogleCredentialsBuilder.build(credentialResource.getPath(),
+                Resources.toString(credentialResource, StandardCharsets.UTF_8)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Both credentialsPath and credentialsJson cannot be non-null.");
     }
 }

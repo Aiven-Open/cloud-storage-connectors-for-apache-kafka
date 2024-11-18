@@ -18,9 +18,7 @@ package io.aiven.kafka.connect.gcs;
 
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -57,8 +55,6 @@ import io.aiven.kafka.connect.gcs.testutils.Utils;
 import com.google.api.gax.rpc.NoHeaderProvider;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.assertj.core.util.introspection.FieldSupport;
 import org.junit.jupiter.api.BeforeEach;
@@ -146,7 +142,7 @@ final class GcsSinkTaskTest {
     @Test
     void version() {
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
-        assertEquals("test-version", task.version());
+        assertThat(task.version()).isEqualTo("test-version");
     }
 
     @ParameterizedTest
@@ -161,13 +157,13 @@ final class GcsSinkTaskTest {
         final Map<String, Collection<List<String>>> blobNameWithExtensionValuesMap = buildBlobNameValuesMap(
                 compression);
 
-        assertEquals(blobNameWithExtensionValuesMap.keySet(), Sets.newHashSet(testBucketAccessor.getBlobNames()));
+        assertThat(testBucketAccessor.getBlobNames()).hasSameElementsAs(blobNameWithExtensionValuesMap.keySet());
 
         blobNameWithExtensionValuesMap.keySet().forEach(blobNameWithExtension -> {
             final Collection<List<String>> expected = blobNameWithExtensionValuesMap.get(blobNameWithExtension);
             final Collection<List<String>> actual = readSplittedAndDecodedLinesFromBlob(blobNameWithExtension,
                     compression, 0);
-            assertIterableEquals(expected, actual);
+            assertThat(actual).containsExactlyElementsOf(expected);
         });
     }
 
@@ -186,12 +182,12 @@ final class GcsSinkTaskTest {
 
         final Map<String, Collection<Record>> blobNameWithRecordsMap = toBlobNameWithRecordsMap(compression, records);
 
-        assertEquals(blobNameWithRecordsMap.keySet(), Sets.newHashSet(testBucketAccessor.getBlobNames()));
+        assertThat(testBucketAccessor.getBlobNames()).hasSameElementsAs(blobNameWithRecordsMap.keySet());
 
         blobNameWithRecordsMap.keySet().forEach(blobNameWithExtension -> {
             final Collection<Record> actual = readRecords(blobNameWithExtension, compression);
             final Collection<Record> expected = blobNameWithRecordsMap.get(blobNameWithExtension);
-            assertIterableEquals(expected, actual);
+            assertThat(actual).containsExactlyElementsOf(expected);
         });
     }
 
@@ -208,13 +204,13 @@ final class GcsSinkTaskTest {
         final Map<String, Collection<List<String>>> blobNameWithExtensionValuesMap = buildBlobNameValuesMap(
                 compression);
 
-        assertEquals(blobNameWithExtensionValuesMap.keySet(), Sets.newHashSet(testBucketAccessor.getBlobNames()));
+        assertThat(testBucketAccessor.getBlobNames()).hasSameElementsAs(blobNameWithExtensionValuesMap.keySet());
 
         blobNameWithExtensionValuesMap.keySet().forEach(blobNameWithExtension -> {
             final Collection<List<String>> expected = blobNameWithExtensionValuesMap.get(blobNameWithExtension);
             final Collection<List<String>> actual = readSplittedAndDecodedLinesFromBlob(blobNameWithExtension,
                     compression);
-            assertIterableEquals(expected, actual);
+            assertThat(actual).containsExactlyElementsOf(expected);
         });
     }
 
@@ -229,28 +225,23 @@ final class GcsSinkTaskTest {
 
         final CompressionType compressionType = CompressionType.forName(compression);
 
-        final List<String> names = Lists.newArrayList("topic0-0-10", "topic0-1-20", "topic0-2-50", "topic1-0-30",
+        final List<String> names = Arrays.asList("topic0-0-10", "topic0-1-20", "topic0-2-50", "topic1-0-30",
                 "topic1-1-40");
         final List<String> blobNames = names.stream()
                 .map(n -> n + compressionType.extension())
                 .collect(Collectors.toList());
 
-        assertIterableEquals(blobNames, testBucketAccessor.getBlobNames());
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value0"), Collections.singletonList("value5")),
-                readSplittedAndDecodedLinesFromBlob("topic0-0-10" + compressionType.extension(), compression, 0));
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value1"), Collections.singletonList("value6")),
-                readSplittedAndDecodedLinesFromBlob("topic0-1-20" + compressionType.extension(), compression, 0));
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value4"), Collections.singletonList("value9")),
-                readSplittedAndDecodedLinesFromBlob("topic0-2-50" + compressionType.extension(), compression, 0));
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value2"), Collections.singletonList("value7")),
-                readSplittedAndDecodedLinesFromBlob("topic1-0-30" + compressionType.extension(), compression, 0));
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value3"), Collections.singletonList("value8")),
-                readSplittedAndDecodedLinesFromBlob("topic1-1-40" + compressionType.extension(), compression, 0));
+        assertThat(testBucketAccessor.getBlobNames()).containsExactlyElementsOf(blobNames);
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-10" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value0"), Collections.singletonList("value5"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-1-20" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value1"), Collections.singletonList("value6"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-2-50" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value4"), Collections.singletonList("value9"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-0-30" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value2"), Collections.singletonList("value7"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-1-40" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value3"), Collections.singletonList("value8"));
     }
 
     @ParameterizedTest
@@ -265,31 +256,26 @@ final class GcsSinkTaskTest {
 
         final CompressionType compressionType = CompressionType.forName(compression);
 
-        final List<String> names = Lists.newArrayList("topic0-0-10", "topic0-1-20", "topic0-2-50", "topic1-0-30",
+        final List<String> names = Arrays.asList("topic0-0-10", "topic0-1-20", "topic0-2-50", "topic1-0-30",
                 "topic1-1-40");
         final List<String> blobNames = names.stream()
                 .map(n -> n + compressionType.extension())
                 .collect(Collectors.toList());
 
-        assertIterableEquals(blobNames, testBucketAccessor.getBlobNames());
+        assertThat(testBucketAccessor.getBlobNames()).containsExactlyElementsOf(blobNames);
         // given a blob with metadata Content-Encoding equal to its byte compression,
         // the result of its GS-downloaded bytes is automatically un-compressed (gzip support only)
         // see https://cloud.google.com/storage/docs/metadata#content-encoding
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value0"), Collections.singletonList("value5")),
-                readDecodedFieldsFromDownload("topic0-0-10" + compressionType.extension(), compression, 0));
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value1"), Collections.singletonList("value6")),
-                readDecodedFieldsFromDownload("topic0-1-20" + compressionType.extension(), compression, 0));
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value4"), Collections.singletonList("value9")),
-                readDecodedFieldsFromDownload("topic0-2-50" + compressionType.extension(), compression, 0));
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value2"), Collections.singletonList("value7")),
-                readDecodedFieldsFromDownload("topic1-0-30" + compressionType.extension(), compression, 0));
-        assertIterableEquals(
-                Lists.newArrayList(Collections.singletonList("value3"), Collections.singletonList("value8")),
-                readDecodedFieldsFromDownload("topic1-1-40" + compressionType.extension(), compression, 0));
+        assertThat(readDecodedFieldsFromDownload("topic0-0-10" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value0"), Collections.singletonList("value5"));
+        assertThat(readDecodedFieldsFromDownload("topic0-1-20" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value1"), Collections.singletonList("value6"));
+        assertThat(readDecodedFieldsFromDownload("topic0-2-50" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value4"), Collections.singletonList("value9"));
+        assertThat(readDecodedFieldsFromDownload("topic1-0-30" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value2"), Collections.singletonList("value7"));
+        assertThat(readDecodedFieldsFromDownload("topic1-1-40" + compressionType.extension(), compression, 0))
+                .containsExactly(Collections.singletonList("value3"), Collections.singletonList("value8"));
     }
 
     @ParameterizedTest
@@ -304,31 +290,24 @@ final class GcsSinkTaskTest {
 
         final CompressionType compressionType = CompressionType.forName(compression);
 
-        assertIterableEquals(
-                Lists.newArrayList("topic0-0-10" + compressionType.extension(),
-                        "topic0-1-20" + compressionType.extension(), "topic0-2-50" + compressionType.extension(),
-                        "topic1-0-30" + compressionType.extension(), "topic1-1-40" + compressionType.extension()),
-                testBucketAccessor.getBlobNames());
-        assertIterableEquals(
-                Lists.newArrayList(Arrays.asList("key0", "value0", "1000", "10"),
-                        Arrays.asList("key5", "value5", "1005", "11")),
-                readSplittedAndDecodedLinesFromBlob("topic0-0-10" + compressionType.extension(), compression, 0, 1));
-        assertIterableEquals(
-                Lists.newArrayList(Arrays.asList("key1", "value1", "1001", "20"),
-                        Arrays.asList("key6", "value6", "1006", "21")),
-                readSplittedAndDecodedLinesFromBlob("topic0-1-20" + compressionType.extension(), compression, 0, 1));
-        assertIterableEquals(
-                Lists.newArrayList(Arrays.asList("key4", "value4", "1004", "50"),
-                        Arrays.asList("key9", "value9", "1009", "51")),
-                readSplittedAndDecodedLinesFromBlob("topic0-2-50" + compressionType.extension(), compression, 0, 1));
-        assertIterableEquals(
-                Lists.newArrayList(Arrays.asList("key2", "value2", "1002", "30"),
-                        Arrays.asList("key7", "value7", "1007", "31")),
-                readSplittedAndDecodedLinesFromBlob("topic1-0-30" + compressionType.extension(), compression, 0, 1));
-        assertIterableEquals(
-                Lists.newArrayList(Arrays.asList("key3", "value3", "1003", "40"),
-                        Arrays.asList("key8", "value8", "1008", "41")),
-                readSplittedAndDecodedLinesFromBlob("topic1-1-40" + compressionType.extension(), compression, 0, 1));
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
+                "topic0-1-20" + compressionType.extension(), "topic0-2-50" + compressionType.extension(),
+                "topic1-0-30" + compressionType.extension(), "topic1-1-40" + compressionType.extension());
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-10" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key0", "value0", "1000", "10"),
+                        Arrays.asList("key5", "value5", "1005", "11"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-1-20" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key1", "value1", "1001", "20"),
+                        Arrays.asList("key6", "value6", "1006", "21"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-2-50" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key4", "value4", "1004", "50"),
+                        Arrays.asList("key9", "value9", "1009", "51"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-0-30" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key2", "value2", "1002", "30"),
+                        Arrays.asList("key7", "value7", "1007", "31"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-1-40" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key3", "value3", "1003", "40"),
+                        Arrays.asList("key8", "value8", "1008", "41"));
     }
 
     @ParameterizedTest
@@ -345,10 +324,9 @@ final class GcsSinkTaskTest {
 
         final CompressionType compressionType = CompressionType.forName(compression);
 
-        assertIterableEquals(Lists.newArrayList("topic0-0-10" + compressionType.extension()),
-                testBucketAccessor.getBlobNames());
-        assertIterableEquals(Lists.newArrayList(",,,10", ",,,11", ",,,12"),
-                readRawLinesFromBlob("topic0-0-10" + compressionType.extension(), compression));
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension());
+        assertThat(readRawLinesFromBlob("topic0-0-10" + compressionType.extension(), compression))
+                .containsExactly(",,,10", ",,,11", ",,,12");
     }
 
     @ParameterizedTest
@@ -369,14 +347,12 @@ final class GcsSinkTaskTest {
 
         final CompressionType compressionType = CompressionType.forName(compression);
 
-        assertIterableEquals(
-                Lists.newArrayList("topic0-0-100" + compressionType.extension(),
-                        "topic0-0-102" + compressionType.extension(), "topic0-0-104" + compressionType.extension()),
-                testBucketAccessor.getBlobNames());
-        assertIterableEquals(Lists.newArrayList(Arrays.asList("value0"), Arrays.asList("value1")),
-                readSplittedAndDecodedLinesFromBlob("topic0-0-100" + compressionType.extension(), compression, 0));
-        assertIterableEquals(Lists.newArrayList(Arrays.asList("value2"), Arrays.asList("value3")),
-                readSplittedAndDecodedLinesFromBlob("topic0-0-102" + compressionType.extension(), compression, 0));
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-100" + compressionType.extension(),
+                "topic0-0-102" + compressionType.extension(), "topic0-0-104" + compressionType.extension());
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-100" + compressionType.extension(), compression, 0))
+                .containsExactly(List.of("value0"), List.of("value1"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-102" + compressionType.extension(), compression, 0))
+                .containsExactly(List.of("value2"), List.of("value3"));
     }
 
     @ParameterizedTest
@@ -396,13 +372,14 @@ final class GcsSinkTaskTest {
 
         final CompressionType compressionType = CompressionType.forName(compression);
 
-        assertIterableEquals(IntStream.range(0, recordNum)
+        assertThat(testBucketAccessor.getBlobNames()).containsExactlyElementsOf(IntStream.range(0, recordNum)
                 .mapToObj(i -> "topic0-0-" + i + compressionType.extension())
                 .sorted()
-                .collect(Collectors.toList()), testBucketAccessor.getBlobNames());
+                .collect(Collectors.toList()));
         for (int i = 0; i < recordNum; i++) {
-            assertIterableEquals(Collections.singletonList(Collections.singletonList("value" + i)),
-                    readSplittedAndDecodedLinesFromBlob("topic0-0-" + i + compressionType.extension(), compression, 0));
+            assertThat(
+                    readSplittedAndDecodedLinesFromBlob("topic0-0-" + i + compressionType.extension(), compression, 0))
+                    .containsExactly(Collections.singletonList("value" + i));
         }
     }
 
@@ -468,7 +445,7 @@ final class GcsSinkTaskTest {
 
         assertThat(headers).containsExactly(entry("user-agent", "foo"));
         assertThat(retrySettings.isJittered()).isTrue();
-        assertThat(kafkaBackoffMsCaptor.getValue()).isEqualTo(1L);
+        assertThat(kafkaBackoffMsCaptor.getValue()).isOne();
         assertThat(retrySettings.getInitialRetryDelayDuration()).isEqualTo(Duration.ofMillis(2L));
         assertThat(retrySettings.getMaxRetryDelayDuration()).isEqualTo(Duration.ofMillis(3L));
         assertThat(retrySettings.getRetryDelayMultiplier()).isEqualTo(4.0D);
@@ -484,8 +461,8 @@ final class GcsSinkTaskTest {
         task.put(basicRecords);
         task.flush(null);
 
-        assertIterableEquals(Lists.newArrayList("prefix-topic0-0-10", "prefix-topic0-1-20", "prefix-topic0-2-50",
-                "prefix-topic1-0-30", "prefix-topic1-1-40"), testBucketAccessor.getBlobNames());
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("prefix-topic0-0-10", "prefix-topic0-1-20",
+                "prefix-topic0-2-50", "prefix-topic1-0-30", "prefix-topic1-1-40");
     }
 
     @ParameterizedTest
@@ -512,16 +489,16 @@ final class GcsSinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        assertIterableEquals(Lists.newArrayList("key0", "key1", "key2", "null"), testBucketAccessor.getBlobNames());
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("key0", "key1", "key2", "null");
 
-        assertIterableEquals(Arrays.asList(Arrays.asList("key0", "value6")),
-                readSplittedAndDecodedLinesFromBlob("key0", compression, 0, 1));
-        assertIterableEquals(Arrays.asList(Arrays.asList("key1", "value8")),
-                readSplittedAndDecodedLinesFromBlob("key1", compression, 0, 1));
-        assertIterableEquals(Arrays.asList(Arrays.asList("key2", "value2")),
-                readSplittedAndDecodedLinesFromBlob("key2", compression, 0, 1));
-        assertIterableEquals(Arrays.asList(Arrays.asList("", "value5")), // null is written as an empty string to files
-                readSplittedAndDecodedLinesFromBlob("null", compression, 0, 1));
+        assertThat(readSplittedAndDecodedLinesFromBlob("key0", compression, 0, 1))
+                .containsExactly(Arrays.asList("key0", "value6"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("key1", compression, 0, 1))
+                .containsExactly(Arrays.asList("key1", "value8"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("key2", compression, 0, 1))
+                .containsExactly(Arrays.asList("key2", "value2"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("null", compression, 0, 1))
+                .containsExactly(Arrays.asList("", "value5"));// null is written as an empty string to files
     }
 
     @Test
@@ -541,9 +518,9 @@ final class GcsSinkTaskTest {
 
         task.put(records);
 
-        final Throwable throwable = assertThrows(ConnectException.class, () -> task.flush(null));
-        assertEquals("org.apache.kafka.connect.errors.DataException: "
-                + "Record value schema type must be BYTES, STRING given", throwable.getMessage());
+        assertThatThrownBy(() -> task.flush(null)).isInstanceOf(ConnectException.class)
+                .hasMessage(
+                        "org.apache.kafka.connect.errors.DataException: Record value schema type must be BYTES, STRING given");
     }
 
     @Test
@@ -565,17 +542,15 @@ final class GcsSinkTaskTest {
 
         final CompressionType compressionType = CompressionType.forName(compression);
 
-        assertIterableEquals(
-                Lists.newArrayList("topic0-0-10" + compressionType.extension(),
-                        "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension()),
-                testBucketAccessor.getBlobNames());
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
+                "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertIterableEquals(Arrays.asList("{\"value\":\"value0\",\"key\":\"key0\"}"),
-                readRawLinesFromBlob("topic0-0-10", compression));
-        assertIterableEquals(Arrays.asList("{\"value\":\"value1\",\"key\":\"key1\"}"),
-                readRawLinesFromBlob("topic0-1-20", compression));
-        assertIterableEquals(Arrays.asList("{\"value\":\"value2\",\"key\":\"key2\"}"),
-                readRawLinesFromBlob("topic1-0-30", compression));
+        assertThat(readRawLinesFromBlob("topic0-0-10", compression))
+                .containsExactly("{\"value\":\"value0\",\"key\":\"key0\"}");
+        assertThat(readRawLinesFromBlob("topic0-1-20", compression))
+                .containsExactly("{\"value\":\"value1\",\"key\":\"key1\"}");
+        assertThat(readRawLinesFromBlob("topic1-0-30", compression))
+                .containsExactly("{\"value\":\"value2\",\"key\":\"key2\"}");
     }
 
     @Test
@@ -594,9 +569,9 @@ final class GcsSinkTaskTest {
 
         task.put(records);
 
-        final Throwable throwable = assertThrows(ConnectException.class, () -> task.flush(null));
-        assertEquals("org.apache.kafka.connect.errors.DataException: "
-                + "Record value schema type must be BYTES, STRUCT given", throwable.getMessage());
+        assertThatThrownBy(() -> task.flush(null)).isInstanceOf(ConnectException.class)
+                .hasMessage(
+                        "org.apache.kafka.connect.errors.DataException: Record value schema type must be BYTES, STRUCT given");
     }
 
     @Test
@@ -620,17 +595,15 @@ final class GcsSinkTaskTest {
 
         final CompressionType compressionType = CompressionType.forName(compression);
 
-        assertIterableEquals(
-                Lists.newArrayList("topic0-0-10" + compressionType.extension(),
-                        "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension()),
-                testBucketAccessor.getBlobNames());
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
+                "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertIterableEquals(Arrays.asList("{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}"),
-                readRawLinesFromBlob("topic0-0-10", compression));
-        assertIterableEquals(Arrays.asList("{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}"),
-                readRawLinesFromBlob("topic0-1-20", compression));
-        assertIterableEquals(Arrays.asList("{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}"),
-                readRawLinesFromBlob("topic1-0-30", compression));
+        assertThat(readRawLinesFromBlob("topic0-0-10", compression))
+                .containsExactly("{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}");
+        assertThat(readRawLinesFromBlob("topic0-1-20", compression))
+                .containsExactly("{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}");
+        assertThat(readRawLinesFromBlob("topic1-0-30", compression))
+                .containsExactly("{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}");
     }
 
     @Test
@@ -682,17 +655,15 @@ final class GcsSinkTaskTest {
 
         final CompressionType compressionType = CompressionType.forName(compression);
 
-        assertIterableEquals(
-                Lists.newArrayList("topic0-0-10" + compressionType.extension(),
-                        "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension()),
-                testBucketAccessor.getBlobNames());
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
+                "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertIterableEquals(Arrays.asList("[", "{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}", "]"),
-                readRawLinesFromBlob("topic0-0-10", compression));
-        assertIterableEquals(Arrays.asList("[", "{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}", "]"),
-                readRawLinesFromBlob("topic0-1-20", compression));
-        assertIterableEquals(Arrays.asList("[", "{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}", "]"),
-                readRawLinesFromBlob("topic1-0-30", compression));
+        assertThat(readRawLinesFromBlob("topic0-0-10", compression)).containsExactly("[",
+                "{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}", "]");
+        assertThat(readRawLinesFromBlob("topic0-1-20", compression)).containsExactly("[",
+                "{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}", "]");
+        assertThat(readRawLinesFromBlob("topic1-0-30", compression)).containsExactly("[",
+                "{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}", "]");
     }
 
     @Test
@@ -806,7 +777,7 @@ final class GcsSinkTaskTest {
      * example Input: "value0", "value5" Output: Collection[List["value0"], List["value5"]]
      */
     private Collection<List<String>> toCollectionOfLists(final String... values) {
-        return toCollectionOfLists(Lists.newArrayList(values));
+        return toCollectionOfLists(Arrays.asList(values));
     }
 
     private Collection<List<String>> toCollectionOfLists(final List<String> values) {

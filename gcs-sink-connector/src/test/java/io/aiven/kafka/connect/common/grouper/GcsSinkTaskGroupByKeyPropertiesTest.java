@@ -16,10 +16,7 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -45,7 +42,7 @@ import net.jqwik.api.Property;
  *
  * <p>
  * The idea is to generate random batches of {@link SinkRecord} (see {@link PbtBase#recordBatches()}), put them into a
- * task, and check certain properties of the written files afterwards. Files are written virtually using the in-memory
+ * task, and check certain properties of the written files afterward. Files are written virtually using the in-memory
  * GCS mock.
  */
 @SuppressWarnings("PMD.TestClassWithoutTestCases")
@@ -78,7 +75,7 @@ final class GcsSinkTaskGroupByKeyPropertiesTest extends PbtBase {
                 .stream()
                 .map(this::createFilename)
                 .collect(Collectors.toList());
-        assertThat(testBucketAccessor.getBlobNames(), containsInAnyOrder(expectedFileNames.toArray()));
+        assertThat(testBucketAccessor.getBlobNames()).containsExactlyInAnyOrderElementsOf(expectedFileNames);
 
         // Check file contents.
         for (final Map.Entry<String, SinkRecord> entry : lastRecordPerKey.entrySet()) {
@@ -86,7 +83,7 @@ final class GcsSinkTaskGroupByKeyPropertiesTest extends PbtBase {
             final String filename = createFilename(entry.getKey());
 
             final List<String> lines = testBucketAccessor.readLines(filename, "none");
-            assertThat(lines, hasSize(1));
+            assertThat(lines).hasSize(1);
 
             final String expectedKeySubstring;
             if (record.key() == null) {
@@ -101,7 +98,7 @@ final class GcsSinkTaskGroupByKeyPropertiesTest extends PbtBase {
                                                                                                                // loop
             final String expectedLine = String.format("%s,%s,%d", expectedKeySubstring, expectedValueSubstring,
                     record.kafkaOffset());
-            assertEquals(expectedLine, lines.get(0));
+            assertThat(lines).first().isEqualTo(expectedLine);
         }
     }
 

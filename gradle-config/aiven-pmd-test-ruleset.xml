@@ -93,4 +93,20 @@
             <property name="maximumAsserts" value="15" />
         </properties>
     </rule>
+    <rule name="ProhibitJUnitAndHamcrestAssertions"
+          language="java"
+          class="net.sourceforge.pmd.lang.rule.XPathRule"
+          message="JUnit and Hamcrest assertions are prohibited in favor of AssertJ">
+        <description>
+            Avoid using these classes, there are better alternatives.
+        </description>
+        <priority>3</priority>
+        <properties>
+            <property name="xpath">
+                <value>
+                    <![CDATA[//Name[matches(@Image, '^org\.junit\.jupiter\.api\.Assertions|^org\.hamcrest\.')]]]>
+                </value>
+            </property>
+        </properties>
+    </rule>
 </ruleset>

@@ -16,10 +16,8 @@
 
 package io.aiven.kafka.connect.gcs.config;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
@@ -63,11 +61,11 @@ final class GcsSinkCredentialsConfigTest {
                 .stream()
                 .filter(x -> GcsSinkConfig.FILE_NAME_TEMPLATE_CONFIG.equals(x.name()))
                 .findFirst()
-                .get();
-        assertFalse(configValue.errorMessages().isEmpty());
+                .orElseThrow();
+        assertThat(configValue.errorMessages()).isNotEmpty();
 
-        final var throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertTrue(throwable.getMessage().startsWith("Invalid value "));
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessageStartingWith("Invalid value ");
     }
 
     @Test
@@ -79,8 +77,8 @@ final class GcsSinkCredentialsConfigTest {
 
         final GcsSinkConfig config = new GcsSinkConfig(properties);
         final UserCredentials credentials = (UserCredentials) config.getCredentials();
-        assertEquals("test-client-id", credentials.getClientId());
-        assertEquals("test-client-secret", credentials.getClientSecret());
+        assertThat(credentials.getClientId()).isEqualTo("test-client-id");
+        assertThat(credentials.getClientSecret()).isEqualTo("test-client-secret");
     }
 
     @Test
@@ -97,8 +95,8 @@ final class GcsSinkCredentialsConfigTest {
 
         final GcsSinkConfig config = new GcsSinkConfig(properties);
         final UserCredentials credentials = (UserCredentials) config.getCredentials();
-        assertEquals("test-client-id", credentials.getClientId());
-        assertEquals("test-client-secret", credentials.getClientSecret());
+        assertThat(credentials.getClientId()).isEqualTo("test-client-id");
+        assertThat(credentials.getClientSecret()).isEqualTo("test-client-secret");
     }
 
     /**
@@ -115,7 +113,7 @@ final class GcsSinkCredentialsConfigTest {
         final GcsSinkConfig config = new GcsSinkConfig(properties);
 
         final Credentials credentials = config.getCredentials();
-        assertEquals(NoCredentials.getInstance(), credentials);
+        assertThat(credentials).isEqualTo(NoCredentials.getInstance());
     }
 
     /** Verifies that NoCredentials are used when no credential configurations is supplied. */
@@ -128,7 +126,7 @@ final class GcsSinkCredentialsConfigTest {
         final GcsSinkConfig config = new GcsSinkConfig(properties);
 
         final Credentials credentials = config.getCredentials();
-        assertEquals(NoCredentials.getInstance(), credentials);
+        assertThat(credentials).isEqualTo(NoCredentials.getInstance());
     }
 
     @Test
@@ -148,7 +146,7 @@ final class GcsSinkCredentialsConfigTest {
             mocked.when(GoogleCredentials::getApplicationDefault).thenReturn(googleCredentials);
 
             final OAuth2Credentials credentials = config.getCredentials();
-            assertEquals(googleCredentials, credentials);
+            assertThat(credentials).isEqualTo(googleCredentials);
         }
     }
 
@@ -166,10 +164,9 @@ final class GcsSinkCredentialsConfigTest {
         // Should pass here, because ConfigDef validation doesn't check interdependencies.
         assertConfigDefValidationPasses(properties);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(
-                "Only one of gcs.credentials.default, gcs.credentials.json, and gcs.credentials.path can be non-null.",
-                throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(
+                        "Only one of gcs.credentials.default, gcs.credentials.json, and gcs.credentials.path can be non-null.");
     }
 
     private static Stream<Arguments> provideMoreThanOneNonNull() {
@@ -180,7 +177,7 @@ final class GcsSinkCredentialsConfigTest {
 
     private void assertConfigDefValidationPasses(final Map<String, String> properties) {
         for (final ConfigValue configValue : GcsSinkConfig.configDef().validate(properties)) {
-            assertTrue(configValue.errorMessages().isEmpty());
+            assertThat(configValue.errorMessages()).isEmpty();
         }
     }
 }
