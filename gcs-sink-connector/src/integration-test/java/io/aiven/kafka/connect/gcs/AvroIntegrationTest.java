@@ -16,8 +16,7 @@
 
 package io.aiven.kafka.connect.gcs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
@@ -111,7 +109,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         final List<String> expectedBlobs = Arrays.asList(getAvroBlobName(0, 0), getAvroBlobName(1, 0),
                 getAvroBlobName(2, 0), getAvroBlobName(3, 0));
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBucketAccessor.getBlobNames(gcsPrefix));
+        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         final Map<String, Schema> gcsOutputAvroSchemas = new HashMap<>();
@@ -142,7 +140,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 cnt += 1;
 
                 final GenericRecord actualRecord = blobContents.get(blobName).get(i);
-                assertEquals(expectedRecord, actualRecord);
+                assertThat(actualRecord).isEqualTo(expectedRecord);
             }
         }
     }
@@ -185,7 +183,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 getAvroBlobName(1, 0, compression), getAvroBlobName(2, 0, compression),
                 getAvroBlobName(3, 0, compression));
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBucketAccessor.getBlobNames(gcsPrefix));
+        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
@@ -217,7 +215,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 cnt += 1;
 
                 final GenericRecord actualRecord = blobContents.get(blobName).get(i);
-                assertEquals(expectedRecord, actualRecord);
+                assertThat(actualRecord).isEqualTo(expectedRecord);
             }
         }
     }
@@ -225,10 +223,6 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     /**
      * When Avro schema changes a new Avro Container File must be produced to GCS. Avro Container File can have only
      * records written with same schema.
-     *
-     * @throws ExecutionException
-     * @throws InterruptedException
-     * @throws IOException
      */
     @Test
     void schemaChanged() throws ExecutionException, InterruptedException, IOException {
@@ -269,9 +263,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 getAvroBlobName(0, 2));
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        final List<String> blobNames = testBucketAccessor.getBlobNames(gcsPrefix);
-        assertIterableEquals(expectedBlobs, blobNames);
-        assertEquals(3, blobNames.size());
+        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final var blobContents = new ArrayList<String>();
         for (final String blobName : expectedBlobs) {
@@ -283,8 +275,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 }
             }
         }
-        assertIterableEquals(expectedRecords.stream().sorted().collect(Collectors.toList()),
-                blobContents.stream().sorted().collect(Collectors.toList()));
+        assertThat(blobContents).containsExactlyInAnyOrderElementsOf(expectedRecords);
     }
 
     @Test
@@ -304,7 +295,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 getBlobName(2, 0, compression), getBlobName(3, 0, compression));
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBucketAccessor.getBlobNames(gcsPrefix));
+        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
@@ -322,7 +313,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 final String blobName = getBlobName(partition, 0, "none");
                 final String actualLine = blobContents.get(blobName).get(i);
                 final String expectedLine = "{\"value\":" + value + ",\"key\":\"" + key + "\"}";
-                assertEquals(expectedLine, actualLine);
+                assertThat(actualLine).isEqualTo(expectedLine);
             }
         }
     }

@@ -16,10 +16,7 @@
 
 package io.aiven.kafka.connect.gcs;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -95,7 +92,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
                 getBlobName(2, 0, compression), getBlobName(3, 0, compression));
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBucketAccessor.getBlobNames(gcsPrefix));
+        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
@@ -110,11 +107,11 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
                 final var value = "value-" + cnt;
                 final String blobName = getBlobName(partition, 0, compression);
                 final var record = blobContents.get(blobName).get(i);
-                assertEquals(key, record.get("key").toString());
-                assertEquals(value, record.get("value").toString());
-                assertNotNull(record.get("offset"));
-                assertNotNull(record.get("timestamp"));
-                assertNull(record.get("headers"));
+                assertThat(record.get("key")).hasToString(key);
+                assertThat(record.get("value")).hasToString(value);
+                assertThat(record.get("offset")).isNotNull();
+                assertThat(record.get("timestamp")).isNotNull();
+                assertThat(record.get("headers")).isNull();
                 cnt += 1;
             }
         }
@@ -150,7 +147,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
                 getBlobName(2, 0, compression), getBlobName(3, 0, compression));
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBucketAccessor.getBlobNames(gcsPrefix));
+        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
@@ -165,11 +162,11 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
                 final var value = "{\"name\": \"name-" + cnt + "\", \"value\": \"value-" + cnt + "\"}";
                 final String blobName = getBlobName(partition, 0, compression);
                 final var record = blobContents.get(blobName).get(i);
-                assertEquals(key, record.get("key").toString());
-                assertEquals(value, record.get("value").toString());
-                assertNotNull(record.get("offset"));
-                assertNotNull(record.get("timestamp"));
-                assertNull(record.get("headers"));
+                assertThat(record.get("key")).hasToString(key);
+                assertThat(record.get("value")).hasToString(value);
+                assertThat(record.get("offset")).isNotNull();
+                assertThat(record.get("timestamp")).isNotNull();
+                assertThat(record.get("headers")).isNull();
                 cnt += 1;
             }
         }
@@ -213,7 +210,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
                 getBlobName(2, 0, compression), getBlobName(3, 0, compression));
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBucketAccessor.getBlobNames(gcsPrefix));
+        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
@@ -228,7 +225,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
                 final String blobName = getBlobName(partition, 0, compression);
                 final var record = blobContents.get(blobName).get(i);
                 final String expectedLine = String.format(expectedOutput, name);
-                assertEquals(expectedLine, record.toString());
+                assertThat(record).hasToString(expectedLine);
                 cnt += 1;
             }
         }
@@ -281,7 +278,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
                 getBlobName(2, 5, compression), getBlobName(3, 0, compression), getBlobName(3, 5, compression));
 
         awaitAllBlobsWritten(expectedBlobs.size());
-        assertIterableEquals(expectedBlobs, testBucketAccessor.getBlobNames(gcsPrefix));
+        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
 
         final var blobContents = new ArrayList<String>();
         for (final String blobName : expectedBlobs) {
@@ -289,8 +286,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
                     testBucketAccessor.readBytes(blobName));
             blobContents.addAll(records.stream().map(GenericRecord::toString).collect(Collectors.toList()));
         }
-        assertIterableEquals(expectedRecords.stream().sorted().collect(Collectors.toList()),
-                blobContents.stream().sorted().collect(Collectors.toList()));
+        assertThat(blobContents).containsExactlyInAnyOrderElementsOf(expectedRecords);
     }
     private Map<String, String> basicConnectorConfig(final String compression) {
         final Map<String, String> config = new HashMap<>();

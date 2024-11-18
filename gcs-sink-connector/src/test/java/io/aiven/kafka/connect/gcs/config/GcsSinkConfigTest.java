@@ -16,21 +16,13 @@
 
 package io.aiven.kafka.connect.gcs.config;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -74,11 +66,11 @@ final class GcsSinkConfigTest {
                 .stream()
                 .filter(x -> GcsSinkConfig.FILE_NAME_TEMPLATE_CONFIG.equals(x.name()))
                 .findFirst()
-                .get();
-        assertFalse(configValue.errorMessages().isEmpty());
+                .orElseThrow();
+        assertThat(configValue.errorMessages()).isNotEmpty();
 
-        final var throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertTrue(throwable.getMessage().startsWith("Invalid value "));
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessageStartingWith("Invalid value ");
     }
 
     @Test
@@ -98,7 +90,7 @@ final class GcsSinkConfigTest {
                 .bindVariable("partition", () -> "p")
                 .bindVariable("start_offset", VariableTemplatePart.Parameter::getValue)
                 .render();
-        assertEquals("a-yyyy-MM-dd-p-true.gz", fileName);
+        assertThat(fileName).isEqualTo("a-yyyy-MM-dd-p-true.gz");
     }
 
     @Test
@@ -118,7 +110,7 @@ final class GcsSinkConfigTest {
                 .bindVariable("partition", () -> "_")
                 .bindVariable("start_offset", () -> "_")
                 .render();
-        assertEquals("_-yyyy-yyyy-yyyy-yyyy-_-_.gz", fileName);
+        assertThat(fileName).isEqualTo("_-yyyy-yyyy-yyyy-yyyy-_-_.gz");
     }
 
     @Test
@@ -128,8 +120,8 @@ final class GcsSinkConfigTest {
         final var expectedErrorMessage = "Missing required configuration \"gcs.bucket.name\" which has no default value.";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "gcs.bucket.name", expectedErrorMessage);
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -140,8 +132,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "gcs.bucket.name", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -151,29 +143,27 @@ final class GcsSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final GcsSinkConfig config = new GcsSinkConfig(properties);
-        assertEquals("test-bucket", config.getBucketName());
-        assertEquals(CompressionType.NONE, config.getCompressionType());
-        assertEquals("", config.getPrefix());
-        assertEquals("a-b-c",
-                config.getFilenameTemplate()
-                        .instance()
-                        .bindVariable("topic", () -> "a")
-                        .bindVariable("partition", () -> "b")
-                        .bindVariable("start_offset", () -> "c")
-                        .render());
-        assertIterableEquals(
-                Collections.singleton(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64)),
-                config.getOutputFields());
-        assertEquals(FormatType.forName("csv"), config.getFormatType());
-        assertEquals(Duration.ofMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT),
-                config.getGcsRetryBackoffInitialDelay());
-        assertEquals(Duration.ofMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT),
-                config.getGcsRetryBackoffMaxDelay());
-        assertEquals(Duration.ofMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT),
-                config.getGcsRetryBackoffTotalTimeout());
-        assertEquals(GcsSinkConfig.GCS_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT, config.getGcsRetryBackoffMaxAttempts());
-        assertEquals(GcsSinkConfig.GCS_RETRY_BACKOFF_DELAY_MULTIPLIER_DEFAULT,
-                config.getGcsRetryBackoffDelayMultiplier());
+        assertThat(config.getBucketName()).isEqualTo("test-bucket");
+        assertThat(config.getCompressionType()).isEqualTo(CompressionType.NONE);
+        assertThat(config.getPrefix()).isEmpty();
+        assertThat(config.getFilenameTemplate()
+                .instance()
+                .bindVariable("topic", () -> "a")
+                .bindVariable("partition", () -> "b")
+                .bindVariable("start_offset", () -> "c")
+                .render()).isEqualTo("a-b-c");
+        assertThat(config.getOutputFields())
+                .containsExactly(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
+        assertThat(config.getFormatType()).isEqualTo(FormatType.forName("csv"));
+        assertThat(config.getGcsRetryBackoffInitialDelay())
+                .hasMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT);
+        assertThat(config.getGcsRetryBackoffMaxDelay()).hasMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT);
+        assertThat(config.getGcsRetryBackoffTotalTimeout())
+                .hasMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT);
+        assertThat(config.getGcsRetryBackoffMaxAttempts())
+                .isEqualTo(GcsSinkConfig.GCS_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT);
+        assertThat(config.getGcsRetryBackoffDelayMultiplier())
+                .isEqualTo(GcsSinkConfig.GCS_RETRY_BACKOFF_DELAY_MULTIPLIER_DEFAULT);
     }
 
     @Test
@@ -183,54 +173,50 @@ final class GcsSinkConfigTest {
                 "gcs.retry.backoff.delay.multiplier", "2.0", "gcs.retry.backoff.total.timeout.ms", "4000",
                 "gcs.retry.backoff.max.attempts", "100");
         final var config = new GcsSinkConfig(properties);
-        assertEquals(1000, config.getKafkaRetryBackoffMs());
-        assertEquals(Duration.ofMillis(2000), config.getGcsRetryBackoffInitialDelay());
-        assertEquals(Duration.ofMillis(3000), config.getGcsRetryBackoffMaxDelay());
-        assertEquals(Duration.ofMillis(4000), config.getGcsRetryBackoffTotalTimeout());
-        assertEquals(2.0D, config.getGcsRetryBackoffDelayMultiplier());
-        assertEquals(100, config.getGcsRetryBackoffMaxAttempts());
+        assertThat(config.getKafkaRetryBackoffMs()).isEqualTo(1000);
+        assertThat(config.getGcsRetryBackoffInitialDelay()).hasMillis(2000);
+        assertThat(config.getGcsRetryBackoffMaxDelay()).hasMillis(3000);
+        assertThat(config.getGcsRetryBackoffTotalTimeout()).hasMillis(4000);
+        assertThat(config.getGcsRetryBackoffDelayMultiplier()).isEqualTo(2.0D);
+        assertThat(config.getGcsRetryBackoffMaxAttempts()).isEqualTo(100);
     }
 
     @Test
     void wrongRetryPolicySettings() {
         final var initialDelayProp = Map.of("gcs.bucket.name", "test-bucket", "gcs.retry.backoff.initial.delay.ms",
                 "-1");
-        final var initialDelayE = assertThrows(ConfigException.class, () -> new GcsSinkConfig(initialDelayProp));
-        assertEquals(
-                "Invalid value -1 for configuration gcs.retry.backoff.initial.delay.ms: " + "Value must be at least 0",
-                initialDelayE.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(initialDelayProp)).isInstanceOf(ConfigException.class)
+                .hasMessage("Invalid value -1 for configuration gcs.retry.backoff.initial.delay.ms: "
+                        + "Value must be at least 0");
 
         final var maxDelayProp = Map.of("gcs.bucket.name", "test-bucket", "gcs.retry.backoff.max.delay.ms", "-1");
-        final var maxDelayE = assertThrows(ConfigException.class, () -> new GcsSinkConfig(maxDelayProp));
-        assertEquals("Invalid value -1 for configuration gcs.retry.backoff.max.delay.ms: " + "Value must be at least 0",
-                maxDelayE.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(maxDelayProp)).isInstanceOf(ConfigException.class)
+                .hasMessage("Invalid value -1 for configuration gcs.retry.backoff.max.delay.ms: "
+                        + "Value must be at least 0");
 
         final var delayMultiplayerProp = Map.of("gcs.bucket.name", "test-bucket", "gcs.retry.backoff.delay.multiplier",
                 "-1", "gcs.retry.backoff.total.timeout.ms", "-1", "gcs.retry.backoff.max.attempts", "-1");
-        final var delayMultiplayerE = assertThrows(ConfigException.class,
-                () -> new GcsSinkConfig(delayMultiplayerProp));
-        assertEquals("Invalid value -1.0 for configuration gcs.retry.backoff.delay.multiplier: "
-                + "Value must be at least 1.0", delayMultiplayerE.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(delayMultiplayerProp)).isInstanceOf(ConfigException.class)
+                .hasMessage(
+                        "Invalid value -1.0 for configuration gcs.retry.backoff.delay.multiplier: Value must be at least 1.0");
 
         final var maxAttemptsProp = Map.of("gcs.bucket.name", "test-bucket", "gcs.retry.backoff.max.attempts", "-1");
-        final var maxAttemptsE = assertThrows(ConfigException.class, () -> new GcsSinkConfig(maxAttemptsProp));
-        assertEquals("Invalid value -1 for configuration gcs.retry.backoff.max.attempts: " + "Value must be at least 0",
-                maxAttemptsE.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(maxAttemptsProp)).isInstanceOf(ConfigException.class)
+                .hasMessage("Invalid value -1 for configuration gcs.retry.backoff.max.attempts: "
+                        + "Value must be at least 0");
 
         final var totalTimeoutProp = Map.of("gcs.bucket.name", "test-bucket", "gcs.retry.backoff.total.timeout.ms",
                 "-1");
-        final var totalTimeoutE = assertThrows(ConfigException.class, () -> new GcsSinkConfig(totalTimeoutProp));
-        assertEquals(
-                "Invalid value -1 for configuration gcs.retry.backoff.total.timeout.ms: " + "Value must be at least 0",
-                totalTimeoutE.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(totalTimeoutProp)).isInstanceOf(ConfigException.class)
+                .hasMessage("Invalid value -1 for configuration gcs.retry.backoff.total.timeout.ms: "
+                        + "Value must be at least 0");
 
         final var tooBigTotalTimeoutProp = Map.of("gcs.bucket.name", "test-bucket",
                 "gcs.retry.backoff.total.timeout.ms", String.valueOf(TimeUnit.HOURS.toMillis(25)));
 
-        final var tooBigTotalTimeoutE = assertThrows(ConfigException.class,
-                () -> new GcsSinkConfig(tooBigTotalTimeoutProp));
-        assertEquals("Invalid value 90000000 for configuration gcs.retry.backoff.total.timeout.ms: "
-                + "Value must be no more than 86400000 (24 hours)", tooBigTotalTimeoutE.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(tooBigTotalTimeoutProp)).isInstanceOf(ConfigException.class)
+                .hasMessage(
+                        "Invalid value 90000000 for configuration gcs.retry.backoff.total.timeout.ms: Value must be no more than 86400000 (24 hours)");
     }
 
     @ParameterizedTest
@@ -250,28 +236,26 @@ final class GcsSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final GcsSinkConfig config = new GcsSinkConfig(properties);
-        assertDoesNotThrow(config::getCredentials);
-        assertEquals("test-bucket", config.getBucketName());
-        assertEquals(CompressionType.forName(compression), config.getCompressionType());
-        assertEquals(42, config.getMaxRecordsPerFile());
-        assertEquals("test-prefix", config.getPrefix());
-        assertEquals("a-b-c-d.gz",
-                config.getFilenameTemplate()
-                        .instance()
-                        .bindVariable("topic", () -> "a")
-                        .bindVariable("partition", () -> "b")
-                        .bindVariable("start_offset", () -> "c")
-                        .bindVariable("timestamp", () -> "d")
-                        .render());
-        assertIterableEquals(
-                Arrays.asList(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
-                        new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64),
-                        new OutputField(OutputFieldType.OFFSET, OutputFieldEncodingType.NONE),
-                        new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE)),
-                config.getOutputFields());
+        assertThatNoException().isThrownBy(config::getCredentials);
+        assertThat(config.getBucketName()).isEqualTo("test-bucket");
+        assertThat(config.getCompressionType()).isEqualTo(CompressionType.forName(compression));
+        assertThat(config.getMaxRecordsPerFile()).isEqualTo(42);
+        assertThat(config.getPrefix()).isEqualTo("test-prefix");
+        assertThat(config.getFilenameTemplate()
+                .instance()
+                .bindVariable("topic", () -> "a")
+                .bindVariable("partition", () -> "b")
+                .bindVariable("start_offset", () -> "c")
+                .bindVariable("timestamp", () -> "d")
+                .render()).isEqualTo("a-b-c-d.gz");
+        assertThat(config.getOutputFields()).containsExactly(
+                new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
+                new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64),
+                new OutputField(OutputFieldType.OFFSET, OutputFieldEncodingType.NONE),
+                new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE));
 
-        assertEquals(ZoneOffset.UTC, config.getFilenameTimezone());
-        assertEquals(TimestampSource.WallclockTimestampSource.class, config.getFilenameTimestampSource().getClass());
+        assertThat(config.getFilenameTimezone()).isEqualTo(ZoneOffset.UTC);
+        assertThat(config.getFilenameTimestampSource()).isInstanceOf(TimestampSource.WallclockTimestampSource.class);
 
     }
 
@@ -291,7 +275,7 @@ final class GcsSinkConfigTest {
         final CompressionType expectedCompressionType = compression == null
                 ? CompressionType.NONE
                 : CompressionType.forName(compression);
-        assertEquals(expectedCompressionType, config.getCompressionType());
+        assertThat(config.getCompressionType()).isEqualTo(expectedCompressionType);
     }
 
     @Test
@@ -304,10 +288,10 @@ final class GcsSinkConfigTest {
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "file.compression.type", expectedErrorMessage);
-        assertIterableEquals(List.of("none", "gzip", "snappy", "zstd"), configValue.recommendedValues());
+        assertThat(configValue.recommendedValues()).containsExactly("none", "gzip", "snappy", "zstd");
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -318,11 +302,10 @@ final class GcsSinkConfigTest {
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "format.output.fields", expectedErrorMessage);
-        assertIterableEquals(List.of("key", "value", "offset", "timestamp", "headers"),
-                configValue.recommendedValues());
+        assertThat(configValue.recommendedValues()).containsExactly("key", "value", "offset", "timestamp", "headers");
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -336,11 +319,10 @@ final class GcsSinkConfigTest {
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "format.output.fields", expectedErrorMessage);
-        assertIterableEquals(List.of("key", "value", "offset", "timestamp", "headers"),
-                configValue.recommendedValues());
+        assertThat(configValue.recommendedValues()).containsExactly("key", "value", "offset", "timestamp", "headers");
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -350,7 +332,7 @@ final class GcsSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final GcsSinkConfig config = new GcsSinkConfig(properties);
-        assertEquals("test-connector", config.getConnectorName());
+        assertThat(config.getConnectorName()).isEqualTo("test-connector");
     }
 
     @Test
@@ -365,8 +347,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.prefix", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -379,8 +361,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.prefix", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -390,7 +372,7 @@ final class GcsSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final GcsSinkConfig config = new GcsSinkConfig(properties);
-        assertEquals(0, config.getMaxRecordsPerFile());
+        assertThat(config.getMaxRecordsPerFile()).isZero();
     }
 
     @Test
@@ -400,7 +382,7 @@ final class GcsSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final GcsSinkConfig config = new GcsSinkConfig(properties);
-        assertEquals(42, config.getMaxRecordsPerFile());
+        assertThat(config.getMaxRecordsPerFile()).isEqualTo(42);
     }
 
     @Test
@@ -412,8 +394,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.max.records", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @ParameterizedTest
@@ -440,7 +422,7 @@ final class GcsSinkConfigTest {
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", () -> "c")
                 .render();
-        assertEquals(expected, actual);
+        assertThat(actual).isEqualTo(expected);
     }
 
     @Test
@@ -457,7 +439,7 @@ final class GcsSinkConfigTest {
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", () -> "c")
                 .render();
-        assertEquals("a-b-c", actual);
+        assertThat(actual).isEqualTo("a-b-c");
     }
 
     @Test
@@ -474,7 +456,7 @@ final class GcsSinkConfigTest {
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", () -> "c")
                 .render();
-        assertEquals("c-b-a", actual);
+        assertThat(actual).isEqualTo("c-b-a");
     }
 
     @Test
@@ -489,12 +471,12 @@ final class GcsSinkConfigTest {
                 .bindVariable("topic", () -> "a")
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", parameter -> {
-                    assertEquals("padding", parameter.getName());
-                    assertTrue(parameter.asBoolean());
+                    assertThat(parameter.getName()).isEqualTo("padding");
+                    assertThat(parameter.asBoolean()).isTrue();
                     return "c";
                 })
                 .render();
-        assertEquals("c-b-a", actual);
+        assertThat(actual).isEqualTo("c-b-a");
     }
 
     @Test
@@ -506,7 +488,7 @@ final class GcsSinkConfigTest {
 
         final GcsSinkConfig config = new GcsSinkConfig(properties);
         final String actual = config.getFilenameTemplate().instance().bindVariable("key", () -> "a").render();
-        assertEquals("a", actual);
+        assertThat(actual).isEqualTo("a");
     }
 
     @Test
@@ -518,8 +500,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -533,8 +515,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -547,8 +529,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -563,8 +545,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -578,8 +560,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -592,8 +574,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -607,8 +589,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -622,8 +604,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -637,8 +619,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -651,8 +633,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -665,8 +647,8 @@ final class GcsSinkConfigTest {
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -675,7 +657,7 @@ final class GcsSinkConfigTest {
                 "{{key}}");
 
         assertConfigDefValidationPasses(properties);
-        assertDoesNotThrow(() -> new GcsSinkConfig(properties));
+        assertThatNoException().isThrownBy(() -> new GcsSinkConfig(properties));
     }
 
     @Test
@@ -684,7 +666,7 @@ final class GcsSinkConfigTest {
                 "file.max.records", "1");
 
         assertConfigDefValidationPasses(properties);
-        assertDoesNotThrow(() -> new GcsSinkConfig(properties));
+        assertThatNoException().isThrownBy(() -> new GcsSinkConfig(properties));
     }
 
     @Test
@@ -695,9 +677,8 @@ final class GcsSinkConfigTest {
         // Should pass here, because ConfigDef validation doesn't check interdependencies.
         assertConfigDefValidationPasses(properties);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals("When file.name.template is {{key}}, file.max.records must be either 1 or not set",
-                throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage("When file.name.template is {{key}}, file.max.records must be either 1 or not set");
     }
 
     @Test
@@ -708,7 +689,7 @@ final class GcsSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final GcsSinkConfig sinkConfig = new GcsSinkConfig(properties);
-        assertEquals(ZoneId.of("CET"), sinkConfig.getFilenameTimezone());
+        assertThat(sinkConfig.getFilenameTimezone()).isEqualTo(ZoneId.of("CET"));
     }
 
     @Test
@@ -719,7 +700,7 @@ final class GcsSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final GcsSinkConfig sinkConfig = new GcsSinkConfig(properties);
-        assertEquals(ZoneId.of("Europe/Berlin"), sinkConfig.getFilenameTimezone());
+        assertThat(sinkConfig.getFilenameTimezone()).isEqualTo(ZoneId.of("Europe/Berlin"));
     }
 
     @Test
@@ -733,8 +714,8 @@ final class GcsSinkConfigTest {
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.timestamp.source",
                 expectedErrorMessage);
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -745,8 +726,8 @@ final class GcsSinkConfigTest {
         assertConfigDefValidationPasses(properties);
 
         final GcsSinkConfig sinkConfig = new GcsSinkConfig(properties);
-        assertEquals(TimestampSource.WallclockTimestampSource.class,
-                sinkConfig.getFilenameTimestampSource().getClass());
+        assertThat(sinkConfig.getFilenameTimestampSource())
+                .isInstanceOf(TimestampSource.WallclockTimestampSource.class);
     }
 
     @ParameterizedTest
@@ -760,7 +741,7 @@ final class GcsSinkConfigTest {
         final GcsSinkConfig sinkConfig = new GcsSinkConfig(properties);
         final FormatType expectedFormatType = FormatType.forName(formatType);
 
-        assertEquals(expectedFormatType, sinkConfig.getFormatType());
+        assertThat(sinkConfig.getFormatType()).isEqualTo(expectedFormatType);
     }
 
     @Test
@@ -773,10 +754,10 @@ final class GcsSinkConfigTest {
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "format.output.type", expectedErrorMessage);
-        assertIterableEquals(List.of("avro", "csv", "json", "jsonl", "parquet"), configValue.recommendedValues());
+        assertThat(configValue.recommendedValues()).containsExactly("avro", "csv", "json", "jsonl", "parquet");
 
-        final Throwable throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertEquals(expectedErrorMessage, throwable.getMessage());
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     @ParameterizedTest
@@ -784,13 +765,16 @@ final class GcsSinkConfigTest {
     void notSupportedFileMaxRecords(final String fileNameTemplate) {
         final Map<String, String> properties = Map.of(GcsSinkConfig.FILE_NAME_TEMPLATE_CONFIG, fileNameTemplate,
                 GcsSinkConfig.FILE_MAX_RECORDS, "2", GcsSinkConfig.GCS_BUCKET_NAME_CONFIG, "any_bucket");
-        assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties), String.format(
-                "When file.name.template is %s, file.max.records must be either 1 or not set", fileNameTemplate));
+        assertThatThrownBy(() -> new GcsSinkConfig(properties))
+                .withFailMessage(
+                        String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
+                                fileNameTemplate))
+                .isInstanceOf(ConfigException.class);
     }
 
     private void assertConfigDefValidationPasses(final Map<String, String> properties) {
         for (final ConfigValue configValue : GcsSinkConfig.configDef().validate(properties)) {
-            assertTrue(configValue.errorMessages().isEmpty());
+            assertThat(configValue.errorMessages()).isEmpty();
         }
     }
 
@@ -799,13 +783,13 @@ final class GcsSinkConfigTest {
         ConfigValue result = null;
         for (final ConfigValue configValue : GcsSinkConfig.configDef().validate(properties)) {
             if (configValue.name().equals(configuration)) {
-                assertIterableEquals(List.of(expectedErrorMessage), configValue.errorMessages());
+                assertThat(configValue.errorMessages()).containsExactly(expectedErrorMessage);
                 result = configValue;
             } else {
-                assertTrue(configValue.errorMessages().isEmpty());
+                assertThat(configValue.errorMessages()).isEmpty();
             }
         }
-        assertNotNull(result, "Not found");
+        assertThat(result).withFailMessage("Not found").isNotNull();
         return result;
     }
 }

@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.gcs.config;
 
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,8 +44,8 @@ final class GcsSinkConfigValidationTest {
                 .stream()
                 .filter(x -> "file.compression.type".equals(x.name()))
                 .findFirst()
-                .get();
-        assertIterableEquals(CompressionType.names(), configValue.recommendedValues());
+                .orElseThrow();
+        assertThat(configValue.recommendedValues()).containsExactlyElementsOf(CompressionType.names());
     }
 
     @Test
@@ -58,7 +58,7 @@ final class GcsSinkConfigValidationTest {
                 .stream()
                 .filter(x -> "format.output.fields".equals(x.name()))
                 .findFirst()
-                .get();
-        assertIterableEquals(OutputFieldType.names(), configValue.recommendedValues());
+                .orElseThrow();
+        assertThat(configValue.recommendedValues()).containsExactlyElementsOf(OutputFieldType.names());
     }
 }
