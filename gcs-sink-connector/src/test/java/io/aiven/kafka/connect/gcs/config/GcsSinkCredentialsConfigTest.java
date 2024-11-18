@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.gcs.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -64,10 +63,11 @@ final class GcsSinkCredentialsConfigTest {
                 .filter(x -> GcsSinkConfig.FILE_NAME_TEMPLATE_CONFIG.equals(x.name()))
                 .findFirst()
                 .get();
-        assertFalse(configValue.errorMessages().isEmpty());
+        assertTrue(configValue.errorMessages().isEmpty());
 
         final var throwable = assertThrows(ConfigException.class, () -> new GcsSinkConfig(properties));
-        assertTrue(throwable.getMessage().startsWith("Invalid value "));
+        assertTrue(throwable.getMessage()
+                .startsWith("Invalid value " + template + " for configuration file.name.template:"));
     }
 
     @Test

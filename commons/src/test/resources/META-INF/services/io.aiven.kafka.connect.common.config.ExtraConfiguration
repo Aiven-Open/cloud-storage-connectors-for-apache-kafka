@@ -1,0 +1,2 @@
+io.aiven.kafka.connect.common.config.CustomConfig
+io.aiven.kafka.connect.common.config.MoreCustomConfig
