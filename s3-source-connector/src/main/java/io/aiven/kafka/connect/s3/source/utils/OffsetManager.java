@@ -72,42 +72,6 @@ public class OffsetManager {
         return Collections.unmodifiableMap(offsets);
     }
 
-    /**
-     * Updates the offset map. The {@code partitionMap} parameter is only used as a key all data is managed internally.
-     * If the {@code partitionMap} is not found in the internal map then no changes occur and the {@code startOffset}
-     * value is returned. Otherwise:
-     * <ul>
-     * <li>If the internal map contains a value for {@code currentObjectKey} the offset is incremented and
-     * returned.</li>
-     * <li>If the internal map does NOT contain a value for {@code currentObjectKey} the offset set to the value of
-     * {@code startOffset} and that value returned.</li>
-     * </ul>
-     *
-     * @param partitionMap
-     *            the key to lookup the data in the offsets table.
-     * @param currentObjectKey
-     *            The object to update the offset for.
-     * @param startOffset
-     *            The initial value if necessary.
-     * @return the value of the calculation outlined above.
-     */
-    public long incrementAndUpdateOffsetMap(final Map<String, Object> partitionMap, final String currentObjectKey,
-            final long startOffset) {
-        if (offsets.containsKey(partitionMap)) {
-            final Map<String, Object> offsetValue = new HashMap<>(offsets.get(partitionMap));
-            if (offsetValue.containsKey(currentObjectKey)) {
-                final long newOffsetVal = (long) offsetValue.get(currentObjectKey) + 1L;
-                offsetValue.put(currentObjectKey, newOffsetVal);
-                offsets.put(partitionMap, offsetValue);
-                return newOffsetVal;
-            } else {
-                offsetValue.put(currentObjectKey, startOffset);
-                offsets.put(partitionMap, offsetValue);
-                return startOffset;
-            }
-        }
-        return startOffset;
-    }
 
     public boolean shouldSkipRecord(final S3OffsetManagerEntry offsetManagerEntry) {
         boolean result = false;
@@ -120,21 +84,14 @@ public class OffsetManager {
         return result;
     }
 
-    public Map<String, Object> getOffsetValueMap(final String currentObjectKey, final long offsetId) {
-        final Map<String, Object> offsetMap = new HashMap<>();
-        offsetMap.put(currentObjectKey, offsetId);
-
-        return offsetMap;
-    }
-
-    void updateCurrentOffsets(final Map<String, Object> partitionMap, final Map<String, Object> offsetValueMap) {
-        if (offsets.containsKey(partitionMap)) {
-            final Map<String, Object> offsetMap = new HashMap<>(offsets.get(partitionMap));
-            offsetMap.putAll(offsetValueMap);
-            offsets.put(partitionMap, offsetMap);
-        } else {
-            offsets.put(partitionMap, offsetValueMap);
-        }
+    void updateCurrentOffsets(OffsetManagerEntry entry) {
+        offsets.compute(entry.getManagerKey().getPartitionMap(), (k, v) -> {
+            if (v == null) {
+                return new HashMap<>(entry.getProperties());
+            } else {
+                v.putAll(entry.getProperties());
+                return v;
+            }});
     }
 
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {
@@ -159,7 +116,7 @@ public class OffsetManager {
     /**
      * The definition of an entry in the OffsetManager.
      */
-    public interface OffsetManagerEntry {
+    public interface OffsetManagerEntry<T extends OffsetManagerEntry> {
 
         /**
          * Creates a new OffsetManagerEntry by wrapping the properties with the current implementation.
@@ -168,7 +125,7 @@ public class OffsetManager {
          *            the properties to wrap.
          * @return an OffsetManagerProperty
          */
-        OffsetManagerEntry fromProperties(Map<String, Object> properties);
+        T fromProperties(Map<String, Object> properties);
 
         /**
          * Extract the data from the entry in the correct format to return to Kafka.

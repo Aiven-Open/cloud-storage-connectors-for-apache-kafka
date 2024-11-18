@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry {
+public class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3OffsetManagerEntry> {
 
     // package private statics for testing.
     static final String BUCKET = "bucket";
