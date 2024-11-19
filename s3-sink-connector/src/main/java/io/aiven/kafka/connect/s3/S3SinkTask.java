@@ -37,6 +37,7 @@ import org.apache.kafka.connect.sink.SinkTask;
 
 import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
 import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.common.grouper.RecordGrouper;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.output.OutputWriter;
@@ -168,7 +169,7 @@ public final class S3SinkTask extends SinkTask {
         final var prefix = config.getPrefixTemplate()
                 .instance()
                 .bindVariable(FilenameTemplateVariable.TIMESTAMP.name,
-                        parameter -> OldFullKeyFormatters.timestamp(record, config.getTimestampSource(), parameter))
+                        new StableTimeFormatter(config.getTimestampSource()).apply(record))
                 .bindVariable(FilenameTemplateVariable.PARTITION.name, () -> record.kafkaPartition().toString())
                 .bindVariable(FilenameTemplateVariable.START_OFFSET.name,
                         parameter -> OldFullKeyFormatters.KAFKA_OFFSET.apply(record, parameter))

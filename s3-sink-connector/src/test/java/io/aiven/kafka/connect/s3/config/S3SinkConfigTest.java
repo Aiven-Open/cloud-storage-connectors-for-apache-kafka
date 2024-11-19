@@ -33,7 +33,7 @@ import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.s3.OldFullKeyFormatters;
+import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.s3.S3OutputStream;
 
 import com.amazonaws.regions.RegionUtils;
@@ -549,9 +549,12 @@ final class S3SinkConfigTest {
         // null record is fine here, because it's not needed for the wallclock timestamp source
         final var expectedTimestamp = config.getTimestampSource().time(null);
 
-        final var renderedPrefix = config.getPrefixTemplate().instance().bindVariable("timestamp", parameter ->
-        // null record is fine here, because it's not needed for the wall clock timestamp source
-        OldFullKeyFormatters.timestamp(null, config.getTimestampSource(), parameter)).render();
+        final var renderedPrefix = config.getPrefixTemplate()
+                .instance()
+                .bindVariable("timestamp",
+                        // null record is fine here, because it's not needed for the wall clock timestamp source
+                        new StableTimeFormatter(config.getTimestampSource()).apply(null))
+                .render();
 
         assertThat(renderedPrefix)
                 .isEqualTo(String.format("%s/%s/%s/", expectedTimestamp.format(DateTimeFormatter.ofPattern("yyyy")),

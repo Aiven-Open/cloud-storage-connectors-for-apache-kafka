@@ -16,13 +16,10 @@
 
 package io.aiven.kafka.connect.s3;
 
-import java.time.format.DateTimeFormatter;
-import java.util.Map;
 import java.util.function.BiFunction;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
 
 public final class OldFullKeyFormatters {
@@ -31,15 +28,7 @@ public final class OldFullKeyFormatters {
                     ? String.format("%020d", sinkRecord.kafkaOffset())
                     : Long.toString(sinkRecord.kafkaOffset());
 
-    private static final Map<String, DateTimeFormatter> TIMESTAMP_FORMATTERS = Map.of("yyyy",
-            DateTimeFormatter.ofPattern("yyyy"), "MM", DateTimeFormatter.ofPattern("MM"), "dd",
-            DateTimeFormatter.ofPattern("dd"), "HH", DateTimeFormatter.ofPattern("HH"));
-
     private OldFullKeyFormatters() {
         /* hide constructor */ }
 
-    public static String timestamp(final SinkRecord record, final TimestampSource tsSource,
-            final VariableTemplatePart.Parameter parameter) {
-        return tsSource.time(record).format(TIMESTAMP_FORMATTERS.get(parameter.getValue()));
-    }
 }

@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,6 +28,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
+import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
@@ -45,17 +45,13 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
  */
 class TopicPartitionRecordGrouper implements RecordGrouper {
 
-    private static final Map<String, DateTimeFormatter> TIMESTAMP_FORMATTERS = Map.of("yyyy",
-            DateTimeFormatter.ofPattern("yyyy"), "MM", DateTimeFormatter.ofPattern("MM"), "dd",
-            DateTimeFormatter.ofPattern("dd"), "HH", DateTimeFormatter.ofPattern("HH"));
-
     private final Template filenameTemplate;
 
     private final Map<TopicPartition, SinkRecord> currentHeadRecords = new HashMap<>();
 
     private final Map<String, List<SinkRecord>> fileBuffers = new HashMap<>();
 
-    private final Function<SinkRecord, Function<Parameter, String>> setTimestampBasedOnRecord;
+    private final StableTimeFormatter timeFormatter;
 
     private final Rotator<List<SinkRecord>> rotator;
 
@@ -75,8 +71,7 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
         Objects.requireNonNull(tsSource, "tsSource cannot be null");
         this.filenameTemplate = filenameTemplate;
 
-        this.setTimestampBasedOnRecord = record -> parameter -> tsSource.time(record)
-                .format(TIMESTAMP_FORMATTERS.get(parameter.getValue()));
+        this.timeFormatter = new StableTimeFormatter(tsSource);
 
         this.rotator = buffer -> {
             final var unlimited = maxRecordsPerFile == null;
@@ -119,7 +114,7 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
                 .bindVariable(FilenameTemplateVariable.TOPIC.name, topicPartition::topic)
                 .bindVariable(FilenameTemplateVariable.PARTITION.name, setKafkaPartition)
                 .bindVariable(FilenameTemplateVariable.START_OFFSET.name, setKafkaOffset)
-                .bindVariable(FilenameTemplateVariable.TIMESTAMP.name, setTimestampBasedOnRecord.apply(currentRecord))
+                .bindVariable(FilenameTemplateVariable.TIMESTAMP.name, timeFormatter.apply(currentRecord))
                 .render();
     }
 
