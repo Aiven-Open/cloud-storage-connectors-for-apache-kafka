@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -52,13 +52,13 @@ class StableTimeFormatterTest {
                 .bindVariable(FilenameTemplateVariable.TIMESTAMP.name, stableTimeFormatter.apply(currentRecord))
                 .render();
         // used to be yy-2021,MM-02,dd-03,HH1-13,HH2-14, if we dont cache the time
-        assertEquals("yy-2021,MM-02,dd-03,HH1-10,HH2-10", result);
+        assertThat("yy-2021,MM-02,dd-03,HH1-10,HH2-10").isEqualTo(result);
 
         final var result2 = template.instance()
                 .bindVariable(FilenameTemplateVariable.TIMESTAMP.name, stableTimeFormatter.apply(currentRecord))
                 .render();
         // ensure time isnt cached across records
-        assertEquals("yy-2021,MM-02,dd-03,HH1-11,HH2-11", result2);
+        assertThat("yy-2021,MM-02,dd-03,HH1-11,HH2-11").isEqualTo(result2);
     }
 
 }
