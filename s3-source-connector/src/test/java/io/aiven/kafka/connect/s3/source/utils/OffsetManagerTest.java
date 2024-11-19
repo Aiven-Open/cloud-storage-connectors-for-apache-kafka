@@ -16,17 +16,15 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.offset;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -173,6 +171,11 @@ final class OffsetManagerTest {
         }
 
         @Override
+        public Object getProperty(String key) {
+            return properties.get(key);
+        }
+
+        @Override
         public void setProperty(String key, Object value) {
             properties.put(key, value);
         }
@@ -185,6 +188,18 @@ final class OffsetManagerTest {
                     return Map.of("topic", properties.get("topic"), "partition", properties.get("topic"), "bucket", properties.get("bucket"));
                 }
             };
+        }
+
+        @Override
+        public int compareTo(TestingManagerEntry other) {
+            int result = ((String) getProperty("bucket")).compareTo((String) other.getProperty("bucket"));
+            if (result == 0) {
+                result = ((String) getProperty("topic")).compareTo((String) other.getProperty("topic"));
+                if (result == 0) {
+                    result = ((String) getProperty("partition")).compareTo((String) other.getProperty("partition"));
+                }
+            }
+            return result;
         }
     }
 }

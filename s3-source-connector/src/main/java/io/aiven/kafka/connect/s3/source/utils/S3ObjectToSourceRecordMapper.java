@@ -64,9 +64,16 @@ public final class S3ObjectToSourceRecordMapper implements Function<S3Object, It
         }
         @Override
         public boolean test(final Object recordData) {
-            // once we find a record not to skip we no longer skip.
+            // once we find a record to process (not skip) we no longer skip.  Thus skip record is always the
+            // negation of checkRecordSkip.
             if (checkRecordSkip) {
-                checkRecordSkip = offsetManager.shouldSkipRecord(offsetManagerEntry);
+               S3OffsetManagerEntry stored = offsetManager.getEntry(offsetManagerEntry.getManagerKey(),  map -> offsetManagerEntry.fromProperties(map));
+               if (stored != null) {
+                   boolean skipRecord = stored.compareTo(offsetManagerEntry) <= 0 && stored.wasProcessed();
+                   checkRecordSkip = !skipRecord;
+               } else {
+                   checkRecordSkip = false;
+               }
             }
             offsetManagerEntry.incrementRecordCount();
             return !checkRecordSkip;
