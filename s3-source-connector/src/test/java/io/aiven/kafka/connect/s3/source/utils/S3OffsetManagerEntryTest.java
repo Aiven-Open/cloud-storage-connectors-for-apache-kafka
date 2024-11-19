@@ -87,7 +87,7 @@ class S3OffsetManagerEntryTest {
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("fromPropertiesThrowingExceptionData")
     public void testFromPropertiesThrowingException(String name, Map<String, Object> map, Class<?> expected) {
-        assertThatThrownBy(() -> underTest.fromProperties(map)).as(name+" does not throw exception: "+expected.getName()).isInstanceOf(expected);
+        assertThatThrownBy(() -> underTest.fromProperties(map)).isInstanceOf(expected).as(name+" does not throw exception: "+expected.getName());
     }
 
     private static Map<String, Object> createPopulatedMap() {

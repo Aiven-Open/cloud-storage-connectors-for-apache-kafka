@@ -28,12 +28,10 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 public final class RecordProcessor {
 
-    // private static final Logger LOGGER = LoggerFactory.getLogger(RecordProcessor.class);
-
     private RecordProcessor() {
-
     }
 
+    // TODO: this may move to S3SourceTask.
     public static List<SourceRecord> processRecords(final Iterator<S3SourceRecord> sourceRecordIterator,
             final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
             final Optional<Converter> keyConverter, final Converter valueConverter,
@@ -48,26 +46,4 @@ public final class RecordProcessor {
 
         return results;
     }
-    //
-    // static SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord, final S3SourceConfig s3SourceConfig,
-    // final Optional<Converter> keyConverter, final Converter valueConverter,
-    // final Map<String, String> conversionConfig, final Transformer transformer, final FileReader fileReader,
-    // final OffsetManager offsetManager) {
-    //
-    // final String topic = s3SourceRecord.getTopic();
-    // final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(topic, s3SourceRecord.key()));
-    //
-    // transformer.configureValueConverter(conversionConfig, s3SourceConfig);
-    // valueConverter.configure(conversionConfig, false);
-    // try {
-    // final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, s3SourceRecord.value());
-    // offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
-    // s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
-    // return s3SourceRecord.getSourceRecord(keyData, schemaAndValue);
-    // } catch (DataException e) {
-    // LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
-    // fileReader.addFailedObjectKeys(s3SourceRecord.getObjectKey());
-    // throw e;
-    // }
-    // }
 }

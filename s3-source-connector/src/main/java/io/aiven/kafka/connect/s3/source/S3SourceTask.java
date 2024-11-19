@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -60,11 +61,27 @@ public class S3SourceTask extends SourceTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
 
-    public static final String BUCKET = "bucket";
-    public static final String TOPIC = "topic";
+    /**
+     * @deprecated use {@link S3OffsetManagerEntry#BUCKET}.
+     */
+    @Deprecated
+    public static final String BUCKET = S3OffsetManagerEntry.BUCKET;
+    /**
+     * @deprecated use {@link S3OffsetManagerEntry#<></>}.
+     */
+    @Deprecated
+    public static final String TOPIC = S3OffsetManagerEntry.TOPIC;
 
-    public static final String OBJECT_KEY = "object_key";
-    public static final String PARTITION = "topicPartition";
+    /**
+     * @deprecated use {@link S3OffsetManagerEntry#OBJECT_KEY}.
+     */
+    @Deprecated
+    public static final String OBJECT_KEY = S3OffsetManagerEntry.OBJECT_KEY;
+    /**
+     * @deprecated use {@link S3OffsetManagerEntry#PARTITION}.
+     */
+    @Deprecated
+    public static final String PARTITION = S3OffsetManagerEntry.PARTITION;
 
     private static final long S_3_POLL_INTERVAL_MS = 10_000L;
     private static final long ERROR_BACKOFF = 1000L;
@@ -79,8 +96,6 @@ public class S3SourceTask extends SourceTask {
 
     private Transformer transformer;
 
-    private String s3Bucket;
-
     private boolean taskInitialized;
 
     private final AtomicBoolean connectorStopped = new AtomicBoolean();
@@ -89,7 +104,6 @@ public class S3SourceTask extends SourceTask {
     private final Object pollLock = new Object();
     private FileReader fileReader;
     private final Set<String> failedObjectKeys = new HashSet<>();
-    private final Set<String> inProcessObjectKeys = new HashSet<>();
 
     private OffsetManager offsetManager;
 
@@ -109,10 +123,10 @@ public class S3SourceTask extends SourceTask {
         s3SourceConfig = new S3SourceConfig(props);
         initializeConverters();
         initializeS3Client();
-        this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
-        this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
+        transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
-        fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys);
+        String s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
+        fileReader = new FileReader(s3SourceConfig, s3Bucket, failedObjectKeys);
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;
     }
@@ -213,23 +227,23 @@ public class S3SourceTask extends SourceTask {
     }
 
     // below for visibility in tests
-    public Optional<Converter> getKeyConverter() {
+    Optional<Converter> getKeyConverter() {
         return keyConverter;
     }
 
-    public Converter getValueConverter() {
+    Converter getValueConverter() {
         return valueConverter;
     }
 
-    public Transformer getTransformer() {
+    Transformer getTransformer() {
         return transformer;
     }
 
-    public boolean isTaskInitialized() {
+    boolean isTaskInitialized() {
         return taskInitialized;
     }
 
-    public AtomicBoolean getConnectorStopped() {
+    AtomicBoolean getConnectorStopped() {
         return new AtomicBoolean(connectorStopped.get());
     }
 }

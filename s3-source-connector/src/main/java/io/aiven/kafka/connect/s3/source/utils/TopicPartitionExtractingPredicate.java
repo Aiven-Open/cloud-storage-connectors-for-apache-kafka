@@ -24,17 +24,33 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A predicate that extracts the topic and partition from the S3ObjectSummary key.
+ * Will ignore S3ObjectSummary for which the keys can not be parsed.
+ */
 public final class TopicPartitionExtractingPredicate implements Predicate<S3ObjectSummary> {
+    /** THe logger to use */
     private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
+    /** The name for the topic key */
     public static final String PATTERN_TOPIC_KEY = "topicName";
+    /** The name of the partition key */
     public static final String PATTERN_PARTITION_KEY = "partitionId";
 
+    /** The Regex pattern to match file names */
     public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
             + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
 
+    // TODO: replace the file name matching with the pattern matching in common.
+
+    /** The S3OffsetManagerEntry that is created when the topic and partition are discovered. */
     private S3OffsetManagerEntry offsetManagerEntry;
 
-    public S3OffsetManagerEntry getOffsetMapEntry() {
+    /**
+     * Return the S3OffsetManagerEntry that is associated with the S3ObjectSummary.  This method will return {@code null} if no
+     * files have been processed or if the last file processed did not have a parsable S3ObjectSummary key.
+     * @return the offset manager entry or {@code null} if not available.
+     */
+    public S3OffsetManagerEntry getOffsetMnagerEntry() {
         return offsetManagerEntry;
     }
 
