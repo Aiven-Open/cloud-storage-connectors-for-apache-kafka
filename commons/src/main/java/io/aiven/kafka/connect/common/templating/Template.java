@@ -24,10 +24,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -81,6 +84,10 @@ public final class Template {
         return new Instance();
     }
 
+    public Extractor extractor() {
+        return new Extractor();
+    }
+
     @SuppressWarnings("PMD.ShortMethodName")
     public static Template of(final String template) {
 
@@ -92,6 +99,49 @@ public final class Template {
     @Override
     public String toString() {
         return originalTemplateString;
+    }
+
+    public final class Extractor {
+        private final Pattern regex;
+        private final Map<String, String> captureGroups = new HashMap<>();
+
+        private Extractor() {
+            // Build a regex to match the template pattern. Every variable part is mapped to a capturing group
+            // and every text part is quoted to require an exact match. Variable part parameters are ignored.
+            final StringBuilder textAsRegex = new StringBuilder();
+            for (int i = 0; i < templateParts.size(); i++) {
+                if (templateParts.get(i) instanceof TextTemplatePart) {
+                    textAsRegex.append(Pattern.quote(((TextTemplatePart) templateParts.get(i)).getText()));
+                } else if (templateParts.get(i) instanceof VariableTemplatePart) {
+                    final String variableName = ((VariableTemplatePart) templateParts.get(i)).getVariableName();
+                    if (captureGroups.containsKey(variableName)) {
+                        // If the name was already used, we can capture it with a backreference.
+                        textAsRegex.append("\\k<").append(captureGroups.get(variableName)).append('>');
+                    } else {
+                        textAsRegex.append("(?<capture").append(i).append(">.*?)");
+                        // A capturing group cannot contain underscores, so we map every variable name to a valid unique
+                        // name.
+                        captureGroups.put(((VariableTemplatePart) templateParts.get(i)).getVariableName(),
+                                "capture" + i);
+                    }
+                }
+            }
+            regex = Pattern.compile(textAsRegex.toString());
+        }
+
+        public Map<String, String> extract(final String input) {
+            final Matcher matcher = regex.matcher(input);
+            if (!matcher.matches()) {
+                throw new IllegalArgumentException("Input does not match the template");
+            }
+
+            final ImmutableMap.Builder<String, String> found = new ImmutableMap.Builder<>();
+            for (final Map.Entry<String, String> entry : captureGroups.entrySet()) {
+                found.put(entry.getKey(), matcher.group(entry.getValue()));
+            }
+
+            return found.build();
+        }
     }
 
     public final class Instance {
