@@ -298,13 +298,13 @@ final public class S3SinkConfig extends AivenCommonConfig {
 
         configDef.define(AWS_STS_ROLE_SESSION_NAME, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 Importance.MEDIUM, "AWS STS Session name", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
-                                                                                                // UnusedAssignment
+                // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_STS_ROLE_SESSION_NAME);
 
         configDef.define(AWS_STS_ROLE_SESSION_DURATION, ConfigDef.Type.INT, 3600,
                 ConfigDef.Range.between(AwsStsRole.MIN_SESSION_DURATION, AwsStsRole.MAX_SESSION_DURATION),
                 Importance.MEDIUM, "AWS STS Session duration", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
-                                                                                                    // UnusedAssignment
+                // UnusedAssignment
                 ConfigDef.Width.NONE, AWS_STS_ROLE_SESSION_DURATION);
 
         configDef.define(AWS_STS_ROLE_EXTERNAL_ID, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
@@ -369,7 +369,7 @@ final public class S3SinkConfig extends AivenCommonConfig {
         configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
                 new TimestampSourceValidator(), ConfigDef.Importance.LOW,
                 "Specifies the the timestamp variable source. Default is wall-clock.", GROUP_FILE, fileGroupCounter++, // NOPMD
-                                                                                                                       // UnusedAssignment
+                // UnusedAssignment
                 ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_SOURCE);
     }
 
@@ -571,18 +571,31 @@ final public class S3SinkConfig extends AivenCommonConfig {
         return CompressionType.GZIP;
     }
 
+    /**
+     * Gets the list of output fields. Will check {@link AivenCommonConfig#FORMAT_OUTPUT_FIELDS_CONFIG} and then
+     * {@link #OUTPUT_FIELDS}. If neither is set will create an output field of {@link OutputFieldType#VALUE} and
+     * {@link OutputFieldEncodingType#BASE64}.
+     *
+     * @return The list of output fields. WIll not be {@code null}.
+     */
     @Override
     public List<OutputField> getOutputFields() {
-        if (Objects.nonNull(getList(FORMAT_OUTPUT_FIELDS_CONFIG))
-                && !get(FORMAT_OUTPUT_FIELDS_CONFIG).equals(ConfigDef.NO_DEFAULT_VALUE)) {
+        if (get(FORMAT_OUTPUT_FIELDS_CONFIG) != null) {
             return getOutputFields(FORMAT_OUTPUT_FIELDS_CONFIG);
         }
-        if (Objects.nonNull(getList(OUTPUT_FIELDS)) && !get(OUTPUT_FIELDS).equals(ConfigDef.NO_DEFAULT_VALUE)) {
+        if (get(OUTPUT_FIELDS) != null) {
             return getOutputFields(OUTPUT_FIELDS);
         }
         return List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
     }
 
+    /**
+     * Gets the list of output fields for the specified name
+     *
+     * @param format
+     *            the name of the configuration key to check.
+     * @return a list of output fields as defined in the configuration or {@code null} if not defined.
+     */
     public List<OutputField> getOutputFields(final String format) {
         return getList(format).stream().map(fieldName -> {
             final var type = OutputFieldType.forName(fieldName);
