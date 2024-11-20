@@ -289,7 +289,9 @@ public final class GcsSinkConfig extends AivenCommonConfig {
                     @Override
                     public void ensureValid(final String name, final Object value) {
                         try {
-                            TimestampSource.Type.of(value.toString());
+                            new TimestampSource.Builder()
+                                    .configuration(value.toString())
+                                    .build();
                         } catch (final Exception e) { // NOPMD broad exception catched
                             throw new ConfigException(FILE_NAME_TIMESTAMP_SOURCE, value, e.getMessage());
                         }

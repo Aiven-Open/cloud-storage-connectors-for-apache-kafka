@@ -630,7 +630,10 @@ final public class S3SinkConfig extends AivenCommonConfig {
     }
 
     public TimestampSource getTimestampSource() {
-        return TimestampSource.of(getTimezone(), TimestampSource.Type.of(getString(TIMESTAMP_SOURCE)));
+        return new TimestampSource.Builder()
+                .configuration(getString(TIMESTAMP_SOURCE))
+                .zoneId(getTimezone())
+                .build();
     }
 
     public AwsStsRole getStsRole() {

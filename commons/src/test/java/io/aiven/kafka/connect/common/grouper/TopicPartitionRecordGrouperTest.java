@@ -84,7 +84,7 @@ final class TopicPartitionRecordGrouperTest {
     private static final SinkRecord T2P1R3 = new SinkRecord("topic2", 1, Schema.OPTIONAL_STRING_SCHEMA, null, null,
             null, 2003, 1_635_547_906_000L, TimestampType.CREATE_TIME);
 
-    private static final TimestampSource DEFAULT_TS_SOURCE = TimestampSource.of(TimestampSource.Type.WALLCLOCK);
+    private static final TimestampSource DEFAULT_TS_SOURCE =TestTimestampSource.of(TimestampSource.Type.WALLCLOCK);
 
     @Test
     void withoutNecessaryParameters() {
@@ -233,13 +233,13 @@ final class TopicPartitionRecordGrouperTest {
     void addTimeUnitsToTheFileNameUsingWallclockTimestampSource() {
         final Template filenameTemplate = Template.of("{{topic}}-" + "{{partition}}-" + "{{start_offset}}-"
                 + "{{timestamp:unit=yyyy}}" + "{{timestamp:unit=MM}}" + "{{timestamp:unit=dd}}");
-        final ZonedDateTime timestamp = TimestampSource.of(TimestampSource.Type.WALLCLOCK).time(null);
+        final ZonedDateTime timestamp = TestTimestampSource.of(TimestampSource.Type.WALLCLOCK).time(null);
         final String expectedTs = timestamp.format(DateTimeFormatter.ofPattern("yyyy"))
                 + timestamp.format(DateTimeFormatter.ofPattern("MM"))
                 + timestamp.format(DateTimeFormatter.ofPattern("dd"));
 
         final TopicPartitionRecordGrouper grouper = new TopicPartitionRecordGrouper(filenameTemplate, null,
-                TimestampSource.of(TimestampSource.Type.WALLCLOCK));
+                TestTimestampSource.of(TimestampSource.Type.WALLCLOCK));
 
         grouper.put(T1P1R0);
         grouper.put(T1P1R1);
@@ -391,9 +391,9 @@ final class TopicPartitionRecordGrouperTest {
     void rotateDailyWithEventTimestampSource() {
         final Template filenameTemplate = Template.of("{{topic}}-" + "{{partition}}-" + "{{start_offset}}-"
                 + "{{timestamp:unit=yyyy}}" + "{{timestamp:unit=MM}}" + "{{timestamp:unit=dd}}");
-        final ZonedDateTime timestamp0 = TimestampSource.of(TimestampSource.Type.EVENT).time(T2P1R0);
-        final ZonedDateTime timestamp1 = TimestampSource.of(TimestampSource.Type.EVENT).time(T2P1R1);
-        final ZonedDateTime timestamp2 = TimestampSource.of(TimestampSource.Type.EVENT).time(T2P1R2);
+        final ZonedDateTime timestamp0 = TestTimestampSource.of(TimestampSource.Type.EVENT).time(T2P1R0);
+        final ZonedDateTime timestamp1 = TestTimestampSource.of(TimestampSource.Type.EVENT).time(T2P1R1);
+        final ZonedDateTime timestamp2 = TestTimestampSource.of(TimestampSource.Type.EVENT).time(T2P1R2);
 
         final String expectedTs0 = timestamp0.format(DateTimeFormatter.ofPattern("yyyy"))
                 + timestamp0.format(DateTimeFormatter.ofPattern("MM"))
@@ -406,7 +406,7 @@ final class TopicPartitionRecordGrouperTest {
                 + timestamp2.format(DateTimeFormatter.ofPattern("dd"));
 
         final TopicPartitionRecordGrouper grouper = new TopicPartitionRecordGrouper(filenameTemplate, null,
-                TimestampSource.of(TimestampSource.Type.EVENT));
+                TestTimestampSource.of(TimestampSource.Type.EVENT));
 
         grouper.put(T2P1R0);
         grouper.put(T2P1R1);
