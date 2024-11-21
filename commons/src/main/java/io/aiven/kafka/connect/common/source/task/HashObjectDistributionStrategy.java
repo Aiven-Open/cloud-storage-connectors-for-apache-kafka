@@ -20,10 +20,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * HashTaskAssignmentStrategy determines which files should be executed by a task by the filename and path supplied by
- * the iterator. The RandomTaskAssignment is perfect in use cases where ordering of events is not a requirement and when
- * adding files to kafka where the files were not previously created by a supported S3 Sink or where manually created or
- * created by another process.
+ * {@link HashObjectDistributionStrategy} evenly distributes cloud storage objects between tasks using the hashcode of
+ * the object's filename, which is uniformly distributed and deterministic across workers.
+ * <p>
+ * This is well-suited to use cases where the order of events between records from objects is not important, especially
+ * when ingesting files into Kafka that were not previously created by a supported cloud storage Sink.
  */
 public final class HashObjectDistributionStrategy implements ObjectDistributionStrategy {
     private final static Logger LOG = LoggerFactory.getLogger(HashObjectDistributionStrategy.class);

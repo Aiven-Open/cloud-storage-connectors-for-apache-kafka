@@ -26,10 +26,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * PartitionInFilenameDistributionStrategy will determine which files to process for each task, based on the partition
- * number defined in the filename e.g. the default object names created by the sink connector ex.
- * topicname-{{partition}}-{{start_offset}} the partition can be extracted to have one task running per partition.
- *
+ * The {@link PartitionInFilenameDistributionStrategy} finds a partition in the object's filename by matching it to an
+ * expected format, and assigns all partitions to the same task.
+ * <p>
+ * This useful when a sink connector has created the object name in a format like
+ * {@code topicname-{{partition}}-{{start_offset}}}, and we want all objects with the same partition to be processed
+ * within a single task.
  */
 public final class PartitionInFilenameDistributionStrategy implements ObjectDistributionStrategy {
     private final static Logger LOG = LoggerFactory.getLogger(PartitionInFilenameDistributionStrategy.class);
@@ -70,7 +72,7 @@ public final class PartitionInFilenameDistributionStrategy implements ObjectDist
     }
 
     /**
-     * When a connector reconfiguration event is received this method should be called to ensure the correct Startegy is
+     * When a connector reconfiguration event is received this method should be called to ensure the correct strategy is
      * being implemented by the connector.
      *
      * @param maxTasks

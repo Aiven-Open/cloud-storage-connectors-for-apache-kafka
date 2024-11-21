@@ -24,10 +24,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * PartitionInPathDistributionStrategy allows source connectors to distribute tasks based off the folder structure that
- * partition number that is defined in that structure. for example /PREFIX/partition={{partition}}/YYYY/MM/DD/mm this
- * will split all tasks by the number of unique partitions defined in the storage path. e.g. Task distribution in
- * Connect with 10 Partitions and 3 tasks |Task | Partition| |0|0| |1|1| |2|2| |0|3| |1|4| |2|5| |0|6| |1|7| |2|8| |0|9|
+ * The {@link PartitionInPathDistributionStrategy} finds a partition number in the path by matching a
+ * {@code {{partition}} } marker in the path.
+ * <p>
+ * This useful when a sink connector has created the object name in a path like
+ * {@code /PREFIX/partition={{partition}}/YYYY/MM/DD/mm/}}, and we want all objects with the same partition to be
+ * processed within a single task.
+ * <p>
+ * Partitions are evenly distributed between tasks. For example, in Connect with 10 Partitions and 3 tasks:
+ *
+ * <pre>
+ *   | Task | Partitions |
+ *   |------|------------|
+ *   | 0    | 0, 3, 6, 9 |
+ *   | 1    | 1, 4, 7    |
+ *   | 2    | 2, 5, 8    |
+ * </pre>
  */
 public final class PartitionInPathDistributionStrategy implements ObjectDistributionStrategy {
     public static final String PARTITION_ID_PATTERN = "\\{\\{partition}}";
@@ -70,7 +82,6 @@ public final class PartitionInPathDistributionStrategy implements ObjectDistribu
      * @param expectedPathFormat
      *            The format of the path and where to identify
      */
-
     @Override
     public void reconfigureDistributionStrategy(final int maxTasks, final String expectedPathFormat) {
         configureDistributionStrategy(maxTasks, expectedPathFormat);
