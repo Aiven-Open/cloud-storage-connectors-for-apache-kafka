@@ -146,7 +146,7 @@ public final class Template {
     /**
      * Given a template, the {@link Extractor} finds the matching variables from a string.
      *
-     * Where an{@link Instance} generates strings by filling in the variables in a template, the {@link Extractor} does
+     * Where an {@link Instance} generates strings by filling in the variables in a template, the {@link Extractor} does
      * the opposite:
      *
      * <pre>
