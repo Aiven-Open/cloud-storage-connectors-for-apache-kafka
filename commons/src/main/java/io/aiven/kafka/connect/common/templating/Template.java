@@ -145,14 +145,14 @@ public final class Template {
 
     /**
      * Given a template, the {@link Extractor} finds the matching variables from a string.
-     *
+     * <p>
      * Where an {@link Instance} generates strings by filling in the variables in a template, the {@link Extractor} does
      * the opposite:
      *
      * <pre>
      * // Renders the string "Hello World!"
      * var tmpl = Template.of("Hello {{name}}!");
-     * var greeting = tmpl.instance().bindVariable("name", () -> "World").render();
+     * var greeting = tmpl.instance().bindVariable("name", () -&gt; "World").render();
      *
      * // The other way around, extracts a name from a string:
      * tmpl.extractor().extract(greeting); // returns a map {name=World}
@@ -204,7 +204,7 @@ public final class Template {
          * @throws IllegalArgumentException
          *             If the input string does not match the template.
          */
-        public Map<String, String> extract(final String input) throws IllegalArgumentException {
+        public Map<String, String> extract(final String input) {
             final Matcher matcher = regex.matcher(input);
             if (!matcher.matches()) {
                 throw new IllegalArgumentException("Input does not match the template");
