@@ -62,11 +62,19 @@ public class FileReader {
                 .flatMap(response -> response.getObjectSummaries()
                         .stream()
                         .filter(objectSummary -> objectSummary.getSize() > 0)
+                        .filter(objectSummary -> assignObjectToTask(objectSummary.getKey()))
                         .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey())));
         return s3ObjectStream.iterator();
     }
 
     public void addFailedObjectKeys(final String objectKey) {
         this.failedObjectKeys.add(objectKey);
+    }
+
+    private boolean assignObjectToTask(final String objectKey) {
+        final int maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
+        final int taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
+        final int taskAssignment = Math.floorMod(objectKey.hashCode(), maxTasks);
+        return taskAssignment == taskId;
     }
 }
