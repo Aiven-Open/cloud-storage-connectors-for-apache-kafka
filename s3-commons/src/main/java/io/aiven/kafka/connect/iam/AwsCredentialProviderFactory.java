@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,33 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.config;
+package io.aiven.kafka.connect.iam;
+
+import java.util.Objects;
+
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 
 public class AwsCredentialProviderFactory {
-    public AWSCredentialsProvider getProvider(final S3SinkConfig config) {
+
+    public AWSCredentialsProvider getProvider(final S3ConfigFragment config) {
         if (config.hasAwsStsRole()) {
             return getStsProvider(config);
         }
-        final AwsAccessSecret awsCredentials = config.getAwsCredentials();
-        if (!awsCredentials.isValid()) {
+        final BasicAWSCredentials awsCredentials = config.getAwsCredentials();
+        if (Objects.isNull(awsCredentials)) {
             return config.getCustomCredentialsProvider();
         }
-        return new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsCredentials.getAccessKeyId().value(),
-                awsCredentials.getSecretAccessKey().value()));
+        return new AWSStaticCredentialsProvider(awsCredentials);
     }
 
-    private AWSCredentialsProvider getStsProvider(final S3SinkConfig config) {
+    private AWSCredentialsProvider getStsProvider(final S3ConfigFragment config) {
         final AwsStsRole awsstsRole = config.getStsRole();
         final AWSSecurityTokenService sts = securityTokenService(config);
         return new STSAssumeRoleSessionCredentialsProvider.Builder(awsstsRole.getArn(), awsstsRole.getSessionName())
@@ -47,13 +50,10 @@ public class AwsCredentialProviderFactory {
                 .build();
     }
 
-    private AWSSecurityTokenService securityTokenService(final S3SinkConfig config) {
+    private AWSSecurityTokenService securityTokenService(final S3ConfigFragment config) {
         if (config.hasStsEndpointConfig()) {
-            final AwsStsEndpointConfig endpointConfig = config.getStsEndpointConfig();
-            final AwsClientBuilder.EndpointConfiguration stsConfig = new AwsClientBuilder.EndpointConfiguration(
-                    endpointConfig.getServiceEndpoint(), endpointConfig.getSigningRegion());
             final AWSSecurityTokenServiceClientBuilder stsBuilder = AWSSecurityTokenServiceClientBuilder.standard();
-            stsBuilder.setEndpointConfiguration(stsConfig);
+            stsBuilder.setEndpointConfiguration(config.getAwsEndpointConfiguration());
             return stsBuilder.build();
         }
         return AWSSecurityTokenServiceClientBuilder.defaultClient();

@@ -17,17 +17,15 @@
 package io.aiven.kafka.connect.common.grouper;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
 import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import io.aiven.kafka.connect.common.templating.Template;
 
 import com.google.common.collect.Sets;
@@ -124,15 +122,29 @@ public final class RecordGrouperFactory {
     private RecordGrouperFactory() {
     }
 
+    /**
+     * Returns the class name for the RecordGrouperType.
+     *
+     * @param template
+     *            the template to parse for the types.
+     * @return The class name for the RecordGrouperType.
+     * @throws IllegalArgumentException
+     *             if there are no variables in the template or if the variables do not match a registered RecordGrouper
+     *             implementation.
+     */
     public static String resolveRecordGrouperType(final Template template) {
-        final Supplier<Set<String>> variables = () -> new HashSet<>(template.variablesSet());
-        if (isByTopicPartitionKeyRecord(variables.get())) {
+        if (template.variablesSet().isEmpty()) {
+            throw new IllegalArgumentException(String.format(
+                    "RecordGrouper requires that the template [%s] has variables defined. Supported variables are: %s",
+                    template, SUPPORTED_VARIABLES_LIST));
+        }
+        if (isByTopicPartitionKeyRecord(template.variablesSet())) {
             return TOPIC_PARTITION_KEY_RECORD;
-        } else if (isByTopicPartitionRecord(variables.get())) {
+        } else if (isByTopicPartitionRecord(template.variablesSet())) {
             return TOPIC_PARTITION_RECORD;
-        } else if (isByKeyRecord(variables.get())) {
+        } else if (isByKeyRecord(template.variablesSet())) {
             return KEY_RECORD;
-        } else if (isByKeyTopicPartitionRecord(variables.get())) {
+        } else if (isByKeyTopicPartitionRecord(template.variablesSet())) {
             return KEY_TOPIC_PARTITION_RECORD;
         } else {
             throw new IllegalArgumentException(String
@@ -141,7 +153,7 @@ public final class RecordGrouperFactory {
     }
 
     @SuppressWarnings("PMD.CognitiveComplexity")
-    public static RecordGrouper newRecordGrouper(final AivenCommonConfig config) {
+    public static RecordGrouper newRecordGrouper(final SinkCommonConfig config) {
         final Template fileNameTemplate = config.getFilenameTemplate();
         final String grType = resolveRecordGrouperType(fileNameTemplate);
         if (KEY_RECORD.equals(grType)) {

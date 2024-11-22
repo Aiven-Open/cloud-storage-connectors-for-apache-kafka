@@ -33,7 +33,9 @@ import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
 import io.aiven.kafka.connect.common.config.StableTimeFormatter;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.S3OutputStream;
 
 import com.amazonaws.regions.RegionUtils;
@@ -51,26 +53,26 @@ final class S3SinkConfigTest {
     void correctFullConfig() {
         final var props = new HashMap<String, String>();
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "AWS_ACCESS_KEY_ID");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3SinkConfig.AWS_S3_ENDPOINT_CONFIG, "AWS_S3_ENDPOINT");
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "AWS_ACCESS_KEY_ID");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
+        props.put(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG, "AWS_S3_ENDPOINT");
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
         props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.GZIP.name);
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG,
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(),
                 Arrays.stream(OutputFieldType.values())
                         .map(OutputFieldType::name)
                         .map(String::toLowerCase)
                         .collect(Collectors.joining(",")));
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, OutputFieldEncodingType.NONE.name);
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG.key(), OutputFieldEncodingType.NONE.name);
 
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAccessKeyId().value()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getSecretAccessKey().value()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3Prefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
@@ -96,15 +98,15 @@ final class S3SinkConfigTest {
     void correctFullConfigForOldStyleConfigParameters() {
         final var props = new HashMap<String, String>();
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "AWS_ACCESS_KEY_ID");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "AWS_SECRET_ACCESS_KEY");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "the-bucket");
-        props.put(S3SinkConfig.AWS_S3_ENDPOINT, "AWS_S3_ENDPOINT");
-        props.put(S3SinkConfig.AWS_S3_PREFIX, "AWS_S3_PREFIX");
-        props.put(S3SinkConfig.AWS_S3_REGION, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "AWS_ACCESS_KEY_ID");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "AWS_SECRET_ACCESS_KEY");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "the-bucket");
+        props.put(S3ConfigFragment.AWS_S3_ENDPOINT, "AWS_S3_ENDPOINT");
+        props.put(S3ConfigFragment.AWS_S3_PREFIX, "AWS_S3_PREFIX");
+        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_EAST_1.getName());
 
-        props.put(S3SinkConfig.OUTPUT_COMPRESSION, CompressionType.GZIP.name);
-        props.put(S3SinkConfig.OUTPUT_FIELDS,
+        props.put(S3ConfigFragment.OUTPUT_COMPRESSION, CompressionType.GZIP.name);
+        props.put(S3ConfigFragment.OUTPUT_FIELDS,
                 Arrays.stream(OutputFieldType.values())
                         .map(OutputFieldType::name)
                         .map(String::toLowerCase)
@@ -113,8 +115,8 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAccessKeyId().value()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getSecretAccessKey().value()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3Prefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
@@ -133,36 +135,36 @@ final class S3SinkConfigTest {
     void newConfigurationPropertiesHaveHigherPriorityOverOldOne() {
         final var props = new HashMap<String, String>();
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "AWS_ACCESS_KEY_ID");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3SinkConfig.AWS_S3_ENDPOINT_CONFIG, "AWS_S3_ENDPOINT");
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "AWS_ACCESS_KEY_ID");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
+        props.put(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG, "AWS_S3_ENDPOINT");
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
         props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.GZIP.name);
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG,
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(),
                 Arrays.stream(OutputFieldType.values())
                         .map(OutputFieldType::name)
                         .map(String::toLowerCase)
                         .collect(Collectors.joining(",")));
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, OutputFieldEncodingType.NONE.name);
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG.key(), OutputFieldEncodingType.NONE.name);
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "AWS_ACCESS_KEY_ID_#1");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "AWS_SECRET_ACCESS_KEY_#1");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "the-bucket1");
-        props.put(S3SinkConfig.AWS_S3_ENDPOINT, "AWS_S3_ENDPOINT_#1");
-        props.put(S3SinkConfig.AWS_S3_PREFIX, "AWS_S3_PREFIX_#1");
-        props.put(S3SinkConfig.AWS_S3_REGION, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "AWS_ACCESS_KEY_ID_#1");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "AWS_SECRET_ACCESS_KEY_#1");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "the-bucket1");
+        props.put(S3ConfigFragment.AWS_S3_ENDPOINT, "AWS_S3_ENDPOINT_#1");
+        props.put(S3ConfigFragment.AWS_S3_PREFIX, "AWS_S3_PREFIX_#1");
+        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_WEST_1.getName());
 
-        props.put(S3SinkConfig.OUTPUT_COMPRESSION, CompressionType.NONE.name);
-        props.put(S3SinkConfig.OUTPUT_FIELDS, "key, value");
+        props.put(S3ConfigFragment.OUTPUT_COMPRESSION, CompressionType.NONE.name);
+        props.put(S3ConfigFragment.OUTPUT_FIELDS, "key, value");
 
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAccessKeyId().value()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getSecretAccessKey().value()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3Prefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
@@ -179,15 +181,16 @@ final class S3SinkConfigTest {
 
     @Test
     void wrongPartSize() {
-        final var wrongMaxPartSizeProps = Map.of(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
-                S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3SinkConfig.AWS_S3_PART_SIZE,
+        final var wrongMaxPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
+                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
                 Long.toString(2_000_000_001L));
         assertThatThrownBy(() -> new S3SinkConfig(wrongMaxPartSizeProps)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value 2000000001 for configuration aws.s3.part.size.bytes: "
                         + "Part size must be no more: 2000000000 bytes (2GB)");
 
-        final var wrongMinPartSizeProps = Map.of(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
-                S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3SinkConfig.AWS_S3_PART_SIZE, "0");
+        final var wrongMinPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
+                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
+                "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMinPartSizeProps)).isInstanceOf(ConfigException.class)
                 .hasMessage(
                         "Invalid value 0 for configuration aws.s3.part.size.bytes: Part size must be greater than 0");
@@ -196,15 +199,15 @@ final class S3SinkConfigTest {
     @Test
     void emptyAwsS3Bucket() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Illegal bucket name: Bucket name should be between 3 and 63 characters long");
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Illegal bucket name: Bucket name should be between 3 and 63 characters long");
     }
@@ -212,19 +215,19 @@ final class S3SinkConfigTest {
     @Test
     void invalidAwsS3Bucket() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "BUCKET-NAME");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "BUCKET-NAME");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Illegal bucket name: Bucket name should not contain uppercase characters");
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "BUCKET-NAME");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "BUCKET-NAME");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Illegal bucket name: Bucket name should not contain uppercase characters");
 
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "bucket_name");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "bucket_name");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Illegal bucket name: Bucket name should not contain '_'");
     }
@@ -232,18 +235,18 @@ final class S3SinkConfigTest {
     @Test
     void emptyAwsS3Region() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws_s3_region: " + "supported values are: "
                         + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws.s3.region: " + "supported values are: "
                         + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
@@ -252,18 +255,18 @@ final class S3SinkConfigTest {
     @Test
     void unknownAwsS3Region() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION, "unknown");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION, "unknown");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value unknown for configuration aws_s3_region: " + "supported values are: "
                         + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws.s3.region: " + "supported values are: "
                         + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
@@ -272,29 +275,29 @@ final class S3SinkConfigTest {
     @Test
     void validAwsS3Region() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_EAST_1.getName());
         assertThat(new S3SinkConfig(props).getAwsS3Region()).isEqualTo(RegionUtils.getRegion("us-east-1"));
     }
 
     @Test
     void emptyAwsS3Prefix() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.AWS_S3_PREFIX, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_PREFIX, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws_s3_prefix: String must be non-empty");
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws.s3.prefix: String must be non-empty");
     }
@@ -302,21 +305,21 @@ final class S3SinkConfigTest {
     @Test
     void emptyAwsS3EndPoint() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION, Regions.US_EAST_1.getName());
-        props.put(S3SinkConfig.AWS_S3_PREFIX, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_ENDPOINT, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_PREFIX, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_ENDPOINT, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws_s3_endpoint: String must be non-empty");
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_ENDPOINT_CONFIG, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws.s3.endpoint: String must be non-empty");
     }
@@ -324,21 +327,21 @@ final class S3SinkConfigTest {
     @Test
     void wrongAwsS3EndPoint() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION, Regions.US_EAST_1.getName());
-        props.put(S3SinkConfig.AWS_S3_PREFIX, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_ENDPOINT, "ffff://asdsadas");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_PREFIX, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_ENDPOINT, "ffff://asdsadas");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value ffff://asdsadas for configuration aws_s3_endpoint: should be valid URL");
 
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_ENDPOINT_CONFIG, "ffff://asdsadas");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG, "ffff://asdsadas");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value ffff://asdsadas for configuration aws.s3.endpoint: should be valid URL");
     }
@@ -346,18 +349,18 @@ final class S3SinkConfigTest {
     @Test
     void emptyOutputField() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.OUTPUT_FIELDS, "");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.OUTPUT_FIELDS, "");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [] for configuration output_fields: cannot be empty");
 
-        props.remove(S3SinkConfig.OUTPUT_FIELDS);
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "");
+        props.remove(S3ConfigFragment.OUTPUT_FIELDS);
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [] for configuration format.output.fields: cannot be empty");
@@ -366,14 +369,14 @@ final class S3SinkConfigTest {
     @Test
     void supportPriorityForOutputFields() {
         final var props = Maps.<String, String>newHashMap();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
 
-        props.put(S3SinkConfig.OUTPUT_FIELDS, "key,value,offset,timestamp");
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key");
+        props.put(S3ConfigFragment.OUTPUT_FIELDS, "key,value,offset,timestamp");
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key");
 
         final var conf = new S3SinkConfig(props);
 
@@ -384,19 +387,19 @@ final class S3SinkConfigTest {
     @Test
     void unsupportedOutputField() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.OUTPUT_FIELDS, "key,value,offset,timestamp,unsupported");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.OUTPUT_FIELDS, "key,value,offset,timestamp,unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [key, value, offset, timestamp, unsupported] "
                         + "for configuration output_fields: "
                         + "supported values are: 'key', 'value', 'offset', 'timestamp', 'headers'");
 
-        props.remove(S3SinkConfig.OUTPUT_FIELDS);
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset,timestamp,unsupported");
+        props.remove(S3ConfigFragment.OUTPUT_FIELDS);
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp,unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [key, value, offset, timestamp, unsupported] "
@@ -406,11 +409,12 @@ final class S3SinkConfigTest {
 
     @Test
     void customAwsS3BackoffPolicy() {
-        final var props = Map.of(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
-                S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah", S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG,
-                "blah-blah-blah", S3SinkConfig.AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, "2000",
-                S3SinkConfig.AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, "4000",
-                S3SinkConfig.AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, "10");
+        final var props = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, "2000",
+                S3ConfigFragment.AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, "4000",
+                S3ConfigFragment.AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, "10");
         final var config = new S3SinkConfig(props);
 
         assertThat(config.getS3RetryBackoffDelayMs()).isEqualTo(2000L);
@@ -420,27 +424,31 @@ final class S3SinkConfigTest {
 
     @Test
     void wrongAwsS3BackoffPolicy() {
-        final var wrongDelayProps = Map.of(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
-                S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah", S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG,
-                "blah-blah-blah", S3SinkConfig.AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, "0");
+        final var wrongDelayProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongDelayProps)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value 0 for configuration aws.s3.backoff.delay.ms: Value must be at least 1");
 
-        final var wrongMaxDelayProps = Map.of(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
-                S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah", S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG,
-                "blah-blah-blah", S3SinkConfig.AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, "0");
+        final var wrongMaxDelayProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMaxDelayProps)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value 0 for configuration aws.s3.backoff.max.delay.ms: Value must be at least 1");
 
-        final var wrongMaxRetriesProps = Map.of(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
-                S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah", S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG,
-                "blah-blah-blah", S3SinkConfig.AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, "0");
+        final var wrongMaxRetriesProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMaxRetriesProps)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value 0 for configuration aws.s3.backoff.max.retries: Value must be at least 1");
 
-        final var tooBigMaxRetriesProps = Map.of(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
-                S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah", S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG,
-                "blah-blah-blah", S3SinkConfig.AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, "35");
+        final var tooBigMaxRetriesProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah",
+                S3ConfigFragment.AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, "35");
         assertThatThrownBy(() -> new S3SinkConfig(tooBigMaxRetriesProps)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value 35 for configuration aws.s3.backoff.max.retries: "
                         + "Value must be no more than 30");
@@ -451,19 +459,19 @@ final class S3SinkConfigTest {
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
     void supportedCompression(final String compression) {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
         if (!Objects.isNull(compression)) {
-            props.put(S3SinkConfig.OUTPUT_COMPRESSION, compression);
+            props.put(S3ConfigFragment.OUTPUT_COMPRESSION, compression);
         }
 
         var config = new S3SinkConfig(props);
         assertThat(config.getCompressionType()).isEqualTo(determineExpectedCompressionType(compression));
 
-        props.remove(S3SinkConfig.OUTPUT_COMPRESSION);
+        props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
         if (!Objects.isNull(compression)) {
             props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
         }
@@ -475,12 +483,12 @@ final class S3SinkConfigTest {
     @Test
     void supportPriorityForCompressionTypeConfig() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.OUTPUT_COMPRESSION, CompressionType.GZIP.name);
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.OUTPUT_COMPRESSION, CompressionType.GZIP.name);
         props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name);
 
         final var config = new S3SinkConfig(props);
@@ -505,18 +513,18 @@ final class S3SinkConfigTest {
     @Test
     void unsupportedCompressionType() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset,timestamp");
-        props.put(S3SinkConfig.OUTPUT_COMPRESSION, "unsupported");
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp");
+        props.put(S3ConfigFragment.OUTPUT_COMPRESSION, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value unsupported for configuration output_compression: "
                         + "supported values are: 'none', 'gzip', 'snappy', 'zstd'");
 
-        props.remove(S3SinkConfig.OUTPUT_COMPRESSION);
+        props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
         props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
@@ -535,14 +543,14 @@ final class S3SinkConfigTest {
         }
 
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
-        props.put(S3SinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset,timestamp,headers");
-        props.put(S3SinkConfig.TIMESTAMP_TIMEZONE, "Europe/Berlin");
-        props.put(S3SinkConfig.TIMESTAMP_SOURCE, "wallclock");
-        props.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, prefix);
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp,headers");
+        props.put(S3ConfigFragment.TIMESTAMP_TIMEZONE, "Europe/Berlin");
+        props.put(S3ConfigFragment.TIMESTAMP_SOURCE, "wallclock");
+        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, prefix);
 
         final var config = new S3SinkConfig(props);
 
@@ -566,11 +574,11 @@ final class S3SinkConfigTest {
     @ValueSource(strings = { "jsonl", "json", "csv" })
     void supportedFormatTypeConfig(final String formatType) {
         final Map<String, String> properties = new HashMap<>();
-        properties.put(S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id");
-        properties.put(S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key");
-        properties.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
-        properties.put(S3SinkConfig.AWS_S3_PREFIX_CONFIG, "any_prefix");
-        properties.put(S3SinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, formatType);
+        properties.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id");
+        properties.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key");
+        properties.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        properties.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "any_prefix");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), formatType);
 
         final S3SinkConfig s3SinkConfig = new S3SinkConfig(properties);
         final FormatType expectedFormatType = FormatType.forName(formatType);
@@ -581,7 +589,7 @@ final class S3SinkConfigTest {
     @Test
     void wrongFormatTypeConfig() {
         final Map<String, String> props = new HashMap<>();
-        props.put(S3SinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "unknown");
+        props.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "unknown");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value unknown for configuration format.output.type: "
@@ -593,8 +601,9 @@ final class S3SinkConfigTest {
     void notSupportYyyyUppercaseInFilenameTemplate() {
         final Map<String, String> properties = Map.of(S3SinkConfig.FILE_NAME_TEMPLATE_CONFIG,
                 "{{topic}}-" + "{{timestamp:unit=YYYY}}" + "-{{partition}}-{{start_offset:padding=true}}.gz",
-                S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id", S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG,
-                "any_secret_key", S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+                S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id",
+                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key",
+                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
         assertThatThrownBy(() -> new S3SinkConfig(properties)).isInstanceOf(ConfigException.class)
                 .hasMessage(
                         "Invalid value {{topic}}-{{timestamp:unit=YYYY}}-{{partition}}-{{start_offset:padding=true}}.gz "
@@ -607,11 +616,11 @@ final class S3SinkConfigTest {
     void stsRoleCorrectConfig() {
         final var props = new HashMap<String, String>();
 
-        props.put(S3SinkConfig.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
-        props.put(S3SinkConfig.AWS_STS_ROLE_EXTERNAL_ID, "EXTERNAL_ID");
-        props.put(S3SinkConfig.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_EXTERNAL_ID, "EXTERNAL_ID");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
         final var conf = new S3SinkConfig(props);
 
@@ -625,18 +634,18 @@ final class S3SinkConfigTest {
     void stsWrongSessionDuration() {
         final var props = new HashMap<String, String>();
 
-        props.put(S3SinkConfig.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
-        props.put(S3SinkConfig.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
-        props.put(S3SinkConfig.AWS_STS_ROLE_SESSION_DURATION, "30");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_DURATION, "30");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage(
                         "Invalid value 30 for configuration aws.sts.role.session.duration: Value must be at least 900");
 
-        props.put(S3SinkConfig.AWS_STS_ROLE_SESSION_DURATION, "50000");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_DURATION, "50000");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value 50000 for configuration aws.sts.role.session.duration: "
@@ -647,12 +656,12 @@ final class S3SinkConfigTest {
     void stsCorrectSessionDuration() {
         final var props = new HashMap<String, String>();
 
-        props.put(S3SinkConfig.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
-        props.put(S3SinkConfig.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3SinkConfig.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
-        props.put(S3SinkConfig.AWS_STS_ROLE_SESSION_DURATION, "900");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_DURATION, "900");
 
         final var conf = new S3SinkConfig(props);
 
@@ -663,11 +672,11 @@ final class S3SinkConfigTest {
     void stsEndpointShouldNotBeSetWithoutRegion() {
         final var props = new HashMap<String, String>();
 
-        props.put(S3SinkConfig.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
-        props.put(S3SinkConfig.AWS_STS_ROLE_EXTERNAL_ID, "EXTERNAL_ID");
-        props.put(S3SinkConfig.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
-        props.put(S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3SinkConfig.AWS_STS_CONFIG_ENDPOINT, "https://sts.eu-north-1.amazonaws.com");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_EXTERNAL_ID, "EXTERNAL_ID");
+        props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
+        props.put(S3ConfigFragment.AWS_STS_CONFIG_ENDPOINT, "https://sts.eu-north-1.amazonaws.com");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("aws.s3.region should be specified together with aws.sts.config.endpoint");
@@ -677,9 +686,9 @@ final class S3SinkConfigTest {
     @ValueSource(strings = { "{{key}}", "{{topic}}/{{partition}}/{{key}}" })
     void notSupportedFileMaxRecords(final String fileNameTemplate) {
         final Map<String, String> properties = Map.of(S3SinkConfig.FILE_NAME_TEMPLATE_CONFIG, fileNameTemplate,
-                S3SinkConfig.FILE_MAX_RECORDS, "2", S3SinkConfig.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id",
-                S3SinkConfig.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key", S3SinkConfig.AWS_S3_BUCKET_NAME_CONFIG,
-                "any-bucket");
+                S3SinkConfig.FILE_MAX_RECORDS, "2", S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id",
+                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key",
+                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
         assertThatThrownBy(() -> new S3SinkConfig(properties)).isInstanceOf(ConfigException.class)
                 .hasMessage(String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
                         fileNameTemplate));

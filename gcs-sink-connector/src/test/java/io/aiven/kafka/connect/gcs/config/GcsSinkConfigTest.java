@@ -495,8 +495,8 @@ final class GcsSinkConfigTest {
     void emptyFilenameTemplate() {
         final Map<String, String> properties = Map.of("gcs.bucket.name", "test-bucket", "file.name.template", "");
 
-        final var expectedErrorMessage = "Invalid value  for configuration file.name.template: "
-                + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES;
+        final var expectedErrorMessage = "Invalid value  for configuration file.name.template: RecordGrouper requires that the template [] has variables defined. Supported variables are: "
+                + TEMPLATE_VARIABLES;
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 

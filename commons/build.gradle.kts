@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+  id("aiven-apache-kafka-connectors-all.java-conventions")
+  id("java-test-fixtures")
+}
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
@@ -83,6 +86,7 @@ dependencies {
   testImplementation(jackson.databind)
   testImplementation(testinglibs.mockito.core)
   testImplementation(testinglibs.assertj.core)
+  testImplementation(testFixtures(project(":commons")))
 
   testImplementation(testinglibs.woodstox.stax2.api)
   testImplementation(apache.hadoop.mapreduce.client.core)

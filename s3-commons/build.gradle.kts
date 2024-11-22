@@ -1,7 +1,5 @@
-import com.github.spotbugs.snom.SpotBugsTask
-
 /*
- * Copyright 2020 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,110 +14,39 @@ import com.github.spotbugs.snom.SpotBugsTask
  * limitations under the License.
  */
 
-plugins {
-  id("aiven-apache-kafka-connectors-all.java-conventions")
-  id("java-test-fixtures")
-}
+plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
 val amazonS3Version by extra("1.12.777")
 val amazonSTSVersion by extra("1.12.777")
-val s3mockVersion by extra("0.2.6")
-
-val integrationTest: SourceSet =
-    sourceSets.create("integrationTest") {
-      java { srcDir("src/integration-test/java") }
-      resources { srcDir("src/integration-test/resources") }
-      compileClasspath += sourceSets.main.get().output + configurations.testRuntimeClasspath.get()
-      runtimeClasspath += output + compileClasspath
-    }
-
-val integrationTestImplementation: Configuration by
-    configurations.getting { extendsFrom(configurations.implementation.get()) }
-
-val javaComponent = components["java"] as AdhocComponentWithVariants
-
-javaComponent.withVariantsFromConfiguration(configurations["testFixturesApiElements"]) { skip() }
-
-javaComponent.withVariantsFromConfiguration(configurations["testFixturesRuntimeElements"]) {
-  skip()
-}
-
-tasks.register<Test>("integrationTest") {
-  description = "Runs the integration tests."
-  group = "verification"
-  testClassesDirs = integrationTest.output.classesDirs
-  classpath = integrationTest.runtimeClasspath
-
-  // defines testing order
-  shouldRunAfter("test")
-  // requires archive for connect runner
-  dependsOn("distTar")
-  useJUnitPlatform()
-
-  // Run always.
-  outputs.upToDateWhen { false }
-
-  val distTarTask = tasks["distTar"] as Tar
-  val distributionFilePath = distTarTask.archiveFile.get().asFile.path
-  systemProperty("integration-test.distribution.file.path", distributionFilePath)
-}
-
-idea {
-  module {
-    testSources.from(integrationTest.java.srcDirs)
-    testSources.from(integrationTest.resources.srcDirs)
-  }
-}
 
 dependencies {
-  compileOnly(apache.kafka.connect.api)
-  compileOnly(apache.kafka.connect.runtime)
-
-  implementation(project(":commons"))
-  testImplementation(testFixtures(project(":commons")))
-  implementation(project(":s3-commons"))
-
-  implementation(tools.spotbugs.annotations)
-  implementation(logginglibs.slf4j)
   implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
   implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
 
-  testImplementation(compressionlibs.snappy)
-  testImplementation(compressionlibs.zstd.jni)
-  testImplementation(project(":s3-commons"))
+  implementation(project(":commons"))
 
-  testImplementation(apache.kafka.connect.api)
-  testImplementation(apache.kafka.connect.runtime)
-  testImplementation(apache.kafka.connect.json)
+  compileOnly(apache.kafka.connect.api)
+  compileOnly(apache.kafka.connect.runtime)
+  compileOnly(apache.kafka.connect.json)
 
-  testImplementation(testinglibs.junit.jupiter)
-  testImplementation(testinglibs.assertj.core)
-
-  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
-
-  testImplementation(testinglibs.mockito.core)
-
-  testRuntimeOnly(testinglibs.junit.jupiter.engine)
-  testImplementation(testinglibs.mockito.junit.jupiter)
-
-  testRuntimeOnly(logginglibs.logback.classic)
-
-  integrationTestImplementation(testinglibs.localstack)
-  integrationTestImplementation(testcontainers.junit.jupiter)
-  integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
-  integrationTestImplementation(testcontainers.localstack)
-  integrationTestImplementation(testinglibs.wiremock)
-
-  // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
-  integrationTestImplementation(confluent.kafka.connect.avro.converter) {
+  implementation(confluent.kafka.connect.avro.data) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
 
-  integrationTestImplementation(apache.avro)
+  implementation(tools.spotbugs.annotations)
+  implementation(compressionlibs.snappy)
+  implementation(compressionlibs.zstd.jni)
 
-  testImplementation(apache.parquet.tools) { exclude(group = "org.slf4j", module = "slf4j-api") }
-  testImplementation(apache.hadoop.mapreduce.client.core) {
-    exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
+  implementation(logginglibs.slf4j)
+
+  implementation(apache.commons.text)
+
+  implementation(apache.parquet.avro) {
+    exclude(group = "org.xerial.snappy", module = "snappy-java")
+    exclude(group = "org.slf4j", module = "slf4j-api")
+    exclude(group = "org.apache.avro", module = "avro")
+  }
+  implementation(apache.hadoop.common) {
     exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")
     exclude(group = "com.google.guava", module = "guava")
     exclude(group = "commons-cli", module = "commons-cli")
@@ -156,38 +83,39 @@ dependencies {
     exclude(group = "io.netty", module = "netty")
   }
 
-  // Make test utils from 'test' available in 'integration-test'
-  integrationTestImplementation(sourceSets["test"].output)
-  integrationTestImplementation(testinglibs.awaitility)
+  testImplementation(apache.kafka.connect.api)
+  testImplementation(apache.kafka.connect.runtime)
+  testImplementation(apache.kafka.connect.json)
+  testImplementation(testinglibs.junit.jupiter)
+  testImplementation(apache.parquet.tools) { exclude(group = "org.slf4j", module = "slf4j-api") }
+  testImplementation(jackson.databind)
+  testImplementation(testinglibs.mockito.core)
+  testImplementation(testinglibs.assertj.core)
+
+  testImplementation(testinglibs.woodstox.stax2.api)
+  testImplementation(apache.hadoop.mapreduce.client.core)
+  testImplementation(confluent.kafka.connect.avro.converter)
+
+  testRuntimeOnly(testinglibs.junit.jupiter.engine)
+  testRuntimeOnly(logginglibs.logback.classic)
 }
 
-tasks.named<Pmd>("pmdIntegrationTest") {
-  ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
-  ruleSets = emptyList() // Clear the default rulesets
-}
+tasks.withType<Jar> { archiveBaseName.set(project.name + "-for-apache-kafka-connect") }
 
-tasks.named<SpotBugsTask>("spotbugsIntegrationTest") {
-  reports.create("html") { setStylesheet("fancy-hist.xsl") }
-}
-
-tasks.processResources {
-  filesMatching("s3-sink-connector-for-apache-kafka-version.properties") {
-    expand(mapOf("version" to version))
-  }
-}
+distributions { main { distributionBaseName.set(project.name + "-for-apache-kafka-connect") } }
 
 publishing {
   publications {
     create<MavenPublication>("publishMavenJavaArtifact") {
       groupId = group.toString()
-      artifactId = "s3-sink-connector-for-apache-kafka"
+      artifactId = "s3-connectors-common-for-apache-kafka-connect"
       version = version.toString()
 
       from(components["java"])
 
       pom {
-        name = "Aiven's S3 Sink Connector for Apache Kafka"
-        description = "Aiven's S3 Sink Connector for Apache Kafka"
+        name = "Aiven's Common Module for Apache Kafka connectors"
+        description = "Aiven's Common Module for Apache Kafka connectors"
         url = "https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka"
         organization {
           name = "Aiven Oy"
