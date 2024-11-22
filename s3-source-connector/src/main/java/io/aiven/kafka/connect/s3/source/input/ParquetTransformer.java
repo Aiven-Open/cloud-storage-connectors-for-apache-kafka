@@ -25,15 +25,18 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.compress.utils.IOUtils;
+import org.apache.commons.io.function.IOSupplier;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.LocalInputFile;
@@ -50,9 +53,9 @@ public class ParquetTransformer implements Transformer {
     }
 
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
-            final S3SourceConfig s3SourceConfig) {
-        return getParquetRecords(inputStream, topic, topicPartition);
+    public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
+            final int topicPartition, final S3SourceConfig s3SourceConfig) {
+        return getParquetStreamRecords(inputStreamIOSupplier, topic, topicPartition);
     }
 
     @Override
@@ -61,35 +64,59 @@ public class ParquetTransformer implements Transformer {
                 s3SourceConfig);
     }
 
-    private List<Object> getParquetRecords(final InputStream inputStream, final String topic,
-            final int topicPartition) {
+    private Stream<Object> getParquetStreamRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final String topic, final int topicPartition) {
         final String timestamp = String.valueOf(Instant.now().toEpochMilli());
         File parquetFile;
-        final List<Object> records = new ArrayList<>();
+
         try {
+            // Create a temporary file for the Parquet data
             parquetFile = File.createTempFile(topic + "_" + topicPartition + "_" + timestamp, ".parquet");
         } catch (IOException e) {
-            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
-            return records;
+            LOGGER.error("Error creating temp file for Parquet data: {}", e.getMessage(), e);
+            return Stream.empty();
         }
 
-        try (OutputStream outputStream = Files.newOutputStream(parquetFile.toPath())) {
-            IOUtils.copy(inputStream, outputStream);
+        try (OutputStream outputStream = Files.newOutputStream(parquetFile.toPath());
+                InputStream inputStream = inputStreamIOSupplier.get();) {
+            IOUtils.copy(inputStream, outputStream); // Copy input stream to temporary file
+
             final InputFile inputFile = new LocalInputFile(parquetFile.toPath());
-            try (var parquetReader = AvroParquetReader.<GenericRecord>builder(inputFile).build()) {
-                GenericRecord record;
-                record = parquetReader.read();
-                while (record != null) {
-                    records.add(record);
-                    record = parquetReader.read();
+            final var parquetReader = AvroParquetReader.<GenericRecord>builder(inputFile).build();
+
+            return StreamSupport.stream(new Spliterators.AbstractSpliterator<Object>(Long.MAX_VALUE,
+                    Spliterator.ORDERED | Spliterator.NONNULL) {
+                @Override
+                public boolean tryAdvance(final java.util.function.Consumer<? super Object> action) {
+                    try {
+                        final GenericRecord record = parquetReader.read();
+                        if (record != null) {
+                            action.accept(record); // Pass record to the stream
+                            return true;
+                        } else {
+                            parquetReader.close(); // Close reader at end of file
+                            deleteTmpFile(parquetFile.toPath());
+                            return false;
+                        }
+                    } catch (IOException | RuntimeException e) { // NOPMD
+                        LOGGER.error("Error reading Parquet record: {}", e.getMessage(), e);
+                        deleteTmpFile(parquetFile.toPath());
+                        return false;
+                    }
                 }
-            }
+            }, false).onClose(() -> {
+                try {
+                    parquetReader.close(); // Ensure reader is closed when the stream is closed
+                } catch (IOException e) {
+                    LOGGER.error("Error closing Parquet reader: {}", e.getMessage(), e);
+                }
+                deleteTmpFile(parquetFile.toPath());
+            });
         } catch (IOException | RuntimeException e) { // NOPMD
-            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
-        } finally {
+            LOGGER.error("Error processing Parquet data: {}", e.getMessage(), e);
             deleteTmpFile(parquetFile.toPath());
+            return Stream.empty();
         }
-        return records;
     }
 
     static void deleteTmpFile(final Path parquetFile) {

@@ -16,16 +16,17 @@
 
 package io.aiven.kafka.connect.s3.source.input;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.EXPECTED_MAX_MESSAGE_BYTES;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,29 +38,31 @@ public class ByteArrayTransformer implements Transformer {
         // For byte array transformations, ByteArrayConverter is the converter which is the default config.
     }
 
-    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
-            final S3SourceConfig s3SourceConfig) {
+    public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
+            final int topicPartition, final S3SourceConfig s3SourceConfig) {
 
-        final int maxMessageBytesSize = s3SourceConfig.getInt(EXPECTED_MAX_MESSAGE_BYTES);
-        final byte[] buffer = new byte[maxMessageBytesSize];
-        int bytesRead;
+        // Create a Stream that processes each chunk lazily
+        return StreamSupport.stream(new Spliterators.AbstractSpliterator<>(Long.MAX_VALUE, Spliterator.ORDERED) {
+            final byte[] buffer = new byte[4096];
 
-        final List<Object> chunks = new ArrayList<>();
-        try {
-            bytesRead = inputStream.read(buffer);
-            while (bytesRead != -1) {
-                final byte[] chunk = new byte[bytesRead];
-                System.arraycopy(buffer, 0, chunk, 0, bytesRead);
-                chunks.add(chunk);
-                bytesRead = inputStream.read(buffer);
+            @Override
+            public boolean tryAdvance(final java.util.function.Consumer<? super Object> action) {
+                try (InputStream inputStream = inputStreamIOSupplier.get()) {
+                    final int bytesRead = inputStream.read(buffer);
+                    if (bytesRead == -1) {
+                        return false;
+                    }
+                    final byte[] chunk = new byte[bytesRead];
+                    System.arraycopy(buffer, 0, chunk, 0, bytesRead);
+                    action.accept(chunk);
+                    return true;
+                } catch (IOException e) {
+                    LOGGER.error("Error trying to advance byte stream: {}", e.getMessage(), e);
+                    return false;
+                }
             }
-        } catch (IOException e) {
-            LOGGER.error("Error reading from input stream: {}", e.getMessage(), e);
-        }
-
-        return chunks;
+        }, false);
     }
 
     @Override

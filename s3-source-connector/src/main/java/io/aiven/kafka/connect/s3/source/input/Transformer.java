@@ -17,16 +17,19 @@
 package io.aiven.kafka.connect.s3.source.input;
 
 import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+
+import org.apache.commons.io.function.IOSupplier;
 
 public interface Transformer {
 
     void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
 
-    List<Object> getRecords(InputStream inputStream, String topic, int topicPartition, S3SourceConfig s3SourceConfig);
+    Stream<Object> getRecords(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition,
+            S3SourceConfig s3SourceConfig);
 
     byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
 }

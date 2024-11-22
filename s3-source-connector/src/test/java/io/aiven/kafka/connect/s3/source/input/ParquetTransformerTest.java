@@ -17,24 +17,32 @@
 package io.aiven.kafka.connect.s3.source.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 
 import com.amazonaws.util.IOUtils;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,11 +58,13 @@ final class ParquetTransformerTest {
     void testHandleValueDataWithZeroBytes() {
         final byte[] mockParquetData = new byte[0];
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
+        final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
         final String topic = "test-topic";
         final int topicPartition = 0;
-        final List<Object> recs = parquetTransformer.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
+        final Stream<Object> recs = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
+                s3SourceConfig);
 
         assertThat(recs).isEmpty();
     }
@@ -63,12 +73,15 @@ final class ParquetTransformerTest {
     void testGetRecordsWithValidData() throws Exception {
         final byte[] mockParquetData = generateMockParquetData();
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
+        final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final List<Object> records = parquetTransformer.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
+        final List<Object> records = parquetTransformer
+                .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig)
+                .collect(Collectors.toList());
 
         assertThat(records).isNotEmpty();
         assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
@@ -80,12 +93,15 @@ final class ParquetTransformerTest {
     void testGetRecordsWithInvalidData() {
         final byte[] invalidData = "invalid data".getBytes(StandardCharsets.UTF_8);
         final InputStream inputStream = new ByteArrayInputStream(invalidData);
+        final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
+
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
 
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final List<Object> records = parquetTransformer.getRecords(inputStream, topic, topicPartition, s3SourceConfig);
+        final Stream<Object> records = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
+                s3SourceConfig);
         assertThat(records).isEmpty();
     }
 
@@ -101,5 +117,32 @@ final class ParquetTransformerTest {
     private byte[] generateMockParquetData() throws IOException {
         final Path path = ContentUtils.getTmpFilePath("name");
         return IOUtils.toByteArray(Files.newInputStream(path));
+    }
+
+    @Test
+    void testIOExceptionCreatingTempFile() {
+        try (var mockStatic = Mockito.mockStatic(File.class)) {
+            mockStatic.when(() -> File.createTempFile(anyString(), anyString()))
+                    .thenThrow(new IOException("Test IOException for temp file"));
+
+            final IOSupplier<InputStream> inputStreamSupplier = mock(IOSupplier.class);
+            final Stream<Object> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic", 1,
+                    null);
+
+            assertThat(resultStream).isEmpty();
+        }
+    }
+
+    @Test
+    void testIOExceptionDuringDataCopy() throws IOException {
+        try (InputStream inputStreamMock = mock(InputStream.class)) {
+            when(inputStreamMock.read(any(byte[].class))).thenThrow(new IOException("Test IOException during copy"));
+
+            final IOSupplier<InputStream> inputStreamSupplier = () -> inputStreamMock;
+            final Stream<Object> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic", 1,
+                    null);
+
+            assertThat(resultStream).isEmpty();
+        }
     }
 }
