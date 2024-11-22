@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
@@ -35,7 +35,6 @@ import io.aiven.kafka.connect.s3.source.input.Transformer;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,8 +94,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     }
 
     private Iterator<S3SourceRecord> createIteratorForCurrentFile() throws IOException {
-        try (S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);
-                S3ObjectInputStream inputStream = s3Object.getObjectContent()) {
+        try (S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);) {
 
             final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(currentObjectKey);
             String topicName;
@@ -107,7 +105,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
             } else {
                 LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
-                inputStream.abort();
                 s3Object.close();
                 return Collections.emptyIterator();
             }
@@ -118,13 +115,13 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
                     bucketName);
 
-            return getObjectIterator(inputStream, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
+            return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
                     partitionMap);
         }
     }
 
     @SuppressWarnings("PMD.CognitiveComplexity")
-    private Iterator<S3SourceRecord> getObjectIterator(final InputStream valueInputStream, final String topic,
+    private Iterator<S3SourceRecord> getObjectIterator(final S3Object s3Object, final String topic,
             final int topicPartition, final long startOffset, final Transformer transformer,
             final Map<String, Object> partitionMap) {
         return new Iterator<>() {
@@ -136,24 +133,34 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
                 int numOfProcessedRecs = 1;
                 boolean checkOffsetMap = true;
-                for (final Object record : transformer.getRecords(valueInputStream, topic, topicPartition,
-                        s3SourceConfig)) {
-                    if (offsetManager.shouldSkipRecord(partitionMap, currentObjectKey, numOfProcessedRecs)
-                            && checkOffsetMap) {
+                try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent, topic,
+                        topicPartition, s3SourceConfig)) {
+                    final Iterator<Object> recordIterator = recordStream.iterator();
+                    while (recordIterator.hasNext()) {
+                        final Object record = recordIterator.next();
+
+                        // Check if the record should be skipped based on the offset
+                        if (offsetManager.shouldSkipRecord(partitionMap, currentObjectKey, numOfProcessedRecs)
+                                && checkOffsetMap) {
+                            numOfProcessedRecs++;
+                            continue;
+                        }
+
+                        final byte[] valueBytes = transformer.getValueBytes(record, topic, s3SourceConfig);
+                        checkOffsetMap = false;
+
+                        sourceRecords.add(getSourceRecord(keyBytes, valueBytes, topic, topicPartition, offsetManager,
+                                startOffset, partitionMap));
+
                         numOfProcessedRecs++;
-                        continue;
-                    }
 
-                    final byte[] valueBytes = transformer.getValueBytes(record, topic, s3SourceConfig);
-                    checkOffsetMap = false;
-                    sourceRecords.add(getSourceRecord(keyBytes, valueBytes, topic, topicPartition, offsetManager,
-                            startOffset, partitionMap));
-                    if (sourceRecords.size() >= s3SourceConfig.getInt(MAX_POLL_RECORDS)) {
-                        break;
+                        // Break if we have reached the max records per poll
+                        if (sourceRecords.size() >= s3SourceConfig.getInt(MAX_POLL_RECORDS)) {
+                            break;
+                        }
                     }
-
-                    numOfProcessedRecs++;
                 }
+
                 return sourceRecords;
             }
 

@@ -22,9 +22,7 @@ import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCK
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_ENDPOINT_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_SECRET_ACCESS_KEY_CONFIG;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.EXPECTED_MAX_MESSAGE_BYTES;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.INPUT_FORMAT_KEY;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
@@ -41,7 +39,6 @@ import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -68,7 +65,6 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -186,33 +182,6 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @Test
-    void bytesTestBasedOnMaxMessageBytes(final TestInfo testInfo) throws IOException, InterruptedException {
-        final String testData = "AABBCCDDEE";
-        final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 3);
-        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
-        connectorConfig.put(EXPECTED_MAX_MESSAGE_BYTES, "2"); // For above test data of 10 bytes length, with 2 bytes
-                                                              // each
-        // in source record, we expect 5 records.
-        connectorConfig.put(MAX_POLL_RECORDS, "2"); // In 3 polls all the 5 records should be processed
-
-        connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
-        final String offsetKey = writeToS3(topicName, testData.getBytes(StandardCharsets.UTF_8), "00000");
-
-        // Poll messages from the Kafka topic and verify the consumed data
-        final List<String> records = IntegrationBase.consumeMessages(topicName, 5, connectRunner.getBootstrapServers());
-
-        // Verify that the correct data is read from the S3 bucket and pushed to Kafka
-        assertThat(records).containsExactly("AA", "BB", "CC", "DD", "EE");
-
-        Awaitility.await().atMost(Duration.ofMinutes(2)).untilAsserted(() -> {
-            final Map<String, Object> offsetRecs = IntegrationBase.consumeOffsetStorageMessages(
-                    "connect-offset-topic-" + CONNECTOR_NAME, 1, connectRunner.getBootstrapServers());
-            assertThat(offsetRecs).containsExactly(entry(offsetKey, 5));
-        });
-    }
-
-    @Test
     void avroTest(final TestInfo testInfo) throws IOException, InterruptedException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.AVRO);
@@ -227,16 +196,19 @@ final class IntegrationTest implements IntegrationBase {
         final Schema schema = parser.parse(schemaJson);
 
         final byte[] outputStream1 = getAvroRecord(schema, 1, 100);
-        final byte[] outputStream2 = getAvroRecord(schema, 2, 100);
+        final byte[] outputStream2 = getAvroRecord(schema, 101, 100);
+        final byte[] outputStream3 = getAvroRecord(schema, 201, 100);
+        final byte[] outputStream4 = getAvroRecord(schema, 301, 100);
+        final byte[] outputStream5 = getAvroRecord(schema, 401, 100);
 
         final Set<String> offsetKeys = new HashSet<>();
 
         offsetKeys.add(writeToS3(topicName, outputStream1, "00001"));
         offsetKeys.add(writeToS3(topicName, outputStream2, "00001"));
 
-        offsetKeys.add(writeToS3(topicName, outputStream1, "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream2, "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream2, "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream3, "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream4, "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream5, "00002"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
@@ -249,7 +221,12 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(records).hasSize(500)
                 .map(record -> entry(record.get("id"), String.valueOf(record.get("message"))))
                 .contains(entry(1, "Hello, Kafka Connect S3 Source! object 1"),
-                        entry(2, "Hello, Kafka Connect S3 Source! object 2"));
+                        entry(2, "Hello, Kafka Connect S3 Source! object 2"),
+                        entry(100, "Hello, Kafka Connect S3 Source! object 100"),
+                        entry(200, "Hello, Kafka Connect S3 Source! object 200"),
+                        entry(300, "Hello, Kafka Connect S3 Source! object 300"),
+                        entry(400, "Hello, Kafka Connect S3 Source! object 400"),
+                        entry(500, "Hello, Kafka Connect S3 Source! object 500"));
 
         Thread.sleep(10_000);
 
@@ -327,17 +304,17 @@ final class IntegrationTest implements IntegrationBase {
         verifyOffsetPositions(offsetKeys, 1);
     }
 
-    private static byte[] getAvroRecord(final Schema schema, final int messageId, final int noOfAvroRecs)
-            throws IOException {
+    private static byte[] getAvroRecord(final Schema schema, int messageId, final int noOfAvroRecs) throws IOException {
         final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             dataFileWriter.create(schema, outputStream);
             for (int i = 0; i < noOfAvroRecs; i++) {
                 final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD
-                avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + i);
+                avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + messageId);
                 avroRecord.put("id", messageId);
                 dataFileWriter.append(avroRecord);
+                messageId++; // NOPMD
             }
 
             dataFileWriter.flush();

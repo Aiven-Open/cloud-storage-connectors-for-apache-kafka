@@ -117,7 +117,6 @@ dependencies {
     exclude(group = "org.apache.commons", module = "commons-math3")
     exclude(group = "org.apache.httpcomponents", module = "httpclient")
     exclude(group = "commons-codec", module = "commons-codec")
-    exclude(group = "commons-io", module = "commons-io")
     exclude(group = "commons-net", module = "commons-net")
     exclude(group = "org.eclipse.jetty")
     exclude(group = "org.eclipse.jetty.websocket")
