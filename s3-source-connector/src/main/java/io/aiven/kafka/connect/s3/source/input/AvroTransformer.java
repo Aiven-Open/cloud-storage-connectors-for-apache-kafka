@@ -24,15 +24,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.util.IOUtils;
 import org.apache.avro.file.DataFileReader;
+import org.apache.avro.file.DataFileStream;
 import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
+import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,16 +52,30 @@ public class AvroTransformer implements Transformer {
     }
 
     @Override
-    public List<Object> getRecords(final InputStream inputStream, final String topic, final int topicPartition,
-            final S3SourceConfig s3SourceConfig) {
+    public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
+            final int topicPartition, final S3SourceConfig s3SourceConfig) {
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-        return readAvroRecords(inputStream, datumReader);
+        return readAvroRecordsAsStream(inputStreamIOSupplier, datumReader);
     }
 
     @Override
     public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
         return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
                 s3SourceConfig);
+    }
+
+    private Stream<Object> readAvroRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final DatumReader<GenericRecord> datumReader) {
+        try (DataFileStream<GenericRecord> dataFileStream = new DataFileStream<>(inputStreamIOSupplier.get(),
+                datumReader)) {
+            // Wrap DataFileStream in a Stream using a Spliterator for lazy processing
+            return StreamSupport.stream(
+                    Spliterators.spliteratorUnknownSize(dataFileStream, Spliterator.ORDERED | Spliterator.NONNULL),
+                    false);
+        } catch (IOException e) {
+            LOGGER.error("Error in DataFileStream: {}", e.getMessage(), e);
+            return Stream.empty(); // Return an empty stream if initialization fails
+        }
     }
 
     List<Object> readAvroRecords(final InputStream content, final DatumReader<GenericRecord> datumReader) {

@@ -30,6 +30,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
@@ -78,8 +79,7 @@ final class SourceRecordIteratorTest {
             when(mockS3Client.getObject(anyString(), anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
 
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any()))
-                    .thenReturn(Collections.singletonList(new Object()));
+            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any())).thenReturn(Stream.of(new Object()));
 
             final String outStr = "this is a test";
             when(mockTransformer.getValueBytes(any(), anyString(), any()))
@@ -102,7 +102,6 @@ final class SourceRecordIteratorTest {
             assertTrue(iterator.hasNext());
             assertNotNull(iterator.next());
         }
-
     }
 
     private ListObjectsV2Result mockListObjectsResult(final List<S3ObjectSummary> summaries) {
