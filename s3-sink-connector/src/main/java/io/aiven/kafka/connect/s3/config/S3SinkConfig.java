@@ -189,6 +189,7 @@ final public class S3SinkConfig extends AivenCommonConfig {
         addDeprecatedConfiguration(configDef);
         addKafkaBackoffPolicy(configDef);
         addS3RetryPolicies(configDef);
+        addOverloadConfigGroup(configDef);
         return configDef;
     }
 

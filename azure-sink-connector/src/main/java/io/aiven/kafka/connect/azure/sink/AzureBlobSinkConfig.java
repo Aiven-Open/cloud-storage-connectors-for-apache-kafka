@@ -80,6 +80,7 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
         addKafkaBackoffPolicy(configDef);
         addAzureRetryPolicies(configDef);
         addUserAgentConfig(configDef);
+        addOverloadConfigGroup(configDef);
         return configDef;
     }
 
