@@ -24,10 +24,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -91,6 +94,10 @@ public final class Template {
         return new Instance();
     }
 
+    public Extractor extractor() {
+        return new Extractor();
+    }
+
     @SuppressWarnings("PMD.ShortMethodName")
     public static Template of(final String template) {
 
@@ -145,4 +152,81 @@ public final class Template {
             return stringBuilder.toString();
         }
     }
+
+    /**
+     * Given a template, the {@link Extractor} finds the matching variables from a string.
+     * <p>
+     * Where an {@link Instance} generates strings by filling in the variables in a template, the {@link Extractor} does
+     * the opposite:
+     *
+     * <pre>
+     * // Renders the string "Hello World!"
+     * var tmpl = Template.of("Hello {{name}}!");
+     * var greeting = tmpl.instance().bindVariable("name", () -&gt; "World").render();
+     *
+     * // The other way around, extracts a name from a string:
+     * tmpl.extractor().extract(greeting); // returns a map {name=World}
+     * tmpl.extractor().extract("Hello everyone!"); // returns a map {name=everyone}
+     * </pre>
+     *
+     * The intention is that applying the map back to the template will yield the original string, but the round-trip is
+     * not always exact.
+     * <ul>
+     * <li>Rendering a string uses a supplier and the extractor returns a fixed string.</li>
+     * <li>Variable parameters are currently ignored (to be determined).</li>
+     * </ul>
+     */
+    public final class Extractor {
+        private final Pattern regex;
+        private final Map<String, String> captureGroups = new HashMap<>();
+
+        private Extractor() {
+            // Build a regex to match the template pattern. Every variable part is mapped to a capturing group
+            // and every text part is quoted to require an exact match. Variable part parameters are ignored.
+            final StringBuilder textAsRegex = new StringBuilder();
+            for (int i = 0; i < templateParts.size(); i++) {
+                if (templateParts.get(i) instanceof TextTemplatePart) {
+                    textAsRegex.append(Pattern.quote(((TextTemplatePart) templateParts.get(i)).getText()));
+                } else if (templateParts.get(i) instanceof VariableTemplatePart) {
+                    final String variableName = ((VariableTemplatePart) templateParts.get(i)).getVariableName();
+                    if (captureGroups.containsKey(variableName)) {
+                        // If the name was already used, we can capture it with a backreference.
+                        textAsRegex.append("\\k<").append(captureGroups.get(variableName)).append('>');
+                    } else {
+                        textAsRegex.append("(?<capture").append(i).append(">.*?)");
+                        // A capturing group cannot contain underscores, so we map every variable name to a valid unique
+                        // name.
+                        captureGroups.put(((VariableTemplatePart) templateParts.get(i)).getVariableName(),
+                                "capture" + i);
+                    }
+                }
+            }
+            regex = Pattern.compile(textAsRegex.toString());
+        }
+
+        /**
+         * Performs the variable extraction from the input string.
+         *
+         * @param input
+         *            A string to extract variables from.
+         * @return An immutable map of key-value pairs extracted from the input string, corresponding to the template
+         *         variable names.
+         * @throws IllegalArgumentException
+         *             If the input string does not match the template.
+         */
+        public Map<String, String> extract(final String input) {
+            final Matcher matcher = regex.matcher(input);
+            if (!matcher.matches()) {
+                throw new IllegalArgumentException("Input does not match the template");
+            }
+
+            final ImmutableMap.Builder<String, String> found = new ImmutableMap.Builder<>();
+            for (final Map.Entry<String, String> entry : captureGroups.entrySet()) {
+                found.put(entry.getKey(), matcher.group(entry.getValue()));
+            }
+
+            return found.build();
+        }
+    }
+
 }

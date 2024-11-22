@@ -30,15 +30,16 @@ public final class TemplateParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TemplateParser.class);
 
-    private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\{\\{\\s*([\\w]+)?(:?)([\\w=]+)?\\s*}}"); // {{
-                                                                                                                // var:foo=bar
-                                                                                                                // }}
+    /** Matches <code>{{ var:foo=bar }}</code> */
+    private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\{\\{\\s*([\\w]+)?(:?)([\\w=]+)?\\s*}}");
 
-    private static final Pattern PARAMETER_PATTERN = Pattern.compile("([\\w]+)?=?([\\w]+)?"); // foo=bar
+    /** Matches <code>foo=bar</code> */
+    private static final Pattern PARAMETER_PATTERN = Pattern.compile("([\\w]+)?=?([\\w]+)?");
 
     private TemplateParser() {
     }
 
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     public static Pair<List<Pair<String, VariableTemplatePart.Parameter>>, List<TemplatePart>> parse(
             final String template) {
         LOGGER.debug("Parse template: {}", template);
@@ -50,9 +51,7 @@ public final class TemplateParser {
 
         int position = 0;
         while (matcher.find()) {
-            templatePartsBuilder.add(new TextTemplatePart(template.substring(position, matcher.start())) // NOPMD
-                                                                                                         // AvoidInstantiatingObjectsInLoops
-            );
+            templatePartsBuilder.add(new TextTemplatePart(template.substring(position, matcher.start())));
 
             final String variable = matcher.group(1);
 
@@ -69,8 +68,7 @@ public final class TemplateParser {
 
             final VariableTemplatePart.Parameter parseParameter = parseParameter(variable, parameter);
             variablesAndParametersBuilder.add(Pair.of(variable, parseParameter));
-            templatePartsBuilder.add(new VariableTemplatePart(variable, parseParameter, matcher.group())); // NOPMD
-                                                                                                           // AvoidInstantiatingObjectsInLoops
+            templatePartsBuilder.add(new VariableTemplatePart(variable, parseParameter, matcher.group()));
             position = matcher.end();
         }
         templatePartsBuilder.add(new TextTemplatePart(template.substring(position)));
