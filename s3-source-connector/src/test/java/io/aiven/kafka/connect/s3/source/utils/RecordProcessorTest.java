@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -90,7 +89,7 @@ class RecordProcessorTest {
             transformer, fileReader, offsetManager
         );
 
-        assertTrue(processedRecords.isEmpty(), "Processed records should be empty when there are no records.");
+        assertThat(processedRecords).as("Processed records should be empty when there are no records.").isEmpty();
     }
 
     @Test
@@ -112,7 +111,7 @@ class RecordProcessorTest {
             transformer, fileReader, offsetManager
         );
 
-        assertThat(results.size()).isEqualTo(1);
+        assertThat(results).hasSize(1);
         verify(sourceRecordIterator, times(1)).next();
     }
 
@@ -132,7 +131,7 @@ class RecordProcessorTest {
             transformer, fileReader, offsetManager
         );
 
-        assertTrue(processedRecords.isEmpty(), "Processed records should be empty when connector is stopped.");
+        assertThat(processedRecords).as("Processed records should be empty when connector is stopped.").isEmpty();
         verify(sourceRecordIterator, never()).next();
     }
 

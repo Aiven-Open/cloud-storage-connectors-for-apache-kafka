@@ -16,10 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyString;
@@ -91,16 +88,16 @@ final class SourceRecordIteratorTest {
             SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockS3Client, "test-bucket",
                     mockOffsetManager, mockTransformer, mockFileReader);
 
-            assertFalse(iterator.hasNext());
-            assertNull(iterator.next());
+            assertThat(iterator.hasNext()).isFalse();
+            assertThat(iterator.next()).isNull();
 
             when(mockFileReader.fetchObjectSummaries(any())).thenReturn(mockObjectSummaries.listIterator());
 
             iterator = new SourceRecordIterator(mockConfig, mockS3Client, "test-bucket", mockOffsetManager,
                     mockTransformer, mockFileReader);
 
-            assertTrue(iterator.hasNext());
-            assertNotNull(iterator.next());
+            assertThat(iterator.hasNext()).isTrue();
+            assertThat(iterator.next()).isNotNull();
         }
     }
 
