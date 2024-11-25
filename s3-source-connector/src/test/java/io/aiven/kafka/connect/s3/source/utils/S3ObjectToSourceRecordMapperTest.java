@@ -99,7 +99,7 @@ class S3ObjectToSourceRecordMapperTest {
         return new S3ObjectToSourceRecordMapper(new TestingTransformer() {
             @Override
             public Stream<Object> getRecords(final IOSupplier<InputStream> inputStream, final String topic,
-                                             final int topicPartition, final S3SourceConfig s3SourceConfig) {
+                    final int topicPartition, final S3SourceConfig s3SourceConfig) {
                 final Stream<Object> streamResult = super.getRecords(inputStream, topic, topicPartition,
                         s3SourceConfig);
                 final List<Object> res = streamResult.collect(Collectors.toList());
@@ -139,7 +139,7 @@ class S3ObjectToSourceRecordMapperTest {
         underTest = singleRecordMapper(new TestingTransformer() {
             @Override
             public Stream<Object> getRecords(final IOSupplier<InputStream> inputStream, final String topic,
-                                             final int topicPartition, final S3SourceConfig s3SourceConfig) {
+                    final int topicPartition, final S3SourceConfig s3SourceConfig) {
                 throw new ConnectException("BOOM!");
             }
         });

@@ -21,12 +21,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A predicate that extracts the topic and partition from the S3ObjectSummary key.
- * Will ignore S3ObjectSummary for which the keys can not be parsed.
+ * A predicate that extracts the topic and partition from the S3ObjectSummary key. Will ignore S3ObjectSummary for which
+ * the keys can not be parsed.
  */
 public final class TopicPartitionExtractingPredicate implements Predicate<S3ObjectSummary> {
     /** THe logger to use */
@@ -46,10 +47,12 @@ public final class TopicPartitionExtractingPredicate implements Predicate<S3Obje
     private S3OffsetManagerEntry offsetManagerEntry;
 
     /**
-     * Return the S3OffsetManagerEntry that is associated with the S3ObjectSummary.  This method will return {@code null} if no
-     * files have been processed or if the last file processed did not have a parsable S3ObjectSummary key.
+     * Return the S3OffsetManagerEntry that is associated with the S3ObjectSummary. This method will return {@code null}
+     * if no files have been processed or if the last file processed did not have a parsable S3ObjectSummary key.
+     *
      * @return the offset manager entry or {@code null} if not available.
      */
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     public S3OffsetManagerEntry getOffsetMnagerEntry() {
         return offsetManagerEntry;
     }

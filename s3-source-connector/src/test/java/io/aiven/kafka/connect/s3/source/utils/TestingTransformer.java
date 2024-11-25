@@ -22,34 +22,37 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.errors.ConnectException;
+
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 
 import com.nimbusds.jose.util.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 
-public class TestingTransformer implements Transformer {
+public class TestingTransformer implements Transformer { // NOPMD this is not a test class it is a class used by other
+                                                         // test classes
 
-    public static String transform(String original) {
+    public static String transform(final String original) {
         return String.format("Transformed(%s)", original);
     }
     @Override
-    public void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig) {
+    public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
         config.put("TestingTransformer", "True");
     }
 
     @Override
-    public Stream<Object> getRecords(IOSupplier<InputStream> inputStream, String topic, int topicPartition,
-            S3SourceConfig s3SourceConfig) {
+    public Stream<Object> getRecords(final IOSupplier<InputStream> inputStream, final String topic,
+            final int topicPartition, final S3SourceConfig s3SourceConfig) {
         try {
             return Stream.of(transform(IOUtils.readInputStreamToString(inputStream.get())));
         } catch (IOException e) {
-            throw new RuntimeException("Error reading input stream", e);
+            throw new ConnectException("Error reading input stream", e);
         }
     }
 
     @Override
-    public byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig) {
+    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
         return ((String) record).getBytes(StandardCharsets.UTF_8);
     }
 }

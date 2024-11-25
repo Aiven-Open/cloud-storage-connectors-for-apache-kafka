@@ -79,7 +79,7 @@ public class OffsetManager {
     }
 
     public <T extends OffsetManagerEntry> T getEntry(final OffsetManagerKey key,
-                                                     final Function<Map<String, Object>, T> creator) {
+            final Function<Map<String, Object>, T> creator) {
         return creator.apply(offsets.get(key.getPartitionMap()));
     }
 
@@ -108,7 +108,7 @@ public class OffsetManager {
 
     // TODO move this to S3OffsetManager creation. May not be needed.
     private static List<Map<String, Object>> buildPartitionKeys(final String bucket, final Set<Integer> partitions,
-                                                                final Set<String> topics) {
+            final Set<String> topics) {
         final List<Map<String, Object>> partitionKeys = new ArrayList<>();
         partitions.forEach(partition -> topics.forEach(topic -> {
             partitionKeys.add(ConnectUtils.getPartitionMap(topic, partition, bucket));

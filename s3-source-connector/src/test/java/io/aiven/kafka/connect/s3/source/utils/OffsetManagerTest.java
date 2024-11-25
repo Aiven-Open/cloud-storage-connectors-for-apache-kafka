@@ -19,11 +19,9 @@ package io.aiven.kafka.connect.s3.source.utils;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,21 +31,16 @@ import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 
 final class OffsetManagerTest {
 
     private Map<String, String> properties;
     private static final String TEST_BUCKET = "test-bucket";
 
-    @Mock
-    private SourceTaskContext sourceTaskContext;
-
     private S3SourceConfig s3SourceConfig;
-
-    private OffsetManager offsetManager;
 
     @BeforeEach
     public void setUp() {
@@ -58,7 +51,7 @@ final class OffsetManagerTest {
 
     @Test
     void testWithOffsets() {
-        sourceTaskContext = mock(SourceTaskContext.class);
+        final SourceTaskContext sourceTaskContext = mock(SourceTaskContext.class);
         final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
         when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
 
@@ -74,7 +67,7 @@ final class OffsetManagerTest {
 
         when(offsetStorageReader.offsets(any())).thenReturn(offsets);
 
-        offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
+        final OffsetManager offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
 
         final Map<Map<String, Object>, Map<String, Object>> retrievedOffsets = offsetManager.getOffsets();
         assertThat(retrievedOffsets.size()).isEqualTo(1);
@@ -83,20 +76,21 @@ final class OffsetManagerTest {
 
     @Test
     void testUpdateCurrentOffsets() {
-        TestingManagerEntry offsetEntry = new TestingManagerEntry("bucket", "topic1", 0);
+        final TestingManagerEntry offsetEntry = new TestingManagerEntry("bucket", "topic1", 0);
 
         final Map<Map<String, Object>, Map<String, Object>> offsets = new HashMap<>();
         offsets.put(offsetEntry.getManagerKey().getPartitionMap(), offsetEntry.getProperties());
 
-        OffsetManager underTest = new OffsetManager(offsets);
+        final OffsetManager underTest = new OffsetManager(offsets);
 
         offsetEntry.setProperty("MyProperty", "WOW");
 
         underTest.updateCurrentOffsets(offsetEntry);
 
-        Map<Map<String, Object>, Map<String, Object>> offsetMap = underTest.getOffsets();
-        assertTrue(offsetMap.containsKey(offsetEntry.getManagerKey().getPartitionMap()));
-        TestingManagerEntry stored = offsetEntry.fromProperties(offsetMap.get(offsetEntry.getManagerKey().getPartitionMap()));
+        final Map<Map<String, Object>, Map<String, Object>> offsetMap = underTest.getOffsets();
+        assertThat(offsetMap.containsKey(offsetEntry.getManagerKey().getPartitionMap())).isTrue();
+        final TestingManagerEntry stored = offsetEntry
+                .fromProperties(offsetMap.get(offsetEntry.getManagerKey().getPartitionMap()));
         assertThat(stored.getManagerKey().getPartitionMap()).isEqualTo(offsetEntry.getManagerKey().getPartitionMap());
         assertThat(stored.properties).isEqualTo(offsetEntry.properties);
     }
@@ -104,16 +98,15 @@ final class OffsetManagerTest {
     @Test
     void updateCurrentOffsetsTestNewEntry() {
 
-        final Map<Map<String, Object>, Map<String, Object>> offsets = new HashMap<>();
-        OffsetManager underTest = new OffsetManager(new HashMap<>());
+        final OffsetManager underTest = new OffsetManager(new HashMap<>());
 
-
-        TestingManagerEntry offsetEntry = new TestingManagerEntry("bucket", "topic1", 0);
+        final TestingManagerEntry offsetEntry = new TestingManagerEntry("bucket", "topic1", 0);
         underTest.updateCurrentOffsets(offsetEntry);
 
-        Map<Map<String, Object>, Map<String, Object>> offsetMap = underTest.getOffsets();
-        assertTrue(offsetMap.containsKey(offsetEntry.getManagerKey().getPartitionMap()));
-        TestingManagerEntry stored = offsetEntry.fromProperties(offsetMap.get(offsetEntry.getManagerKey().getPartitionMap()));
+        final Map<Map<String, Object>, Map<String, Object>> offsetMap = underTest.getOffsets();
+        assertThat(offsetMap.containsKey(offsetEntry.getManagerKey().getPartitionMap())).isTrue();
+        final TestingManagerEntry stored = offsetEntry
+                .fromProperties(offsetMap.get(offsetEntry.getManagerKey().getPartitionMap()));
         assertThat(stored.getManagerKey().getPartitionMap()).isEqualTo(offsetEntry.getManagerKey().getPartitionMap());
         assertThat(stored.properties).isEqualTo(offsetEntry.properties);
 
@@ -122,21 +115,19 @@ final class OffsetManagerTest {
     @Test
     void updateCurrentOffsetsDataNotLost() {
 
-        final Map<Map<String, Object>, Map<String, Object>> offsets = new HashMap<>();
-        OffsetManager underTest = new OffsetManager(new HashMap<>());
+        final OffsetManager underTest = new OffsetManager(new HashMap<>());
 
-
-        TestingManagerEntry offsetEntry = new TestingManagerEntry("bucket", "topic1", 0);
+        final TestingManagerEntry offsetEntry = new TestingManagerEntry("bucket", "topic1", 0);
         offsetEntry.setProperty("test", "WOW");
         underTest.updateCurrentOffsets(offsetEntry);
 
-        TestingManagerEntry offsetEntry2 = new TestingManagerEntry("bucket", "topic1", 0);
         offsetEntry.setProperty("test2", "a thing");
         underTest.updateCurrentOffsets(offsetEntry);
 
-        Map<Map<String, Object>, Map<String, Object>> offsetMap = underTest.getOffsets();
-        assertTrue(offsetMap.containsKey(offsetEntry.getManagerKey().getPartitionMap()));
-        TestingManagerEntry stored = offsetEntry.fromProperties(offsetMap.get(offsetEntry.getManagerKey().getPartitionMap()));
+        final Map<Map<String, Object>, Map<String, Object>> offsetMap = underTest.getOffsets();
+        assertThat(offsetMap.containsKey(offsetEntry.getManagerKey().getPartitionMap())).isTrue();
+        final TestingManagerEntry stored = offsetEntry
+                .fromProperties(offsetMap.get(offsetEntry.getManagerKey().getPartitionMap()));
         assertThat(stored.getManagerKey().getPartitionMap()).isEqualTo(offsetEntry.getManagerKey().getPartitionMap());
         assertThat(stored.properties.get("test")).isEqualTo("WOW");
         assertThat(stored.properties.get("test2")).isEqualTo("a thing");
@@ -148,18 +139,30 @@ final class OffsetManagerTest {
         properties.put(TARGET_TOPICS, "topic1,topic2");
     }
 
-    private static class TestingManagerEntry implements OffsetManager.OffsetManagerEntry<TestingManagerEntry> {
+    private static class TestingManagerEntry implements OffsetManager.OffsetManagerEntry<TestingManagerEntry> { // NOPMD
+                                                                                                                // this
+                                                                                                                // is
+                                                                                                                // not a
+                                                                                                                // test
+                                                                                                                // class
+                                                                                                                // it is
+                                                                                                                // a
+                                                                                                                // helper
+                                                                                                                // for
+                                                                                                                // the
+                                                                                                                // unit
+                                                                                                                // tests
         final Map<String, Object> properties = new HashMap<>();
 
-        TestingManagerEntry(String bucket, String topic, int partition) {
+        TestingManagerEntry(final String bucket, final String topic, final int partition) {
             properties.put("topic", topic);
             properties.put("partition", partition);
             properties.put("bucket", bucket);
         }
 
         @Override
-        public TestingManagerEntry fromProperties(Map<String, Object> properties) {
-            TestingManagerEntry result = new TestingManagerEntry(null, null, 0);
+        public TestingManagerEntry fromProperties(final Map<String, Object> properties) {
+            final TestingManagerEntry result = new TestingManagerEntry(null, null, 0);
             result.properties.clear();
             result.properties.putAll(properties);
             return result;
@@ -171,12 +174,12 @@ final class OffsetManagerTest {
         }
 
         @Override
-        public Object getProperty(String key) {
+        public Object getProperty(final String key) {
             return properties.get(key);
         }
 
         @Override
-        public void setProperty(String key, Object value) {
+        public void setProperty(final String key, final Object value) {
             properties.put(key, value);
         }
 
@@ -185,13 +188,15 @@ final class OffsetManagerTest {
             return new OffsetManager.OffsetManagerKey() {
                 @Override
                 public Map<String, Object> getPartitionMap() {
-                    return Map.of("topic", properties.get("topic"), "partition", properties.get("topic"), "bucket", properties.get("bucket"));
+                    return Map.of("topic", properties.get("topic"), "partition", properties.get("topic"), "bucket",
+                            properties.get("bucket"));
                 }
             };
         }
 
         @Override
-        public int compareTo(TestingManagerEntry other) {
+        @SuppressFBWarnings("EQ_COMPARETO_USE_OBJECT_EQUALS")
+        public int compareTo(final TestingManagerEntry other) {
             int result = ((String) getProperty("bucket")).compareTo((String) other.getProperty("bucket"));
             if (result == 0) {
                 result = ((String) getProperty("topic")).compareTo((String) other.getProperty("topic"));

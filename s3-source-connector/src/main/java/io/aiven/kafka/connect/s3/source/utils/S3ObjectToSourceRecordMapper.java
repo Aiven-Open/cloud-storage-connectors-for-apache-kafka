@@ -39,9 +39,8 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
  */
 public final class S3ObjectToSourceRecordMapper implements Function<S3Object, Iterator<S3SourceRecord>> {
     /**
-     * The source of topic and partition for the current S3Object.
-     * As the S3ObjectSummaries are read this instance will be updated.  It will always be the
-     * values fro the S3Object that is being processed.
+     * The source of topic and partition for the current S3Object. As the S3ObjectSummaries are read this instance will
+     * be updated. It will always be the values fro the S3Object that is being processed.
      */
     private final TopicPartitionExtractingPredicate topicPartitionExtractingPredicate;
     /** The transformer to transform the data streams with */
@@ -57,10 +56,15 @@ public final class S3ObjectToSourceRecordMapper implements Function<S3Object, It
 
     /**
      * Creats the record mapper.
-     * @param transformer the Transformer to transform data from S3 input streams into records.
-     * @param topicPartitionExtractingPredicate The class that contains the topic and partition the current S3Object.
-     * @param s3SourceConfig The configuration.
-     * @param offsetManager The OffsetManager.
+     *
+     * @param transformer
+     *            the Transformer to transform data from S3 input streams into records.
+     * @param topicPartitionExtractingPredicate
+     *            The class that contains the topic and partition the current S3Object.
+     * @param s3SourceConfig
+     *            The configuration.
+     * @param offsetManager
+     *            The OffsetManager.
      */
     S3ObjectToSourceRecordMapper(final Transformer transformer,
             final TopicPartitionExtractingPredicate topicPartitionExtractingPredicate,
@@ -72,10 +76,9 @@ public final class S3ObjectToSourceRecordMapper implements Function<S3Object, It
     }
 
     /**
-     * Filters out offsets that we have already processed.
-     * This filter will filter out records that have been seen.
-     * Once a new record is located it will stop filtering.
-     * The {@code Object} being filtered is the Object returned from the {@link Transformer}
+     * Filters out offsets that we have already processed. This filter will filter out records that have been seen. Once
+     * a new record is located it will stop filtering. The {@code Object} being filtered is the Object returned from the
+     * {@link Transformer}
      */
     private class RecordFilter implements Predicate<Object> {
         private final S3OffsetManagerEntry offsetManagerEntry;
@@ -86,11 +89,12 @@ public final class S3ObjectToSourceRecordMapper implements Function<S3Object, It
         }
         @Override
         public boolean test(final Object recordData) {
-            // once we find a record to process (not skip) we no longer skip.  Thus skip record is always the
+            // once we find a record to process (not skip) we no longer skip. Thus skip record is always the
             // negation of checkRecordSkip.
             if (checkRecordSkip) {
-               S3OffsetManagerEntry stored = offsetManager.getEntry(offsetManagerEntry.getManagerKey(),  map -> offsetManagerEntry.fromProperties(map));
-               checkRecordSkip = stored != null ? stored.compareTo(offsetManagerEntry) <= 0  : false;
+                final S3OffsetManagerEntry stored = offsetManager.getEntry(offsetManagerEntry.getManagerKey(),
+                        map -> offsetManagerEntry.fromProperties(map));
+                checkRecordSkip = stored != null && stored.compareTo(offsetManagerEntry) <= 0;
             }
             offsetManagerEntry.incrementRecordCount();
             // this class is a predicate so we have to return true if we want to process the record.
@@ -110,15 +114,15 @@ public final class S3ObjectToSourceRecordMapper implements Function<S3Object, It
         try (S3ObjectInputStream inputStream = s3Object.getObjectContent()) {
             records = transformer.getRecords(() -> inputStream, offsetManagerEntry.getTopic(),
                     offsetManagerEntry.getPartition(), s3SourceConfig);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | RuntimeException e) { // NOPMD Avoid catching Generic exception
             LOGGER.error("Error in input stream for {}", s3Object.getKey(), e);
             if (records == null) {
                 return Collections.emptyIterator();
             }
         }
 
-        // This filter will determine which records to process.  It may make more sense to
-        // TODO: push this down into the Transformer.  We may also want to implement more complex checks.
+        // This filter will determine which records to process. It may make more sense to
+        // TODO: push this down into the Transformer. We may also want to implement more complex checks.
         final RecordFilter recordFilter = new RecordFilter(offsetManagerEntry);
         final byte[] keyBytes = s3Object.getKey().getBytes(StandardCharsets.UTF_8);
 

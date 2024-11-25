@@ -105,6 +105,7 @@ class FileReaderTest {
 
         // assigned 1 object to taskid
         assertThat(summaries).hasNext();
+
         assertThat(summaries.next().getSize()).isEqualTo(1);
         assertThat(summaries).isExhausted();
     }

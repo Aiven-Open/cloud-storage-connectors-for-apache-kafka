@@ -25,18 +25,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
+@SuppressFBWarnings(value = "RV_RETURN_VALUE_IGNORED_INFERRED", justification = "Ignores return value as we expect an exception")
 class S3OffsetManagerEntryTest {
 
-    private static final String  DFLT_BUCKET = "bucket";
-    private static final String  DFLT_KEY = "s3ObjectKey";
-    private static final String  DFLT_TOPIC = "topic";
-    private static final int  DFLT_PARTITION = 1;
+    private static final String DFLT_BUCKET = "bucket";
+    private static final String DFLT_KEY = "s3ObjectKey";
+    private static final String DFLT_TOPIC = "topic";
+    private static final int DFLT_PARTITION = 1;
 
     private S3OffsetManagerEntry underTest;
     @BeforeEach
@@ -63,11 +64,16 @@ class S3OffsetManagerEntryTest {
     void testSetProperty() {
         underTest.setProperty("Foo", "bar");
         assertThat(underTest.getProperties().get("Foo")).isEqualTo("bar");
-        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.BUCKET, "someValue")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.OBJECT_KEY, "someValue")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.TOPIC, "someValue")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.PARTITION, "someValue")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.RECORD_COUNT, "someValue")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.BUCKET, "someValue"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.OBJECT_KEY, "someValue"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.TOPIC, "someValue"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.PARTITION, "someValue"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> underTest.setProperty(S3OffsetManagerEntry.RECORD_COUNT, "someValue"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -78,20 +84,21 @@ class S3OffsetManagerEntryTest {
         assertThat(underTest.getRecordCount()).isEqualTo(0L);
     }
 
-
-    public void testFromProperties() {
+    @Test
+    void testFromProperties() {
         assertThat(underTest.fromProperties(underTest.getProperties()).compareTo(underTest)).isEqualTo(0);
         assertThat(underTest.fromProperties(null)).isNull();
     }
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("fromPropertiesThrowingExceptionData")
-    public void testFromPropertiesThrowingException(String name, Map<String, Object> map, Class<?> expected) {
-        assertThatThrownBy(() -> underTest.fromProperties(map)).isInstanceOf(expected).as(name+" does not throw exception: "+expected.getName());
+    void testFromPropertiesThrowingException(final String name, final Map<String, Object> map,
+            final Class<?> expected) {
+        assertThatThrownBy(() -> underTest.fromProperties(map)).isInstanceOf(expected);
     }
 
     private static Map<String, Object> createPopulatedMap() {
-        Map<String, Object> map = new HashMap<>();
+        final Map<String, Object> map = new HashMap<>();
         map.put(S3OffsetManagerEntry.BUCKET, DFLT_BUCKET);
         map.put(S3OffsetManagerEntry.OBJECT_KEY, DFLT_KEY);
         map.put(S3OffsetManagerEntry.TOPIC, DFLT_TOPIC);
@@ -100,11 +107,12 @@ class S3OffsetManagerEntryTest {
         return map;
     }
     private static Stream<Arguments> fromPropertiesThrowingExceptionData() {
-        String[] fields = {S3OffsetManagerEntry.BUCKET, S3OffsetManagerEntry.OBJECT_KEY, S3OffsetManagerEntry.TOPIC, S3OffsetManagerEntry.PARTITION, S3OffsetManagerEntry.RECORD_COUNT};
-        List<Arguments> lst = new ArrayList<>();
+        final String[] fields = { S3OffsetManagerEntry.BUCKET, S3OffsetManagerEntry.OBJECT_KEY,
+                S3OffsetManagerEntry.TOPIC, S3OffsetManagerEntry.PARTITION, S3OffsetManagerEntry.RECORD_COUNT };
+        final List<Arguments> lst = new ArrayList<>();
 
-        for (String field : fields) {
-            Map<String, Object> map = createPopulatedMap();
+        for (final String field : fields) {
+            final Map<String, Object> map = createPopulatedMap();
             map.remove(field);
             lst.add(Arguments.of("Missing " + field, map, IllegalArgumentException.class));
         }
@@ -113,30 +121,39 @@ class S3OffsetManagerEntryTest {
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("compareToData")
-    void testCompareTo(String name, S3OffsetManagerEntry other, int value) {
-        assertThat(other.compareTo(underTest)).as("Failure in "+name).isEqualTo(value);
+    void testCompareTo(final String name, final S3OffsetManagerEntry other, final int value) {
+        assertThat(other.compareTo(underTest)).as("Failure in " + name).isEqualTo(value);
     }
 
     private static Stream<Arguments> compareToData() {
-        List<Arguments> lst = new ArrayList<>();
+        final List<Arguments> lst = new ArrayList<>();
 
-        lst.add(Arguments.of("Same values", new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION), 0));
-        lst.add(Arguments.of("Bucket before", new S3OffsetManagerEntry(DFLT_BUCKET.substring(0, DFLT_BUCKET.length()-1), DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION), -1));
-        lst.add(Arguments.of("Bucket after", new S3OffsetManagerEntry(DFLT_BUCKET+"5", DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION), 1));
-        lst.add(Arguments.of("Key before", new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY.substring(0, DFLT_KEY.length()-1), DFLT_TOPIC, DFLT_PARTITION), -1));
-        lst.add(Arguments.of("Key after", new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY+"5", DFLT_TOPIC, DFLT_PARTITION), 1));
-        lst.add(Arguments.of("Topic before", new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC.substring(0, DFLT_TOPIC.length()-1), DFLT_PARTITION), -1));
-        lst.add(Arguments.of("Topic after", new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC+"5", DFLT_PARTITION), 1));
-        lst.add(Arguments.of("Partition before", new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION-1), -1));
-        lst.add(Arguments.of("Partition after", new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION+1), 1));
+        lst.add(Arguments.of("Same values", new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION),
+                0));
+        lst.add(Arguments.of("Bucket before", new S3OffsetManagerEntry(
+                DFLT_BUCKET.substring(0, DFLT_BUCKET.length() - 1), DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION), -1));
+        lst.add(Arguments.of("Bucket after",
+                new S3OffsetManagerEntry(DFLT_BUCKET + "5", DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION), 1));
+        lst.add(Arguments.of("Key before", new S3OffsetManagerEntry(DFLT_BUCKET,
+                DFLT_KEY.substring(0, DFLT_KEY.length() - 1), DFLT_TOPIC, DFLT_PARTITION), -1));
+        lst.add(Arguments.of("Key after",
+                new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY + "5", DFLT_TOPIC, DFLT_PARTITION), 1));
+        lst.add(Arguments.of("Topic before", new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY,
+                DFLT_TOPIC.substring(0, DFLT_TOPIC.length() - 1), DFLT_PARTITION), -1));
+        lst.add(Arguments.of("Topic after",
+                new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC + "5", DFLT_PARTITION), 1));
+        lst.add(Arguments.of("Partition before",
+                new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION - 1), -1));
+        lst.add(Arguments.of("Partition after",
+                new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION + 1), 1));
 
         S3OffsetManagerEntry entry = new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION);
-        Map<String, Object> map = entry.getProperties();
+        final Map<String, Object> map = entry.getProperties();
         map.put(S3OffsetManagerEntry.RECORD_COUNT, -1L);
         entry = entry.fromProperties(map);
         lst.add(Arguments.of("Record count before", entry, -1));
 
-         entry = new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION);
+        entry = new S3OffsetManagerEntry(DFLT_BUCKET, DFLT_KEY, DFLT_TOPIC, DFLT_PARTITION);
         entry.incrementRecordCount();
         lst.add(Arguments.of("Record count after", entry, 1));
         return lst.stream();

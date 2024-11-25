@@ -16,11 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.util.Arrays;
-import java.util.Map;
 import java.util.Optional;
 
-import org.apache.avro.generic.GenericData;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;

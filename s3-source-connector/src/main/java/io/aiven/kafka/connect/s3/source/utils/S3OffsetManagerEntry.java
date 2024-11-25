@@ -54,7 +54,7 @@ public class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3
      *            the partition which will be tracked in the offsets
      */
     public S3OffsetManagerEntry(final String bucket, final String s3ObjectKey, final String topic,
-                                final Integer partition) {
+            final Integer partition) {
         data = new HashMap<>();
         data.put(BUCKET, bucket);
         data.put(OBJECT_KEY, s3ObjectKey);

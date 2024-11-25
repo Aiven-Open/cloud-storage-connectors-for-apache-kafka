@@ -29,7 +29,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -43,6 +42,7 @@ import io.aiven.kafka.connect.s3.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.utils.FileReader;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
@@ -67,7 +67,7 @@ public class S3SourceTask extends SourceTask {
     @Deprecated
     public static final String BUCKET = S3OffsetManagerEntry.BUCKET;
     /**
-     * @deprecated use {@link S3OffsetManagerEntry#<></>}.
+     * @deprecated use {@link S3OffsetManagerEntry#TOPIC}.
      */
     @Deprecated
     public static final String TOPIC = S3OffsetManagerEntry.TOPIC;
@@ -125,7 +125,7 @@ public class S3SourceTask extends SourceTask {
         initializeS3Client();
         transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
-        String s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
+        final String s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
         fileReader = new FileReader(s3SourceConfig, s3Bucket, failedObjectKeys);
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;
