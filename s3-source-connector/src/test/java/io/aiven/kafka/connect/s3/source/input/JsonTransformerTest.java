@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.input;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMAS_ENABLE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,7 +27,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -64,7 +62,8 @@ final class JsonTransformerTest {
         final Map<String, String> config = new HashMap<>();
 
         jsonTransformer.configureValueConverter(config, s3SourceConfig);
-        assertEquals("false", config.get(SCHEMAS_ENABLE), "SCHEMAS_ENABLE should be set to false");
+        assertThat(config).as("%s should be set to false", SCHEMAS_ENABLE)
+                .containsEntry(SCHEMAS_ENABLE, Boolean.FALSE.toString());
     }
 
     @Test
@@ -75,7 +74,7 @@ final class JsonTransformerTest {
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
                 s3SourceConfig);
 
-        assertThat(jsonNodes.collect(Collectors.toList())).hasSize(1);
+        assertThat(jsonNodes).hasSize(1);
     }
 
     @Test
@@ -87,7 +86,7 @@ final class JsonTransformerTest {
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
                 s3SourceConfig);
 
-        assertThat(jsonNodes.collect(Collectors.toList())).hasSize(0);
+        assertThat(jsonNodes).isEmpty();
     }
 
     @Test
