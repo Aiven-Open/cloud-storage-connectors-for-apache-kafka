@@ -14,23 +14,17 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.utils;
+package io.aiven.kafka.connect.common.source.offsets;
 
 import static java.util.stream.Collectors.toMap;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
-
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,24 +33,23 @@ public class OffsetManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OffsetManager.class);
     public static final String SEPARATOR = "_";
+    // TODO look using map maker to eject keys which are no longer needed. (i.e. there is only a requirement to actually
+    // have the last file completed in memory plus the current file)
+    // Guava's CacheBuilder might be a good choice
     private final Map<Map<String, Object>, Map<String, Object>> offsets;
 
-    public OffsetManager(final SourceTaskContext context, final S3SourceConfig s3SourceConfig) {
-        final String s3Bucket = s3SourceConfig.getString(S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG);
-        final Set<Integer> partitions = parsePartitions(s3SourceConfig);
-        final Set<String> topics = parseTopics(s3SourceConfig);
+    public OffsetManager(final SourceTaskContext context, final List<Map<String, Object>> partitionKeys) {
 
-        // Build the partition keys and fetch offsets from offset storage
-        final List<Map<String, Object>> partitionKeys = buildPartitionKeys(s3Bucket, partitions, topics);
-        final Map<Map<String, Object>, Map<String, Object>> offsetMap = context.offsetStorageReader()
-                .offsets(partitionKeys);
-
-        LOGGER.info(" ********** offsetMap ***** {}", offsetMap);
-        this.offsets = offsetMap.entrySet()
+        this.offsets = context.offsetStorageReader()
+                .offsets(partitionKeys)
+                .entrySet()
                 .stream()
                 .filter(e -> e.getValue() != null)
                 .collect(toMap(entry -> new HashMap<>(entry.getKey()), entry -> new HashMap<>(entry.getValue())));
-        LOGGER.info(" ********** offsets ***** {}", offsets);
+
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(" ********** offsets ***** {}", offsets);
+        }
     }
 
     /**
@@ -83,7 +76,7 @@ public class OffsetManager {
         return creator.apply(offsets.get(key.getPartitionMap()));
     }
 
-    void updateCurrentOffsets(final OffsetManagerEntry entry) {
+    public void updateCurrentOffsets(final OffsetManagerEntry entry) {
         offsets.compute(entry.getManagerKey().getPartitionMap(), (k, v) -> {
             if (v == null) {
                 return new HashMap<>(entry.getProperties());
@@ -92,28 +85,6 @@ public class OffsetManager {
                 return v;
             }
         });
-    }
-
-    // TODO move this to S3OffsetManager creation.
-    private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {
-        final String partitionString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPIC_PARTITIONS);
-        return Arrays.stream(partitionString.split(",")).map(Integer::parseInt).collect(Collectors.toSet());
-    }
-
-    // TODO move this to S3OffsetManager creation.
-    private static Set<String> parseTopics(final S3SourceConfig s3SourceConfig) {
-        final String topicString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPICS);
-        return Arrays.stream(topicString.split(",")).collect(Collectors.toSet());
-    }
-
-    // TODO move this to S3OffsetManager creation. May not be needed.
-    private static List<Map<String, Object>> buildPartitionKeys(final String bucket, final Set<Integer> partitions,
-            final Set<String> topics) {
-        final List<Map<String, Object>> partitionKeys = new ArrayList<>();
-        partitions.forEach(partition -> topics.forEach(topic -> {
-            partitionKeys.add(ConnectUtils.getPartitionMap(topic, partition, bucket));
-        }));
-        return partitionKeys;
     }
 
     /**

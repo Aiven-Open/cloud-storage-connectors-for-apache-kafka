@@ -29,8 +29,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.errors.ConnectException;
 
+import io.aiven.kafka.connect.common.source.offsets.OffsetManager;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 
@@ -99,7 +101,7 @@ class S3ObjectToSourceRecordMapperTest {
         return new S3ObjectToSourceRecordMapper(new TestingTransformer() {
             @Override
             public Stream<Object> getRecords(final IOSupplier<InputStream> inputStream, final String topic,
-                    final int topicPartition, final S3SourceConfig s3SourceConfig) {
+                    final int topicPartition, final AbstractConfig s3SourceConfig) {
                 final Stream<Object> streamResult = super.getRecords(inputStream, topic, topicPartition,
                         s3SourceConfig);
                 final List<Object> res = streamResult.collect(Collectors.toList());
@@ -139,7 +141,7 @@ class S3ObjectToSourceRecordMapperTest {
         underTest = singleRecordMapper(new TestingTransformer() {
             @Override
             public Stream<Object> getRecords(final IOSupplier<InputStream> inputStream, final String topic,
-                    final int topicPartition, final S3SourceConfig s3SourceConfig) {
+                    final int topicPartition, final AbstractConfig s3SourceConfig) {
                 throw new ConnectException("BOOM!");
             }
         });

@@ -29,7 +29,7 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import org.apache.kafka.common.config.AbstractConfig;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,18 +45,18 @@ public class JsonTransformer implements Transformer {
     final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
+    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
         config.put(SCHEMAS_ENABLE, "false");
     }
 
     @Override
     public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final S3SourceConfig s3SourceConfig) {
+            final int topicPartition, final AbstractConfig sourceConfig) {
         return readJsonRecordsAsStream(inputStreamIOSupplier);
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
+    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
         try {
             return objectMapper.writeValueAsBytes(record);
         } catch (JsonProcessingException e) {

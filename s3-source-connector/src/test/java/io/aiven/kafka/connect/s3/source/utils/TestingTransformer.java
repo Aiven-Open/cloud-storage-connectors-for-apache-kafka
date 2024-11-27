@@ -22,9 +22,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.errors.ConnectException;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 
 import com.nimbusds.jose.util.IOUtils;
@@ -37,13 +37,13 @@ public class TestingTransformer implements Transformer { // NOPMD this is not a 
         return String.format("Transformed(%s)", original);
     }
     @Override
-    public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
+    public void configureValueConverter(final Map<String, String> config, final AbstractConfig s3SourceConfig) {
         config.put("TestingTransformer", "True");
     }
 
     @Override
     public Stream<Object> getRecords(final IOSupplier<InputStream> inputStream, final String topic,
-            final int topicPartition, final S3SourceConfig s3SourceConfig) {
+            final int topicPartition, final AbstractConfig s3SourceConfig) {
         try {
             return Stream.of(transform(IOUtils.readInputStreamToString(inputStream.get())));
         } catch (IOException e) {
@@ -52,7 +52,7 @@ public class TestingTransformer implements Transformer { // NOPMD this is not a 
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
+    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig s3SourceConfig) {
         return ((String) record).getBytes(StandardCharsets.UTF_8);
     }
 }

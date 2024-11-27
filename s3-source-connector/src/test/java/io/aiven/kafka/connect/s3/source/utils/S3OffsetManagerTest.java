@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,19 +30,18 @@ import java.util.Map;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.source.offsets.OffsetManager;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-final class OffsetManagerTest {
+final class S3OffsetManagerTest {
 
     private Map<String, String> properties;
     private static final String TEST_BUCKET = "test-bucket";
-
     private S3SourceConfig s3SourceConfig;
-
     @BeforeEach
     public void setUp() {
         properties = new HashMap<>();
@@ -66,8 +66,7 @@ final class OffsetManagerTest {
         offsets.put(partitionKey, offsetValue);
 
         when(offsetStorageReader.offsets(any())).thenReturn(offsets);
-
-        final OffsetManager offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
+        final OffsetManager offsetManager = new S3OffsetManager(sourceTaskContext, s3SourceConfig);
 
         final Map<Map<String, Object>, Map<String, Object>> retrievedOffsets = offsetManager.getOffsets();
         assertThat(retrievedOffsets.size()).isEqualTo(1);
@@ -81,7 +80,7 @@ final class OffsetManagerTest {
         final Map<Map<String, Object>, Map<String, Object>> offsets = new HashMap<>();
         offsets.put(offsetEntry.getManagerKey().getPartitionMap(), offsetEntry.getProperties());
 
-        final OffsetManager underTest = new OffsetManager(offsets);
+        final OffsetManager underTest = new S3OffsetManager(offsets);
 
         offsetEntry.setProperty("MyProperty", "WOW");
 
@@ -98,7 +97,7 @@ final class OffsetManagerTest {
     @Test
     void updateCurrentOffsetsTestNewEntry() {
 
-        final OffsetManager underTest = new OffsetManager(new HashMap<>());
+        final OffsetManager underTest = new S3OffsetManager(new HashMap<>());
 
         final TestingManagerEntry offsetEntry = new TestingManagerEntry("bucket", "topic1", 0);
         underTest.updateCurrentOffsets(offsetEntry);
@@ -115,7 +114,7 @@ final class OffsetManagerTest {
     @Test
     void updateCurrentOffsetsDataNotLost() {
 
-        final OffsetManager underTest = new OffsetManager(new HashMap<>());
+        final OffsetManager underTest = new S3OffsetManager(new HashMap<>());
 
         final TestingManagerEntry offsetEntry = new TestingManagerEntry("bucket", "topic1", 0);
         offsetEntry.setProperty("test", "WOW");
@@ -134,7 +133,7 @@ final class OffsetManagerTest {
     }
 
     private void setBasicProperties() {
-        properties.put(S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET);
+        properties.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET);
         properties.put(TARGET_TOPIC_PARTITIONS, "0,1");
         properties.put(TARGET_TOPICS, "topic1,topic2");
     }

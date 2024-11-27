@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.s3.source.utils;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import io.aiven.kafka.connect.common.source.offsets.OffsetManager;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 

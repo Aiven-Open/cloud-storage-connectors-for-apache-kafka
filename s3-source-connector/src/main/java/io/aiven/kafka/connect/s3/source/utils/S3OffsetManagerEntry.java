@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.aiven.kafka.connect.common.source.offsets.OffsetManager;
+
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3OffsetManagerEntry> {

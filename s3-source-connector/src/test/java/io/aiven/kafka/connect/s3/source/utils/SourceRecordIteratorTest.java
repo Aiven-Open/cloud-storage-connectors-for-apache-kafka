@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import io.aiven.kafka.connect.common.source.offsets.OffsetManager;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.services.s3.AmazonS3;
@@ -106,7 +107,7 @@ final class SourceRecordIteratorTest {
         final String[] keys = { "topic-00001-key1.txt", "topic-00001-key2.txt", "topic-00001-key3.txt" };
         multiKeySetUp(keys, DFLT_TOPIC, 1);
         // create an empty offset manager.
-        final OffsetManager offsetManager = new OffsetManager(new HashMap<>());
+        final OffsetManager offsetManager = new S3OffsetManager(new HashMap<>());
 
         final Iterator<S3ObjectSummary> s3ObjectSummaryIterator = s3ObjectSummaries.iterator();
 
@@ -127,7 +128,7 @@ final class SourceRecordIteratorTest {
     void skipObjectsTest() {
         final String[] keys = { "topic-00001-key1.txt", "topic-00001-key2.txt", "topic-00001-key3.txt" };
         final List<S3OffsetManagerEntry> entries = multiKeySetUp(keys, DFLT_TOPIC, 1);
-        final OffsetManager offsetManager = new OffsetManager(new HashMap<>());
+        final OffsetManager offsetManager = new S3OffsetManager(new HashMap<>());
         // set the key to skip.
         offsetManager.updateCurrentOffsets(entries.get(0));
 

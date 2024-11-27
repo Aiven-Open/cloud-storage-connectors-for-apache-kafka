@@ -20,18 +20,18 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import org.apache.kafka.common.config.AbstractConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 
 public interface Transformer {
 
     // TODO make this method accept an S3OffsetManagerEntry and update the values in the configuration directly.
-    void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
+    void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
 
     // TODO make this method accept an S3OffsetManagerEntry to retrieve the topic an topicParitiion.
     Stream<Object> getRecords(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition,
-            S3SourceConfig s3SourceConfig);
+            AbstractConfig sourceConfig);
 
-    byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
+    byte[] getValueBytes(Object record, String topic, AbstractConfig sourceConfig);
 }
