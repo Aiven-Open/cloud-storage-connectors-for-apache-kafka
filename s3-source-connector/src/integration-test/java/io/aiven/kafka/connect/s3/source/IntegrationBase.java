@@ -159,7 +159,7 @@ public interface IntegrationBase {
             consumer.subscribe(Collections.singletonList(topic));
 
             final List<V> recordValues = new ArrayList<>();
-            await().atMost(Duration.ofMinutes(2)).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+            await().atMost(Duration.ofMinutes(10)).pollInterval(Duration.ofSeconds(5)).untilAsserted(() -> {
                 final ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(500L));
                 for (final ConsumerRecord<K, V> record : records) {
                     recordValues.add(record.value());

@@ -25,7 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Spliterator;
-import java.util.Spliterators;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -66,15 +66,64 @@ public class AvroTransformer implements Transformer {
 
     private Stream<Object> readAvroRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,
             final DatumReader<GenericRecord> datumReader) {
-        try (DataFileStream<GenericRecord> dataFileStream = new DataFileStream<>(inputStreamIOSupplier.get(),
-                datumReader)) {
-            // Wrap DataFileStream in a Stream using a Spliterator for lazy processing
-            return StreamSupport.stream(
-                    Spliterators.spliteratorUnknownSize(dataFileStream, Spliterator.ORDERED | Spliterator.NONNULL),
-                    false);
+        InputStream inputStream; // NOPMD CloseResource: being closed in try resources iterator
+        DataFileStream<GenericRecord> dataFileStream; // NOPMD CloseResource: being closed in try resources iterator
+        try {
+            // Open input stream from S3
+            inputStream = inputStreamIOSupplier.get();
+
+            // Ensure the DataFileStream is initialized correctly with the open stream
+            dataFileStream = new DataFileStream<>(inputStream, datumReader);
+
+            // Wrap DataFileStream in a Stream using a custom Spliterator for lazy processing
+            return StreamSupport.stream(new AvroRecordSpliterator<>(dataFileStream), false).onClose(() -> {
+                try {
+                    inputStream.close(); // Ensure the reader is closed after streaming
+                } catch (IOException e) {
+                    LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
+                }
+            });
         } catch (IOException e) {
             LOGGER.error("Error in DataFileStream: {}", e.getMessage(), e);
             return Stream.empty(); // Return an empty stream if initialization fails
+        }
+    }
+
+    private static class AvroRecordSpliterator<T> implements Spliterator<T> {
+        private final DataFileStream<GenericRecord> dataFileStream;
+
+        public AvroRecordSpliterator(final DataFileStream<GenericRecord> dataFileStream) {
+            this.dataFileStream = dataFileStream;
+        }
+
+        @Override
+        public boolean tryAdvance(final Consumer<? super T> action) {
+            try {
+                if (dataFileStream.hasNext()) {
+                    final GenericRecord record = dataFileStream.next();
+                    action.accept((T) record);
+                    return true;
+                }
+            } catch (Exception e) { // NOPMD AvoidCatchingGenericException
+                LOGGER.error("Error while reading Avro record: {}", e.getMessage(), e);
+                return false;
+            }
+            return false;
+        }
+
+        @Override
+        public Spliterator<T> trySplit() {
+            return null; // Can't split the data stream as DataFileStream is sequential
+        }
+
+        @Override
+        public long estimateSize() {
+            return Long.MAX_VALUE; // We don't know the size upfront
+        }
+
+        @Override
+        public int characteristics() {
+            return Spliterator.ORDERED | Spliterator.NONNULL;
         }
     }
 
