@@ -30,11 +30,9 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Region;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-@SuppressWarnings({ "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
+
 public class S3SourceBaseConfig extends SourceCommonConfig {
-    public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceBaseConfig.class);
+
     private final S3ConfigFragment s3ConfigFragment;
     protected S3SourceBaseConfig(ConfigDef definition, Map<String, String> originals) { // NOPMD UnusedAssignment
         super(definition, handleDeprecatedYyyyUppercase(originals));

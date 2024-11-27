@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.MAX_POLL_RECORDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -38,8 +39,8 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
+import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.input.Transformer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,7 +76,7 @@ class RecordProcessorTest {
 
     @Test
     void testProcessRecordsNoRecords() {
-        when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
+        when(s3SourceConfig.getInt(MAX_POLL_RECORDS)).thenReturn(5);
         when(sourceRecordIterator.hasNext()).thenReturn(false);
 
         final List<SourceRecord> results = new ArrayList<>();
@@ -94,7 +95,7 @@ class RecordProcessorTest {
 
     @Test
     void testProcessRecordsWithRecords() throws ConnectException {
-        when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
+        when(s3SourceConfig.getInt(MAX_POLL_RECORDS)).thenReturn(5);
         when(sourceRecordIterator.hasNext()).thenReturn(true, false); // One iteration with records
 
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
@@ -117,7 +118,7 @@ class RecordProcessorTest {
 
     @Test
     void testProcessRecordsConnectorStopped() {
-        when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
+        when(s3SourceConfig.getInt(MAX_POLL_RECORDS)).thenReturn(5);
         connectorStopped.set(true); // Simulate connector stopped
 
         final List<SourceRecord> results = new ArrayList<>();

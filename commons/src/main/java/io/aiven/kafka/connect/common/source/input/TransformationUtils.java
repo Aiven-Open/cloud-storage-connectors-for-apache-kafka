@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.input;
+package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.VALUE_SERIALIZER;
+import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.VALUE_SERIALIZER;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -26,7 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import org.apache.kafka.common.config.AbstractConfig;
 
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.generic.GenericRecord;
@@ -40,12 +40,12 @@ final public class TransformationUtils {
         // hidden
     }
 
-    static byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String topic,
-            final S3SourceConfig s3SourceConfig) {
+    public static byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String topic,
+            final AbstractConfig sourceConfig) {
         final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
-                s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
+                sourceConfig.getString(SCHEMA_REGISTRY_URL));
 
-        try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) s3SourceConfig.getClass(VALUE_SERIALIZER)
+        try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) sourceConfig.getClass(VALUE_SERIALIZER)
                 .getDeclaredConstructor()
                 .newInstance(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             avroSerializer.configure(config, false);

@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.MAX_POLL_RECORDS;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -28,8 +30,8 @@ import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
+import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.input.Transformer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +51,7 @@ public final class RecordProcessor {
             final OffsetManager offsetManager) {
 
         final Map<String, String> conversionConfig = new HashMap<>();
-        final int maxPollRecords = s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS);
+        final int maxPollRecords = s3SourceConfig.getInt(MAX_POLL_RECORDS);
 
         for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
             final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();

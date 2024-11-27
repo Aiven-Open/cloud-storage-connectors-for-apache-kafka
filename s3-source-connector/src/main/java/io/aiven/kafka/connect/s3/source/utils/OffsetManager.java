@@ -16,6 +16,9 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static java.util.stream.Collectors.toMap;
 
@@ -42,7 +45,7 @@ public class OffsetManager {
     private final Map<Map<String, Object>, Map<String, Object>> offsets;
 
     public OffsetManager(final SourceTaskContext context, final S3SourceConfig s3SourceConfig) {
-        final String s3Bucket = s3SourceConfig.getString(S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG);
+        final String s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
         final Set<Integer> partitions = parsePartitions(s3SourceConfig);
         final Set<String> topics = parseTopics(s3SourceConfig);
 
@@ -123,12 +126,12 @@ public class OffsetManager {
     }
 
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {
-        final String partitionString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPIC_PARTITIONS);
+        final String partitionString = s3SourceConfig.getString(TARGET_TOPIC_PARTITIONS);
         return Arrays.stream(partitionString.split(",")).map(Integer::parseInt).collect(Collectors.toSet());
     }
 
     private static Set<String> parseTopics(final S3SourceConfig s3SourceConfig) {
-        final String topicString = s3SourceConfig.getString(S3SourceConfig.TARGET_TOPICS);
+        final String topicString = s3SourceConfig.getString(TARGET_TOPICS);
         return Arrays.stream(topicString.split(",")).collect(Collectors.toSet());
     }
 

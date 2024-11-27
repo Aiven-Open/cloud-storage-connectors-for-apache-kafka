@@ -20,8 +20,41 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+
 public class SourceCommonConfig extends CommonConfig {
+
+    private final SchemaRegistryFragment schemaRegistryFragment;
+    private final SourceConfigFragment sourceConfigFragment;
+
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
         super(definition, originals);
+        // Construct Fragments
+        schemaRegistryFragment = new SchemaRegistryFragment(this);
+        sourceConfigFragment = new SourceConfigFragment(this);
+        // TODO: calls getOutputFields, can be overridden in subclasses.
+        validate(); // NOPMD ConstructorCallsOverridableMethod
     }
+
+    private void validate() {
+        schemaRegistryFragment.validate();
+        sourceConfigFragment.validate();
+
+    }
+
+    public InputFormat getInputFormat() {
+        return schemaRegistryFragment.getInputFormat();
+    }
+
+    public String getSchemaRegistryUrl() {
+        return schemaRegistryFragment.getSchemaRegistryUrl();
+    }
+
+    public String getTargetTopics() {
+        return sourceConfigFragment.getTargetTopics();
+    }
+    public String getTargetTopicPartitions() {
+        return sourceConfigFragment.getTargetTopicPartitions();
+    }
+
 }

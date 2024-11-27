@@ -67,23 +67,9 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
+  implementation(project(":s3-commons"))
   implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
   implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
-
-  implementation("org.apache.parquet:parquet-hadoop:$parquetVersion")
-  testImplementation("org.apache.parquet:parquet-hadoop:$parquetVersion")
-  integrationTestImplementation("org.apache.parquet:parquet-hadoop:$parquetVersion")
-
-  implementation("org.apache.parquet:parquet-avro:$parquetVersion") {
-    exclude(group = "org.xerial.snappy", module = "snappy-java")
-    exclude(group = "org.slf4j", module = "slf4j-api")
-    exclude(group = "org.apache.avro", module = "avro")
-  }
-  testImplementation("org.apache.parquet:parquet-avro:$parquetVersion") {
-    exclude(group = "org.xerial.snappy", module = "snappy-java")
-    exclude(group = "org.slf4j", module = "slf4j-api")
-    exclude(group = "org.apache.avro", module = "avro")
-  }
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -91,7 +77,7 @@ dependencies {
   implementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
-
+  integrationTestImplementation("org.apache.parquet:parquet-hadoop:1.11.2")
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
 
