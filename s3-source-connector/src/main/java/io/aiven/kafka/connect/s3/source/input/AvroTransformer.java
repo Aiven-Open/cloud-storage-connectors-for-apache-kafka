@@ -78,7 +78,7 @@ public class AvroTransformer implements Transformer {
             // Wrap DataFileStream in a Stream using a custom Spliterator for lazy processing
             return StreamSupport.stream(new AvroRecordSpliterator<>(dataFileStream), false).onClose(() -> {
                 try {
-                    inputStream.close(); // Ensure the reader is closed after streaming
+                    dataFileStream.close(); // Ensure the reader is closed after streaming
                 } catch (IOException e) {
                     LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
                 }
