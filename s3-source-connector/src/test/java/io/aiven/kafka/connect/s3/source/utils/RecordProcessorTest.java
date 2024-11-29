@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -28,7 +27,6 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +36,7 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
+import io.aiven.kafka.connect.common.source.offsets.OffsetManager;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 
@@ -85,9 +84,7 @@ class RecordProcessorTest {
             s3SourceConfig,
             Optional.of(keyConverter),
             valueConverter,
-            connectorStopped,
-            transformer, fileReader, offsetManager
-        );
+            connectorStopped);
 
         assertThat(processedRecords).as("Processed records should be empty when there are no records.").isEmpty();
     }
@@ -96,9 +93,11 @@ class RecordProcessorTest {
     void testProcessRecordsWithRecords() throws ConnectException {
         when(s3SourceConfig.getInt(S3SourceConfig.MAX_POLL_RECORDS)).thenReturn(5);
         when(sourceRecordIterator.hasNext()).thenReturn(true, false); // One iteration with records
+        when(valueConverter.toConnectData(any(), any())).thenReturn(new SchemaAndValue(null, "Converted value".getBytes(StandardCharsets.UTF_8)));
 
-        final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(sourceRecordIterator.next()).thenReturn(mockRecord);
+        final S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry("bucket", "s3ObjectKey", "topic", 1);
+        final S3SourceRecord s3SourceRecord = new S3SourceRecord(offsetManagerEntry, new byte[0], new byte[0]);
+        when(sourceRecordIterator.next()).thenReturn(s3SourceRecord);
 
         final List<SourceRecord> results = new ArrayList<>();
         RecordProcessor.processRecords(
@@ -107,8 +106,7 @@ class RecordProcessorTest {
             s3SourceConfig,
             Optional.of(keyConverter),
             valueConverter,
-            connectorStopped,
-            transformer, fileReader, offsetManager
+            connectorStopped
         );
 
         assertThat(results).hasSize(1);
@@ -127,28 +125,10 @@ class RecordProcessorTest {
             s3SourceConfig,
             Optional.of(keyConverter),
             valueConverter,
-            connectorStopped,
-            transformer, fileReader, offsetManager
+            connectorStopped
         );
 
         assertThat(processedRecords).as("Processed records should be empty when connector is stopped.").isEmpty();
         verify(sourceRecordIterator, never()).next();
-    }
-
-    @Test
-    void testCreateSourceRecords() {
-        final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getTopic()).thenReturn("test-topic");
-        when(mockRecord.key()).thenReturn("mock-key".getBytes(StandardCharsets.UTF_8));
-        when(mockRecord.value()).thenReturn("mock-value".getBytes(StandardCharsets.UTF_8));
-
-        when(valueConverter.toConnectData(anyString(), any()))
-                .thenReturn(new SchemaAndValue(null, "mock-value-converted"));
-        when(mockRecord.getSourceRecord(anyString(), any(), any())).thenReturn(mock(SourceRecord.class));
-
-        final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig,
-                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, fileReader, offsetManager);
-
-        assertThat(sourceRecords).isNotNull();
     }
 }

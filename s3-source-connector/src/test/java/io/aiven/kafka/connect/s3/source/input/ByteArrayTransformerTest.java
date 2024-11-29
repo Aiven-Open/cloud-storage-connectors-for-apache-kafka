@@ -55,7 +55,6 @@ final class ByteArrayTransformerTest {
 
         final Stream<Object> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
                 s3SourceConfig);
-
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(1);
         assertThat((byte[]) recs.get(0)).isEqualTo(data);
