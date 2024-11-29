@@ -206,11 +206,17 @@ final class IntegrationTest implements IntegrationBase {
         final Schema.Parser parser = new Schema.Parser();
         final Schema schema = parser.parse(schemaJson);
 
-        final byte[] outputStream1 = generateNextAvroMessagesStartingFromId(1, 100, schema);
-        final byte[] outputStream2 = generateNextAvroMessagesStartingFromId(101, 100, schema);
-        final byte[] outputStream3 = generateNextAvroMessagesStartingFromId(201, 100, schema);
-        final byte[] outputStream4 = generateNextAvroMessagesStartingFromId(301, 100, schema);
-        final byte[] outputStream5 = generateNextAvroMessagesStartingFromId(401, 100, schema);
+        final int numOfRecsFactor = 5000;
+
+        final byte[] outputStream1 = generateNextAvroMessagesStartingFromId(1, numOfRecsFactor, schema);
+        final byte[] outputStream2 = generateNextAvroMessagesStartingFromId(numOfRecsFactor + 1, numOfRecsFactor,
+                schema);
+        final byte[] outputStream3 = generateNextAvroMessagesStartingFromId(2 * numOfRecsFactor + 1, numOfRecsFactor,
+                schema);
+        final byte[] outputStream4 = generateNextAvroMessagesStartingFromId(3 * numOfRecsFactor + 1, numOfRecsFactor,
+                schema);
+        final byte[] outputStream5 = generateNextAvroMessagesStartingFromId(4 * numOfRecsFactor + 1, numOfRecsFactor,
+                schema);
 
         final Set<String> offsetKeys = new HashSet<>();
 
@@ -224,7 +230,7 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
         // Poll Avro messages from the Kafka topic and deserialize them
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 500,
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, numOfRecsFactor * 5,
                 connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl()); // Ensure this method
                                                                                              // deserializes Avro
 
@@ -232,13 +238,13 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(records).map(record -> entry(record.get("id"), String.valueOf(record.get("message"))))
                 .contains(entry(1, "Hello, Kafka Connect S3 Source! object 1"),
                         entry(2, "Hello, Kafka Connect S3 Source! object 2"),
-                        entry(100, "Hello, Kafka Connect S3 Source! object 100"),
-                        entry(200, "Hello, Kafka Connect S3 Source! object 200"),
-                        entry(300, "Hello, Kafka Connect S3 Source! object 300"),
-                        entry(400, "Hello, Kafka Connect S3 Source! object 400"),
-                        entry(500, "Hello, Kafka Connect S3 Source! object 500"));
+                        entry(numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + numOfRecsFactor),
+                        entry(2 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (2 * numOfRecsFactor)),
+                        entry(3 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (3 * numOfRecsFactor)),
+                        entry(4 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (4 * numOfRecsFactor)),
+                        entry(5 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (5 * numOfRecsFactor)));
 
-        verifyOffsetPositions(offsetKeys.stream().collect(Collectors.toMap(Function.identity(), s -> 100)),
+        verifyOffsetPositions(offsetKeys.stream().collect(Collectors.toMap(Function.identity(), s -> numOfRecsFactor)),
                 connectRunner.getBootstrapServers());
     }
 
