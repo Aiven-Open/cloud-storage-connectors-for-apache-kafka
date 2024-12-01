@@ -26,54 +26,42 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.List;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.input.Transformer;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 final class SourceRecordIteratorTest {
 
-    private AmazonS3 mockS3Client;
     private S3SourceConfig mockConfig;
     private OffsetManager mockOffsetManager;
     private Transformer mockTransformer;
 
-    private FileReader mockFileReader;
+    private AWSV2SourceClient mockSourceApiClient;
 
     @BeforeEach
     public void setUp() {
-        mockS3Client = mock(AmazonS3.class);
         mockConfig = mock(S3SourceConfig.class);
         mockOffsetManager = mock(OffsetManager.class);
         mockTransformer = mock(Transformer.class);
-        mockFileReader = mock(FileReader.class);
+        mockSourceApiClient = mock(AWSV2SourceClient.class);
     }
 
     @Test
     void testIteratorProcessesS3Objects() throws Exception {
-        final S3ObjectSummary mockSummary = new S3ObjectSummary();
-        mockSummary.setKey("topic-00001-abc123.txt");
 
-        // Mock list of S3 object summaries
-        final List<S3ObjectSummary> mockObjectSummaries = Collections.singletonList(mockSummary);
-
-        final ListObjectsV2Result result = mockListObjectsResult(mockObjectSummaries);
-        when(mockS3Client.listObjectsV2(anyString())).thenReturn(result);
+        final String key = "topic-00001-abc123.txt";
 
         // Mock S3Object and InputStream
         try (S3Object mockS3Object = mock(S3Object.class);
                 S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
                         null);) {
-            when(mockS3Client.getObject(anyString(), anyString())).thenReturn(mockS3Object);
+            when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
 
             when(mockTransformer.getRecords(any(), anyString(), anyInt(), any())).thenReturn(Stream.of(new Object()));
@@ -84,26 +72,19 @@ final class SourceRecordIteratorTest {
 
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
-            when(mockFileReader.fetchObjectSummaries(any())).thenReturn(Collections.emptyIterator());
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockS3Client, "test-bucket",
-                    mockOffsetManager, mockTransformer, mockFileReader);
+            when(mockSourceApiClient.getListOfObjects(any())).thenReturn(Collections.emptyIterator());
+            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+                    mockSourceApiClient);
 
             assertThat(iterator.hasNext()).isFalse();
             assertThat(iterator.next()).isNull();
 
-            when(mockFileReader.fetchObjectSummaries(any())).thenReturn(mockObjectSummaries.listIterator());
+            when(mockSourceApiClient.getListOfObjects(any())).thenReturn(Collections.singletonList(key).listIterator());
 
-            iterator = new SourceRecordIterator(mockConfig, mockS3Client, "test-bucket", mockOffsetManager,
-                    mockTransformer, mockFileReader);
+            iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
 
             assertThat(iterator.hasNext()).isTrue();
             assertThat(iterator.next()).isNotNull();
         }
-    }
-
-    private ListObjectsV2Result mockListObjectsResult(final List<S3ObjectSummary> summaries) {
-        final ListObjectsV2Result result = mock(ListObjectsV2Result.class);
-        when(result.getObjectSummaries()).thenReturn(summaries);
-        return result;
     }
 }

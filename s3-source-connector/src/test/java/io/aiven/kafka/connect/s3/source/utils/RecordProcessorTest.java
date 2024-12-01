@@ -62,7 +62,7 @@ class RecordProcessorTest {
     private OffsetManager offsetManager;
 
     @Mock
-    private FileReader fileReader;
+    private AWSV2SourceClient sourceClient;
 
     private AtomicBoolean connectorStopped;
     private Iterator<S3SourceRecord> sourceRecordIterator;
@@ -86,7 +86,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            transformer, fileReader, offsetManager
+            transformer, sourceClient, offsetManager
         );
 
         assertThat(processedRecords).as("Processed records should be empty when there are no records.").isEmpty();
@@ -108,7 +108,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            transformer, fileReader, offsetManager
+            transformer, sourceClient, offsetManager
         );
 
         assertThat(results).hasSize(1);
@@ -128,7 +128,7 @@ class RecordProcessorTest {
             Optional.of(keyConverter),
             valueConverter,
             connectorStopped,
-            transformer, fileReader, offsetManager
+            transformer, sourceClient, offsetManager
         );
 
         assertThat(processedRecords).as("Processed records should be empty when connector is stopped.").isEmpty();
@@ -147,7 +147,7 @@ class RecordProcessorTest {
         when(mockRecord.getSourceRecord(anyString(), any(), any())).thenReturn(mock(SourceRecord.class));
 
         final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig,
-                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, fileReader, offsetManager);
+                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, sourceClient, offsetManager);
 
         assertThat(sourceRecords).isNotNull();
     }

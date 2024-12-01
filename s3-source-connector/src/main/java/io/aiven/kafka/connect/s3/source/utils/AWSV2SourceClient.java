@@ -25,14 +25,20 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.source.api.SourceApiClient;
+import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.codehaus.plexus.util.StringUtils;
 
-public class FileReader implements SourceApiClient<S3Object> {
+/**
+ * Called AWSV2SourceClient as this source client implements the V2 version of the aws client library. Handles all calls
+ * and authentication to AWS and returns useable objects to the SourceRecordIterator.
+ */
+public class AWSV2SourceClient implements SourceApiClient<S3Object> {
 
     public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
@@ -41,7 +47,31 @@ public class FileReader implements SourceApiClient<S3Object> {
 
     private final Set<String> failedObjectKeys;
 
-    public FileReader(final AmazonS3 s3Client, final S3SourceConfig s3SourceConfig,
+    /**
+     * @param s3SourceConfig
+     *            configuration for Source connector
+     * @param failedObjectKeys
+     *            all objectKeys which have already been tried but have been unable to process.
+     */
+    public AWSV2SourceClient(final S3SourceConfig s3SourceConfig, final Set<String> failedObjectKeys) {
+        this.s3SourceConfig = s3SourceConfig;
+        S3ClientFactory s3ClientFactory = new S3ClientFactory();
+        this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
+        this.bucketName = s3SourceConfig.getAwsS3BucketName();
+        this.failedObjectKeys = new HashSet<>(failedObjectKeys);
+    }
+
+    /**
+     * Valid for testing
+     *
+     * @param s3Client
+     *            amazonS3Client
+     * @param s3SourceConfig
+     *            configuration for Source connector
+     * @param failedObjectKeys
+     *            all objectKeys which have already been tried but have been unable to process.
+     */
+    protected AWSV2SourceClient(final AmazonS3 s3Client, final S3SourceConfig s3SourceConfig,
             final Set<String> failedObjectKeys) {
         this.s3SourceConfig = s3SourceConfig;
         this.s3Client = s3Client;
@@ -50,12 +80,15 @@ public class FileReader implements SourceApiClient<S3Object> {
     }
 
     @Override
-    public Iterator<S3ObjectSummary> getListOfObjects(final String startToken) {
+    public Iterator<String> getListOfObjects(final String startToken) {
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
-                .withStartAfter(startToken)
                 .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR);
 
-        final Stream<S3ObjectSummary> s3ObjectStream = Stream
+        if (StringUtils.isNotBlank(startToken)) {
+            request.withStartAfter(startToken);
+        }
+
+        final Stream<String> s3ObjectStream = Stream
                 .iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
                     if (response.isTruncated()) {
                         return s3Client.listObjectsV2(new ListObjectsV2Request().withBucketName(bucketName)
@@ -69,15 +102,17 @@ public class FileReader implements SourceApiClient<S3Object> {
                         .stream()
                         .filter(objectSummary -> objectSummary.getSize() > 0)
                         .filter(objectSummary -> assignObjectToTask(objectSummary.getKey()))
-                        .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey())));
+                        .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey())))
+                .map(S3ObjectSummary::getKey);
         return s3ObjectStream.iterator();
     }
 
     @Override
-    public S3Object getObject(String ObjectKey) {
-        return s3Client.getObject(bucketName, ObjectKey);
+    public S3Object getObject(final String objectKey) {
+        return s3Client.getObject(bucketName, objectKey);
     }
 
+    @Override
     public void addFailedObjectKeys(final String objectKey) {
         this.failedObjectKeys.add(objectKey);
     }
@@ -87,6 +122,10 @@ public class FileReader implements SourceApiClient<S3Object> {
         final int taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
         final int taskAssignment = Math.floorMod(objectKey.hashCode(), maxTasks);
         return taskAssignment == taskId;
+    }
+
+    public void shutdown() {
+        s3Client.shutdown();
     }
 
 }
