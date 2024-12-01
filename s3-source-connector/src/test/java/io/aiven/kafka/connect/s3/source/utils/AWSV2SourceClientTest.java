@@ -59,7 +59,7 @@ class FileReaderTest {
         final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(Collections.emptyList(), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        final Iterator<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
+        final Iterator<S3ObjectSummary> summaries = fileReader.getListOfObjects(null);
         assertThat(summaries).isExhausted();
     }
 
@@ -101,7 +101,7 @@ class FileReaderTest {
         final ListObjectsV2Result listObjectsV2Result = getListObjectsV2Result();
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        final Iterator<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
+        final Iterator<S3ObjectSummary> summaries = fileReader.getListOfObjects(null);
 
         // assigned 1 object to taskid
         assertThat(summaries).hasNext();
@@ -122,7 +122,7 @@ class FileReaderTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
 
-        final Iterator<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
+        final Iterator<S3ObjectSummary> summaries = fileReader.getListOfObjects(null);
 
         assertThat(summaries.next()).isNotNull();
     }
@@ -149,14 +149,15 @@ class FileReaderTest {
                 Collections.singletonList(objectSummary), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        return fileReader.fetchObjectSummaries(s3Client);
+        return fileReader.getListOfObjects(null);
     }
 
     public void initializeWithTaskConfigs(final int maxTasks, final int taskId) {
         final Map<String, String> configMap = getConfigMap(maxTasks, taskId);
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
-        fileReader = new FileReader(s3SourceConfig, TEST_BUCKET, Collections.emptySet());
         s3Client = mock(AmazonS3.class);
+        fileReader = new FileReader(s3Client, s3SourceConfig, Collections.emptySet());
+
     }
 
     private ListObjectsV2Result getListObjectsV2Result() {

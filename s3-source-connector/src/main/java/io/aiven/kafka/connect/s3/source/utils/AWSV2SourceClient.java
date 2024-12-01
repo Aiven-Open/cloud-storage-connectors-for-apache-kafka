@@ -24,29 +24,35 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.source.api.SourceApiClient;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
-public class FileReader {
+public class FileReader implements SourceApiClient<S3Object> {
 
     public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
+    private final AmazonS3 s3Client;
     private final String bucketName;
 
     private final Set<String> failedObjectKeys;
 
-    public FileReader(final S3SourceConfig s3SourceConfig, final String bucketName,
+    public FileReader(final AmazonS3 s3Client, final S3SourceConfig s3SourceConfig,
             final Set<String> failedObjectKeys) {
         this.s3SourceConfig = s3SourceConfig;
-        this.bucketName = bucketName;
+        this.s3Client = s3Client;
+        this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
     }
 
-    Iterator<S3ObjectSummary> fetchObjectSummaries(final AmazonS3 s3Client) {
+    @Override
+    public Iterator<S3ObjectSummary> getListOfObjects(final String startToken) {
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
+                .withStartAfter(startToken)
                 .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR);
 
         final Stream<S3ObjectSummary> s3ObjectStream = Stream
@@ -67,6 +73,11 @@ public class FileReader {
         return s3ObjectStream.iterator();
     }
 
+    @Override
+    public S3Object getObject(String ObjectKey) {
+        return s3Client.getObject(bucketName, ObjectKey);
+    }
+
     public void addFailedObjectKeys(final String objectKey) {
         this.failedObjectKeys.add(objectKey);
     }
@@ -77,4 +88,5 @@ public class FileReader {
         final int taskAssignment = Math.floorMod(objectKey.hashCode(), maxTasks);
         return taskAssignment == taskId;
     }
+
 }
