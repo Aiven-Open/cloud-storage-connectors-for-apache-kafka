@@ -52,4 +52,5 @@ public interface SourceApiClient<T> {
      *            a unique key identifying an object that was not processable and was skipped.
      */
     void addFailedObjectKeys(String objectKey);
+
 }
