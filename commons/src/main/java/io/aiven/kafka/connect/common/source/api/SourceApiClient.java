@@ -39,11 +39,11 @@ public interface SourceApiClient<T> {
 
     /**
      *
-     * @param ObjectKey
+     * @param objectKey
      *            is the unique identifier that will identify the exact object to return from the api.
      * @return a specific Object from the API
      */
-    T getObject(String ObjectKey);
+    T getObject(String objectKey);
 
     /**
      * Allows the implmenetation to build a map of entries that could not be processed.
