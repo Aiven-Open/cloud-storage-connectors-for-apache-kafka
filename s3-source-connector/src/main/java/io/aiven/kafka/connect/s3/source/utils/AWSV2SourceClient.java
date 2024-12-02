@@ -55,7 +55,7 @@ public class AWSV2SourceClient implements SourceApiClient<S3Object> {
      */
     public AWSV2SourceClient(final S3SourceConfig s3SourceConfig, final Set<String> failedObjectKeys) {
         this.s3SourceConfig = s3SourceConfig;
-        S3ClientFactory s3ClientFactory = new S3ClientFactory();
+        final S3ClientFactory s3ClientFactory = new S3ClientFactory();
         this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
