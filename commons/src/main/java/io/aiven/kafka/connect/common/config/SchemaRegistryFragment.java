@@ -23,11 +23,11 @@ import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 
-public class SchemaRegistryFragment extends ConfigFragment {
-    private static final String GROUP_OTHER = "OTHER_CFG";
+public final class SchemaRegistryFragment extends ConfigFragment {
+    private static final String SCHEMAREGISTRY_GROUP = "Schema registry group";
     public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
     public static final String VALUE_CONVERTER_SCHEMA_REGISTRY_URL = "value.converter.schema.registry.url";
-    public static final String VALUE_SERIALIZER = "value.serializer";
+    public static final String AVRO_VALUE_SERIALIZER = "value.serializer";
     public static final String INPUT_FORMAT_KEY = "input.format";
     public static final String SCHEMAS_ENABLE = "schemas.enable";
 
@@ -44,20 +44,20 @@ public class SchemaRegistryFragment extends ConfigFragment {
     public static ConfigDef update(final ConfigDef configDef) {
         int srCounter = 0;
         configDef.define(SCHEMA_REGISTRY_URL, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_OTHER, srCounter++, ConfigDef.Width.NONE,
-                SCHEMA_REGISTRY_URL);
+                ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", SCHEMAREGISTRY_GROUP, srCounter++,
+                ConfigDef.Width.NONE, SCHEMA_REGISTRY_URL);
         configDef.define(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, ConfigDef.Type.STRING, null,
-                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", GROUP_OTHER,
-                srCounter++, ConfigDef.Width.NONE, VALUE_CONVERTER_SCHEMA_REGISTRY_URL);
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL",
+                SCHEMAREGISTRY_GROUP, srCounter++, ConfigDef.Width.NONE, VALUE_CONVERTER_SCHEMA_REGISTRY_URL);
         configDef.define(INPUT_FORMAT_KEY, ConfigDef.Type.STRING, InputFormat.BYTES.getValue(),
-                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "Output format avro/json/parquet/bytes",
-                GROUP_OTHER, srCounter++, // NOPMD
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM,
+                "Input format of messages read from source avro/json/parquet/bytes", SCHEMAREGISTRY_GROUP, srCounter++, // NOPMD
                 ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
 
-        configDef.define(VALUE_SERIALIZER, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM, "Value serializer",
-                GROUP_OTHER, srCounter++, // NOPMD
+        configDef.define(AVRO_VALUE_SERIALIZER, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM,
+                "Avro value serializer", SCHEMAREGISTRY_GROUP, srCounter++, // NOPMD
                 // UnusedAssignment
-                ConfigDef.Width.NONE, VALUE_SERIALIZER);
+                ConfigDef.Width.NONE, AVRO_VALUE_SERIALIZER);
         return configDef;
     }
 
@@ -67,6 +67,10 @@ public class SchemaRegistryFragment extends ConfigFragment {
 
     public String getSchemaRegistryUrl() {
         return cfg.getString(SCHEMA_REGISTRY_URL);
+    }
+
+    public Class<?> getAvroValueSerializer() {
+        return cfg.getClass(AVRO_VALUE_SERIALIZER);
     }
 
 }

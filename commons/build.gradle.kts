@@ -19,8 +19,6 @@ plugins {
   id("java-test-fixtures")
 }
 
-val parquetVersion by extra("1.14.3")
-
 dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)

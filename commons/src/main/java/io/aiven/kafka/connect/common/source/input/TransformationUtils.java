@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.common.source.input;
 
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.VALUE_SERIALIZER;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.common.config.AbstractConfig;
+
+import io.aiven.kafka.connect.common.config.SchemaRegistryFragment;
 
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.generic.GenericRecord;
@@ -42,10 +43,11 @@ final public class TransformationUtils {
 
     public static byte[] serializeAvroRecordToBytes(final List<GenericRecord> avroRecords, final String topic,
             final AbstractConfig sourceConfig) {
+        final SchemaRegistryFragment registryFragment = new SchemaRegistryFragment(sourceConfig);
         final Map<String, String> config = Collections.singletonMap(SCHEMA_REGISTRY_URL,
-                sourceConfig.getString(SCHEMA_REGISTRY_URL));
+                registryFragment.getSchemaRegistryUrl());
 
-        try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) sourceConfig.getClass(VALUE_SERIALIZER)
+        try (KafkaAvroSerializer avroSerializer = (KafkaAvroSerializer) registryFragment.getAvroValueSerializer()
                 .getDeclaredConstructor()
                 .newInstance(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             avroSerializer.configure(config, false);

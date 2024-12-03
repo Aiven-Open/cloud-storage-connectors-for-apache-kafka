@@ -71,7 +71,7 @@ public final class ContentUtils {
             final int numOfRecords) throws IOException {
 
         final List<Struct> allParquetRecords = new ArrayList<>();
-        // Write records to the Parquet file
+
         for (int i = 0; i < numOfRecords; i++) {
             allParquetRecords
                     .add(new Struct(schema).put("name", name1 + i).put("age", 30).put("email", name1 + "@test"));

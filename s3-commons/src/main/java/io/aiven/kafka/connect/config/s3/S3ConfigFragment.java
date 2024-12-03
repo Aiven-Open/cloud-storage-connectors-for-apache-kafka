@@ -110,6 +110,8 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG = "aws.s3.backoff.max.delay.ms";
     public static final String AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG = "aws.s3.backoff.max.retries";
 
+    public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
+
     private static final String GROUP_AWS = "AWS";
     private static final String GROUP_AWS_STS = "AWS STS";
 
@@ -211,9 +213,13 @@ public final class S3ConfigFragment extends ConfigFragment {
                 awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_ENDPOINT_CONFIG);
 
         configDef.define(AWS_S3_REGION_CONFIG, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD
-                // UnusedAssignment
+                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
+
+        configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
+                ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, awsGroupCounter++, // NOPMD
+                // UnusedAssignment
+                ConfigDef.Width.NONE, FETCH_PAGE_SIZE);
     }
 
     static void addAwsStsConfigGroup(final ConfigDef configDef) {

@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.FETCH_PAGE_SIZE;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.FETCH_PAGE_SIZE;
 
 import java.util.HashSet;
 import java.util.Iterator;

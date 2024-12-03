@@ -26,20 +26,25 @@ public class SourceCommonConfig extends CommonConfig {
 
     private final SchemaRegistryFragment schemaRegistryFragment;
     private final SourceConfigFragment sourceConfigFragment;
+    private final FileNameFragment fileNameFragment;
+    private final OutputFormatFragment outputFormatFragment;
 
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
         super(definition, originals);
         // Construct Fragments
         schemaRegistryFragment = new SchemaRegistryFragment(this);
         sourceConfigFragment = new SourceConfigFragment(this);
-        // TODO: calls getOutputFields, can be overridden in subclasses.
+        fileNameFragment = new FileNameFragment(this);
+        outputFormatFragment = new OutputFormatFragment(this);
+
         validate(); // NOPMD ConstructorCallsOverridableMethod
     }
 
     private void validate() {
         schemaRegistryFragment.validate();
         sourceConfigFragment.validate();
-
+        fileNameFragment.validate();
+        outputFormatFragment.validate();
     }
 
     public InputFormat getInputFormat() {
@@ -55,6 +60,10 @@ public class SourceCommonConfig extends CommonConfig {
     }
     public String getTargetTopicPartitions() {
         return sourceConfigFragment.getTargetTopicPartitions();
+    }
+
+    public int getMaxPollRecords() {
+        return sourceConfigFragment.getMaxPollRecords();
     }
 
 }

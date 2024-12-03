@@ -21,7 +21,6 @@ plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 val amazonS3Version by extra("1.12.729")
 val amazonSTSVersion by extra("1.12.729")
 val s3mockVersion by extra("0.2.6")
-val parquetVersion by extra("1.14.3")
 val testKafkaVersion by extra("3.7.1")
 
 val integrationTest: SourceSet =
@@ -77,7 +76,7 @@ dependencies {
   implementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
-  integrationTestImplementation("org.apache.parquet:parquet-hadoop:1.11.2")
+  integrationTestImplementation(apache.parquet.hadoop)
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
 

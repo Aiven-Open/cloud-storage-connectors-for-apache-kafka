@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.config;
 
 import java.util.Objects;
 
-import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 
 import com.amazonaws.PredefinedClientConfigurations;
@@ -42,7 +41,7 @@ public class S3ClientFactory {
                                 Math.toIntExact(config.getS3RetryBackoffMaxDelayMs())),
                         config.getS3RetryBackoffMaxRetries(), false));
         final var s3ClientBuilder = AmazonS3ClientBuilder.standard()
-                .withCredentials(credentialFactory.getProvider(new S3ConfigFragment(config)))
+                .withCredentials(credentialFactory.getProvider(config.getS3ConfigFragment()))
                 .withClientConfiguration(clientConfig);
         if (Objects.isNull(awsEndpointConfig)) {
             s3ClientBuilder.withRegion(config.getAwsS3Region().getName());

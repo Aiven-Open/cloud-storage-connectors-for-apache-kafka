@@ -38,7 +38,8 @@ public final class TransformerFactory {
             case BYTES :
                 return new ByteArrayTransformer();
             default :
-                throw new IllegalArgumentException("Unknown output format " + sourceConfig.getString(INPUT_FORMAT_KEY));
+                throw new IllegalArgumentException(
+                        "Unknown input format in configuration: " + sourceConfig.getString(INPUT_FORMAT_KEY));
         }
     }
 }

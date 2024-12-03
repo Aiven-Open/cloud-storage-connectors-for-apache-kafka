@@ -19,9 +19,8 @@ package io.aiven.kafka.connect.common.config;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-public class SourceConfigFragment extends ConfigFragment {
+public final class SourceConfigFragment extends ConfigFragment {
     private static final String GROUP_OTHER = "OTHER_CFG";
-    public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
     public static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String EXPECTED_MAX_MESSAGE_BYTES = "expected.max.message.bytes";
     private static final String GROUP_OFFSET_TOPIC = "OFFSET_TOPIC";
@@ -39,18 +38,15 @@ public class SourceConfigFragment extends ConfigFragment {
     }
 
     public static ConfigDef update(final ConfigDef configDef) {
-        int awsOtherGroupCounter = 0;
-        configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Fetch page size", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
-                // UnusedAssignment
-                ConfigDef.Width.NONE, FETCH_PAGE_SIZE);
+        int sourcePollingConfigCounter = 0;
+
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, awsOtherGroupCounter++, // NOPMD
+                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, sourcePollingConfigCounter++, // NOPMD
                 // UnusedAssignment
                 ConfigDef.Width.NONE, MAX_POLL_RECORDS);
         configDef.define(EXPECTED_MAX_MESSAGE_BYTES, ConfigDef.Type.INT, 1_048_588, ConfigDef.Importance.MEDIUM,
                 "The largest record batch size allowed by Kafka config max.message.bytes", GROUP_OTHER,
-                awsOtherGroupCounter++, // NOPMD
+                sourcePollingConfigCounter++, // NOPMD
                 // UnusedAssignment
                 ConfigDef.Width.NONE, EXPECTED_MAX_MESSAGE_BYTES);
 
@@ -71,6 +67,14 @@ public class SourceConfigFragment extends ConfigFragment {
 
     public String getTargetTopicPartitions() {
         return cfg.getString(TARGET_TOPIC_PARTITIONS);
+    }
+
+    public int getMaxPollRecords() {
+        return cfg.getInt(MAX_POLL_RECORDS);
+    }
+
+    public int getExpectedMaxMessageBytes() {
+        return cfg.getInt(EXPECTED_MAX_MESSAGE_BYTES);
     }
 
 }
