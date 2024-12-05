@@ -20,6 +20,7 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 
 public class SourceCommonConfig extends CommonConfig {
@@ -60,6 +61,10 @@ public class SourceCommonConfig extends CommonConfig {
     }
     public String getTargetTopicPartitions() {
         return sourceConfigFragment.getTargetTopicPartitions();
+    }
+
+    public ErrorsTolerance getErrorsTolerance() {
+        return ErrorsTolerance.forName(sourceConfigFragment.getErrorsTolerance());
     }
 
     public int getMaxPollRecords() {
