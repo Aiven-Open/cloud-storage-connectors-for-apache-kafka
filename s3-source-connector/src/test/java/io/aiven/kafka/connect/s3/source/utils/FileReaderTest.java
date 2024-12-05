@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -49,6 +50,7 @@ class FileReaderTest {
         final Map<String, String> configMap = new HashMap<>();
         configMap.put("tasks.max", String.valueOf(maxTasks));
         configMap.put("task.id", String.valueOf(taskId));
+        configMap.put(AWS_S3_BUCKET_NAME_CONFIG, "testbucket");
         return configMap;
     }
 

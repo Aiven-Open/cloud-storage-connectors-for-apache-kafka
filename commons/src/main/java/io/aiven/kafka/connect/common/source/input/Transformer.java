@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.input;
+package io.aiven.kafka.connect.common.source.input;
 
 import java.io.InputStream;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import org.apache.kafka.common.config.AbstractConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 
 public interface Transformer {
 
-    void configureValueConverter(Map<String, String> config, S3SourceConfig s3SourceConfig);
+    void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
 
     Stream<Object> getRecords(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition,
-            S3SourceConfig s3SourceConfig);
+            AbstractConfig sourceConfig);
 
-    byte[] getValueBytes(Object record, String topic, S3SourceConfig s3SourceConfig);
+    byte[] getValueBytes(Object record, String topic, AbstractConfig sourceConfig);
 }

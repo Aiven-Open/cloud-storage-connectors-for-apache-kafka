@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.input;
+package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,15 +29,15 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import org.apache.kafka.common.config.AbstractConfig;
 
-import com.amazonaws.util.IOUtils;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileStream;
 import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,21 +47,21 @@ public class AvroTransformer implements Transformer {
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroTransformer.class);
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
-        config.put(SCHEMA_REGISTRY_URL, s3SourceConfig.getString(SCHEMA_REGISTRY_URL));
+    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
+        config.put(SCHEMA_REGISTRY_URL, sourceConfig.getString(SCHEMA_REGISTRY_URL));
     }
 
     @Override
     public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final S3SourceConfig s3SourceConfig) {
+            final int topicPartition, final AbstractConfig sourceConfig) {
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
         return readAvroRecordsAsStream(inputStreamIOSupplier, datumReader);
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
+    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
         return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
-                s3SourceConfig);
+                sourceConfig);
     }
 
     private Stream<Object> readAvroRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,

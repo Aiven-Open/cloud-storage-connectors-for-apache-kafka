@@ -16,9 +16,9 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPICS;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.TARGET_TOPIC_PARTITIONS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -31,6 +31,7 @@ import java.util.Map;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -139,7 +140,7 @@ final class OffsetManagerTest {
     }
 
     private void setBasicProperties() {
-        properties.put(S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET);
+        properties.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET);
         properties.put(TARGET_TOPIC_PARTITIONS, "0,1");
         properties.put(TARGET_TOPICS, "topic1,topic2");
     }
