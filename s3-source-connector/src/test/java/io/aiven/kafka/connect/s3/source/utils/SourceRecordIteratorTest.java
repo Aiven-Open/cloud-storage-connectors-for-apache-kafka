@@ -72,14 +72,15 @@ final class SourceRecordIteratorTest {
 
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
-            when(mockSourceApiClient.getListOfObjects(any())).thenReturn(Collections.emptyIterator());
+            when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.emptyIterator());
             SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
                     mockSourceApiClient);
 
             assertThat(iterator.hasNext()).isFalse();
             assertThat(iterator.next()).isNull();
 
-            when(mockSourceApiClient.getListOfObjects(any())).thenReturn(Collections.singletonList(key).listIterator());
+            when(mockSourceApiClient.getListOfObjectKeys(any()))
+                    .thenReturn(Collections.singletonList(key).listIterator());
 
             iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
 

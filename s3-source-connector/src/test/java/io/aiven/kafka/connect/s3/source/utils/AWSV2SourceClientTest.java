@@ -17,10 +17,11 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -62,7 +63,7 @@ class AWSV2SourceClientTest {
         final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(Collections.emptyList(), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjects(null);
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
         assertThat(summaries).isExhausted();
     }
 
@@ -103,7 +104,7 @@ class AWSV2SourceClientTest {
         final ListObjectsV2Result listObjectsV2Result = getListObjectsV2Result();
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjects(null);
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
 
         // assigned 1 object to taskid
         assertThat(summaries).hasNext();
@@ -114,7 +115,7 @@ class AWSV2SourceClientTest {
     @Test
     void testFetchObjectSummariesWithPagination() throws IOException {
         initializeWithTaskConfigs(4, 3);
-        final S3ObjectSummary object1 = createObjectSummary(1, "key1");
+        final S3ObjectSummary object1 = createObjectSummary(3, "key1");
         final S3ObjectSummary object2 = createObjectSummary(2, "key2");
         final List<S3ObjectSummary> firstBatch = List.of(object1);
         final List<S3ObjectSummary> secondBatch = List.of(object2);
@@ -124,9 +125,16 @@ class AWSV2SourceClientTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjects(null);
-
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
         assertThat(summaries.next()).isNotNull();
+        assertThat(summaries.next()).isNotNull();
+        assertThat(summaries.next()).isNotNull();
+        // First page exhausted, calls continuation token.
+        verify(s3Client, times(2)).listObjectsV2(any(ListObjectsV2Request.class));
+        assertThat(summaries.next()).isNotNull();
+        assertThat(summaries.next()).isNotNull();
+        assertThat(summaries).isExhausted();
     }
 
     private ListObjectsV2Result createListObjectsV2Result(final List<S3ObjectSummary> summaries,
@@ -151,7 +159,7 @@ class AWSV2SourceClientTest {
                 Collections.singletonList(objectSummary), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        return awsv2SourceClient.getListOfObjects(null);
+        return awsv2SourceClient.getListOfObjectKeys(null);
     }
 
     public void initializeWithTaskConfigs(final int maxTasks, final int taskId) {

@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.source.api;
 
 import java.util.Iterator;
+import java.util.function.Predicate;
 
 /**
  * The SourceApiClient allows us to implement a common interface for all sources to list and retrieve objects which can
@@ -35,7 +36,7 @@ public interface SourceApiClient<T> {
      * @return an Iterator of object keys that are available to be consumed by the source connector the object key
      *         references an exact object stored in the source system
      */
-    Iterator<String> getListOfObjects(String startToken);
+    Iterator<String> getListOfObjectKeys(String startToken);
 
     /**
      *
@@ -53,4 +54,11 @@ public interface SourceApiClient<T> {
      */
     void addFailedObjectKeys(String objectKey);
 
+    /**
+     * The predicate can be used to pass in a check to filter out objectKeys from the listOfObjectKeys
+     *
+     * @param predicate
+     *            The predicate to filter the listOfObjectKeys by
+     */
+    void setFilterPredicate(Predicate<String> predicate);
 }

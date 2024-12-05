@@ -48,7 +48,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
     private String currentObjectKey;
 
-    private final Iterator<String> objectListIterator;
+    private Iterator<String> objectListIterator;
     private Iterator<S3SourceRecord> recordIterator = Collections.emptyIterator();
 
     private final OffsetManager offsetManager;
@@ -69,13 +69,17 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
         this.sourceClient = sourceClient;
-        objectListIterator = sourceClient.getListOfObjects(null);
+        objectListIterator = sourceClient.getListOfObjectKeys(null);
     }
 
     private void nextS3Object() {
         if (!objectListIterator.hasNext()) {
-            recordIterator = Collections.emptyIterator();
-            return;
+            // Start after the object Key we have just finished with.
+            objectListIterator = sourceClient.getListOfObjectKeys(currentObjectKey);
+            if (!objectListIterator.hasNext()) {
+                recordIterator = Collections.emptyIterator();
+                return;
+            }
         }
 
         try {

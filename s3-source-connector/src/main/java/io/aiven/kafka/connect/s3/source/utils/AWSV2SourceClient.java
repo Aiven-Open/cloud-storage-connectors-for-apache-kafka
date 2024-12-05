@@ -16,12 +16,11 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.FETCH_PAGE_SIZE;
-
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.source.api.SourceApiClient;
@@ -45,6 +44,7 @@ public class AWSV2SourceClient implements SourceApiClient<S3Object> {
     private final AmazonS3 s3Client;
     private final String bucketName;
 
+    private Predicate<String> filterPredicate = defaultString -> true;
     private final Set<String> failedObjectKeys;
 
     /**
@@ -80,31 +80,34 @@ public class AWSV2SourceClient implements SourceApiClient<S3Object> {
     }
 
     @Override
-    public Iterator<String> getListOfObjects(final String startToken) {
+    public Iterator<String> getListOfObjectKeys(final String startToken) {
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
-                .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR);
+                .withMaxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR);
 
         if (StringUtils.isNotBlank(startToken)) {
             request.withStartAfter(startToken);
         }
 
-        final Stream<String> s3ObjectStream = Stream
+        final Stream<String> s3ObjectKeyStream = Stream
                 .iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
+                    // This is called every time next() is called on the iterator.
                     if (response.isTruncated()) {
                         return s3Client.listObjectsV2(new ListObjectsV2Request().withBucketName(bucketName)
-                                .withMaxKeys(s3SourceConfig.getInt(FETCH_PAGE_SIZE) * PAGE_SIZE_FACTOR)
+                                .withMaxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
                                 .withContinuationToken(response.getNextContinuationToken()));
                     } else {
                         return null;
                     }
+
                 })
                 .flatMap(response -> response.getObjectSummaries()
                         .stream()
                         .filter(objectSummary -> objectSummary.getSize() > 0)
+                        .filter(x -> filterPredicate.test(x.getKey()))
                         .filter(objectSummary -> assignObjectToTask(objectSummary.getKey()))
                         .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey())))
                 .map(S3ObjectSummary::getKey);
-        return s3ObjectStream.iterator();
+        return s3ObjectKeyStream.iterator();
     }
 
     @Override
@@ -115,6 +118,11 @@ public class AWSV2SourceClient implements SourceApiClient<S3Object> {
     @Override
     public void addFailedObjectKeys(final String objectKey) {
         this.failedObjectKeys.add(objectKey);
+    }
+
+    @Override
+    public void setFilterPredicate(final Predicate<String> predicate) {
+        filterPredicate = predicate;
     }
 
     private boolean assignObjectToTask(final String objectKey) {
