@@ -23,7 +23,6 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.common.source.api.SourceApiClient;
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -37,7 +36,7 @@ import org.codehaus.plexus.util.StringUtils;
  * Called AWSV2SourceClient as this source client implements the V2 version of the aws client library. Handles all calls
  * and authentication to AWS and returns useable objects to the SourceRecordIterator.
  */
-public class AWSV2SourceClient implements SourceApiClient<S3Object> {
+public class AWSV2SourceClient {
 
     public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
@@ -79,7 +78,6 @@ public class AWSV2SourceClient implements SourceApiClient<S3Object> {
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
     }
 
-    @Override
     public Iterator<String> getListOfObjectKeys(final String startToken) {
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
                 .withMaxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR);
@@ -110,17 +108,14 @@ public class AWSV2SourceClient implements SourceApiClient<S3Object> {
         return s3ObjectKeyStream.iterator();
     }
 
-    @Override
     public S3Object getObject(final String objectKey) {
         return s3Client.getObject(bucketName, objectKey);
     }
 
-    @Override
     public void addFailedObjectKeys(final String objectKey) {
         this.failedObjectKeys.add(objectKey);
     }
 
-    @Override
     public void setFilterPredicate(final Predicate<String> predicate) {
         filterPredicate = predicate;
     }

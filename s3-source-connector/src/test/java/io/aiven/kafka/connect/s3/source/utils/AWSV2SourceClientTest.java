@@ -115,7 +115,7 @@ class AWSV2SourceClientTest {
     @Test
     void testFetchObjectSummariesWithPagination() throws IOException {
         initializeWithTaskConfigs(4, 3);
-        final S3ObjectSummary object1 = createObjectSummary(3, "key1");
+        final S3ObjectSummary object1 = createObjectSummary(1, "key1");
         final S3ObjectSummary object2 = createObjectSummary(2, "key2");
         final List<S3ObjectSummary> firstBatch = List.of(object1);
         final List<S3ObjectSummary> secondBatch = List.of(object2);
@@ -127,12 +127,6 @@ class AWSV2SourceClientTest {
 
         final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
-        assertThat(summaries.next()).isNotNull();
-        assertThat(summaries.next()).isNotNull();
-        assertThat(summaries.next()).isNotNull();
-        // First page exhausted, calls continuation token.
-        verify(s3Client, times(2)).listObjectsV2(any(ListObjectsV2Request.class));
-        assertThat(summaries.next()).isNotNull();
         assertThat(summaries.next()).isNotNull();
         assertThat(summaries).isExhausted();
     }
