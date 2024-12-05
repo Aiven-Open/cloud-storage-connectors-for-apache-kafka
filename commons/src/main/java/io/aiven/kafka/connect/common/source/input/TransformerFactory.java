@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.input;
+package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.INPUT_FORMAT_KEY;
+import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.common.config.SchemaRegistryFragment;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 public final class TransformerFactory {
 
     private TransformerFactory() {
         // hidden
     }
-    public static Transformer getTransformer(final S3SourceConfig s3SourceConfig) {
-        final InputFormat inputFormatEnum = s3SourceConfig.getInputFormat();
+    public static Transformer getTransformer(final SourceCommonConfig sourceConfig) {
+        final InputFormat inputFormatEnum = new SchemaRegistryFragment(sourceConfig).getInputFormat();
         switch (inputFormatEnum) {
             case AVRO :
                 return new AvroTransformer();
@@ -38,7 +39,7 @@ public final class TransformerFactory {
                 return new ByteArrayTransformer();
             default :
                 throw new IllegalArgumentException(
-                        "Unknown output format " + s3SourceConfig.getString(INPUT_FORMAT_KEY));
+                        "Unknown input format in configuration: " + sourceConfig.getString(INPUT_FORMAT_KEY));
         }
     }
 }

@@ -27,7 +27,7 @@ dependencies {
   implementation(confluent.kafka.connect.avro.data) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
-
+  implementation("commons-io:commons-io:2.18.0")
   implementation(tools.spotbugs.annotations)
   implementation(compressionlibs.snappy)
   implementation(compressionlibs.zstd.jni)
@@ -41,6 +41,7 @@ dependencies {
     exclude(group = "org.slf4j", module = "slf4j-api")
     exclude(group = "org.apache.avro", module = "avro")
   }
+
   implementation(apache.hadoop.common) {
     exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")
     exclude(group = "com.google.guava", module = "guava")
@@ -87,10 +88,10 @@ dependencies {
   testImplementation(testinglibs.mockito.core)
   testImplementation(testinglibs.assertj.core)
   testImplementation(testFixtures(project(":commons")))
-
   testImplementation(testinglibs.woodstox.stax2.api)
   testImplementation(apache.hadoop.mapreduce.client.core)
   testImplementation(confluent.kafka.connect.avro.converter)
+  testImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)

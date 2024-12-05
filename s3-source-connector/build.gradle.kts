@@ -21,7 +21,6 @@ plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 val amazonS3Version by extra("1.12.729")
 val amazonSTSVersion by extra("1.12.729")
 val s3mockVersion by extra("0.2.6")
-val parquetVersion by extra("1.14.3")
 val testKafkaVersion by extra("3.7.1")
 
 val integrationTest: SourceSet =
@@ -67,23 +66,9 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
+  implementation(project(":s3-commons"))
   implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
   implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
-
-  implementation("org.apache.parquet:parquet-hadoop:$parquetVersion")
-  testImplementation("org.apache.parquet:parquet-hadoop:$parquetVersion")
-  integrationTestImplementation("org.apache.parquet:parquet-hadoop:$parquetVersion")
-
-  implementation("org.apache.parquet:parquet-avro:$parquetVersion") {
-    exclude(group = "org.xerial.snappy", module = "snappy-java")
-    exclude(group = "org.slf4j", module = "slf4j-api")
-    exclude(group = "org.apache.avro", module = "avro")
-  }
-  testImplementation("org.apache.parquet:parquet-avro:$parquetVersion") {
-    exclude(group = "org.xerial.snappy", module = "snappy-java")
-    exclude(group = "org.slf4j", module = "slf4j-api")
-    exclude(group = "org.apache.avro", module = "avro")
-  }
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -91,7 +76,7 @@ dependencies {
   implementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
-
+  integrationTestImplementation(apache.parquet.hadoop)
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
 

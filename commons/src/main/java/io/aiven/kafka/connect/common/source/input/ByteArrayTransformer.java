@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.input;
+package io.aiven.kafka.connect.common.source.input;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +24,7 @@ import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import org.apache.kafka.common.config.AbstractConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
@@ -34,13 +34,13 @@ public class ByteArrayTransformer implements Transformer {
     private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayTransformer.class);
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final S3SourceConfig s3SourceConfig) {
+    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
         // For byte array transformations, ByteArrayConverter is the converter which is the default config.
     }
 
     @Override
     public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final S3SourceConfig s3SourceConfig) {
+            final int topicPartition, final AbstractConfig sourceConfig) {
 
         // Create a Stream that processes each chunk lazily
         return StreamSupport.stream(new Spliterators.AbstractSpliterator<>(Long.MAX_VALUE, Spliterator.ORDERED) {
@@ -66,7 +66,7 @@ public class ByteArrayTransformer implements Transformer {
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final S3SourceConfig s3SourceConfig) {
+    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
         return (byte[]) record;
     }
 }
