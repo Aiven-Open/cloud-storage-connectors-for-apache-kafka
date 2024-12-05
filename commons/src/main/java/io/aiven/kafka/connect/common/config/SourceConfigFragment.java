@@ -19,6 +19,10 @@ package io.aiven.kafka.connect.common.config;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+
+import org.codehaus.plexus.util.StringUtils;
+
 public final class SourceConfigFragment extends ConfigFragment {
     private static final String GROUP_OTHER = "OTHER_CFG";
     public static final String MAX_POLL_RECORDS = "max.poll.records";
@@ -26,6 +30,7 @@ public final class SourceConfigFragment extends ConfigFragment {
     private static final String GROUP_OFFSET_TOPIC = "OFFSET_TOPIC";
     public static final String TARGET_TOPIC_PARTITIONS = "topic.partitions";
     public static final String TARGET_TOPICS = "topics";
+    public static final String ERRORS_TOLERANCE = "errors.tolerance";
 
     /**
      * Construct the ConfigFragment..
@@ -41,9 +46,14 @@ public final class SourceConfigFragment extends ConfigFragment {
         int sourcePollingConfigCounter = 0;
 
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, sourcePollingConfigCounter++, // NOPMD
-                // UnusedAssignment
+                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, sourcePollingConfigCounter++,
                 ConfigDef.Width.NONE, MAX_POLL_RECORDS);
+        // KIP-298 Error Handling in Connect
+        configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, "none", new ErrorsToleranceValidator(),
+                ConfigDef.Importance.MEDIUM,
+                "Indicates to the connector what level of exceptions are allowed before the connector stops, supported values : none,all",
+                GROUP_OTHER, sourcePollingConfigCounter++, ConfigDef.Width.NONE, ERRORS_TOLERANCE);
+
         configDef.define(EXPECTED_MAX_MESSAGE_BYTES, ConfigDef.Type.INT, 1_048_588, ConfigDef.Importance.MEDIUM,
                 "The largest record batch size allowed by Kafka config max.message.bytes", GROUP_OTHER,
                 sourcePollingConfigCounter++, // NOPMD
@@ -58,6 +68,7 @@ public final class SourceConfigFragment extends ConfigFragment {
         configDef.define(TARGET_TOPICS, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "eg : connect-storage-offsets", GROUP_OFFSET_TOPIC,
                 offsetStorageGroupCounter++, ConfigDef.Width.NONE, TARGET_TOPICS); // NOPMD
+
         return configDef;
     }
 
@@ -75,6 +86,21 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     public int getExpectedMaxMessageBytes() {
         return cfg.getInt(EXPECTED_MAX_MESSAGE_BYTES);
+    }
+
+    public String getErrorsTolerance() {
+        return cfg.getString(ERRORS_TOLERANCE);
+    }
+
+    private static class ErrorsToleranceValidator implements ConfigDef.Validator {
+        @Override
+        public void ensureValid(final String name, final Object value) {
+            final String errorsTolerance = (String) value;
+            if (StringUtils.isBlank(errorsTolerance)) {
+                // This will throw an Exception if not a valid value.
+                ErrorsTolerance.forName(errorsTolerance);
+            }
+        }
     }
 
 }
