@@ -43,7 +43,7 @@ public class AWSV2SourceClient {
     private final AmazonS3 s3Client;
     private final String bucketName;
 
-    private Predicate<String> filterPredicate = defaultString -> true;
+    private Predicate<S3ObjectSummary> filterPredicate = summary -> summary.getSize() > 0;
     private final Set<String> failedObjectKeys;
 
     /**
@@ -70,7 +70,7 @@ public class AWSV2SourceClient {
      * @param failedObjectKeys
      *            all objectKeys which have already been tried but have been unable to process.
      */
-    protected AWSV2SourceClient(final AmazonS3 s3Client, final S3SourceConfig s3SourceConfig,
+    AWSV2SourceClient(final AmazonS3 s3Client, final S3SourceConfig s3SourceConfig,
             final Set<String> failedObjectKeys) {
         this.s3SourceConfig = s3SourceConfig;
         this.s3Client = s3Client;
@@ -100,8 +100,7 @@ public class AWSV2SourceClient {
                 })
                 .flatMap(response -> response.getObjectSummaries()
                         .stream()
-                        .filter(objectSummary -> objectSummary.getSize() > 0)
-                        .filter(x -> filterPredicate.test(x.getKey()))
+                        .filter(filterPredicate)
                         .filter(objectSummary -> assignObjectToTask(objectSummary.getKey()))
                         .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey())))
                 .map(S3ObjectSummary::getKey);
@@ -116,7 +115,7 @@ public class AWSV2SourceClient {
         this.failedObjectKeys.add(objectKey);
     }
 
-    public void setFilterPredicate(final Predicate<String> predicate) {
+    public void setFilterPredicate(final Predicate<S3ObjectSummary> predicate) {
         filterPredicate = predicate;
     }
 
