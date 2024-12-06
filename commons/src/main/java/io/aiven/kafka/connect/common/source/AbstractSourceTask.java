@@ -80,19 +80,22 @@ public abstract class AbstractSourceTask extends SourceTask {
      * Constructs the iterator.  Also configures the task environment.
      * @param props The properties for the environment.
      */
-    abstract protected Iterator<SourceRecord> getIterator(final Map<String, String> props);
+    abstract protected Iterator<SourceRecord> getIterator();
+
+    abstract protected void configure(final Map<String, String> props);
 
     @Override
     public final void start(Map<String, String> props) {
         SourceCommonConfig config = new SourceCommonConfig(new ConfigDef(), props);
         maxPollRecords = config.getMaxPollRecords();
-        sourceRecordIterator = getIterator(props);
+        configure(props);
     }
 
     @Override
     public final List<SourceRecord> poll() throws InterruptedException {
         final List<SourceRecord> results = new ArrayList<>(maxPollRecords);
         final Timer timer = new Timer(MAX_POLL_TIME);
+        final Iterator<SourceRecord> sourceRecordIterator = getIterator();
 
         if (!connectorStopped.get()) {
             while (!connectorStopped.get() && sourceRecordIterator.hasNext() && !timer.expired() && results.size() < maxPollRecords) {
@@ -117,11 +120,11 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     /**
-     * Returns the stop state of the connector.
-     * @return {@code true} if the connector has been stopped, {@code false} otherwise.
+     * Returns the running state of the task.
+     * @return {@code true} if the connector is running, {@code false} otherwise.
      */
-    protected boolean isStopped() {
-        return connectorStopped.get();
+    public boolean isRunning() {
+        return !connectorStopped.get();
     }
 
     /**
@@ -213,7 +216,7 @@ public abstract class AbstractSourceTask extends SourceTask {
             if (waitCount < maxCount) {
                 waitCount++;
                 final long sleep = (long) Math.pow(2, waitCount) + jitter;
-                Thread.sleep(sleep);
+                Thread.sleep(Math.max(0, sleep));
             } else {
                 Thread.sleep(maxWait + jitter);
             }

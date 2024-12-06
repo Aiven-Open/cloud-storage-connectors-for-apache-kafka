@@ -41,17 +41,17 @@ final public class S3SourceConfig extends SourceCommonConfig {
 
     private final S3ConfigFragment s3ConfigFragment;
     public S3SourceConfig(final Map<String, String> properties) {
-        super(configDef(), handleDeprecatedYyyyUppercase(properties));
+        super(update(new ConfigDef()), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
     }
 
     /**
      * package private for testing.
-     * @return the Configuration def for S3SourceCOnfig without the updates from SourceCommonConfig.
+     * @return the Configuration def for S3SourceConfig without the updates from SourceCommonConfig.
      */
-    static ConfigDef configDef() {
-        return S3ConfigFragment.update(new ConfigDef());
+    public static ConfigDef update(ConfigDef config) {
+        return S3ConfigFragment.update(config);
     }
 
     private void validate() {

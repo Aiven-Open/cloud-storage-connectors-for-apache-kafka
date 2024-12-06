@@ -16,6 +16,9 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Map;
 
 import org.apache.kafka.common.config.AbstractConfig;
@@ -27,6 +30,38 @@ import org.apache.kafka.common.config.ConfigDef;
 public class CommonConfig extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";
     protected static final String GROUP_FORMAT = "Format";
+
+    public static ConfigDef generateFullConfigurationDefinition(Class<? extends CommonConfig> clazz) {
+        ConfigDef configDef = new ConfigDef();
+        Class<?> workingClazz = clazz;
+        while (CommonConfig.class.isAssignableFrom(workingClazz)) {
+            try {
+                Method m = workingClazz.getDeclaredMethod("update", ConfigDef.class);
+                int modifiers = m.getModifiers();
+                if (!Modifier.isPublic(modifiers) || !Modifier.isStatic(modifiers)) {
+                    throw new IllegalArgumentException("Class " + workingClazz.getName() + " does not have a public static method 'update(ConfigDef)'");
+                }
+                m.invoke(null, configDef);
+                workingClazz = workingClazz.getSuperclass();
+            } catch (InvocationTargetException e) {
+                throw new IllegalArgumentException("Can not invoke '" + workingClazz.getName() + ".update(ConfigDef)'");
+            } catch (NoSuchMethodException e) {
+                throw new IllegalArgumentException("Class " + workingClazz.getName() + " does not have a public static method 'update(ConfigDef)'");
+            } catch (IllegalAccessException e) {
+                throw new IllegalArgumentException("Can not access '" + workingClazz.getName() + ".update(ConfigDef)'");
+            }
+        }
+        return configDef;
+    }
+
+    /**
+     * Adds the definitions for Common config to the configuration definition..
+     * @param configDef the configuration definition to update.
+     * @return the updated configuration definition.
+     */
+    public static ConfigDef update(ConfigDef configDef) {
+        return BackoffPolicyConfig.update(configDef);
+    }
 
     /**
      * @deprecated No longer needed.
@@ -46,7 +81,7 @@ public class CommonConfig extends AbstractConfig {
      *            The properties to construct the configuration with.
      */
     protected CommonConfig(ConfigDef definition, Map<?, ?> props) { // NOPMD
-        super(BackoffPolicyConfig.update(definition), props);
+        super(update(definition), props);
     }
 
     /**

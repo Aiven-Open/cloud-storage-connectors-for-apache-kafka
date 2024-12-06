@@ -20,17 +20,27 @@ import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import java.lang.reflect.Field;
+import java.net.ConnectException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
 import org.apache.kafka.connect.converters.ByteArrayConverter;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.Converter;
@@ -41,6 +51,7 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.utils.ConnectUtils;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
@@ -158,25 +169,61 @@ final class S3SourceTaskTest {
         setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
         when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
 
-        final S3SourceRecord s3SourceRecordList = getAivenS3SourceRecord();
-        when(mockSourceRecordIterator.next()).thenReturn(s3SourceRecordList);
+        final S3SourceRecord s3SourceRecord = getAivenS3SourceRecord();
+        when(mockSourceRecordIterator.next()).thenReturn(s3SourceRecord);
 
         final List<SourceRecord> sourceRecordList = s3SourceTask.poll();
         assertThat(sourceRecordList).isNotEmpty();
+    }
+
+        @Test
+    void testGetIterator() throws Exception {
+            final S3SourceTask s3SourceTask = new S3SourceTask();
+            startSourceTask(s3SourceTask);
+
+            SourceRecordIterator mockSourceRecordIterator;
+
+            mockSourceRecordIterator = mock(SourceRecordIterator.class);
+            setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
+            when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
+
+            final S3SourceRecord s3SourceRecord = getAivenS3SourceRecord();
+            final S3SourceRecord s3SourceRecord2 = getAivenS3SourceRecord("key2", "value2");
+            when(mockSourceRecordIterator.next()).thenReturn(s3SourceRecord).thenReturn(s3SourceRecord2);
+
+            Iterator<SourceRecord> iter = s3SourceTask.getIterator();
+            assertThat(iter).hasNext();
+            SourceRecord record = iter.next();
+            assertThat(record.key()).isEqualTo(s3SourceRecord.key());
+            assertThat(record.value()).isEqualTo(s3SourceRecord.value());
+            assertThat(record.sourcePartition()).isEqualTo(s3SourceRecord.getPartitionMap());
+            assertThat(record.sourceOffset()).isEqualTo(s3SourceRecord.getOffsetMap());
+
+            assertThat(iter).hasNext();
+            record = iter.next();
+            assertThat(record.key()).isEqualTo(s3SourceRecord2.key());
+            assertThat(record.value()).isEqualTo(s3SourceRecord2.value());
+            assertThat(record.sourcePartition()).isEqualTo(s3SourceRecord2.getPartitionMap());
+            assertThat(record.sourceOffset()).isEqualTo(s3SourceRecord2.getOffsetMap());
+
+            assertThat(iter.hasNext()).isFalse();;
     }
 
     @Test
     void testStop() {
         final S3SourceTask s3SourceTask = new S3SourceTask();
         startSourceTask(s3SourceTask);
+        assertThat(s3SourceTask.isRunning()).isTrue();
         s3SourceTask.stop();
-
         assertThat(s3SourceTask.isRunning()).isFalse();
-        assertThat(s3SourceTask.isStopped()).isTrue();
     }
 
     private static S3SourceRecord getAivenS3SourceRecord() {
-        return new S3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, new byte[0], new byte[0], "");
+        return getAivenS3SourceRecord("key", "value");
+    }
+
+    private static S3SourceRecord getAivenS3SourceRecord(String key, String value) {
+        return new S3SourceRecord(ConnectUtils.getPartitionMap("testtopic", 0, TEST_BUCKET ), new HashMap<>(), "testtopic", 0, key.getBytes(StandardCharsets.UTF_8), value.getBytes(StandardCharsets.UTF_8), "objectKey");
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
@@ -205,6 +252,28 @@ final class S3SourceTaskTest {
         properties.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
         properties.put(TARGET_TOPIC_PARTITIONS, "0,1");
         properties.put(TARGET_TOPICS, "testtopic");
+    }
 
+    @Test
+    void testCreateSourceRecord() {
+        final S3SourceTask s3SourceTask = new S3SourceTask();
+        startSourceTask(s3SourceTask);
+
+        String bucket = "bucket";
+        String topic = "topic";
+        int partition = 1;
+        byte[] key = "key".getBytes(StandardCharsets.UTF_8);
+        byte[] value = "value".getBytes(StandardCharsets.UTF_8);
+        Map<String, Object> offsetMap = new HashMap<>();
+        Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topic, partition, bucket);
+
+        S3SourceRecord initialRecord = new S3SourceRecord(partitionMap, offsetMap, topic, partition, key, value, "objectKey");
+
+        SourceRecord actual = s3SourceTask.createSourceRecord(initialRecord);
+
+        assertThat(actual.key()).isEqualTo(key);
+        assertThat(actual.value()).isEqualTo(value);
+        assertThat(actual.sourceOffset()).isEqualTo(offsetMap);
+        assertThat(actual.sourcePartition()).isEqualTo(partitionMap);
     }
 }

@@ -29,7 +29,7 @@ public class SourceCommonConfig extends CommonConfig {
     private final FileNameFragment fileNameFragment;
     private final OutputFormatFragment outputFormatFragment;
 
-    private static ConfigDef update(ConfigDef configDef) {
+    public static ConfigDef update(ConfigDef configDef) {
         SchemaRegistryFragment.update(configDef);
         SourceConfigFragment.update(configDef);
         FileNameFragment.update(configDef);

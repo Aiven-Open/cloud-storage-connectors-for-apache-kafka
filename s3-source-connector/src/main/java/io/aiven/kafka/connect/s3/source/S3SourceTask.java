@@ -84,7 +84,7 @@ public final class S3SourceTask extends AbstractSourceTask {
     }
 
     @Override
-    public Iterator<SourceRecord> getIterator(final Map<String, String> props) {
+    public void configure(final Map<String, String> props) {
         LOGGER.info("S3 Source task started.");
         s3SourceConfig = new S3SourceConfig(props);
         initializeConverters();
@@ -93,7 +93,11 @@ public final class S3SourceTask extends AbstractSourceTask {
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
         fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys);
-        prepareReaderFromOffsetStorageReader();
+        sourceRecordIterator = prepareReaderFromOffsetStorageReader();
+    }
+
+    @Override
+    public Iterator<SourceRecord> getIterator() {
         return IteratorUtils.transformedIterator(sourceRecordIterator, s3SourceRecord -> createSourceRecord(s3SourceRecord));
     }
 
@@ -117,8 +121,8 @@ public final class S3SourceTask extends AbstractSourceTask {
         LOGGER.debug("S3 client initialized");
     }
 
-    private void prepareReaderFromOffsetStorageReader() {
-        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
+    Iterator<S3SourceRecord> prepareReaderFromOffsetStorageReader() {
+        return new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
                 this.transformer, fileReader);
     }
 
@@ -141,7 +145,13 @@ public final class S3SourceTask extends AbstractSourceTask {
     }
 
 
-    private SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord) {
+    /**
+     * Creates a Source record from the S3SourceRecord.  Package private to support testing.
+     * Updates the {@link OffsetManager} to indicate the record has been processed.
+     * @param s3SourceRecord the S3SourceRecord to convert.
+     * @return a SourceRecord based on the S3SourceRecord.
+     */
+    SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord) {
         final Map<String, String> conversionConfig = new HashMap<>();
 
         final String topic = s3SourceRecord.getTopic();
