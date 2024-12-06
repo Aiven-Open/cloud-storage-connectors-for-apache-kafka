@@ -49,8 +49,8 @@ public final class SourceConfigFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, sourcePollingConfigCounter++,
                 ConfigDef.Width.NONE, MAX_POLL_RECORDS);
         // KIP-298 Error Handling in Connect
-        configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, "none", new ErrorsToleranceValidator(),
-                ConfigDef.Importance.MEDIUM,
+        configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, ErrorsTolerance.NONE.name(),
+                new ErrorsToleranceValidator(), ConfigDef.Importance.MEDIUM,
                 "Indicates to the connector what level of exceptions are allowed before the connector stops, supported values : none,all",
                 GROUP_OTHER, sourcePollingConfigCounter++, ConfigDef.Width.NONE, ERRORS_TOLERANCE);
 
@@ -96,7 +96,7 @@ public final class SourceConfigFragment extends ConfigFragment {
         @Override
         public void ensureValid(final String name, final Object value) {
             final String errorsTolerance = (String) value;
-            if (StringUtils.isBlank(errorsTolerance)) {
+            if (StringUtils.isNotBlank(errorsTolerance)) {
                 // This will throw an Exception if not a valid value.
                 ErrorsTolerance.forName(errorsTolerance);
             }

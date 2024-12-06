@@ -25,7 +25,7 @@ public enum ErrorsTolerance {
 
     NONE("none"), ALL("all");
 
-    public final String name;
+    private final String name;
 
     ErrorsTolerance(final String name) {
         this.name = name;
