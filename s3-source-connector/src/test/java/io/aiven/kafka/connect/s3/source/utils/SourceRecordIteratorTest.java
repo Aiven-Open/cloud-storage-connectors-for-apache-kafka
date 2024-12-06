@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyString;
@@ -76,7 +77,8 @@ final class SourceRecordIteratorTest {
             when(mockS3Client.getObject(anyString(), anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
 
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any())).thenReturn(Stream.of(new Object()));
+            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
+                    .thenReturn(Stream.of(new Object()));
 
             final String outStr = "this is a test";
             when(mockTransformer.getValueBytes(any(), anyString(), any()))

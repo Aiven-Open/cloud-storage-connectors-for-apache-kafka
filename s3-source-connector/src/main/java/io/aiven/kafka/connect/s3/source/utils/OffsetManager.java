@@ -85,18 +85,11 @@ public class OffsetManager {
         return OBJECT_KEY + SEPARATOR + currentObjectKey;
     }
 
-    public boolean shouldSkipRecord(final Map<String, Object> partitionMap, final String currentObjectKey,
-            final long numOfProcessedRecs) {
+    public long recordsProcessedForObjectKey(final Map<String, Object> partitionMap, final String currentObjectKey) {
         if (offsets.containsKey(partitionMap)) {
-            final Map<String, Object> offsetVal = offsets.get(partitionMap);
-            final String objectMapKey = getObjectMapKey(currentObjectKey);
-
-            if (offsetVal.containsKey(objectMapKey)) {
-                final long offsetValue = (long) offsetVal.get(objectMapKey);
-                return numOfProcessedRecs <= offsetValue;
-            }
+            return (long) offsets.get(partitionMap).getOrDefault(getObjectMapKey(currentObjectKey), 0L);
         }
-        return false;
+        return 0L;
     }
 
     public void createNewOffsetMap(final Map<String, Object> partitionMap, final String objectKey,
