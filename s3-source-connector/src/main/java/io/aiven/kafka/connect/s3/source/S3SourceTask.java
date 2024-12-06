@@ -17,22 +17,21 @@
 package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.AWS_S3_BUCKET_NAME_CONFIG;
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
+
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.collections4.IteratorUtils;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
-import org.apache.kafka.connect.source.SourceTask;
 import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
@@ -41,13 +40,11 @@ import io.aiven.kafka.connect.s3.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.utils.FileReader;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
-import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +53,7 @@ import org.slf4j.LoggerFactory;
  * Connect records.
  */
 @SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports" })
-public class S3SourceTask extends SourceTask {
+public final class S3SourceTask extends AivenSourceTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
 
@@ -65,9 +62,6 @@ public class S3SourceTask extends SourceTask {
 
     public static final String OBJECT_KEY = "object_key";
     public static final String PARTITION = "topicPartition";
-
-    private static final long S_3_POLL_INTERVAL_MS = 10_000L;
-    private static final long ERROR_BACKOFF = 1000L;
 
     private S3SourceConfig s3SourceConfig;
     private AmazonS3 s3Client;
@@ -81,21 +75,13 @@ public class S3SourceTask extends SourceTask {
 
     private String s3Bucket;
 
-    private boolean taskInitialized;
-
-    private final AtomicBoolean connectorStopped = new AtomicBoolean();
-    private final S3ClientFactory s3ClientFactory = new S3ClientFactory();
-
-    private final Object pollLock = new Object();
     private FileReader fileReader;
     private final Set<String> failedObjectKeys = new HashSet<>();
-    private final Set<String> inProcessObjectKeys = new HashSet<>();
 
     private OffsetManager offsetManager;
 
-    @SuppressWarnings("PMD.UnnecessaryConstructor")
     public S3SourceTask() {
-        super();
+        super(LOGGER);
     }
 
     @Override
@@ -114,8 +100,15 @@ public class S3SourceTask extends SourceTask {
         offsetManager = new OffsetManager(context, s3SourceConfig);
         fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys);
         prepareReaderFromOffsetStorageReader();
-        this.taskInitialized = true;
+        super.startIterator(IteratorUtils.transformedIterator(sourceRecordIterator, s3SourceRecord -> createSourceRecord(s3SourceRecord)));
     }
+
+    @Override
+    protected int getMaxPollRecords() {
+        return s3SourceConfig.getMaxPollRecords();
+
+    }
+
 
     private void initializeConverters() {
         try {
@@ -127,13 +120,13 @@ public class S3SourceTask extends SourceTask {
                     .getDeclaredConstructor()
                     .newInstance();
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException
-                | NoSuchMethodException e) {
+                 | NoSuchMethodException e) {
             throw new ConnectException("Connect converters could not be instantiated.", e);
         }
     }
 
     private void initializeS3Client() {
-        this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
+        this.s3Client = new S3ClientFactory().createAmazonS3Client(s3SourceConfig);
         LOGGER.debug("S3 client initialized");
     }
 
@@ -143,92 +136,42 @@ public class S3SourceTask extends SourceTask {
     }
 
     @Override
-    public List<SourceRecord> poll() throws InterruptedException {
-        LOGGER.info("Polling for new records...");
-        synchronized (pollLock) {
-            final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
-
-            if (connectorStopped.get()) {
-                LOGGER.info("Connector has been stopped. Returning empty result list.");
-                return results;
-            }
-
-            while (!connectorStopped.get()) {
-                try {
-                    extractSourceRecords(results);
-                    LOGGER.info("Number of records extracted and sent: {}", results.size());
-                    return results;
-                } catch (AmazonS3Exception exception) {
-                    if (exception.isRetryable()) {
-                        LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
-                                exception);
-                        pollLock.wait(ERROR_BACKOFF);
-
-                        prepareReaderFromOffsetStorageReader();
-                    } else {
-                        LOGGER.warn("Non-retryable AmazonS3Exception occurred. Stopping polling.", exception);
-                        return null; // NOPMD
-                    }
-                } catch (DataException exception) {
-                    LOGGER.warn("DataException occurred during polling. No retries will be attempted.", exception);
-                } catch (final Throwable t) { // NOPMD
-                    LOGGER.error("Unexpected error encountered. Closing resources and stopping task.", t);
-                    closeResources();
-                    throw t;
-                }
-            }
-            return results;
-        }
-    }
-
-    private List<SourceRecord> extractSourceRecords(final List<SourceRecord> results) throws InterruptedException {
-        waitForObjects();
-        if (connectorStopped.get()) {
-            return results;
-        }
-        return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
-                valueConverter, connectorStopped, this.transformer, fileReader, offsetManager);
-    }
-
-    private void waitForObjects() throws InterruptedException {
-        while (!sourceRecordIterator.hasNext() && !connectorStopped.get()) {
-            LOGGER.debug("Blocking until new S3 files are available.");
-            Thread.sleep(S_3_POLL_INTERVAL_MS);
-            prepareReaderFromOffsetStorageReader();
-        }
-    }
-
-    @Override
-    public void stop() {
-        this.taskInitialized = false;
-        this.connectorStopped.set(true);
-        synchronized (pollLock) {
-            closeResources();
-        }
-    }
-
-    private void closeResources() {
+    protected void closeResources() {
         s3Client.shutdown();
     }
 
     // below for visibility in tests
-    public Optional<Converter> getKeyConverter() {
+    Optional<Converter> getKeyConverter() {
         return keyConverter;
     }
 
-    public Converter getValueConverter() {
+    Converter getValueConverter() {
         return valueConverter;
     }
 
-    public Transformer getTransformer() {
+    Transformer getTransformer() {
         return transformer;
     }
 
-    public boolean isTaskInitialized() {
-        return taskInitialized;
+
+    private SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord) {
+        final Map<String, String> conversionConfig = new HashMap<>();
+
+        final String topic = s3SourceRecord.getTopic();
+        final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(topic, s3SourceRecord.key()));
+
+        transformer.configureValueConverter(conversionConfig, s3SourceConfig);
+        valueConverter.configure(conversionConfig, false);
+        try {
+            final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, s3SourceRecord.value());
+//            offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
+//            s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
+            return s3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
+        } catch (DataException e) {
+            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
+            fileReader.addFailedObjectKeys(s3SourceRecord.getObjectKey());
+            throw e;
+        }
     }
 
-    public AtomicBoolean getConnectorStopped() {
-        return new AtomicBoolean(connectorStopped.get());
-    }
 }

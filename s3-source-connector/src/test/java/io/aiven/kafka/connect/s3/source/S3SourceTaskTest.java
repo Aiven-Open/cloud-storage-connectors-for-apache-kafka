@@ -129,18 +129,21 @@ final class S3SourceTaskTest {
         final S3SourceTask s3SourceTask = new S3SourceTask();
         startSourceTask(s3SourceTask);
 
-        final Optional<Converter> keyConverter = s3SourceTask.getKeyConverter();
-        assertThat(keyConverter).isPresent();
-        assertThat(keyConverter.get()).isInstanceOf(ByteArrayConverter.class);
+        try {
+            final Optional<Converter> keyConverter = s3SourceTask.getKeyConverter();
+            assertThat(keyConverter).isPresent();
+            assertThat(keyConverter.get()).isInstanceOf(ByteArrayConverter.class);
 
-        final Converter valueConverter = s3SourceTask.getValueConverter();
-        assertThat(valueConverter).isInstanceOf(ByteArrayConverter.class);
+            final Converter valueConverter = s3SourceTask.getValueConverter();
+            assertThat(valueConverter).isInstanceOf(ByteArrayConverter.class);
 
-        final Transformer transformer = s3SourceTask.getTransformer();
-        assertThat(transformer).isInstanceOf(ByteArrayTransformer.class);
+            final Transformer transformer = s3SourceTask.getTransformer();
+            assertThat(transformer).isInstanceOf(ByteArrayTransformer.class);
 
-        final boolean taskInitialized = s3SourceTask.isTaskInitialized();
-        assertThat(taskInitialized).isTrue();
+            assertThat(s3SourceTask.isRunning()).isTrue();
+        } finally {
+            s3SourceTask.stop();
+        }
     }
 
     @Test
@@ -167,9 +170,8 @@ final class S3SourceTaskTest {
         startSourceTask(s3SourceTask);
         s3SourceTask.stop();
 
-        final boolean taskInitialized = s3SourceTask.isTaskInitialized();
-        assertThat(taskInitialized).isFalse();
-        assertThat(s3SourceTask.getConnectorStopped()).isTrue();
+        assertThat(s3SourceTask.isRunning()).isFalse();
+        assertThat(s3SourceTask.isStopped()).isTrue();
     }
 
     private static S3SourceRecord getAivenS3SourceRecord() {

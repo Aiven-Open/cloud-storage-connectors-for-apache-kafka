@@ -35,6 +35,7 @@ dependencies {
   implementation(logginglibs.slf4j)
 
   implementation(apache.commons.text)
+  implementation(apache.commons.collection4)
 
   implementation(apache.parquet.avro) {
     exclude(group = "org.xerial.snappy", module = "snappy-java")

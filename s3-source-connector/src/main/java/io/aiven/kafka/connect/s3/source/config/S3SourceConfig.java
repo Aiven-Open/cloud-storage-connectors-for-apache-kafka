@@ -382,4 +382,8 @@ final public class S3SourceConfig extends AbstractConfig {
     String getSchemaRegistryUrl() {
         return getString(SCHEMA_REGISTRY_URL);
     }
+
+    public int getMaxPollRecords() {
+        return getInt(MAX_POLL_RECORDS);
+    }
 }
