@@ -20,6 +20,8 @@ import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NA
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -39,18 +41,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-class FileReaderTest {
+class AWSV2SourceClientTest {
 
-    private static final String TEST_BUCKET = "test-bucket";
     private AmazonS3 s3Client;
 
-    private FileReader fileReader;
+    private AWSV2SourceClient awsv2SourceClient;
 
     private static Map<String, String> getConfigMap(final int maxTasks, final int taskId) {
         final Map<String, String> configMap = new HashMap<>();
         configMap.put("tasks.max", String.valueOf(maxTasks));
         configMap.put("task.id", String.valueOf(taskId));
-        configMap.put(AWS_S3_BUCKET_NAME_CONFIG, "testbucket");
+
+        configMap.put(AWS_S3_BUCKET_NAME_CONFIG, "test-bucket");
         return configMap;
     }
 
@@ -61,7 +63,7 @@ class FileReaderTest {
         final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(Collections.emptyList(), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        final Iterator<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
         assertThat(summaries).isExhausted();
     }
 
@@ -71,9 +73,8 @@ class FileReaderTest {
         final String objectKey = "any-key";
 
         initializeWithTaskConfigs(maxTasks, taskId);
-        final Iterator<S3ObjectSummary> summaries = getS3ObjectSummaryIterator(objectKey);
+        final Iterator<String> summaries = getS3ObjectKeysIterator(objectKey);
         assertThat(summaries).hasNext();
-        assertThat(summaries.next().getSize()).isEqualTo(1);
     }
 
     @ParameterizedTest
@@ -81,9 +82,8 @@ class FileReaderTest {
     void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdAssigned(final int maxTasks, final int taskId,
             final String objectKey) {
         initializeWithTaskConfigs(maxTasks, taskId);
-        final Iterator<S3ObjectSummary> summaries = getS3ObjectSummaryIterator(objectKey);
+        final Iterator<String> summaries = getS3ObjectKeysIterator(objectKey);
         assertThat(summaries).hasNext();
-        assertThat(summaries.next().getSize()).isEqualTo(1);
     }
 
     @ParameterizedTest
@@ -92,7 +92,8 @@ class FileReaderTest {
     void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdUnassigned(final int maxTasks, final int taskId,
             final String objectKey) {
         initializeWithTaskConfigs(maxTasks, taskId);
-        final Iterator<S3ObjectSummary> summaries = getS3ObjectSummaryIterator(objectKey);
+        final Iterator<String> summaries = getS3ObjectKeysIterator(objectKey);
+
         assertThat(summaries).isExhausted();
     }
 
@@ -103,11 +104,11 @@ class FileReaderTest {
         final ListObjectsV2Result listObjectsV2Result = getListObjectsV2Result();
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        final Iterator<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
 
         // assigned 1 object to taskid
         assertThat(summaries).hasNext();
-        assertThat(summaries.next().getSize()).isEqualTo(1);
+        assertThat(summaries.next()).isNotBlank();
         assertThat(summaries).isExhausted();
     }
 
@@ -124,9 +125,10 @@ class FileReaderTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
 
-        final Iterator<S3ObjectSummary> summaries = fileReader.fetchObjectSummaries(s3Client);
-
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
         assertThat(summaries.next()).isNotNull();
+        assertThat(summaries).isExhausted();
     }
 
     private ListObjectsV2Result createListObjectsV2Result(final List<S3ObjectSummary> summaries,
@@ -145,20 +147,21 @@ class FileReaderTest {
         return summary;
     }
 
-    private Iterator<S3ObjectSummary> getS3ObjectSummaryIterator(final String objectKey) {
+    private Iterator<String> getS3ObjectKeysIterator(final String objectKey) {
         final S3ObjectSummary objectSummary = createObjectSummary(1, objectKey);
         final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(
                 Collections.singletonList(objectSummary), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        return fileReader.fetchObjectSummaries(s3Client);
+        return awsv2SourceClient.getListOfObjectKeys(null);
     }
 
     public void initializeWithTaskConfigs(final int maxTasks, final int taskId) {
         final Map<String, String> configMap = getConfigMap(maxTasks, taskId);
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
-        fileReader = new FileReader(s3SourceConfig, TEST_BUCKET, Collections.emptySet());
         s3Client = mock(AmazonS3.class);
+        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
+
     }
 
     private ListObjectsV2Result getListObjectsV2Result() {
