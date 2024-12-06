@@ -99,7 +99,6 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_S3_REGION_CONFIG = "aws.s3.region";
     public static final String AWS_S3_PART_SIZE = "aws.s3.part.size.bytes";
 
-    public static final String AWS_S3_START_AFTER_CONFIG = "aws.s3.startAfter";
     public static final String AWS_S3_PREFIX_CONFIG = "aws.s3.prefix";
     public static final String AWS_STS_ROLE_ARN = "aws.sts.role.arn";
     public static final String AWS_STS_ROLE_EXTERNAL_ID = "aws.sts.role.external.id";
@@ -220,11 +219,6 @@ public final class S3ConfigFragment extends ConfigFragment {
         configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
-
-        configDef.define(AWS_S3_START_AFTER_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM,
-                "If you want to start reading events from a specific location you can start reading them after a certain file name in S3 by configuring this.",
-                GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_START_AFTER_CONFIG);
 
         configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, awsGroupCounter++, // NOPMD
