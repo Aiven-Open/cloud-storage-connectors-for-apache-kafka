@@ -16,20 +16,20 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.BUCKET;
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.PARTITION;
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.TOPIC;
-
 import java.util.HashMap;
 import java.util.Map;
 
 final public class ConnectUtils {
 
+    private static final String BUCKET = "bucket";
+    private static final String TOPIC = "topic";
+    private static final String PARTITION = "topicPartition";
+
     private ConnectUtils() {
         // hidden
     }
-    static Map<String, Object> getPartitionMap(final String topicName, final Integer defaultPartitionId,
-            final String bucketName) {
+    public static Map<String, Object> getPartitionMap(final String topicName, final Integer defaultPartitionId,
+                                                      final String bucketName) {
         final Map<String, Object> partitionMap = new HashMap<>();
         partitionMap.put(BUCKET, bucketName);
         partitionMap.put(TOPIC, topicName);

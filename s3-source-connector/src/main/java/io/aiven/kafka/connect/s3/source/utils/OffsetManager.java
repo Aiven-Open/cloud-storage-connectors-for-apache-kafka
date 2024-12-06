@@ -112,7 +112,7 @@ public class OffsetManager {
         return offsetMap;
     }
 
-    void updateCurrentOffsets(final Map<String, Object> partitionMap, final Map<String, Object> offsetValueMap) {
+    public void updateCurrentOffsets(final Map<String, Object> partitionMap, final Map<String, Object> offsetValueMap) {
         if (offsets.containsKey(partitionMap)) {
             final Map<String, Object> offsetMap = new HashMap<>(offsets.get(partitionMap));
             offsetMap.putAll(offsetValueMap);

@@ -22,12 +22,8 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.common.config.OutputFormatFragment;
-import io.aiven.kafka.connect.common.config.SchemaRegistryFragment;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
@@ -45,25 +41,20 @@ final public class S3SourceConfig extends SourceCommonConfig {
 
     private final S3ConfigFragment s3ConfigFragment;
     public S3SourceConfig(final Map<String, String> properties) {
-        super(configDef(), handleDeprecatedYyyyUppercase(properties));
+        super(update(new ConfigDef()), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
     }
 
-    public static ConfigDef configDef() {
-
-        final var configDef = new S3SourceConfigDef();
-        S3ConfigFragment.update(configDef);
-        SourceConfigFragment.update(configDef);
-        FileNameFragment.update(configDef);
-        SchemaRegistryFragment.update(configDef);
-        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
-
-        return configDef;
+    /**
+     * package private for testing.
+     * @return the Configuration def for S3SourceConfig without the updates from SourceCommonConfig.
+     */
+    public static ConfigDef update(ConfigDef config) {
+        return S3ConfigFragment.update(config);
     }
 
     private void validate() {
-
         // s3ConfigFragment is validated in this method as it is created here.
         // Other Fragments created in the ConfigDef are validated in the parent classes their instances are created in.
         // e.g. SourceConfigFragment, FileNameFragment, SchemaRegistryFragment and OutputFormatFragment are all
@@ -138,5 +129,4 @@ final public class S3SourceConfig extends SourceCommonConfig {
     public S3ConfigFragment getS3ConfigFragment() {
         return s3ConfigFragment;
     }
-
 }

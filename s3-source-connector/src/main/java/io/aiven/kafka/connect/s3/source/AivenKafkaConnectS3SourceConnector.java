@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.aiven.kafka.connect.common.config.CommonConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
@@ -44,7 +45,7 @@ public class AivenKafkaConnectS3SourceConnector extends SourceConnector {
 
     @Override
     public ConfigDef config() {
-        return S3SourceConfig.configDef();
+        return CommonConfig.generateFullConfigurationDefinition(S3SourceConfig.class);
     }
 
     @Override
