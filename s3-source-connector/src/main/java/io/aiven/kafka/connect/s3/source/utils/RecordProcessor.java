@@ -45,7 +45,7 @@ public final class RecordProcessor {
     public static List<SourceRecord> processRecords(final Iterator<S3SourceRecord> sourceRecordIterator,
             final List<SourceRecord> results, final S3SourceConfig s3SourceConfig,
             final Optional<Converter> keyConverter, final Converter valueConverter,
-            final AtomicBoolean connectorStopped, final Transformer transformer, final FileReader fileReader,
+            final AtomicBoolean connectorStopped, final Transformer transformer, final AWSV2SourceClient sourceClient,
             final OffsetManager offsetManager) {
 
         final Map<String, String> conversionConfig = new HashMap<>();
@@ -55,7 +55,7 @@ public final class RecordProcessor {
             final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
             if (s3SourceRecord != null) {
                 final SourceRecord sourceRecord = createSourceRecord(s3SourceRecord, s3SourceConfig, keyConverter,
-                        valueConverter, conversionConfig, transformer, fileReader, offsetManager);
+                        valueConverter, conversionConfig, transformer, sourceClient, offsetManager);
                 results.add(sourceRecord);
             }
         }
@@ -65,8 +65,8 @@ public final class RecordProcessor {
 
     static SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord, final S3SourceConfig s3SourceConfig,
             final Optional<Converter> keyConverter, final Converter valueConverter,
-            final Map<String, String> conversionConfig, final Transformer transformer, final FileReader fileReader,
-            final OffsetManager offsetManager) {
+            final Map<String, String> conversionConfig, final Transformer transformer,
+            final AWSV2SourceClient sourceClient, final OffsetManager offsetManager) {
 
         final String topic = s3SourceRecord.getTopic();
         final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(topic, s3SourceRecord.key()));
@@ -80,7 +80,7 @@ public final class RecordProcessor {
             return s3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
         } catch (DataException e) {
             LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
-            fileReader.addFailedObjectKeys(s3SourceRecord.getObjectKey());
+            sourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
             throw e;
         }
     }

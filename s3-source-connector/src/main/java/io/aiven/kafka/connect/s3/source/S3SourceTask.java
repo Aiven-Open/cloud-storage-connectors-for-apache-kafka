@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.MAX_POLL_RECORDS;
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -37,9 +36,8 @@ import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
-import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.FileReader;
+import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
@@ -79,15 +77,12 @@ public class S3SourceTask extends SourceTask {
 
     private Transformer transformer;
 
-    private String s3Bucket;
-
     private boolean taskInitialized;
 
     private final AtomicBoolean connectorStopped = new AtomicBoolean();
-    private final S3ClientFactory s3ClientFactory = new S3ClientFactory();
 
     private final Object pollLock = new Object();
-    private FileReader fileReader;
+    private AWSV2SourceClient awsv2SourceClient;
     private final Set<String> failedObjectKeys = new HashSet<>();
     private final Set<String> inProcessObjectKeys = new HashSet<>();
 
@@ -108,11 +103,9 @@ public class S3SourceTask extends SourceTask {
         LOGGER.info("S3 Source task started.");
         s3SourceConfig = new S3SourceConfig(props);
         initializeConverters();
-        initializeS3Client();
-        this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
-        fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys);
+        awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;
     }
@@ -132,14 +125,9 @@ public class S3SourceTask extends SourceTask {
         }
     }
 
-    private void initializeS3Client() {
-        this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
-        LOGGER.debug("S3 client initialized");
-    }
-
     private void prepareReaderFromOffsetStorageReader() {
-        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
-                this.transformer, fileReader);
+        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
+                awsv2SourceClient);
     }
 
     @Override
@@ -187,7 +175,7 @@ public class S3SourceTask extends SourceTask {
             return results;
         }
         return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
-                valueConverter, connectorStopped, this.transformer, fileReader, offsetManager);
+                valueConverter, connectorStopped, this.transformer, awsv2SourceClient, offsetManager);
     }
 
     private void waitForObjects() throws InterruptedException {
@@ -208,7 +196,7 @@ public class S3SourceTask extends SourceTask {
     }
 
     private void closeResources() {
-        s3Client.shutdown();
+        awsv2SourceClient.shutdown();
     }
 
     // below for visibility in tests
