@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.testutils;
+package io.aiven.kafka.connect.common.source.input;
 
 import static org.apache.kafka.connect.data.Schema.INT32_SCHEMA;
 import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
@@ -71,7 +71,7 @@ public final class ContentUtils {
             final int numOfRecords) throws IOException {
 
         final List<Struct> allParquetRecords = new ArrayList<>();
-
+        // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
             allParquetRecords
                     .add(new Struct(schema).put("name", name1 + i).put("age", 30).put("email", name1 + "@test"));

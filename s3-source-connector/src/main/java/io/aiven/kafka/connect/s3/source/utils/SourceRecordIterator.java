@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.MAX_POLL_RECORDS;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -29,8 +27,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.input.Transformer;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -155,7 +153,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                         numOfProcessedRecs++;
 
                         // Break if we have reached the max records per poll
-                        if (sourceRecords.size() >= s3SourceConfig.getInt(MAX_POLL_RECORDS)) {
+                        if (sourceRecords.size() >= s3SourceConfig.getMaxPollRecords()) {
                             break;
                         }
                     }

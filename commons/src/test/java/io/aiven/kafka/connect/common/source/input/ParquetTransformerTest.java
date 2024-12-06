@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.input;
+package io.aiven.kafka.connect.common.source.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,11 +33,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
-import com.amazonaws.util.IOUtils;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,7 +58,7 @@ final class ParquetTransformerTest {
         final byte[] mockParquetData = new byte[0];
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
+        final SourceCommonConfig s3SourceConfig = mock(SourceCommonConfig.class);
 
         final String topic = "test-topic";
         final int topicPartition = 0;
@@ -74,7 +73,7 @@ final class ParquetTransformerTest {
         final byte[] mockParquetData = generateMockParquetData();
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
+        final SourceCommonConfig s3SourceConfig = mock(SourceCommonConfig.class);
 
         final String topic = "test-topic";
         final int topicPartition = 0;
@@ -95,7 +94,7 @@ final class ParquetTransformerTest {
         final InputStream inputStream = new ByteArrayInputStream(invalidData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
+        final SourceCommonConfig s3SourceConfig = mock(SourceCommonConfig.class);
 
         final String topic = "test-topic";
         final int topicPartition = 0;

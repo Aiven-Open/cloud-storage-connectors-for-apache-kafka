@@ -94,6 +94,46 @@ public abstract class AivenSourceTask extends SourceTask {
         final List<SourceRecord> results = new ArrayList<>(maxPollRecords);
         final int recordCount = queue.drainTo(results);
         return recordCount > 0 ? results : null;
+        /*
+            @Override
+    public List<SourceRecord> poll() throws InterruptedException {
+        LOGGER.info("Polling for new records...");
+        synchronized (pollLock) {
+            final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
+
+            if (connectorStopped.get()) {
+                LOGGER.info("Connector has been stopped. Returning empty result list.");
+                return results;
+            }
+
+            while (!connectorStopped.get()) {
+                try {
+                    extractSourceRecords(results);
+                    LOGGER.info("Number of records extracted and sent: {}", results.size());
+                    return results;
+                } catch (AmazonS3Exception exception) {
+                    if (exception.isRetryable()) {
+                        LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
+                                exception);
+                        pollLock.wait(ERROR_BACKOFF);
+
+                        prepareReaderFromOffsetStorageReader();
+                    } else {
+                        LOGGER.warn("Non-retryable AmazonS3Exception occurred. Stopping polling.", exception);
+                        return null; // NOPMD
+                    }
+                } catch (DataException exception) {
+                    LOGGER.warn("DataException occurred during polling. No retries will be attempted.", exception);
+                } catch (final Throwable t) { // NOPMD
+                    LOGGER.error("Unexpected error encountered. Closing resources and stopping task.", t);
+                    closeResources();
+                    throw t;
+                }
+            }
+            return results;
+        }
+    }
+         */
     }
 
     protected abstract int getMaxPollRecords();

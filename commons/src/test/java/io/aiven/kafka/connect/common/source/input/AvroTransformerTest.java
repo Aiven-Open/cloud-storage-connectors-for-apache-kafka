@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.input;
+package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -29,7 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
@@ -49,7 +49,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 final class AvroTransformerTest {
 
     @Mock
-    private S3SourceConfig s3SourceConfig;
+    private SourceCommonConfig sourceCommonConfig;
 
     private AvroTransformer avroTransformer;
     private Map<String, String> config;
@@ -63,8 +63,8 @@ final class AvroTransformerTest {
     @Test
     void testConfigureValueConverter() {
         final String value = "http://localhost:8081";
-        when(s3SourceConfig.getString(SCHEMA_REGISTRY_URL)).thenReturn(value);
-        avroTransformer.configureValueConverter(config, s3SourceConfig);
+        when(sourceCommonConfig.getString(SCHEMA_REGISTRY_URL)).thenReturn(value);
+        avroTransformer.configureValueConverter(config, sourceCommonConfig);
         assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("http://localhost:8081")
                 .describedAs("The schema registry URL should be correctly set in the config.");
     }

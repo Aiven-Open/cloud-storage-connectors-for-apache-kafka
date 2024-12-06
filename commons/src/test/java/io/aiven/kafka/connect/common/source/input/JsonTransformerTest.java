@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.input;
+package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.s3.source.config.S3SourceConfig.SCHEMAS_ENABLE;
+import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -29,7 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,7 +46,7 @@ final class JsonTransformerTest {
     public static final String TESTTOPIC = "testtopic";
     JsonTransformer jsonTransformer;
 
-    S3SourceConfig s3SourceConfig;
+    SourceCommonConfig sourceCommonConfig;
 
     @Mock
     private IOSupplier<InputStream> inputStreamIOSupplierMock;
@@ -54,14 +54,14 @@ final class JsonTransformerTest {
     @BeforeEach
     void setUp() {
         jsonTransformer = new JsonTransformer();
-        s3SourceConfig = mock(S3SourceConfig.class);
+        sourceCommonConfig = mock(SourceCommonConfig.class);
     }
 
     @Test
     void testConfigureValueConverter() {
         final Map<String, String> config = new HashMap<>();
 
-        jsonTransformer.configureValueConverter(config, s3SourceConfig);
+        jsonTransformer.configureValueConverter(config, sourceCommonConfig);
         assertThat(config).as("%s should be set to false", SCHEMAS_ENABLE)
                 .containsEntry(SCHEMAS_ENABLE, Boolean.FALSE.toString());
     }
@@ -72,7 +72,7 @@ final class JsonTransformerTest {
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                s3SourceConfig);
+                sourceCommonConfig);
 
         assertThat(jsonNodes).hasSize(1);
     }
@@ -84,7 +84,7 @@ final class JsonTransformerTest {
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
 
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                s3SourceConfig);
+                sourceCommonConfig);
 
         assertThat(jsonNodes).isEmpty();
     }
@@ -95,9 +95,9 @@ final class JsonTransformerTest {
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                s3SourceConfig);
+                sourceCommonConfig);
         final byte[] serializedData = jsonTransformer.getValueBytes(jsonNodes.findFirst().get(), TESTTOPIC,
-                s3SourceConfig);
+                sourceCommonConfig);
 
         final ObjectMapper objectMapper = new ObjectMapper();
         final JsonNode expectedData = objectMapper.readTree(serializedData);

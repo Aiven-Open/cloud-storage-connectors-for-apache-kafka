@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.input;
+package io.aiven.kafka.connect.common.source.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +40,7 @@ final class ByteArrayTransformerTest {
     private ByteArrayTransformer byteArrayTransformer;
 
     @Mock
-    private S3SourceConfig s3SourceConfig;
+    private SourceCommonConfig sourceCommonConfig;
 
     @BeforeEach
     void setUp() {
@@ -54,7 +54,7 @@ final class ByteArrayTransformerTest {
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
         final Stream<Object> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
-                s3SourceConfig);
+                sourceCommonConfig);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(1);
@@ -68,7 +68,7 @@ final class ByteArrayTransformerTest {
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
         final Stream<Object> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
-                s3SourceConfig);
+                sourceCommonConfig);
 
         assertThat(records).hasSize(0);
     }
@@ -76,7 +76,7 @@ final class ByteArrayTransformerTest {
     @Test
     void testGetValueBytes() {
         final byte[] record = { 1, 2, 3 };
-        final byte[] result = byteArrayTransformer.getValueBytes(record, TEST_TOPIC, s3SourceConfig);
+        final byte[] result = byteArrayTransformer.getValueBytes(record, TEST_TOPIC, sourceCommonConfig);
 
         assertThat(result).containsExactlyInAnyOrder(record);
     }
