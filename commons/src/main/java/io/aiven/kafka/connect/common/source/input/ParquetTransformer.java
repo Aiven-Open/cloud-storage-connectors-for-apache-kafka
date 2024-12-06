@@ -55,8 +55,8 @@ public class ParquetTransformer implements Transformer {
 
     @Override
     public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig) {
-        return getParquetStreamRecords(inputStreamIOSupplier, topic, topicPartition);
+            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
+        return getParquetStreamRecords(inputStreamIOSupplier, topic, topicPartition, skipRecords);
     }
 
     @Override
@@ -66,7 +66,7 @@ public class ParquetTransformer implements Transformer {
     }
 
     private Stream<Object> getParquetStreamRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition) {
+            final String topic, final int topicPartition, final long skipRecords) {
         final String timestamp = String.valueOf(Instant.now().toEpochMilli());
         File parquetFile;
 
@@ -105,7 +105,7 @@ public class ParquetTransformer implements Transformer {
                         return false;
                     }
                 }
-            }, false).onClose(() -> {
+            }, false).skip(skipRecords).onClose(() -> {
                 try {
                     parquetReader.close(); // Ensure reader is closed when the stream is closed
                 } catch (IOException e) {

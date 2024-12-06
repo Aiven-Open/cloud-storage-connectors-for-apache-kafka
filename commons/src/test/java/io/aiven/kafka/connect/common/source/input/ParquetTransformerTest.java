@@ -63,7 +63,7 @@ final class ParquetTransformerTest {
         final String topic = "test-topic";
         final int topicPartition = 0;
         final Stream<Object> recs = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
-                s3SourceConfig);
+                s3SourceConfig, 0L);
 
         assertThat(recs).isEmpty();
     }
@@ -79,13 +79,37 @@ final class ParquetTransformerTest {
         final int topicPartition = 0;
 
         final List<Object> records = parquetTransformer
-                .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig)
+                .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig, 0L)
                 .collect(Collectors.toList());
 
-        assertThat(records).isNotEmpty();
+        assertThat(records).hasSize(100);
         assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
                 .contains("name1")
                 .contains("name2");
+    }
+
+    @Test
+    void testGetRecordsWithValidDataSkipFew() throws Exception {
+        final byte[] mockParquetData = generateMockParquetData();
+        final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
+        final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
+        final SourceCommonConfig s3SourceConfig = mock(SourceCommonConfig.class);
+
+        final String topic = "test-topic";
+        final int topicPartition = 0;
+
+        final List<Object> records = parquetTransformer
+                .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig, 25L)
+                .collect(Collectors.toList());
+
+        assertThat(records).hasSize(75);
+        assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
+                .doesNotContain("name1")
+                .doesNotContain("name2")
+                .doesNotContain("name24")
+                .contains("name25")
+                .contains("name26")
+                .contains("name99");
     }
 
     @Test
@@ -100,7 +124,7 @@ final class ParquetTransformerTest {
         final int topicPartition = 0;
 
         final Stream<Object> records = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
-                s3SourceConfig);
+                s3SourceConfig, 0L);
         assertThat(records).isEmpty();
     }
 
@@ -126,7 +150,7 @@ final class ParquetTransformerTest {
 
             final IOSupplier<InputStream> inputStreamSupplier = mock(IOSupplier.class);
             final Stream<Object> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic", 1,
-                    null);
+                    null, 0L);
 
             assertThat(resultStream).isEmpty();
         }
@@ -139,7 +163,7 @@ final class ParquetTransformerTest {
 
             final IOSupplier<InputStream> inputStreamSupplier = () -> inputStreamMock;
             final Stream<Object> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic", 1,
-                    null);
+                    null, 0L);
 
             assertThat(resultStream).isEmpty();
         }
