@@ -85,6 +85,10 @@ public class AWSV2SourceClient {
         if (StringUtils.isNotBlank(startToken)) {
             request.withStartAfter(startToken);
         }
+        // Prefix is optional so only use if supplied
+        if (StringUtils.isNotBlank(s3SourceConfig.getAwsS3Prefix())) {
+            request.withPrefix(s3SourceConfig.getAwsS3Prefix());
+        }
 
         final Stream<String> s3ObjectKeyStream = Stream
                 .iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
