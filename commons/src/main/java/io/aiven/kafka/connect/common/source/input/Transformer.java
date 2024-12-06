@@ -29,7 +29,7 @@ public interface Transformer {
     void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
 
     Stream<Object> getRecords(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition,
-            AbstractConfig sourceConfig);
+            AbstractConfig sourceConfig, long skipRecords);
 
     byte[] getValueBytes(Object record, String topic, AbstractConfig sourceConfig);
 }
