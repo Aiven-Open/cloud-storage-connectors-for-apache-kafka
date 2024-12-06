@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import org.apache.commons.collections4.IteratorUtils;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
@@ -50,16 +51,11 @@ import org.slf4j.LoggerFactory;
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
  * Connect records.
  */
-@SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports" })
-public final class S3SourceTask extends AivenSourceTask {
+public final class S3SourceTask extends AbstractSourceTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
 
-    public static final String BUCKET = "bucket";
-    public static final String TOPIC = "topic";
-
     public static final String OBJECT_KEY = "object_key";
-    public static final String PARTITION = "topicPartition";
 
     private S3SourceConfig s3SourceConfig;
     private AmazonS3 s3Client;

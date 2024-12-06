@@ -1,10 +1,9 @@
-package io.aiven.kafka.connect.s3.source;
+package io.aiven.kafka.connect.common.source;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
-import org.checkerframework.checker.units.qual.C;
 import org.slf4j.Logger;
 
 import java.time.Duration;
@@ -31,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  *
  */
-public abstract class AivenSourceTask extends SourceTask {
+public abstract class AbstractSourceTask extends SourceTask {
 
     /**
      * The maximum time to spend polling.  This is set to 5 seconds as that is the time that is allotted to a system
@@ -44,7 +43,7 @@ public abstract class AivenSourceTask extends SourceTask {
     private final AtomicBoolean connectorStopped;
 
     /**
-     * The logger to use.  Set from the class implementing AivenSourceTask.
+     * The logger to use.  Set from the class implementing AbstractSourceTask.
      */
     private final Logger logger;
 
@@ -70,7 +69,7 @@ public abstract class AivenSourceTask extends SourceTask {
      * Constructor.
      * @param logger the logger to use.
      */
-    protected AivenSourceTask(final Logger logger) {
+    protected AbstractSourceTask(final Logger logger) {
         super();
         this.logger = logger;
         connectorStopped =  new AtomicBoolean();
