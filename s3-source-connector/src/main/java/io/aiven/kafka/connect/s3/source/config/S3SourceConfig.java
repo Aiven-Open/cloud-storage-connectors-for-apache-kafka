@@ -22,12 +22,8 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.common.config.OutputFormatFragment;
-import io.aiven.kafka.connect.common.config.SchemaRegistryFragment;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
@@ -50,20 +46,15 @@ final public class S3SourceConfig extends SourceCommonConfig {
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
     }
 
-    public static ConfigDef configDef() {
-
-        final var configDef = new S3SourceConfigDef();
-        S3ConfigFragment.update(configDef);
-        SourceConfigFragment.update(configDef);
-        FileNameFragment.update(configDef);
-        SchemaRegistryFragment.update(configDef);
-        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
-
-        return configDef;
+    /**
+     * package private for testing.
+     * @return the Configuration def for S3SourceCOnfig without the updates from SourceCommonConfig.
+     */
+    static ConfigDef configDef() {
+        return S3ConfigFragment.update(new ConfigDef());
     }
 
     private void validate() {
-
         // s3ConfigFragment is validated in this method as it is created here.
         // Other Fragments created in the ConfigDef are validated in the parent classes their instances are created in.
         // e.g. SourceConfigFragment, FileNameFragment, SchemaRegistryFragment and OutputFormatFragment are all
@@ -137,22 +128,5 @@ final public class S3SourceConfig extends SourceCommonConfig {
 
     public S3ConfigFragment getS3ConfigFragment() {
         return s3ConfigFragment;
-    }
-
-
-    String getTargetTopics() {
-        return getString(TARGET_TOPICS);
-    }
-
-    String getTargetTopicPartitions() {
-        return getString(TARGET_TOPIC_PARTITIONS);
-    }
-
-    String getSchemaRegistryUrl() {
-        return getString(SCHEMA_REGISTRY_URL);
-    }
-
-    public int getMaxPollRecords() {
-        return getInt(MAX_POLL_RECORDS);
     }
 }

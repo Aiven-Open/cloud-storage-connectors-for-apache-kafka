@@ -1,16 +1,18 @@
 package io.aiven.kafka.connect.s3.source;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
+import org.checkerframework.checker.units.qual.C;
 import org.slf4j.Logger;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -18,14 +20,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * This class handles extracting records from an iterator and returning them to Kafka.  It uses an exponential backoff with
  * jitter to reduce the number of calls to the backend when there is no data.  This solution:
  * <ul>
- *     <li>This solution uses a thread to read from an iterator of SourceRecords and writes them to a LinkedBlockingQueue until
- *     the queue is full or the iterator says it has no more entries.</li>
- *     <li>When polled this implementation moves available records from the LinkedBlockingQueue to the return array.</li>
- *     <li>if there are no records {@link #poll()} will return null.</li>
- *     <li>Upto {@link #getMaxPollRecords()} will be sent in a single poll request</li>
- *     <li>The queue size is 2 x {@link #getMaxPollRecords()}</li>
- *     <li>When the connector is stopped the iterator thread is stopped so that no more items are placed in the queue.</li>
- *     <li>The remaining items in the queue will be returned via the poll method.</li>
+ *     <li>When polled this implementation moves available records from the {@link #sourceRecordIterator} to the return array.</li>
+ *     <li>if there are no records
+ *     <ul><li>{@link #poll()} will return null.</li>
+ *     <li>The poll will delay no more than approx 5 seconds.</li>
+ *     </ul></li>
+ *     <li>Upto {@link #maxPollRecords} will be sent in a single poll request</li>
+ *     <li>When the connector is stopped any collected records are returned to kafka before stopping.</li>
  * </ul>
  *
  *
@@ -33,15 +34,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class AivenSourceTask extends SourceTask {
 
     /**
-     * Place 2x the max poll records in the queue.
+     * The maximum time to spend polling.  This is set to 5 seconds as that is the time that is allotted to a system
+     * for shutdown.
      */
-    private static final int QUEUE_MULTIPLIER = 2;
-
-    /**
-     * The queue of records that are ready to send to Kafka.
-     */
-    private LinkedBlockingQueue<SourceRecord> queue;
-
+    private static final Duration MAX_POLL_TIME = Duration.ofSeconds(5);
     /**
      * The boolean that indicates the connector is stopped.
      */
@@ -58,9 +54,17 @@ public abstract class AivenSourceTask extends SourceTask {
     private int maxPollRecords;
 
     /**
-     * The thread that runs the iterator.
+     * The iterator that SourceRecords are extracted from during a poll event.
+     * When this iterator runs out of records it should attempt to reset and read
+     * more records from the backend on the next {@code hasNext()} call.  In this way it should
+     * detect when new data has been added to the backend and continue processing.
      */
-    private Thread iteratorThread; // NOPMD not J2EE webapp
+    private Iterator<SourceRecord> sourceRecordIterator;
+
+    /**
+     * The Backoff implementation that executes the delay in the poll loop.
+     */
+    private Backoff backoff;
 
     /**
      * Constructor.
@@ -70,85 +74,47 @@ public abstract class AivenSourceTask extends SourceTask {
         super();
         this.logger = logger;
         connectorStopped =  new AtomicBoolean();
+        backoff = new Backoff(MAX_POLL_TIME);
     }
 
     /**
-     * Starts the iterator.  Also configures the task environment.
-     * @param iterator the iterator to start reading from.
+     * Constructs the iterator.  Also configures the task environment.
+     * @param props The properties for the environment.
      */
-    protected void startIterator(final Iterator<SourceRecord> iterator) {
-        iteratorThread = new Thread(new IteratorRunnable(iterator), "IteratorThread"); // NOPMD not J2EE webapp
-        iteratorThread.start();
-        maxPollRecords = getMaxPollRecords();
-        queue = new LinkedBlockingQueue<>(maxPollRecords * QUEUE_MULTIPLIER);
-    }
+    abstract protected Iterator<SourceRecord> getIterator(final Map<String, String> props);
 
     @Override
     public final void start(Map<String, String> props) {
-        SourceCommonConfig config = new SourceCommonConfig(props);
-
+        SourceCommonConfig config = new SourceCommonConfig(new ConfigDef(), props);
+        maxPollRecords = config.getMaxPollRecords();
+        sourceRecordIterator = getIterator(props);
     }
 
     @Override
     public final List<SourceRecord> poll() throws InterruptedException {
         final List<SourceRecord> results = new ArrayList<>(maxPollRecords);
-        final int recordCount = queue.drainTo(results);
-        return recordCount > 0 ? results : null;
-        /*
-            @Override
-    public List<SourceRecord> poll() throws InterruptedException {
-        LOGGER.info("Polling for new records...");
-        synchronized (pollLock) {
-            final List<SourceRecord> results = new ArrayList<>(s3SourceConfig.getInt(MAX_POLL_RECORDS));
+        final Timer timer = new Timer(MAX_POLL_TIME);
 
-            if (connectorStopped.get()) {
-                LOGGER.info("Connector has been stopped. Returning empty result list.");
+        if (!connectorStopped.get()) {
+            while (!connectorStopped.get() && sourceRecordIterator.hasNext() && !timer.expired() && results.size() < maxPollRecords) {
+                backoff.reset();
+                results.add(sourceRecordIterator.next());
+            }
+            if (!results.isEmpty()) {
                 return results;
             }
-
-            while (!connectorStopped.get()) {
-                try {
-                    extractSourceRecords(results);
-                    LOGGER.info("Number of records extracted and sent: {}", results.size());
-                    return results;
-                } catch (AmazonS3Exception exception) {
-                    if (exception.isRetryable()) {
-                        LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
-                                exception);
-                        pollLock.wait(ERROR_BACKOFF);
-
-                        prepareReaderFromOffsetStorageReader();
-                    } else {
-                        LOGGER.warn("Non-retryable AmazonS3Exception occurred. Stopping polling.", exception);
-                        return null; // NOPMD
-                    }
-                } catch (DataException exception) {
-                    LOGGER.warn("DataException occurred during polling. No retries will be attempted.", exception);
-                } catch (final Throwable t) { // NOPMD
-                    LOGGER.error("Unexpected error encountered. Closing resources and stopping task.", t);
-                    closeResources();
-                    throw t;
-                }
+            if (!timer.expired() && !connectorStopped.get()) {
+                backoff.delay();
             }
-            return results;
+        } else {
+            closeResources();
         }
+        return null;
     }
-         */
-    }
-
-    protected abstract int getMaxPollRecords();
 
     @Override
     public void stop() {
         connectorStopped.set(true);
-    }
-
-    /**
-     * Returns the state of the iterator thread.
-     * @return {@code true} if the iterator thread is running, {@code false} otherwise.
-     */
-    protected boolean isRunning() {
-        return iteratorThread.isAlive();
     }
 
     /**
@@ -165,58 +131,94 @@ public abstract class AivenSourceTask extends SourceTask {
      */
     abstract protected void closeResources();
 
-
     /**
-     * Reads data from the SourceRecord iterator and feeds that into the queue.
+     * Calculates elapsed time and flags when expired.
      */
-    private class IteratorRunnable implements Runnable {
-        // establishes a limit of approx 5 seconds for the backoff.
-        private final static int MAX_WAIT_COUNT = 10;
-
-        /** The iterator we are reading from */
-        private final Iterator<SourceRecord> iterator;
-        private int waitCount;
-        private final Random random;
-
+    private class Timer {
+        /**
+         * The time the Timer was created.
+         */
+        private final long startTime;
+        /**
+         * The length of time that the timer should run.
+         */
+        private final long duration;
 
         /**
-         * Creates the runnable iterator.  This class will read from the iterator
-         * until the connector is stopped.  The iterator must be able to detect new
-         * data added to the storage after it was started.
-         * @param iterator the iterator to read from.
+         * Constructor.
+         * @param duration the length of time the timer should run.
          */
-        IteratorRunnable(final Iterator<SourceRecord> iterator) {
-            this.iterator = iterator;
-            random = new Random();
+        Timer(Duration duration) {
+            this.duration = duration.toMillis();
+            this.startTime = System.currentTimeMillis();
         }
 
-        @Override
-        public void run() {
-            try {
-                while (!connectorStopped.get()) {
-                    if (iterator.hasNext()) {
-                        waitCount = 0;
-                        queue.put(iterator.next());
-                    } else {
-                        backoff();
-                    }
-                }
-            } catch (InterruptedException e) {
-                logger.warn("Iterator thread interrupted -- stopping", e);
-            } finally {
-                closeResources();
-            }
-        }
-
-        private void backoff() throws InterruptedException {
-            if (waitCount < MAX_WAIT_COUNT) {
-                waitCount++;
-            }
-            final int jitter = random.nextInt(-500, 500);
-            // 4.88 * 1024 approx 5000 (5 seconds)
-            // The default graceful shutdown time as defined by Kafka is 5 seconds,
-            final Double sleep = Math.pow(2, waitCount) * 4.88 + jitter;
-            Thread.sleep(sleep.longValue());
+        /**
+         * Returns {@code true} if the timer has expired.
+         * @return {@code true} if the timer has expired.
+         */
+        boolean expired() {
+            return System.currentTimeMillis() - startTime >= duration;
         }
     }
+
+    /**
+     * Calculates the amount of time to sleep during a backoff performs the sleep.
+     * Backoff calculation uses an expenantially increasing delay until the maxDelay is
+     * reached.  Then all delays are maxDelay length.
+     */
+    private class Backoff {
+        /**
+         * The maximum wait time.
+         */
+        private final long maxWait;
+        /**
+         * The maximum number of times {@link #delay()} will be called before maxWait is reached.
+         */
+        private final int maxCount;
+        /**
+         * The number of times {@link #delay()} has been called.
+         */
+        private int waitCount;
+
+        /**
+         * A random number generator to construct jitter.
+         */
+        Random random = new Random();
+
+        /**
+         * Constructor.
+         * @param maxDelay The maximum delay that this instance will use.
+         */
+        Backoff(Duration maxDelay) {
+            // calculate the approx wait time.
+            maxWait = maxDelay.toMillis();
+            maxCount = (int) (Math.log10(maxWait) / Math.log10(2));
+            waitCount = 0;
+        }
+
+        /**
+         * Reset the backoff time so that delay is again at the minimum.
+         */
+        private void reset() {
+            waitCount = 0;
+        }
+
+        /**
+         * Delay execution based on the number of times this method has been called.
+         * @throws InterruptedException If any thread interrupts this thread.
+         */
+        private void delay() throws InterruptedException {
+            final int jitter = random.nextInt(-500, 500);
+
+            if (waitCount < maxCount) {
+                waitCount++;
+                final long sleep = (long) Math.pow(2, waitCount) + jitter;
+                Thread.sleep(sleep);
+            } else {
+                Thread.sleep(maxWait + jitter);
+            }
+        }
+    }
+
 }

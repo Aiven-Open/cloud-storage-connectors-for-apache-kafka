@@ -29,8 +29,16 @@ public class SourceCommonConfig extends CommonConfig {
     private final FileNameFragment fileNameFragment;
     private final OutputFormatFragment outputFormatFragment;
 
+    private static ConfigDef update(ConfigDef configDef) {
+        SchemaRegistryFragment.update(configDef);
+        SourceConfigFragment.update(configDef);
+        FileNameFragment.update(configDef);
+        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
+        return configDef;
+    }
+
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
-        super(definition, originals);
+        super(update(definition), originals);
         // Construct Fragments
         schemaRegistryFragment = new SchemaRegistryFragment(this);
         sourceConfigFragment = new SourceConfigFragment(this);
@@ -62,8 +70,11 @@ public class SourceCommonConfig extends CommonConfig {
         return sourceConfigFragment.getTargetTopicPartitions();
     }
 
+    /**
+     * Get the maximum number of records to return from a poll request.
+     * @return The maximum number of records to return from a poll request.
+     */
     public int getMaxPollRecords() {
         return sourceConfigFragment.getMaxPollRecords();
     }
-
 }

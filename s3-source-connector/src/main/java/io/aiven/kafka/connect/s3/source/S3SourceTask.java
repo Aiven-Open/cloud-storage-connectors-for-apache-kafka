@@ -88,25 +88,18 @@ public final class S3SourceTask extends AivenSourceTask {
     }
 
     @Override
-    public void start(final Map<String, String> props) {
+    public Iterator<SourceRecord> getIterator(final Map<String, String> props) {
         LOGGER.info("S3 Source task started.");
         s3SourceConfig = new S3SourceConfig(props);
         initializeConverters();
         initializeS3Client();
-        this.s3Bucket = s3SourceConfig.getString(AWS_S3_BUCKET_NAME_CONFIG);
+        this.s3Bucket = s3SourceConfig.getAwsS3BucketName();
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
         fileReader = new FileReader(s3SourceConfig, this.s3Bucket, failedObjectKeys);
         prepareReaderFromOffsetStorageReader();
-        super.startIterator(IteratorUtils.transformedIterator(sourceRecordIterator, s3SourceRecord -> createSourceRecord(s3SourceRecord)));
+        return IteratorUtils.transformedIterator(sourceRecordIterator, s3SourceRecord -> createSourceRecord(s3SourceRecord));
     }
-
-    @Override
-    protected int getMaxPollRecords() {
-        return s3SourceConfig.getMaxPollRecords();
-
-    }
-
 
     private void initializeConverters() {
         try {
@@ -162,8 +155,8 @@ public final class S3SourceTask extends AivenSourceTask {
         valueConverter.configure(conversionConfig, false);
         try {
             final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, s3SourceRecord.value());
-//            offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
-//            s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
+            offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
+            s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
             return s3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
         } catch (DataException e) {
             LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
