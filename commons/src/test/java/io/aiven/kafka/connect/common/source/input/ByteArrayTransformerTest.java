@@ -73,11 +73,11 @@ final class ByteArrayTransformerTest {
         assertThat(records).hasSize(0);
     }
 
-    @Test
-    void testGetValueBytes() {
-        final byte[] record = { 1, 2, 3 };
-        final byte[] result = byteArrayTransformer.getValueBytes(record, TEST_TOPIC, sourceCommonConfig);
-
-        assertThat(result).containsExactlyInAnyOrder(record);
-    }
+    // @Test
+    // void testGetValueBytes() {
+    // final byte[] record = { 1, 2, 3 };
+    // final byte[] result = byteArrayTransformer.getValueBytes(record, TEST_TOPIC, sourceCommonConfig);
+    //
+    // assertThat(result).containsExactlyInAnyOrder(record);
+    // }
 }

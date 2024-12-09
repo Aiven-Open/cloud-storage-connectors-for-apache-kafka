@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -26,6 +25,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -128,7 +129,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             private final Iterator<S3SourceRecord> internalIterator = readNext().iterator();
 
             private List<S3SourceRecord> readNext() {
-                final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
                 final List<S3SourceRecord> sourceRecords = new ArrayList<>();
 
                 int numOfProcessedRecs = 1;
@@ -146,11 +146,11 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                             continue;
                         }
 
-                        final byte[] valueBytes = transformer.getValueBytes(record, topic, s3SourceConfig);
                         checkOffsetMap = false;
 
-                        sourceRecords.add(getSourceRecord(keyBytes, valueBytes, topic, topicPartition, offsetManager,
-                                startOffset, partitionMap));
+                        sourceRecords.add(getSourceRecord(topic, topicPartition, offsetManager, startOffset,
+                                partitionMap, transformer.getValueData(record, topic, s3SourceConfig),
+                                transformer.getKeyData(currentObjectKey, topic, s3SourceConfig)));
 
                         numOfProcessedRecs++;
 
@@ -164,9 +164,9 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 return sourceRecords;
             }
 
-            private S3SourceRecord getSourceRecord(final byte[] key, final byte[] value, final String topic,
-                    final int topicPartition, final OffsetManager offsetManager, final long startOffset,
-                    final Map<String, Object> partitionMap) {
+            private S3SourceRecord getSourceRecord(final String topic, final int topicPartition,
+                    final OffsetManager offsetManager, final long startOffset, final Map<String, Object> partitionMap,
+                    final SchemaAndValue valueData, final SchemaAndValue keyData) {
 
                 long currentOffset;
 
@@ -182,7 +182,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
                 final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey, currentOffset);
 
-                return new S3SourceRecord(partitionMap, offsetMap, topic, topicPartition, key, value, currentObjectKey);
+                return new S3SourceRecord(partitionMap, offsetMap, topic, topicPartition, currentObjectKey, keyData,
+                        valueData);
             }
 
             @Override
