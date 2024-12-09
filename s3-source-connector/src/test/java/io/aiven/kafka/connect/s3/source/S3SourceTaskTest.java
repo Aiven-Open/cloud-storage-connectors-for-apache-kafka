@@ -24,7 +24,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,6 +43,7 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.utils.ConnectUtils;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
@@ -64,8 +67,6 @@ final class S3SourceTaskTest {
 
     private static final Random RANDOM = new Random();
     private Map<String, String> properties;
-
-    private static BucketAccessor testBucketAccessor;
     private static final String TEST_BUCKET = "test-bucket";
 
     private static S3Mock s3Api;
@@ -103,7 +104,7 @@ final class S3SourceTaskTest {
 
         s3Client = builder.build();
 
-        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET);
+        final BucketAccessor testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET);
         testBucketAccessor.createBucket();
     }
 
@@ -130,18 +131,21 @@ final class S3SourceTaskTest {
         final S3SourceTask s3SourceTask = new S3SourceTask();
         startSourceTask(s3SourceTask);
 
-        final Optional<Converter> keyConverter = s3SourceTask.getKeyConverter();
-        assertThat(keyConverter).isPresent();
-        assertThat(keyConverter.get()).isInstanceOf(ByteArrayConverter.class);
+        try {
+            final Optional<Converter> keyConverter = s3SourceTask.getKeyConverter();
+            assertThat(keyConverter).isPresent();
+            assertThat(keyConverter.get()).isInstanceOf(ByteArrayConverter.class);
 
-        final Converter valueConverter = s3SourceTask.getValueConverter();
-        assertThat(valueConverter).isInstanceOf(ByteArrayConverter.class);
+            final Converter valueConverter = s3SourceTask.getValueConverter();
+            assertThat(valueConverter).isInstanceOf(ByteArrayConverter.class);
 
-        final Transformer transformer = s3SourceTask.getTransformer();
-        assertThat(transformer).isInstanceOf(ByteArrayTransformer.class);
+            final Transformer transformer = s3SourceTask.getTransformer();
+            assertThat(transformer).isInstanceOf(ByteArrayTransformer.class);
 
-        final boolean taskInitialized = s3SourceTask.isTaskInitialized();
-        assertThat(taskInitialized).isTrue();
+            assertThat(s3SourceTask.isRunning()).isTrue();
+        } finally {
+            s3SourceTask.stop();
+        }
     }
 
     @Test
@@ -155,34 +159,70 @@ final class S3SourceTaskTest {
         setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
         when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
 
-        final S3SourceRecord s3SourceRecordList = getAivenS3SourceRecord();
-        when(mockSourceRecordIterator.next()).thenReturn(s3SourceRecordList);
+        final S3SourceRecord s3SourceRecord = getAivenS3SourceRecord();
+        when(mockSourceRecordIterator.next()).thenReturn(s3SourceRecord);
 
         final List<SourceRecord> sourceRecordList = s3SourceTask.poll();
         assertThat(sourceRecordList).isNotEmpty();
     }
 
     @Test
+    void testGetIterator() throws Exception {
+        final S3SourceTask s3SourceTask = new S3SourceTask();
+        startSourceTask(s3SourceTask);
+
+        SourceRecordIterator mockSourceRecordIterator;
+
+        mockSourceRecordIterator = mock(SourceRecordIterator.class);
+        setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
+        when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
+
+        final S3SourceRecord s3SourceRecord = getAivenS3SourceRecord();
+        final S3SourceRecord s3SourceRecord2 = getAivenS3SourceRecord("key2", "value2");
+        when(mockSourceRecordIterator.next()).thenReturn(s3SourceRecord).thenReturn(s3SourceRecord2);
+
+        final Iterator<SourceRecord> iter = s3SourceTask.getIterator();
+        assertThat(iter).hasNext();
+        SourceRecord record = iter.next();
+        assertThat(record.key()).isEqualTo(s3SourceRecord.key());
+        assertThat(record.value()).isEqualTo(s3SourceRecord.value());
+        assertThat(record.sourcePartition()).isEqualTo(s3SourceRecord.getPartitionMap());
+        assertThat(record.sourceOffset()).isEqualTo(s3SourceRecord.getOffsetMap());
+
+        assertThat(iter).hasNext();
+        record = iter.next();
+        assertThat(record.key()).isEqualTo(s3SourceRecord2.key());
+        assertThat(record.value()).isEqualTo(s3SourceRecord2.value());
+        assertThat(record.sourcePartition()).isEqualTo(s3SourceRecord2.getPartitionMap());
+        assertThat(record.sourceOffset()).isEqualTo(s3SourceRecord2.getOffsetMap());
+
+        assertThat(iter.hasNext()).isFalse();
+    }
+
+    @Test
     void testStop() {
         final S3SourceTask s3SourceTask = new S3SourceTask();
         startSourceTask(s3SourceTask);
+        assertThat(s3SourceTask.isRunning()).isTrue();
         s3SourceTask.stop();
-
-        final boolean taskInitialized = s3SourceTask.isTaskInitialized();
-        assertThat(taskInitialized).isFalse();
-        assertThat(s3SourceTask.getConnectorStopped()).isTrue();
+        assertThat(s3SourceTask.isRunning()).isFalse();
     }
 
     private static S3SourceRecord getAivenS3SourceRecord() {
-        return new S3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, new byte[0], new byte[0], "");
+        return getAivenS3SourceRecord("key", "value");
     }
 
-    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
+    private static S3SourceRecord getAivenS3SourceRecord(final String key, final String value) {
+        return new S3SourceRecord(ConnectUtils.getPartitionMap("testtopic", 0, TEST_BUCKET), new HashMap<>(),
+                "testtopic", 0, key.getBytes(StandardCharsets.UTF_8), value.getBytes(StandardCharsets.UTF_8),
+                "objectKey");
+    }
+
     private void setPrivateField(final Object object, final String fieldName, final Object value)
             throws NoSuchFieldException, IllegalAccessException {
         Field field;
         field = object.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
+        field.setAccessible(true); // NOPMD do not modify visibility of fields
         field.set(object, value);
     }
 
@@ -203,6 +243,27 @@ final class S3SourceTaskTest {
         properties.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
         properties.put(TARGET_TOPIC_PARTITIONS, "0,1");
         properties.put(TARGET_TOPICS, "testtopic");
+    }
 
+    @Test
+    void testCreateSourceRecord() {
+        final S3SourceTask s3SourceTask = new S3SourceTask();
+        startSourceTask(s3SourceTask);
+
+        final String bucket = "bucket";
+        final String topic = "topic";
+        final int partition = 1;
+        final byte[] key = "key".getBytes(StandardCharsets.UTF_8);
+        final byte[] value = "value".getBytes(StandardCharsets.UTF_8);
+        final Map<String, Object> offsetMap = new HashMap<>();
+        final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topic, partition, bucket);
+        final S3SourceRecord initialRecord = new S3SourceRecord(partitionMap, offsetMap, topic, partition, key, value,
+                "objectKey");
+        final SourceRecord actual = s3SourceTask.createSourceRecord(initialRecord);
+
+        assertThat(actual.key()).isEqualTo(key);
+        assertThat(actual.value()).isEqualTo(value);
+        assertThat(actual.sourceOffset()).isEqualTo(offsetMap);
+        assertThat(actual.sourcePartition()).isEqualTo(partitionMap);
     }
 }
