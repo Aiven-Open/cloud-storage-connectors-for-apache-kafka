@@ -27,26 +27,30 @@ import org.apache.kafka.common.config.ConfigDef;
 /**
  * The base configuration or all connectors.
  */
-public class CommonConfig extends AbstractConfig {
+public abstract class CommonConfig extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";
     protected static final String GROUP_FORMAT = "Format";
 
-    public static ConfigDef generateFullConfigurationDefinition(Class<? extends CommonConfig> clazz) {
-        ConfigDef configDef = new ConfigDef();
+    private final BackoffPolicyConfig backoffPolicy;
+
+    public static ConfigDef generateFullConfigurationDefinition(final Class<? extends CommonConfig> clazz) {
+        final ConfigDef configDef = new ConfigDef();
         Class<?> workingClazz = clazz;
         while (CommonConfig.class.isAssignableFrom(workingClazz)) {
             try {
-                Method m = workingClazz.getDeclaredMethod("update", ConfigDef.class);
-                int modifiers = m.getModifiers();
+                final Method method = workingClazz.getDeclaredMethod("update", ConfigDef.class);
+                final int modifiers = method.getModifiers();
                 if (!Modifier.isPublic(modifiers) || !Modifier.isStatic(modifiers)) {
-                    throw new IllegalArgumentException("Class " + workingClazz.getName() + " does not have a public static method 'update(ConfigDef)'");
+                    throw new IllegalArgumentException("Class " + workingClazz.getName()
+                            + " does not have a public static method 'update(ConfigDef)'");
                 }
-                m.invoke(null, configDef);
+                method.invoke(null, configDef);
                 workingClazz = workingClazz.getSuperclass();
             } catch (InvocationTargetException e) {
                 throw new IllegalArgumentException("Can not invoke '" + workingClazz.getName() + ".update(ConfigDef)'");
             } catch (NoSuchMethodException e) {
-                throw new IllegalArgumentException("Class " + workingClazz.getName() + " does not have a public static method 'update(ConfigDef)'");
+                throw new IllegalArgumentException("Class " + workingClazz.getName()
+                        + " does not have a public static method 'update(ConfigDef)'");
             } catch (IllegalAccessException e) {
                 throw new IllegalArgumentException("Can not access '" + workingClazz.getName() + ".update(ConfigDef)'");
             }
@@ -56,10 +60,12 @@ public class CommonConfig extends AbstractConfig {
 
     /**
      * Adds the definitions for Common config to the configuration definition..
-     * @param configDef the configuration definition to update.
+     *
+     * @param configDef
+     *            the configuration definition to update.
      * @return the updated configuration definition.
      */
-    public static ConfigDef update(ConfigDef configDef) {
+    public static ConfigDef update(final ConfigDef configDef) {
         return BackoffPolicyConfig.update(configDef);
     }
 
@@ -82,6 +88,7 @@ public class CommonConfig extends AbstractConfig {
      */
     protected CommonConfig(ConfigDef definition, Map<?, ?> props) { // NOPMD
         super(update(definition), props);
+        backoffPolicy = new BackoffPolicyConfig(this);
     }
 
     /**
@@ -90,7 +97,16 @@ public class CommonConfig extends AbstractConfig {
      * @return The Kafka retry backoff time in MS.
      */
     public Long getKafkaRetryBackoffMs() {
-        return new BackoffPolicyConfig(this).getKafkaRetryBackoffMs();
+        return backoffPolicy.getKafkaRetryBackoffMs();
+    }
+
+    /**
+     * TODO Change this method name to validate and have every descendent implement validate and call the parent
+     * validate. Connectors should call validate() on the configuration they actually use to validate that all the data
+     * are correct.
+     */
+    public void doValidate() {
+        backoffPolicy.validate();
     }
 
 }

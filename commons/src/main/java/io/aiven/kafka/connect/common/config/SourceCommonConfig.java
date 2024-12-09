@@ -29,7 +29,7 @@ public class SourceCommonConfig extends CommonConfig {
     private final FileNameFragment fileNameFragment;
     private final OutputFormatFragment outputFormatFragment;
 
-    public static ConfigDef update(ConfigDef configDef) {
+    public static ConfigDef update(final ConfigDef configDef) {
         SchemaRegistryFragment.update(configDef);
         SourceConfigFragment.update(configDef);
         FileNameFragment.update(configDef);
@@ -37,22 +37,21 @@ public class SourceCommonConfig extends CommonConfig {
         return configDef;
     }
 
-    public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
+    public SourceCommonConfig(final ConfigDef definition, final Map<?, ?> originals) {
         super(update(definition), originals);
         // Construct Fragments
         schemaRegistryFragment = new SchemaRegistryFragment(this);
         sourceConfigFragment = new SourceConfigFragment(this);
         fileNameFragment = new FileNameFragment(this);
         outputFormatFragment = new OutputFormatFragment(this);
-
-        validate(); // NOPMD ConstructorCallsOverridableMethod
     }
 
-    private void validate() {
+    public void validate() {
         schemaRegistryFragment.validate();
         sourceConfigFragment.validate();
         fileNameFragment.validate();
         outputFormatFragment.validate();
+        super.doValidate();
     }
 
     public InputFormat getInputFormat() {
@@ -72,6 +71,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Get the maximum number of records to return from a poll request.
+     *
      * @return The maximum number of records to return from a poll request.
      */
     public int getMaxPollRecords() {

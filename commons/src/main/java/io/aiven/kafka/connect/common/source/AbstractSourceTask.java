@@ -1,10 +1,20 @@
-package io.aiven.kafka.connect.common.source;
+/*
+ * Copyright 2024 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.connect.source.SourceRecord;
-import org.apache.kafka.connect.source.SourceTask;
-import org.slf4j.Logger;
+package io.aiven.kafka.connect.common.source;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -14,18 +24,27 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.source.SourceTask;
+
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+
+import org.slf4j.Logger;
 
 /**
- * This class handles extracting records from an iterator and returning them to Kafka.  It uses an exponential backoff with
- * jitter to reduce the number of calls to the backend when there is no data.  This solution:
+ * This class handles extracting records from an iterator and returning them to Kafka. It uses an exponential backoff
+ * with jitter to reduce the number of calls to the backend when there is no data. This solution:
  * <ul>
- *     <li>When polled this implementation moves available records from the SsourceRecord iterator to the return array.</li>
- *     <li>if there are no records
- *     <ul><li>{@link #poll()} will return null.</li>
- *     <li>The poll will delay no more than approx 5 seconds.</li>
- *     </ul></li>
- *     <li>Upto {@link #maxPollRecords} will be sent in a single poll request</li>
- *     <li>When the connector is stopped any collected records are returned to kafka before stopping.</li>
+ * <li>When polled this implementation moves available records from the SsourceRecord iterator to the return array.</li>
+ * <li>if there are no records
+ * <ul>
+ * <li>{@link #poll()} will return null.</li>
+ * <li>The poll will delay no more than approx 5 seconds.</li>
+ * </ul>
+ * </li>
+ * <li>Upto {@link #maxPollRecords} will be sent in a single poll request</li>
+ * <li>When the connector is stopped any collected records are returned to kafka before stopping.</li>
  * </ul>
  *
  *
@@ -33,8 +52,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class AbstractSourceTask extends SourceTask {
 
     /**
-     * The maximum time to spend polling.  This is set to 5 seconds as that is the time that is allotted to a system
-     * for shutdown.
+     * The maximum time to spend polling. This is set to 5 seconds as that is the time that is allotted to a system for
+     * shutdown.
      */
     private static final Duration MAX_POLL_TIME = Duration.ofSeconds(5);
     /**
@@ -43,62 +62,71 @@ public abstract class AbstractSourceTask extends SourceTask {
     private final AtomicBoolean connectorStopped;
 
     /**
-     * The logger to use.  Set from the class implementing AbstractSourceTask.
+     * The logger to use. Set from the class implementing AbstractSourceTask.
      */
     private final Logger logger;
 
     /**
-     * The maximum number of records to put in a poll.  Specified in the configuration.
+     * The maximum number of records to put in a poll. Specified in the configuration.
      */
     private int maxPollRecords;
 
     /**
      * The Backoff implementation that executes the delay in the poll loop.
      */
-    private Backoff backoff;
+    private final Backoff backoff;
 
     /**
      * Constructor.
-     * @param logger the logger to use.
+     *
+     * @param logger
+     *            the logger to use.
      */
     protected AbstractSourceTask(final Logger logger) {
         super();
         this.logger = logger;
-        connectorStopped =  new AtomicBoolean();
+        connectorStopped = new AtomicBoolean();
         backoff = new Backoff(MAX_POLL_TIME);
     }
 
     /**
-     * Gets the iterator of SourceRecords.
-     * The iterator that SourceRecords are extracted from during a poll event.
-     * When this iterator runs out of records it should attempt to reset and read
-     * more records from the backend on the next {@code hasNext()} call.  In this way it should
-     * detect when new data has been added to the backend and continue processing.
+     * Gets the iterator of SourceRecords. The iterator that SourceRecords are extracted from during a poll event. When
+     * this iterator runs out of records it should attempt to reset and read more records from the backend on the next
+     * {@code hasNext()} call. In this way it should detect when new data has been added to the backend and continue
+     * processing.
+     *
      * @return The iterator of SourceRecords.
      */
     abstract protected Iterator<SourceRecord> getIterator();
 
     /**
      * Called by {@link #start} to allows the concrete implementation to configure itself based on properties.
-     * @param props the properties to use for configuration.
+     *
+     * @param props
+     *            the properties to use for configuration.
      */
-    abstract protected void configure(final Map<String, String> props);
+    abstract protected void configure(Map<String, String> props);
 
     @Override
-    public final void start(Map<String, String> props) {
-        SourceCommonConfig config = new SourceCommonConfig(new ConfigDef(), props);
+    public final void start(final Map<String, String> props) {
+        logger.debug("Starting");
+        final SourceCommonConfig config = new SourceCommonConfig(new ConfigDef(), props);
         maxPollRecords = config.getMaxPollRecords();
         configure(props);
     }
 
     @Override
     public final List<SourceRecord> poll() throws InterruptedException {
+        logger.debug("Polling");
         final List<SourceRecord> results = new ArrayList<>(maxPollRecords);
         final Timer timer = new Timer(MAX_POLL_TIME);
         final Iterator<SourceRecord> sourceRecordIterator = getIterator();
 
-        if (!connectorStopped.get()) {
-            while (!connectorStopped.get() && sourceRecordIterator.hasNext() && !timer.expired() && results.size() < maxPollRecords) {
+        if (connectorStopped.get()) {
+            closeResources();
+        } else {
+            while (!connectorStopped.get() && sourceRecordIterator.hasNext() && !timer.expired()
+                    && results.size() < maxPollRecords) {
                 backoff.reset();
                 results.add(sourceRecordIterator.next());
             }
@@ -108,19 +136,19 @@ public abstract class AbstractSourceTask extends SourceTask {
             if (!timer.expired() && !connectorStopped.get()) {
                 backoff.delay();
             }
-        } else {
-            closeResources();
         }
-        return null;
+        return null; // NOPMD must return null in this case.
     }
 
     @Override
     public final void stop() {
+        logger.debug("Stopping");
         connectorStopped.set(true);
     }
 
     /**
      * Returns the running state of the task.
+     *
      * @return {@code true} if the connector is running, {@code false} otherwise.
      */
     public final boolean isRunning() {
@@ -128,15 +156,14 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     /**
-     * Close any resources the source has open.  Called by the IteratorRunnable when it is
-     * stopping.
+     * Close any resources the source has open. Called by the IteratorRunnable when it is stopping.
      */
     abstract protected void closeResources();
 
     /**
      * Calculates elapsed time and flags when expired.
      */
-    private class Timer {
+    private static class Timer {
         /**
          * The time the Timer was created.
          */
@@ -148,15 +175,18 @@ public abstract class AbstractSourceTask extends SourceTask {
 
         /**
          * Constructor.
-         * @param duration the length of time the timer should run.
+         *
+         * @param duration
+         *            the length of time the timer should run.
          */
-        Timer(Duration duration) {
+        Timer(final Duration duration) {
             this.duration = duration.toMillis();
             this.startTime = System.currentTimeMillis();
         }
 
         /**
          * Returns {@code true} if the timer has expired.
+         *
          * @return {@code true} if the timer has expired.
          */
         boolean expired() {
@@ -165,11 +195,10 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     /**
-     * Calculates the amount of time to sleep during a backoff performs the sleep.
-     * Backoff calculation uses an expenantially increasing delay until the maxDelay is
-     * reached.  Then all delays are maxDelay length.
+     * Calculates the amount of time to sleep during a backoff performs the sleep. Backoff calculation uses an
+     * expenantially increasing delay until the maxDelay is reached. Then all delays are maxDelay length.
      */
-    private class Backoff {
+    private static class Backoff {
         /**
          * The maximum wait time.
          */
@@ -190,9 +219,11 @@ public abstract class AbstractSourceTask extends SourceTask {
 
         /**
          * Constructor.
-         * @param maxDelay The maximum delay that this instance will use.
+         *
+         * @param maxDelay
+         *            The maximum delay that this instance will use.
          */
-        Backoff(Duration maxDelay) {
+        Backoff(final Duration maxDelay) {
             // calculate the approx wait time.
             maxWait = maxDelay.toMillis();
             maxCount = (int) (Math.log10(maxWait) / Math.log10(2));
@@ -208,7 +239,9 @@ public abstract class AbstractSourceTask extends SourceTask {
 
         /**
          * Delay execution based on the number of times this method has been called.
-         * @throws InterruptedException If any thread interrupts this thread.
+         *
+         * @throws InterruptedException
+         *             If any thread interrupts this thread.
          */
         private void delay() throws InterruptedException {
             // power of 2 next int is faster and so we generate approx +/- 0.512 seconds of jitter

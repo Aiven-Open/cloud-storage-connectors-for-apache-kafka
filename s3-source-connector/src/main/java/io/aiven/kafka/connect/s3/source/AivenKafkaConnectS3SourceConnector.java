@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.kafka.common.config.Config;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
@@ -80,4 +81,19 @@ public class AivenKafkaConnectS3SourceConnector extends SourceConnector {
     public void stop() {
         LOGGER.info("Stop S3 Source connector");
     }
+
+    /**
+     * Validate the connector configuration values against configuration definitions.
+     *
+     * @param connectorConfigs
+     *            the provided configuration values
+     * @return List of Config, each Config contains the updated configuration information given the current
+     *         configuration values.
+     */
+    @Override
+    public Config validate(final Map<String, String> connectorConfigs) {
+        new S3SourceConfig(connectorConfigs).validate();
+        return super.validate(connectorConfigs);
+    }
+
 }

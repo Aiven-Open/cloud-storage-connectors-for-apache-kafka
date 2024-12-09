@@ -42,7 +42,6 @@ final public class S3SourceConfig extends SourceCommonConfig {
     public S3SourceConfig(final Map<String, String> properties) {
         super(update(new ConfigDef()), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
-        validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
     }
 
     /**
@@ -54,12 +53,14 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return S3ConfigFragment.update(config);
     }
 
-    private void validate() {
+    @Override
+    public void validate() {
         // s3ConfigFragment is validated in this method as it is created here.
         // Other Fragments created in the ConfigDef are validated in the parent classes their instances are created in.
         // e.g. SourceConfigFragment, FileNameFragment, SchemaRegistryFragment and OutputFormatFragment are all
         // validated in SourceCommonConfig.
         s3ConfigFragment.validate();
+        super.validate();
     }
 
     public AwsStsRole getStsRole() {

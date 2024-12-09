@@ -64,8 +64,6 @@ public final class S3SourceTask extends AbstractSourceTask {
 
     private Transformer transformer;
 
-    private String s3Bucket;
-
     private AWSV2SourceClient awsv2SourceClient;
     private final Set<String> failedObjectKeys = new HashSet<>();
 
@@ -85,7 +83,6 @@ public final class S3SourceTask extends AbstractSourceTask {
         LOGGER.info("S3 Source task started.");
         s3SourceConfig = new S3SourceConfig(props);
         initializeConverters();
-        this.s3Bucket = s3SourceConfig.getAwsS3BucketName();
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
@@ -114,7 +111,7 @@ public final class S3SourceTask extends AbstractSourceTask {
     }
 
     Iterator<S3SourceRecord> prepareReaderFromOffsetStorageReader() {
-        return  sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
+        return sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
                 awsv2SourceClient);
     }
 
