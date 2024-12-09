@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * This class handles extracting records from an iterator and returning them to Kafka.  It uses an exponential backoff with
  * jitter to reduce the number of calls to the backend when there is no data.  This solution:
  * <ul>
- *     <li>When polled this implementation moves available records from the {@link #sourceRecordIterator} to the return array.</li>
+ *     <li>When polled this implementation moves available records from the SsourceRecord iterator to the return array.</li>
  *     <li>if there are no records
  *     <ul><li>{@link #poll()} will return null.</li>
  *     <li>The poll will delay no more than approx 5 seconds.</li>
@@ -53,14 +53,6 @@ public abstract class AbstractSourceTask extends SourceTask {
     private int maxPollRecords;
 
     /**
-     * The iterator that SourceRecords are extracted from during a poll event.
-     * When this iterator runs out of records it should attempt to reset and read
-     * more records from the backend on the next {@code hasNext()} call.  In this way it should
-     * detect when new data has been added to the backend and continue processing.
-     */
-    private Iterator<SourceRecord> sourceRecordIterator;
-
-    /**
      * The Backoff implementation that executes the delay in the poll loop.
      */
     private Backoff backoff;
@@ -77,11 +69,19 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     /**
-     * Constructs the iterator.  Also configures the task environment.
-     * @param props The properties for the environment.
+     * Gets the iterator of SourceRecords.
+     * The iterator that SourceRecords are extracted from during a poll event.
+     * When this iterator runs out of records it should attempt to reset and read
+     * more records from the backend on the next {@code hasNext()} call.  In this way it should
+     * detect when new data has been added to the backend and continue processing.
+     * @return The iterator of SourceRecords.
      */
     abstract protected Iterator<SourceRecord> getIterator();
 
+    /**
+     * Called by {@link #start} to allows the concrete implementation to configure itself based on properties.
+     * @param props the properties to use for configuration.
+     */
     abstract protected void configure(final Map<String, String> props);
 
     @Override
@@ -115,7 +115,7 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     @Override
-    public void stop() {
+    public final void stop() {
         connectorStopped.set(true);
     }
 
@@ -123,7 +123,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * Returns the running state of the task.
      * @return {@code true} if the connector is running, {@code false} otherwise.
      */
-    public boolean isRunning() {
+    public final boolean isRunning() {
         return !connectorStopped.get();
     }
 
@@ -211,16 +211,17 @@ public abstract class AbstractSourceTask extends SourceTask {
          * @throws InterruptedException If any thread interrupts this thread.
          */
         private void delay() throws InterruptedException {
-            final int jitter = random.nextInt(-500, 500);
+            // power of 2 next int is faster and so we generate approx +/- 0.512 seconds of jitter
+            final int jitter = random.nextInt(1024) - 512;
 
             if (waitCount < maxCount) {
                 waitCount++;
                 final long sleep = (long) Math.pow(2, waitCount) + jitter;
+                // don't allow jitter to set sleep argument negative.
                 Thread.sleep(Math.max(0, sleep));
             } else {
                 Thread.sleep(maxWait + jitter);
             }
         }
     }
-
 }
