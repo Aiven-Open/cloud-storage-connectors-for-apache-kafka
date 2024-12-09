@@ -25,19 +25,20 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,46 +74,78 @@ final class AvroTransformerTest {
     void testReadAvroRecordsInvalidData() {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
 
-        final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-        final List<Object> records = avroTransformer.readAvroRecords(inputStream, datumReader);
+        final Stream<Object> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig, 0);
 
-        assertThat(records.size()).isEqualTo(0);
+        final List<Object> recs = records.collect(Collectors.toList());
+        assertThat(recs).isEmpty();
     }
 
     @Test
     void testReadAvroRecords() throws Exception {
-        final ByteArrayOutputStream avroData = generateMockAvroData();
+        final ByteArrayOutputStream avroData = generateMockAvroData(25);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-        final List<Object> records = avroTransformer.readAvroRecords(inputStream, datumReader);
+        final Stream<Object> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig, 0);
 
-        assertThat(records.size()).isEqualTo(2);
+        final List<Object> recs = records.collect(Collectors.toList());
+        assertThat(recs).hasSize(25);
     }
 
-    ByteArrayOutputStream generateMockAvroData() throws IOException {
+    @Test
+    void testReadAvroRecordsSkipFew() throws Exception {
+        final ByteArrayOutputStream avroData = generateMockAvroData(20);
+        final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
+
+        final Stream<Object> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig, 5);
+
+        final List<Object> recs = records.collect(Collectors.toList());
+        assertThat(recs).hasSize(15);
+        // get first rec
+        assertThat(((GenericRecord) recs.get(0)).get("message").toString())
+                .isEqualTo("Hello, Kafka Connect S3 Source! object 5");
+    }
+
+    @Test
+    void testReadAvroRecordsSkipMoreRecordsThanExist() throws Exception {
+        final ByteArrayOutputStream avroData = generateMockAvroData(20);
+        final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
+
+        final Stream<Object> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig, 25);
+
+        final List<Object> recs = records.collect(Collectors.toList());
+        assertThat(recs).hasSize(0);
+    }
+
+    ByteArrayOutputStream generateMockAvroData(final int numRecs) throws IOException {
         final String schemaJson = "{\n" + "  \"type\": \"record\",\n" + "  \"name\": \"TestRecord\",\n"
                 + "  \"fields\": [\n" + "    {\"name\": \"message\", \"type\": \"string\"},\n"
                 + "    {\"name\": \"id\", \"type\": \"int\"}\n" + "  ]\n" + "}";
         final Schema.Parser parser = new Schema.Parser();
         final Schema schema = parser.parse(schemaJson);
 
-        return getAvroRecord(schema, 2);
+        return getAvroRecords(schema, numRecs);
     }
 
-    private static ByteArrayOutputStream getAvroRecord(final Schema schema, final int messageId) throws IOException {
+    private static ByteArrayOutputStream getAvroRecords(final Schema schema, final int numOfRecs) throws IOException {
         // Create Avro records
-        final GenericRecord avroRecord = new GenericData.Record(schema);
-        avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + messageId);
-        avroRecord.put("id", messageId);
+        final List<GenericRecord> avroRecords = new ArrayList<>();
+        for (int i = 0; i < numOfRecs; i++) {
+            final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD AvoidInstantiatingObjectsInLoops
+            avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + i);
+            avroRecord.put("id", i);
+            avroRecords.add(avroRecord);
+        }
 
         // Serialize Avro records to byte arrays
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+
+        // Append each record using a loop
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
             dataFileWriter.create(schema, outputStream);
-            dataFileWriter.append(avroRecord); // record 1
-            dataFileWriter.append(avroRecord); // record 2
+            for (final GenericRecord record : avroRecords) {
+                dataFileWriter.append(record);
+            }
             dataFileWriter.flush();
         }
         outputStream.close();
