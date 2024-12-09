@@ -29,7 +29,7 @@ final public class ConnectUtils {
         // hidden
     }
     public static Map<String, Object> getPartitionMap(final String topicName, final Integer defaultPartitionId,
-                                                      final String bucketName) {
+            final String bucketName) {
         final Map<String, Object> partitionMap = new HashMap<>();
         partitionMap.put(BUCKET, bucketName);
         partitionMap.put(TOPIC, topicName);

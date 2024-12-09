@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.source;
 
 import java.lang.reflect.InvocationTargetException;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -25,14 +24,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import io.aiven.kafka.connect.common.source.AbstractSourceTask;
-import org.apache.commons.collections4.IteratorUtils;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
+import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
@@ -44,6 +42,7 @@ import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
 import com.amazonaws.services.s3.AmazonS3;
+import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +51,7 @@ import org.slf4j.LoggerFactory;
  * Connect records.
  */
 public final class S3SourceTask extends AbstractSourceTask {
+    // TODO Refactor for ease of testing
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
 
@@ -98,7 +98,8 @@ public final class S3SourceTask extends AbstractSourceTask {
 
     @Override
     public Iterator<SourceRecord> getIterator() {
-        return IteratorUtils.transformedIterator(sourceRecordIterator, s3SourceRecord -> createSourceRecord(s3SourceRecord));
+        return IteratorUtils.transformedIterator(sourceRecordIterator,
+                s3SourceRecord -> createSourceRecord(s3SourceRecord));
     }
 
     private void initializeConverters() {
@@ -111,7 +112,7 @@ public final class S3SourceTask extends AbstractSourceTask {
                     .getDeclaredConstructor()
                     .newInstance();
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException
-                 | NoSuchMethodException e) {
+                | NoSuchMethodException e) {
             throw new ConnectException("Connect converters could not be instantiated.", e);
         }
     }
@@ -122,8 +123,8 @@ public final class S3SourceTask extends AbstractSourceTask {
     }
 
     Iterator<S3SourceRecord> prepareReaderFromOffsetStorageReader() {
-        return new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager,
-                this.transformer, fileReader);
+        return new SourceRecordIterator(s3SourceConfig, s3Client, this.s3Bucket, offsetManager, this.transformer,
+                fileReader);
     }
 
     @Override
@@ -144,11 +145,12 @@ public final class S3SourceTask extends AbstractSourceTask {
         return transformer;
     }
 
-
     /**
-     * Creates a Source record from the S3SourceRecord.  Package private to support testing.
-     * Updates the {@link OffsetManager} to indicate the record has been processed.
-     * @param s3SourceRecord the S3SourceRecord to convert.
+     * Creates a Source record from the S3SourceRecord. Package private to support testing. Updates the
+     * {@link OffsetManager} to indicate the record has been processed.
+     *
+     * @param s3SourceRecord
+     *            the S3SourceRecord to convert.
      * @return a SourceRecord based on the S3SourceRecord.
      */
     SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord) {

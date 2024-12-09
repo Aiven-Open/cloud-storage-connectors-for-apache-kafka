@@ -103,7 +103,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
             } else {
                 LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
-                s3Object.close();
                 return Collections.emptyIterator();
             }
 

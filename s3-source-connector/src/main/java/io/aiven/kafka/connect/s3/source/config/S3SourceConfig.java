@@ -22,7 +22,6 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
-
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
@@ -48,9 +47,10 @@ final public class S3SourceConfig extends SourceCommonConfig {
 
     /**
      * package private for testing.
+     *
      * @return the Configuration def for S3SourceConfig without the updates from SourceCommonConfig.
      */
-    public static ConfigDef update(ConfigDef config) {
+    public static ConfigDef update(final ConfigDef config) {
         return S3ConfigFragment.update(config);
     }
 

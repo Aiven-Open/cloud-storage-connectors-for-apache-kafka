@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 
+import org.apache.kafka.common.config.ConfigDef;
+
 import io.aiven.kafka.connect.common.config.CommonConfig;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
@@ -31,8 +33,6 @@ import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
-import org.apache.kafka.common.config.ConfigDef;
-import org.checkerframework.checker.units.qual.C;
 import org.junit.jupiter.api.Test;
 
 final class S3SourceConfigTest {
@@ -75,13 +75,13 @@ final class S3SourceConfigTest {
     }
 
     @Test
-    public void generateFullConfigurationDefinitionTest() {
-        ConfigDef expected = new ConfigDef();
+    void generateFullConfigurationDefinitionTest() {
+        final ConfigDef expected = new ConfigDef();
         S3SourceConfig.update(expected);
         SourceCommonConfig.update(expected);
         CommonConfig.update(expected);
 
-        ConfigDef actual = CommonConfig.generateFullConfigurationDefinition(S3SourceConfig.class);
+        final ConfigDef actual = CommonConfig.generateFullConfigurationDefinition(S3SourceConfig.class);
 
         assertThat(actual.names()).isEqualTo(expected.names());
         assertThat(actual.groups()).isEqualTo(expected.groups());
