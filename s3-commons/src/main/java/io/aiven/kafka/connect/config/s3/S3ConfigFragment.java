@@ -483,4 +483,9 @@ public final class S3ConfigFragment extends ConfigFragment {
     public AWSCredentialsProvider getCustomCredentialsProvider() {
         return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
     }
+
+    public int getFetchPageSize() {
+        return cfg.getInt(FETCH_PAGE_SIZE);
+    }
+
 }

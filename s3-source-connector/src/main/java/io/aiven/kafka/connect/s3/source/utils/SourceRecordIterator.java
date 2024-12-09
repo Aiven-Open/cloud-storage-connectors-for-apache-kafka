@@ -31,9 +31,7 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,40 +48,43 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
     private String currentObjectKey;
 
-    private final Iterator<S3ObjectSummary> s3ObjectSummaryIterator;
+    private Iterator<String> objectListIterator;
     private Iterator<S3SourceRecord> recordIterator = Collections.emptyIterator();
 
     private final OffsetManager offsetManager;
 
     private final S3SourceConfig s3SourceConfig;
     private final String bucketName;
-    private final AmazonS3 s3Client;
 
     private final Transformer transformer;
+    // Once we decouple the S3Object from the Source Iterator we can change this to be the SourceApiClient
+    // At which point it will work for al our integrations.
+    private final AWSV2SourceClient sourceClient; // NOPMD
 
-    private final FileReader fileReader; // NOPMD
-
-    public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final AmazonS3 s3Client, final String bucketName,
-            final OffsetManager offsetManager, final Transformer transformer, final FileReader fileReader) {
+    public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
+            final Transformer transformer, final AWSV2SourceClient sourceClient) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
-        this.s3Client = s3Client;
-        this.bucketName = bucketName;
+
+        this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
-        this.fileReader = fileReader;
-        s3ObjectSummaryIterator = fileReader.fetchObjectSummaries(s3Client);
+        this.sourceClient = sourceClient;
+        objectListIterator = sourceClient.getListOfObjectKeys(null);
     }
 
     private void nextS3Object() {
-        if (!s3ObjectSummaryIterator.hasNext()) {
-            recordIterator = Collections.emptyIterator();
-            return;
+        if (!objectListIterator.hasNext()) {
+            // Start after the object Key we have just finished with.
+            objectListIterator = sourceClient.getListOfObjectKeys(currentObjectKey);
+            if (!objectListIterator.hasNext()) {
+                recordIterator = Collections.emptyIterator();
+                return;
+            }
         }
 
         try {
-            final S3ObjectSummary file = s3ObjectSummaryIterator.next();
-            if (file != null) {
-                currentObjectKey = file.getKey();
+            currentObjectKey = objectListIterator.next();
+            if (currentObjectKey != null) {
                 recordIterator = createIteratorForCurrentFile();
             }
         } catch (IOException e) {
@@ -92,28 +93,30 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     }
 
     private Iterator<S3SourceRecord> createIteratorForCurrentFile() throws IOException {
-        try (S3Object s3Object = s3Client.getObject(bucketName, currentObjectKey);) {
 
-            final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(currentObjectKey);
-            String topicName;
-            int defaultPartitionId;
+        final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(currentObjectKey);
+        String topicName;
+        int defaultPartitionId;
 
-            if (fileMatcher.find()) {
+        if (fileMatcher.find()) {
+            // TODO move this from the SourceRecordIterator so that we can decouple it from S3 and make it API agnostic
+            try (S3Object s3Object = sourceClient.getObject(currentObjectKey);) {
+
                 topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
                 defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
-            } else {
-                LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
-                return Collections.emptyIterator();
+
+                final long defaultStartOffsetId = 1L;
+
+                final String finalTopic = topicName;
+                final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
+                        bucketName);
+
+                return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
+                        partitionMap);
             }
-
-            final long defaultStartOffsetId = 1L;
-
-            final String finalTopic = topicName;
-            final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
-                    bucketName);
-
-            return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
-                    partitionMap);
+        } else {
+            LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
+            return Collections.emptyIterator();
         }
     }
 
@@ -196,7 +199,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     @Override
     public boolean hasNext() {
-        return recordIterator.hasNext() || s3ObjectSummaryIterator.hasNext();
+        return recordIterator.hasNext() || objectListIterator.hasNext();
     }
 
     @Override
