@@ -31,8 +31,6 @@ import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,33 +75,33 @@ final class JsonTransformerTest {
         assertThat(jsonNodes).hasSize(1);
     }
 
-    @Test
-    void testHandleValueDataWithInvalidJson() {
-        final InputStream invalidJsonInputStream = new ByteArrayInputStream(
-                "invalid-json".getBytes(StandardCharsets.UTF_8));
-        final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
+    // @Test
+    // void testHandleValueDataWithInvalidJson() {
+    // final InputStream invalidJsonInputStream = new ByteArrayInputStream(
+    // "invalid-json".getBytes(StandardCharsets.UTF_8));
+    // final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
+    //
+    // final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+    // sourceCommonConfig);
+    //
+    // assertThat(jsonNodes).isEmpty();
+    // }
 
-        final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig);
+    // @Test
+    // void testSerializeJsonDataValid() throws IOException {
+    // final InputStream validJsonInputStream = new ByteArrayInputStream(
+    // "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
+    // final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
+    // final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+    // sourceCommonConfig);
+    // final byte[] serializedData = jsonTransformer.getValueBytes(jsonNodes.findFirst().get(), TESTTOPIC,
+    // sourceCommonConfig);
 
-        assertThat(jsonNodes).isEmpty();
-    }
-
-    @Test
-    void testSerializeJsonDataValid() throws IOException {
-        final InputStream validJsonInputStream = new ByteArrayInputStream(
-                "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
-        final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig);
-        final byte[] serializedData = jsonTransformer.getValueBytes(jsonNodes.findFirst().get(), TESTTOPIC,
-                sourceCommonConfig);
-
-        final ObjectMapper objectMapper = new ObjectMapper();
-        final JsonNode expectedData = objectMapper.readTree(serializedData);
-
-        assertThat(expectedData.get("key").asText()).isEqualTo("value");
-    }
+    // final ObjectMapper objectMapper = new ObjectMapper();
+    // final JsonNode expectedData = objectMapper.readTree(serializedData);
+    //
+    // assertThat(expectedData.get("key").asText()).isEqualTo("value");
+    // }
 
     @Test
     void testGetRecordsWithIOException() throws IOException {

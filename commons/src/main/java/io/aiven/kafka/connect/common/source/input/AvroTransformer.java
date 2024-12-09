@@ -20,8 +20,8 @@ import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Spliterator;
@@ -30,6 +30,8 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileStream;
@@ -59,9 +61,13 @@ public class AvroTransformer implements Transformer {
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
-        return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
-                sourceConfig);
+    public SchemaAndValue getValueData(final Object record, final String topic, final AbstractConfig sourceConfig) {
+        return TransformationUtils.getValueStruct(record, topic, sourceConfig);
+    }
+
+    @Override
+    public SchemaAndValue getKeyData(final Object record, final String topic, final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, ((String) record).getBytes(StandardCharsets.UTF_8));
     }
 
     private Stream<Object> readAvroRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -30,10 +31,9 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.json.JsonConverter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,9 @@ public class JsonTransformer implements Transformer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JsonTransformer.class);
 
-    final ObjectMapper objectMapper = new ObjectMapper();
+    private static final JsonConverter JSON_CONVERTER = new JsonConverter();
+
+    private boolean isConfigured;
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
@@ -56,12 +58,23 @@ public class JsonTransformer implements Transformer {
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
-        try {
-            return objectMapper.writeValueAsBytes(record);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to serialize record to JSON bytes. Error: {}", e.getMessage(), e);
-            return new byte[0];
+    public SchemaAndValue getValueData(final Object record, final String topic, final AbstractConfig sourceConfig) {
+        ensureJsonConverterConfigured();
+        return JSON_CONVERTER.toConnectData(topic, (byte[]) record);
+    }
+
+    @Override
+    public SchemaAndValue getKeyData(final Object record, final String topic, final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, ((String) record).getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void ensureJsonConverterConfigured() {
+        // This ensures configuration only if not already configured
+        if (!isConfigured) {
+            final Map<String, String> config = new HashMap<>();
+            config.put(SCHEMAS_ENABLE, "false");
+            JSON_CONVERTER.configure(config, false);
+            isConfigured = true;
         }
     }
 
@@ -104,13 +117,7 @@ public class JsonTransformer implements Transformer {
                 while (line != null) {
                     line = line.trim();
                     if (!line.isEmpty()) {
-                        try {
-                            final JsonNode jsonNode = objectMapper.readTree(line); // Parse the JSON
-                            // line
-                            action.accept(jsonNode); // Provide the parsed JSON node to the stream
-                        } catch (IOException e) {
-                            LOGGER.error("Error parsing JSON record: {}", e.getMessage(), e);
-                        }
+                        action.accept(line.getBytes(StandardCharsets.UTF_8));
                         line = null; // NOPMD
                         return true;
                     }
