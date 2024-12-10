@@ -23,16 +23,19 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.S3Object;
+import org.apache.commons.collections.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +56,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private Iterator<String> objectListIterator;
     private Iterator<S3SourceRecord> recordIterator = Collections.emptyIterator();
 
-    private final OffsetManager offsetManager;
+    private final OffsetManager<S3OffsetManagerEntry> offsetManager;
 
     private final S3SourceConfig s3SourceConfig;
     private final String bucketName;
@@ -63,11 +66,10 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     // At which point it will work for al our integrations.
     private final AWSV2SourceClient sourceClient; // NOPMD
 
-    public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
+    public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager<S3OffsetManagerEntry> offsetManager,
             final Transformer transformer, final AWSV2SourceClient sourceClient) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
-
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
         this.sourceClient = sourceClient;
@@ -108,13 +110,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
 
                 final long defaultStartOffsetId = 1L;
-
                 final String finalTopic = topicName;
-                final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
-                        bucketName);
-
-                return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
-                        partitionMap);
+                return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer);
             }
         } else {
             LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
@@ -122,19 +119,19 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         }
     }
 
-    @SuppressWarnings("PMD.CognitiveComplexity")
+
     private Iterator<S3SourceRecord> getObjectIterator(final S3Object s3Object, final String topic,
-            final int topicPartition, final long startOffset, final Transformer transformer,
-            final Map<String, Object> partitionMap) {
+            final int partition, final long startOffset, final Transformer transformer) {
         return new Iterator<>() {
             private final Iterator<S3SourceRecord> internalIterator = readNext().iterator();
+            S3OffsetManagerEntry keyEntry = new S3OffsetManagerEntry(bucketName, currentObjectKey, topic, partition);
+
+            // this entry will keep track of the current record.
+            private final S3OffsetManagerEntry s3OffsetManagerEntry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties);
 
             private List<S3SourceRecord> readNext() {
 
-                final List<S3SourceRecord> sourceRecords = new ArrayList<>();
-
-                final long numberOfRecsAlreadyProcessed = offsetManager.recordsProcessedForObjectKey(partitionMap,
-                        currentObjectKey);
+                final long numberOfRecsAlreadyProcessed = s3OffsetManagerEntry.getRecordCount();
 
                 // Optimizing without reading stream again.
                 if (checkBytesTransformation(transformer, numberOfRecsAlreadyProcessed)) {
@@ -142,17 +139,16 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 }
 
                 final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
-
+                final List<S3SourceRecord> sourceRecords = new ArrayList<>();
                 try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent, topic,
-                        topicPartition, s3SourceConfig, numberOfRecsAlreadyProcessed)) {
+                        s3OffsetManagerEntry.getPartition(), s3SourceConfig, numberOfRecsAlreadyProcessed)) {
                     final Iterator<Object> recordIterator = recordStream.iterator();
                     while (recordIterator.hasNext()) {
                         final Object record = recordIterator.next();
 
                         final byte[] valueBytes = transformer.getValueBytes(record, topic, s3SourceConfig);
 
-                        sourceRecords.add(getSourceRecord(keyBytes, valueBytes, topic, topicPartition, offsetManager,
-                                startOffset, partitionMap));
+                        sourceRecords.add(new S3SourceRecord(s3OffsetManagerEntry, keyBytes, valueBytes));
 
                         // Break if we have reached the max records per poll
                         if (sourceRecords.size() >= s3SourceConfig.getMaxPollRecords()) {
@@ -169,27 +165,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                     final long numberOfRecsAlreadyProcessed) {
                 return transformer instanceof ByteArrayTransformer
                         && numberOfRecsAlreadyProcessed == BYTES_TRANSFORMATION_NUM_OF_RECS;
-            }
-
-            private S3SourceRecord getSourceRecord(final byte[] key, final byte[] value, final String topic,
-                    final int topicPartition, final OffsetManager offsetManager, final long startOffset,
-                    final Map<String, Object> partitionMap) {
-
-                long currentOffset;
-
-                if (offsetManager.getOffsets().containsKey(partitionMap)) {
-                    LOGGER.info("***** offsetManager.getOffsets() ***** {}", offsetManager.getOffsets());
-                    currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap, currentObjectKey,
-                            startOffset);
-                } else {
-                    LOGGER.info("Into else block ...");
-                    currentOffset = startOffset;
-                    offsetManager.createNewOffsetMap(partitionMap, currentObjectKey, currentOffset);
-                }
-
-                final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey, currentOffset);
-
-                return new S3SourceRecord(partitionMap, offsetMap, topic, topicPartition, key, value, currentObjectKey);
             }
 
             @Override

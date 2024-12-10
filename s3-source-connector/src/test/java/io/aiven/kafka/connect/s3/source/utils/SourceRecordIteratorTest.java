@@ -32,8 +32,10 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.AvroTransformer;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
@@ -47,7 +49,7 @@ import org.junit.jupiter.api.Test;
 final class SourceRecordIteratorTest {
 
     private S3SourceConfig mockConfig;
-    private OffsetManager mockOffsetManager;
+    private OffsetManager<S3OffsetManagerEntry> offsetManager;
     private Transformer mockTransformer;
 
     private AWSV2SourceClient mockSourceApiClient;
@@ -55,7 +57,7 @@ final class SourceRecordIteratorTest {
     @BeforeEach
     public void setUp() {
         mockConfig = mock(S3SourceConfig.class);
-        mockOffsetManager = mock(OffsetManager.class);
+        offsetManager = new OffsetManager(new HashMap<>());
         mockTransformer = mock(Transformer.class);
         mockSourceApiClient = mock(AWSV2SourceClient.class);
     }
@@ -72,17 +74,14 @@ final class SourceRecordIteratorTest {
             when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
 
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-                    .thenReturn(Stream.of(new Object()));
+            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any())).thenReturn(Stream.of(new Object()));
 
             final String outStr = "this is a test";
             when(mockTransformer.getValueBytes(any(), anyString(), any()))
                     .thenReturn(outStr.getBytes(StandardCharsets.UTF_8));
 
-            when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
-
             when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.emptyIterator());
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, mockTransformer,
                     mockSourceApiClient);
 
             assertThat(iterator.hasNext()).isFalse();
@@ -91,7 +90,7 @@ final class SourceRecordIteratorTest {
             when(mockSourceApiClient.getListOfObjectKeys(any()))
                     .thenReturn(Collections.singletonList(key).listIterator());
 
-            iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
+            iterator = new SourceRecordIterator(mockConfig, offsetManager, mockTransformer, mockSourceApiClient);
 
             assertThat(iterator.hasNext()).isTrue();
             assertThat(iterator.next()).isNotNull();

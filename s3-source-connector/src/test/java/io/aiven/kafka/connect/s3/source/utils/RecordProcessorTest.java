@@ -62,7 +62,7 @@ class RecordProcessorTest {
     @Mock
     private Converter keyConverter;
     @Mock
-    private OffsetManager offsetManager;
+    private S3OffsetManager offsetManager;
 
     @Mock
     private AWSV2SourceClient sourceClient;

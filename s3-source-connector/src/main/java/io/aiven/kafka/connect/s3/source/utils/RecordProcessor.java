@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
@@ -70,16 +71,13 @@ public final class RecordProcessor {
             final Map<String, String> conversionConfig, final Transformer transformer,
             final AWSV2SourceClient sourceClient, final OffsetManager offsetManager) {
 
-        final String topic = s3SourceRecord.getTopic();
-        final Optional<SchemaAndValue> keyData = keyConverter.map(c -> c.toConnectData(topic, s3SourceRecord.key()));
 
         transformer.configureValueConverter(conversionConfig, s3SourceConfig);
         valueConverter.configure(conversionConfig, false);
+
         try {
-            final SchemaAndValue schemaAndValue = valueConverter.toConnectData(topic, s3SourceRecord.value());
-            offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
-            s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
-            return s3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
+            offsetManager.updateCurrentOffsets(s3SourceRecord.getOffsetManagerEntry());
+            return s3SourceRecord.getSourceRecord(keyConverter, valueConverter);
         } catch (DataException e) {
             if (ErrorsTolerance.NONE.equals(s3SourceConfig.getErrorsTolerance())) {
                 throw new ConnectException("Data Exception caught during S3 record to source record transformation", e);

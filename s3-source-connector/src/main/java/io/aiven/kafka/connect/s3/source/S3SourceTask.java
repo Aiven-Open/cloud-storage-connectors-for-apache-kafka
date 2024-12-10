@@ -28,6 +28,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -38,7 +40,6 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
@@ -104,7 +105,7 @@ public class S3SourceTask extends SourceTask {
         s3SourceConfig = new S3SourceConfig(props);
         initializeConverters();
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
-        offsetManager = new OffsetManager(context, s3SourceConfig);
+        offsetManager = new OffsetManager<S3OffsetManagerEntry>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;

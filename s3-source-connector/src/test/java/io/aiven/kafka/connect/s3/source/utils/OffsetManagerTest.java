@@ -48,7 +48,7 @@ final class OffsetManagerTest {
 
     private S3SourceConfig s3SourceConfig;
 
-    private OffsetManager offsetManager;
+    private S3OffsetManager offsetManager;
 
     @BeforeEach
     public void setUp() {
@@ -75,7 +75,7 @@ final class OffsetManagerTest {
 
         when(offsetStorageReader.offsets(any())).thenReturn(offsets);
 
-        offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
+        offsetManager = new S3OffsetManager(sourceTaskContext, s3SourceConfig);
 
         final Map<Map<String, Object>, Map<String, Object>> retrievedOffsets = offsetManager.getOffsets();
         assertThat(retrievedOffsets.size()).isEqualTo(1);
@@ -105,7 +105,7 @@ final class OffsetManagerTest {
         when(offsetStorageReader.offsets(any())).thenReturn(offsets); // Mock offset retrieval
 
         // Initialize offset manager
-        offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
+        offsetManager = new S3OffsetManager(sourceTaskContext, s3SourceConfig);
 
         // Invoke method and assert new offset value
         final long newOffset = offsetManager.incrementAndUpdateOffsetMap(partitionKey, objectKey, 2L);
@@ -129,7 +129,7 @@ final class OffsetManagerTest {
         when(offsetStorageReader.offsets(any())).thenReturn(Collections.emptyMap()); // No existing offset
 
         // Initialize offset manager
-        offsetManager = new OffsetManager(sourceTaskContext, s3SourceConfig);
+        offsetManager = new S3OffsetManager(sourceTaskContext, s3SourceConfig);
 
         // Invoke method and assert new offset value
         final long startOffset = 5L;
