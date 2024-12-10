@@ -26,7 +26,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
@@ -72,9 +74,28 @@ final class JsonTransformerTest {
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig);
+                sourceCommonConfig, 0);
 
         assertThat(jsonNodes).hasSize(1);
+    }
+
+    @Test
+    void testHandleValueDataWithValidJsonSkipFew() {
+        final InputStream validJsonInputStream = new ByteArrayInputStream(
+                getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
+        final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
+        final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+                sourceCommonConfig, 25L);
+
+        final List<Object> recs = jsonNodes.collect(Collectors.toList());
+        assertThat(recs).hasSize(75);
+        assertThat(recs).extracting(record -> ((JsonNode) record).get("key").asText())
+                .doesNotContain("value1")
+                .doesNotContain("value2")
+                .doesNotContain("value25")
+                .contains("value26")
+                .contains("value27")
+                .contains("value100");
     }
 
     @Test
@@ -84,7 +105,7 @@ final class JsonTransformerTest {
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
 
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig);
+                sourceCommonConfig, 0);
 
         assertThat(jsonNodes).isEmpty();
     }
@@ -95,7 +116,7 @@ final class JsonTransformerTest {
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig);
+                sourceCommonConfig, 0);
         final byte[] serializedData = jsonTransformer.getValueBytes(jsonNodes.findFirst().get(), TESTTOPIC,
                 sourceCommonConfig);
 
@@ -108,7 +129,7 @@ final class JsonTransformerTest {
     @Test
     void testGetRecordsWithIOException() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException"));
-        final Stream<Object> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null);
+        final Stream<Object> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
 
         assertThat(resultStream).isEmpty();
     }
@@ -126,8 +147,19 @@ final class JsonTransformerTest {
     @Test
     void testCustomSpliteratorWithIOExceptionDuringInitialization() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException during initialization"));
-        final Stream<Object> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null);
+        final Stream<Object> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
 
         assertThat(resultStream).isEmpty();
+    }
+
+    String getJsonRecs(final int recordCount) {
+        final StringBuilder jsonRecords = new StringBuilder();
+        for (int i = 1; i <= recordCount; i++) {
+            jsonRecords.append(String.format("{\"key\":\"value%d\"}", i));
+            if (i < recordCount) {
+                jsonRecords.append("\n"); // NOPMD AppendCharacterWithChar
+            }
+        }
+        return jsonRecords.toString();
     }
 }

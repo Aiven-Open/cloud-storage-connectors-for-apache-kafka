@@ -40,15 +40,24 @@ public class ByteArrayTransformer implements Transformer {
 
     @Override
     public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig) {
+            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
 
         // Create a Stream that processes each chunk lazily
         return StreamSupport.stream(new Spliterators.AbstractSpliterator<>(Long.MAX_VALUE, Spliterator.ORDERED) {
             final byte[] buffer = new byte[4096];
+            InputStream inputStream;
+
+            {
+                try {
+                    inputStream = inputStreamIOSupplier.get(); // Open the InputStream once
+                } catch (IOException e) {
+                    LOGGER.error("Error closing stream: {}", e.getMessage(), e);
+                }
+            }
 
             @Override
             public boolean tryAdvance(final java.util.function.Consumer<? super Object> action) {
-                try (InputStream inputStream = inputStreamIOSupplier.get()) {
+                try {
                     final int bytesRead = inputStream.read(buffer);
                     if (bytesRead == -1) {
                         return false;
@@ -62,7 +71,13 @@ public class ByteArrayTransformer implements Transformer {
                     return false;
                 }
             }
-        }, false);
+        }, false).onClose(() -> {
+            try {
+                inputStreamIOSupplier.get().close(); // Ensure the reader is closed after streaming
+            } catch (IOException e) {
+                LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
+            }
+        });
     }
 
     @Override

@@ -16,11 +16,17 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.BYTES_TRANSFORMATION_NUM_OF_RECS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -28,6 +34,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.source.input.AvroTransformer;
+import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -64,7 +72,8 @@ final class SourceRecordIteratorTest {
             when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
 
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any())).thenReturn(Stream.of(new Object()));
+            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
+                    .thenReturn(Stream.of(new Object()));
 
             final String outStr = "this is a test";
             when(mockTransformer.getValueBytes(any(), anyString(), any()))
@@ -86,6 +95,56 @@ final class SourceRecordIteratorTest {
 
             assertThat(iterator.hasNext()).isTrue();
             assertThat(iterator.next()).isNotNull();
+        }
+    }
+
+    @Test
+    void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws Exception {
+
+        final String key = "topic-00001-abc123.txt";
+
+        // Mock S3Object and InputStream
+        try (S3Object mockS3Object = mock(S3Object.class);
+                S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
+                        null);) {
+            when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
+            when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
+
+            // With ByteArrayTransformer
+            mockTransformer = mock(ByteArrayTransformer.class);
+            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
+                    .thenReturn(Stream.of(new Object()));
+
+            final String outStr = "this is a test";
+
+            when(mockTransformer.getValueBytes(any(), anyString(), any()))
+                    .thenReturn(outStr.getBytes(StandardCharsets.UTF_8));
+
+            when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
+
+            when(mockSourceApiClient.getListOfObjectKeys(any()))
+                    .thenReturn(Collections.singletonList(key).listIterator());
+            when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
+                    .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
+
+            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+                    mockSourceApiClient);
+            assertThat(iterator.hasNext()).isTrue();
+            iterator.next();
+            verify(mockTransformer, never()).getRecords(any(), anyString(), anyInt(), any(), anyLong());
+
+            // With AvroTransformer
+            mockTransformer = mock(AvroTransformer.class);
+            when(mockSourceApiClient.getListOfObjectKeys(any()))
+                    .thenReturn(Collections.singletonList(key).listIterator());
+            when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
+                    .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
+
+            iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
+            assertThat(iterator.hasNext()).isTrue();
+            iterator.next();
+
+            verify(mockTransformer, times(1)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
         }
     }
 }
