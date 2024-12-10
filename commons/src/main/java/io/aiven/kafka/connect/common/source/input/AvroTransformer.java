@@ -20,9 +20,7 @@ import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -31,13 +29,10 @@ import java.util.stream.StreamSupport;
 
 import org.apache.kafka.common.config.AbstractConfig;
 
-import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileStream;
-import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +48,9 @@ public class AvroTransformer implements Transformer {
 
     @Override
     public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig) {
+            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
         final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-        return readAvroRecordsAsStream(inputStreamIOSupplier, datumReader);
+        return readAvroRecordsAsStream(inputStreamIOSupplier, datumReader, skipRecords);
     }
 
     @Override
@@ -65,7 +60,7 @@ public class AvroTransformer implements Transformer {
     }
 
     private Stream<Object> readAvroRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final DatumReader<GenericRecord> datumReader) {
+            final DatumReader<GenericRecord> datumReader, final long skipRecords) {
         InputStream inputStream; // NOPMD CloseResource: being closed in try resources iterator
         DataFileStream<GenericRecord> dataFileStream; // NOPMD CloseResource: being closed in try resources iterator
         try {
@@ -76,13 +71,15 @@ public class AvroTransformer implements Transformer {
             dataFileStream = new DataFileStream<>(inputStream, datumReader);
 
             // Wrap DataFileStream in a Stream using a custom Spliterator for lazy processing
-            return StreamSupport.stream(new AvroRecordSpliterator<>(dataFileStream), false).onClose(() -> {
-                try {
-                    dataFileStream.close(); // Ensure the reader is closed after streaming
-                } catch (IOException e) {
-                    LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
-                }
-            });
+            return StreamSupport.stream(new AvroRecordSpliterator<>(dataFileStream), false)
+                    .skip(skipRecords)
+                    .onClose(() -> {
+                        try {
+                            dataFileStream.close(); // Ensure the reader is closed after streaming
+                        } catch (IOException e) {
+                            LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
+                        }
+                    });
         } catch (IOException e) {
             LOGGER.error("Error in DataFileStream: {}", e.getMessage(), e);
             return Stream.empty(); // Return an empty stream if initialization fails
@@ -125,21 +122,5 @@ public class AvroTransformer implements Transformer {
         public int characteristics() {
             return Spliterator.ORDERED | Spliterator.NONNULL;
         }
-    }
-
-    List<Object> readAvroRecords(final InputStream content, final DatumReader<GenericRecord> datumReader) {
-        final List<Object> records = new ArrayList<>();
-        try (SeekableByteArrayInput sin = new SeekableByteArrayInput(IOUtils.toByteArray(content))) {
-            try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
-                reader.forEach(records::add);
-            } catch (IOException e) {
-                LOGGER.error("Failed to read records from DataFileReader for S3 object stream. Error: {}",
-                        e.getMessage(), e);
-            }
-        } catch (IOException e) {
-            LOGGER.error("Failed to initialize SeekableByteArrayInput for S3 object stream. Error: {}", e.getMessage(),
-                    e);
-        }
-        return records;
     }
 }

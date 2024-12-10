@@ -27,6 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -46,6 +47,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
             + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
+    public static final long BYTES_TRANSFORMATION_NUM_OF_RECS = 1L;
     private String currentObjectKey;
 
     private Iterator<String> objectListIterator;
@@ -128,31 +130,29 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             private final Iterator<S3SourceRecord> internalIterator = readNext().iterator();
 
             private List<S3SourceRecord> readNext() {
-                final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
+
                 final List<S3SourceRecord> sourceRecords = new ArrayList<>();
 
-                int numOfProcessedRecs = 1;
-                boolean checkOffsetMap = true;
+                final long numberOfRecsAlreadyProcessed = offsetManager.recordsProcessedForObjectKey(partitionMap,
+                        currentObjectKey);
+
+                // Optimizing without reading stream again.
+                if (checkBytesTransformation(transformer, numberOfRecsAlreadyProcessed)) {
+                    return sourceRecords;
+                }
+
+                final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
+
                 try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent, topic,
-                        topicPartition, s3SourceConfig)) {
+                        topicPartition, s3SourceConfig, numberOfRecsAlreadyProcessed)) {
                     final Iterator<Object> recordIterator = recordStream.iterator();
                     while (recordIterator.hasNext()) {
                         final Object record = recordIterator.next();
 
-                        // Check if the record should be skipped based on the offset
-                        if (offsetManager.shouldSkipRecord(partitionMap, currentObjectKey, numOfProcessedRecs)
-                                && checkOffsetMap) {
-                            numOfProcessedRecs++;
-                            continue;
-                        }
-
                         final byte[] valueBytes = transformer.getValueBytes(record, topic, s3SourceConfig);
-                        checkOffsetMap = false;
 
                         sourceRecords.add(getSourceRecord(keyBytes, valueBytes, topic, topicPartition, offsetManager,
                                 startOffset, partitionMap));
-
-                        numOfProcessedRecs++;
 
                         // Break if we have reached the max records per poll
                         if (sourceRecords.size() >= s3SourceConfig.getMaxPollRecords()) {
@@ -162,6 +162,13 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 }
 
                 return sourceRecords;
+            }
+
+            // For bytes transformation, read whole file as 1 record
+            private boolean checkBytesTransformation(final Transformer transformer,
+                    final long numberOfRecsAlreadyProcessed) {
+                return transformer instanceof ByteArrayTransformer
+                        && numberOfRecsAlreadyProcessed == BYTES_TRANSFORMATION_NUM_OF_RECS;
             }
 
             private S3SourceRecord getSourceRecord(final byte[] key, final byte[] value, final String topic,
