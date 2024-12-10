@@ -51,8 +51,8 @@ public class JsonTransformer implements Transformer {
 
     @Override
     public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig) {
-        return readJsonRecordsAsStream(inputStreamIOSupplier);
+            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
+        return readJsonRecordsAsStream(inputStreamIOSupplier, skipRecords);
     }
 
     @Override
@@ -65,7 +65,8 @@ public class JsonTransformer implements Transformer {
         }
     }
 
-    private Stream<Object> readJsonRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier) {
+    private Stream<Object> readJsonRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final long skipRecords) {
         // Use a Stream that lazily processes each line as a JSON object
         CustomSpliterator customSpliteratorParam;
         try {
@@ -80,7 +81,7 @@ public class JsonTransformer implements Transformer {
             } catch (IOException e) {
                 LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
             }
-        });
+        }).skip(skipRecords);
     }
 
     /*
