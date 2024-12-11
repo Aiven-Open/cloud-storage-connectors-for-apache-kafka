@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.config.s3;
+package io.aiven.kafka.connect.s3.source.config;
 
 import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYyyyUppercase;
 
@@ -22,7 +22,13 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.common.config.SchemaRegistryFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
@@ -32,17 +38,36 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Region;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-@SuppressWarnings({ "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
-public class S3SourceBaseConfig extends SourceCommonConfig {
-    public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceBaseConfig.class);
+
+final public class S3SourceConfig extends SourceCommonConfig {
+
+    public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConfig.class);
+
     private final S3ConfigFragment s3ConfigFragment;
-    protected S3SourceBaseConfig(ConfigDef definition, Map<String, String> originals) { // NOPMD UnusedAssignment
-        super(definition, handleDeprecatedYyyyUppercase(originals));
+    public S3SourceConfig(final Map<String, String> properties) {
+        super(configDef(), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
-        validate();
+        validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
+    }
+
+    public static ConfigDef configDef() {
+
+        final var configDef = new S3SourceConfigDef();
+        S3ConfigFragment.update(configDef);
+        SourceConfigFragment.update(configDef);
+        FileNameFragment.update(configDef);
+        SchemaRegistryFragment.update(configDef);
+        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
+
+        return configDef;
     }
 
     private void validate() {
+
+        // s3ConfigFragment is validated in this method as it is created here.
+        // Other Fragments created in the ConfigDef are validated in the parent classes their instances are created in.
+        // e.g. SourceConfigFragment, FileNameFragment, SchemaRegistryFragment and OutputFormatFragment are all
+        // validated in SourceCommonConfig.
         s3ConfigFragment.validate();
     }
 
@@ -108,6 +133,10 @@ public class S3SourceBaseConfig extends SourceCommonConfig {
 
     public AWSCredentialsProvider getCustomCredentialsProvider() {
         return s3ConfigFragment.getCustomCredentialsProvider();
+    }
+
+    public S3ConfigFragment getS3ConfigFragment() {
+        return s3ConfigFragment;
     }
 
 }

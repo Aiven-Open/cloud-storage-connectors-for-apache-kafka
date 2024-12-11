@@ -40,6 +40,7 @@ dependencyResolutionManagement {
           "org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion")
       library("parquet-avro", "org.apache.parquet:parquet-avro:$parquetVersion")
       library("parquet-tools", "org.apache.parquet:parquet-tools:$parquetVersion")
+      library("parquet-hadoop", "org.apache.parquet:parquet-hadoop:$parquetVersion")
     }
     create("compressionlibs") {
       library("snappy", "org.xerial.snappy:snappy-java:$snappyVersion")
@@ -98,3 +99,5 @@ include("gcs-sink-connector")
 include("s3-sink-connector")
 
 include("azure-sink-connector")
+
+include("s3-source-connector")

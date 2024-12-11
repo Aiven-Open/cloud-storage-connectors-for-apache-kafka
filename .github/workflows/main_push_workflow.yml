@@ -2,9 +2,13 @@
 name: Main and pull request checks
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - s3-source-release
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - s3-source-release
 jobs:
   build:
     strategy:
@@ -30,4 +34,4 @@ jobs:
         run: ./gradlew build test
       - name: Build in Linux
         if: runner.os == 'Linux'
-        run: ./gradlew build check test integrationTest
+        run: ./gradlew build check test integrationTest -i
