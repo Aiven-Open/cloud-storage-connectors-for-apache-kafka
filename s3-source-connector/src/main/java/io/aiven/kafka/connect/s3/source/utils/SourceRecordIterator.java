@@ -16,13 +16,12 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -30,8 +29,9 @@ import java.util.stream.Stream;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,176 +41,131 @@ import org.slf4j.LoggerFactory;
  */
 public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
-    public static final String PATTERN_TOPIC_KEY = "topicName";
-    public static final String PATTERN_PARTITION_KEY = "partitionId";
-
-    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
-            + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
-    private String currentObjectKey;
-
-    private final Iterator<S3ObjectSummary> s3ObjectSummaryIterator;
-    private Iterator<S3SourceRecord> recordIterator = Collections.emptyIterator();
 
     private final OffsetManager offsetManager;
 
     private final S3SourceConfig s3SourceConfig;
-    private final String bucketName;
 
     private final Transformer transformer;
-    // Once we decouple the S3Object from the Source Iterator we can change this to be the SourceApiClient
-    // At which point it will work for al our integrations.
-    private final AWSV2SourceClient sourceClient; // NOPMD
+
+    private final FileMatcherFilter fileMatcherFilter;
+
+    private final Iterator<Iterator<S3SourceRecord>> iteratorIterator;
+
+    private Iterator<S3SourceRecord> workingIterator;
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
             final Transformer transformer, final AWSV2SourceClient sourceClient) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
-
-        this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
-        this.sourceClient = sourceClient;
-        objectListIterator = sourceClient.getListOfObjectKeys(null);
+        this.fileMatcherFilter = new FileMatcherFilter();
+        // add the fileMatcher and task assignment filters.
+        sourceClient.andFilter(fileMatcherFilter.and(new TaskAssignmentFilter(s3SourceConfig)));
+        iteratorIterator = IteratorUtils.transformedIterator(sourceClient.getObjectIterator(null),
+                s3Object -> createIteratorForS3Object(s3Object));
+        workingIterator = IteratorUtils.emptyIterator();
     }
 
-    private void nextS3Object() {
-        if (!s3ObjectSummaryIterator.hasNext()) {
-            recordIterator = Collections.emptyIterator();
-            return;
+    /**
+     * Creates an Iterator of S3SourceRecords from an s3Object. package private for testing
+     *
+     * @param s3Object
+     *            the object to get the S3SourceRecords from.
+     * @return an Iterator of S3SourceRecords.
+     */
+    Iterator<S3SourceRecord> createIteratorForS3Object(final S3Object s3Object) {
+        final long startOffset = 1L;
+        final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(fileMatcherFilter.getTopicName(),
+                fileMatcherFilter.getPartitionId(), s3SourceConfig.getAwsS3BucketName());
+        final byte[] keyBytes = s3Object.getKey().getBytes(StandardCharsets.UTF_8);
+        final List<S3SourceRecord> sourceRecords = new ArrayList<>();
+
+        int numOfProcessedRecs = 1;
+        boolean checkOffsetMap = true;
+        try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent,
+                fileMatcherFilter.getTopicName(), fileMatcherFilter.getPartitionId(), s3SourceConfig)) {
+            final Iterator<Object> recordIterator = recordStream.iterator();
+            while (recordIterator.hasNext()) {
+                final Object record = recordIterator.next();
+
+                // Check if the record should be skipped based on the offset
+                if (offsetManager.shouldSkipRecord(partitionMap, s3Object.getKey(), numOfProcessedRecs)
+                        && checkOffsetMap) {
+                    numOfProcessedRecs++;
+                    continue;
+                }
+
+                final byte[] valueBytes = transformer.getValueBytes(record, fileMatcherFilter.getTopicName(),
+                        s3SourceConfig);
+                checkOffsetMap = false;
+
+                sourceRecords.add(getSourceRecord(s3Object.getKey(), keyBytes, valueBytes, offsetManager, startOffset,
+                        partitionMap));
+
+                numOfProcessedRecs++;
+
+                // Break if we have reached the max records per poll
+                if (sourceRecords.size() >= s3SourceConfig.getMaxPollRecords()) {
+                    break;
+                }
+            }
         }
 
-        try {
-            final S3ObjectSummary file = s3ObjectSummaryIterator.next();
-            if (file != null) {
-                currentObjectKey = file.getKey();
-                recordIterator = createIteratorForCurrentFile();
-            }
-        } catch (IOException e) {
-            throw new AmazonClientException(e);
-        }
+        return sourceRecords.iterator();
     }
 
-    private Iterator<S3SourceRecord> createIteratorForCurrentFile() throws IOException {
+    /**
+     * Creates an S3SourceRecord. Package private for testing.
+     *
+     * @param objectKey
+     *            the key for the object we read this record from.
+     * @param key
+     *            the key for this record
+     * @param value
+     *            the value for this record.
+     * @param offsetManager
+     *            the offsetManager.
+     * @param startOffset
+     *            the starting offset.
+     * @param partitionMap
+     *            the partition map for this object.
+     * @return the S3SourceRecord.
+     */
+    S3SourceRecord getSourceRecord(final String objectKey, final byte[] key, final byte[] value,
+            final OffsetManager offsetManager, final long startOffset, final Map<String, Object> partitionMap) {
 
-        final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(currentObjectKey);
-        String topicName;
-        int defaultPartitionId;
+        long currentOffset;
 
-        if (fileMatcher.find()) {
-            // TODO move this from the SourceRecordIterator so that we can decouple it from S3 and make it API agnostic
-            try (S3Object s3Object = sourceClient.getObject(currentObjectKey);) {
-
-                topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
-                defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
-
-                final long defaultStartOffsetId = 1L;
-
-                final String finalTopic = topicName;
-                final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
-                        bucketName);
-
-                return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
-                        partitionMap);
-            }
+        if (offsetManager.getOffsets().containsKey(partitionMap)) {
+            LOGGER.info("***** offsetManager.getOffsets() ***** {}", offsetManager.getOffsets());
+            currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap, objectKey, startOffset);
         } else {
-            LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
-            return Collections.emptyIterator();
+            LOGGER.info("Into else block ...");
+            currentOffset = startOffset;
+            offsetManager.createNewOffsetMap(partitionMap, objectKey, currentOffset);
         }
-    }
 
-    @SuppressWarnings("PMD.CognitiveComplexity")
-    private Iterator<S3SourceRecord> getObjectIterator(final S3Object s3Object, final String topic,
-            final int topicPartition, final long startOffset, final Transformer transformer,
-            final Map<String, Object> partitionMap) {
-        return new Iterator<>() {
-            private final Iterator<S3SourceRecord> internalIterator = readNext().iterator();
+        final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(objectKey, currentOffset);
 
-            private List<S3SourceRecord> readNext() {
-                final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
-                final List<S3SourceRecord> sourceRecords = new ArrayList<>();
-
-                int numOfProcessedRecs = 1;
-                boolean checkOffsetMap = true;
-                try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent, topic,
-                        topicPartition, s3SourceConfig)) {
-                    final Iterator<Object> recordIterator = recordStream.iterator();
-                    while (recordIterator.hasNext()) {
-                        final Object record = recordIterator.next();
-
-                        // Check if the record should be skipped based on the offset
-                        if (offsetManager.shouldSkipRecord(partitionMap, currentObjectKey, numOfProcessedRecs)
-                                && checkOffsetMap) {
-                            numOfProcessedRecs++;
-                            continue;
-                        }
-
-                        final byte[] valueBytes = transformer.getValueBytes(record, topic, s3SourceConfig);
-                        checkOffsetMap = false;
-
-                        sourceRecords.add(getSourceRecord(keyBytes, valueBytes, topic, topicPartition, offsetManager,
-                                startOffset, partitionMap));
-
-                        numOfProcessedRecs++;
-
-                        // Break if we have reached the max records per poll
-                        if (sourceRecords.size() >= s3SourceConfig.getMaxPollRecords()) {
-                            break;
-                        }
-                    }
-                }
-
-                return sourceRecords;
-            }
-
-            private S3SourceRecord getSourceRecord(final byte[] key, final byte[] value, final String topic,
-                    final int topicPartition, final OffsetManager offsetManager, final long startOffset,
-                    final Map<String, Object> partitionMap) {
-
-                long currentOffset;
-
-                if (offsetManager.getOffsets().containsKey(partitionMap)) {
-                    LOGGER.info("***** offsetManager.getOffsets() ***** {}", offsetManager.getOffsets());
-                    currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap, currentObjectKey,
-                            startOffset);
-                } else {
-                    LOGGER.info("Into else block ...");
-                    currentOffset = startOffset;
-                    offsetManager.createNewOffsetMap(partitionMap, currentObjectKey, currentOffset);
-                }
-
-                final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey, currentOffset);
-
-                return new S3SourceRecord(partitionMap, offsetMap, topic, topicPartition, key, value, currentObjectKey);
-            }
-
-            @Override
-            public boolean hasNext() {
-                return internalIterator.hasNext();
-            }
-
-            @Override
-            public S3SourceRecord next() {
-                return internalIterator.next();
-            }
-        };
+        return new S3SourceRecord(partitionMap, offsetMap, fileMatcherFilter.getTopicName(),
+                fileMatcherFilter.getPartitionId(), key, value, objectKey);
     }
 
     @Override
     public boolean hasNext() {
-        return recordIterator.hasNext() || s3ObjectSummaryIterator.hasNext();
+        while (!workingIterator.hasNext() && iteratorIterator.hasNext()) {
+            workingIterator = iteratorIterator.next();
+        }
+        return workingIterator.hasNext();
     }
 
     @Override
     public S3SourceRecord next() {
-        if (!recordIterator.hasNext()) {
-            nextS3Object();
+        if (!hasNext()) {
+            throw new IllegalArgumentException();
         }
-
-        if (!recordIterator.hasNext()) {
-            // If there are still no records, return null or throw an exception
-            return null; // Or throw new NoSuchElementException();
-        }
-
-        return recordIterator.next();
+        return workingIterator.next();
     }
 
     @Override
@@ -218,4 +173,101 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         throw new UnsupportedOperationException("This iterator is unmodifiable");
     }
 
+    /**
+     * A filter for S3ObjectSummaries that extracts the topic name and partition id. Package private for testing.
+     */
+    static class FileMatcherFilter implements Predicate<S3ObjectSummary> {
+        private static final String PATTERN_TOPIC_KEY = "topicName";
+        private static final String PATTERN_PARTITION_KEY = "partitionId";
+
+        private static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
+                + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
+
+        private static final String NOT_ASSIGNED = null;
+        /** The extracted topic name or null the last {@link #test(S3ObjectSummary)} returned false. */
+        private String topicName;
+        /** The extracted partition id or -1 if the last {@link #test(S3ObjectSummary)} returned false. */
+        private int partitionId = -1;
+
+        @Override
+        public boolean test(final S3ObjectSummary s3ObjectSummary) {
+            final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(s3ObjectSummary.getKey());
+            if (fileMatcher.find()) {
+                topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
+                partitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
+                return true;
+            }
+            LOGGER.error("File naming doesn't match to any topic. {}", s3ObjectSummary.getKey());
+            topicName = NOT_ASSIGNED;
+            partitionId = -1;
+            return false;
+        }
+
+        /**
+         * Gets the extracted topic name.
+         *
+         * @return the topic name or {@code null} if the topic has not been set.
+         */
+        public String getTopicName() {
+            return topicName;
+        }
+
+        /**
+         * Gets the extracted partion Id
+         *
+         * @return the partition id or -1 if the value has not been set.
+         */
+        public int getPartitionId() {
+            return partitionId;
+        }
+    }
+
+    /**
+     * A filter that determins if the S3ObjectSummary belongs to this task. Package private for testing. TODO: Should be
+     * replaced with actual task assignment predicate.
+     */
+    static class TaskAssignmentFilter implements Predicate<S3ObjectSummary> {
+        /** The maximum number of tasks */
+        final int maxTasks;
+        /** The task ID for this task */
+        final int taskId;
+
+        /**
+         * Extracts integer values from original in config. TODO create acutal properties in the configuration.
+         *
+         * @param config
+         *            the config to extract from.
+         * @param key
+         *            the key to fine.
+         * @param dfltValue
+         *            the default value on error.
+         * @return the integer value parsed or default on error.
+         */
+        private static int fromOriginals(final S3SourceConfig config, final String key, final int dfltValue) {
+            final Object obj = config.originals().get(key);
+            if (obj != null) {
+                try {
+                    return Integer.parseInt(obj.toString());
+                } catch (NumberFormatException e) {
+                    return dfltValue;
+                }
+            }
+            return dfltValue;
+        }
+        /**
+         * Constructor.
+         *
+         * @param config
+         *            the source config to get "tasks.max" and "task.id" values from.
+         */
+        TaskAssignmentFilter(final S3SourceConfig config) {
+            maxTasks = fromOriginals(config, "tasks.max", 1);
+            taskId = fromOriginals(config, "task.id", 0);
+        }
+
+        @Override
+        public boolean test(final S3ObjectSummary s3ObjectSummary) {
+            return taskId == Math.floorMod(s3ObjectSummary.getKey().hashCode(), maxTasks);
+        }
+    }
 }

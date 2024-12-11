@@ -40,6 +40,9 @@ public class S3ObjectSummaryIterator implements Iterator<S3ObjectSummary> {
     /** the ObjectRequest initially to start the iteration from later to retrieve more records */
     private final ListObjectsV2Request request;
 
+    /** The last key seen by this process. This allows us to restart when a new file is dropped in the direcotry */
+    private String lastObjectSummaryKey;
+
     /**
      * Constructs the s3ObjectSummaryIterator based on the Amazon se client.
      *
@@ -58,17 +61,22 @@ public class S3ObjectSummaryIterator implements Iterator<S3ObjectSummary> {
     public boolean hasNext() {
         // delay creating objectListing until we need it.
         if (objectListing == null) {
-            this.objectListing = s3Client.listObjectsV2(request);
-            this.innerIterator = objectListing.getObjectSummaries().iterator();
+            objectListing = s3Client.listObjectsV2(request);
+            innerIterator = objectListing.getObjectSummaries().iterator();
         }
         if (!this.innerIterator.hasNext()) {
-            if (!objectListing.isTruncated()) {
-                // there is no more data
-                return false;
+            if (objectListing.isTruncated()) {
+                // get the next set of data and create an iterator on it.
+                request.withContinuationToken(objectListing.getContinuationToken());
+                objectListing = s3Client.listObjectsV2(request);
+            } else {
+                // there is no more data -- reread the bucket
+                request.withContinuationToken(null);
+                if (lastObjectSummaryKey != null) {
+                    request.withStartAfter(lastObjectSummaryKey);
+                }
+                objectListing = s3Client.listObjectsV2(request);
             }
-            // get the next set of data and create an iterator on it.
-            request.withContinuationToken(objectListing.getContinuationToken());
-            objectListing = s3Client.listObjectsV2(request);
             innerIterator = objectListing.getObjectSummaries().iterator();
         }
         // innerIterator is configured. Does it have more?
@@ -80,6 +88,8 @@ public class S3ObjectSummaryIterator implements Iterator<S3ObjectSummary> {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }
-        return innerIterator.next();
+        final S3ObjectSummary result = innerIterator.next();
+        lastObjectSummaryKey = result.getKey();
+        return result;
     }
 }
