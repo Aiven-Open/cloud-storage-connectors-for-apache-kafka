@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -35,9 +36,11 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -150,5 +153,43 @@ class RecordProcessorTest {
                 Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, sourceClient, offsetManager);
 
         assertThat(sourceRecords).isNotNull();
+    }
+
+    @Test
+    void errorToleranceOnNONE() {
+        final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
+        when(mockRecord.getTopic()).thenReturn("test-topic");
+        when(mockRecord.key()).thenReturn("mock-key".getBytes(StandardCharsets.UTF_8));
+        when(mockRecord.value()).thenReturn("mock-value".getBytes(StandardCharsets.UTF_8));
+
+        when(valueConverter.toConnectData(anyString(), any()))
+                .thenReturn(new SchemaAndValue(null, "mock-value-converted"));
+        when(mockRecord.getSourceRecord(anyString(), any(), any())).thenThrow(new DataException("generic issue"));
+
+        when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.NONE);
+
+        assertThatThrownBy(() -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig,
+                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, sourceClient, offsetManager))
+                .isInstanceOf(org.apache.kafka.connect.errors.ConnectException.class)
+                .hasMessage("Data Exception caught during S3 record to source record transformation");
+
+    }
+
+    @Test
+    void errorToleranceOnALL() {
+        final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
+        when(mockRecord.getTopic()).thenReturn("test-topic");
+        when(mockRecord.key()).thenReturn("mock-key".getBytes(StandardCharsets.UTF_8));
+        when(mockRecord.value()).thenReturn("mock-value".getBytes(StandardCharsets.UTF_8));
+
+        when(valueConverter.toConnectData(anyString(), any()))
+                .thenReturn(new SchemaAndValue(null, "mock-value-converted"));
+        when(mockRecord.getSourceRecord(anyString(), any(), any())).thenThrow(new DataException("generic issue"));
+
+        when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.ALL);
+
+        assertThat(RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, Optional.of(keyConverter),
+                valueConverter, new HashMap<>(), transformer, sourceClient, offsetManager)).isNull();
+
     }
 }

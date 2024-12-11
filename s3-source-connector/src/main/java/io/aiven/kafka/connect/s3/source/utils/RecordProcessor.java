@@ -24,10 +24,12 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -79,9 +81,15 @@ public final class RecordProcessor {
             s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
             return s3SourceRecord.getSourceRecord(topic, keyData, schemaAndValue);
         } catch (DataException e) {
-            LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
-            sourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
-            throw e;
+            if (ErrorsTolerance.NONE.equals(s3SourceConfig.getErrorsTolerance())) {
+                throw new ConnectException("Data Exception caught during S3 record to source record transformation", e);
+            } else {
+                sourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
+                LOGGER.warn(
+                        "Data Exception caught during S3 record to source record transformation {} . errors.tolerance set to 'all', logging warning and continuing to process.",
+                        e.getMessage(), e);
+                return null;
+            }
         }
     }
 }
