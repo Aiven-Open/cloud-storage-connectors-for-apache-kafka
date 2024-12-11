@@ -53,6 +53,7 @@ public class SinkCommonConfig extends CommonConfig {
     private void validate() {
         outputFormatFragment.validate();
         fileNameFragment.validate();
+        super.doValidate();
     }
 
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,

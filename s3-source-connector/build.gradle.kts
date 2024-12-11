@@ -67,6 +67,7 @@ dependencies {
 
   implementation(project(":commons"))
   implementation(project(":s3-commons"))
+  implementation(apache.commons.collection4)
   implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
   implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
 
