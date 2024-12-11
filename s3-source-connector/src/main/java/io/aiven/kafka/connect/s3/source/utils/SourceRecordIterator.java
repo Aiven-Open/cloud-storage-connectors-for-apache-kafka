@@ -26,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -41,6 +42,8 @@ import org.slf4j.LoggerFactory;
  */
 public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
+
+    public static final long BYTES_TRANSFORMATION_NUM_OF_RECS = 1L;
 
     private final OffsetManager offsetManager;
 
@@ -67,6 +70,12 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         workingIterator = IteratorUtils.emptyIterator();
     }
 
+    // For bytes transformation, read whole file as 1 record
+    private boolean checkBytesTransformation(final Transformer transformer, final long numberOfRecsAlreadyProcessed) {
+        return transformer instanceof ByteArrayTransformer
+                && numberOfRecsAlreadyProcessed == BYTES_TRANSFORMATION_NUM_OF_RECS;
+    }
+
     /**
      * Creates an Iterator of S3SourceRecords from an s3Object. package private for testing
      *
@@ -75,40 +84,27 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
      * @return an Iterator of S3SourceRecords.
      */
     Iterator<S3SourceRecord> createIteratorForS3Object(final S3Object s3Object) {
-        final long startOffset = 1L;
         final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(fileMatcherFilter.getTopicName(),
                 fileMatcherFilter.getPartitionId(), s3SourceConfig.getAwsS3BucketName());
+        final long numberOfRecsAlreadyProcessed = offsetManager.recordsProcessedForObjectKey(partitionMap,
+                s3Object.getKey());
+        // Optimizing without reading stream again.
+        if (checkBytesTransformation(transformer, numberOfRecsAlreadyProcessed)) {
+            return IteratorUtils.emptyIterator();
+        }
+        final long startOffset = 1L;
         final byte[] keyBytes = s3Object.getKey().getBytes(StandardCharsets.UTF_8);
         final List<S3SourceRecord> sourceRecords = new ArrayList<>();
-
-        int numOfProcessedRecs = 1;
-        boolean checkOffsetMap = true;
         try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent,
-                fileMatcherFilter.getTopicName(), fileMatcherFilter.getPartitionId(), s3SourceConfig)) {
+                fileMatcherFilter.getTopicName(), fileMatcherFilter.getPartitionId(), s3SourceConfig,
+                numberOfRecsAlreadyProcessed)) {
             final Iterator<Object> recordIterator = recordStream.iterator();
             while (recordIterator.hasNext()) {
                 final Object record = recordIterator.next();
-
-                // Check if the record should be skipped based on the offset
-                if (offsetManager.shouldSkipRecord(partitionMap, s3Object.getKey(), numOfProcessedRecs)
-                        && checkOffsetMap) {
-                    numOfProcessedRecs++;
-                    continue;
-                }
-
                 final byte[] valueBytes = transformer.getValueBytes(record, fileMatcherFilter.getTopicName(),
                         s3SourceConfig);
-                checkOffsetMap = false;
-
                 sourceRecords.add(getSourceRecord(s3Object.getKey(), keyBytes, valueBytes, offsetManager, startOffset,
                         partitionMap));
-
-                numOfProcessedRecs++;
-
-                // Break if we have reached the max records per poll
-                if (sourceRecords.size() >= s3SourceConfig.getMaxPollRecords()) {
-                    break;
-                }
             }
         }
 
@@ -223,8 +219,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     }
 
     /**
-     * A filter that determins if the S3ObjectSummary belongs to this task. Package private for testing. TODO: Should be
-     * replaced with actual task assignment predicate.
+     * A filter that determines if the S3ObjectSummary belongs to this task. Package private for testing. TODO: Should
+     * be replaced with actual task assignment predicate.
      */
     static class TaskAssignmentFilter implements Predicate<S3ObjectSummary> {
         /** The maximum number of tasks */

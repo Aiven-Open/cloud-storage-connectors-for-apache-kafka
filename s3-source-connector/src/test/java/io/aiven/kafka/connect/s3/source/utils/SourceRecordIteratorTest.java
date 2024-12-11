@@ -17,11 +17,16 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.BYTES_TRANSFORMATION_NUM_OF_RECS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -33,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.S3ObjectsUtils;
@@ -74,6 +80,7 @@ final class SourceRecordIteratorTest {
     void testSingleS3Object() throws IOException {
         s3SourceConfig = new S3SourceConfig(standardConfigurationData());
         offsetManager = mock(OffsetManager.class);
+        when(offsetManager.recordsProcessedForObjectKey(anyMap(), anyString())).thenReturn(0L);
         transformer = new TestingTransformer();
         s3Client = mock(AmazonS3.class);
 
@@ -108,6 +115,8 @@ final class SourceRecordIteratorTest {
     void testMultiple3Object() throws IOException {
         s3SourceConfig = new S3SourceConfig(standardConfigurationData());
         offsetManager = mock(OffsetManager.class);
+        when(offsetManager.recordsProcessedForObjectKey(anyMap(), anyString())).thenReturn(0L);
+
         transformer = new TestingTransformer();
         s3Client = mock(AmazonS3.class);
 
@@ -160,48 +169,77 @@ final class SourceRecordIteratorTest {
     }
 
     @Test
-    void testOffsetManagerFilters3Object() throws IOException {
+    void testByteArrayProcessorSkipsProcessedRecords() throws Exception {
+
         s3SourceConfig = new S3SourceConfig(standardConfigurationData());
         offsetManager = mock(OffsetManager.class);
-        transformer = new TestingTransformer();
+        when(offsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
+                .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
+
+        transformer = mock(ByteArrayTransformer.class);
         s3Client = mock(AmazonS3.class);
 
-        final List<S3ObjectSummary> summaries = new ArrayList<>();
-
-        final String key1 = "topic-00001-abc123.txt";
-        final S3ObjectSummary summary1 = S3ObjectsUtils.createObjectSummary(BUCKET_NAME, key1);
-        summaries.add(summary1);
-
-        final String key2 = "topic-00002-abc123.txt";
-        final S3ObjectSummary summary2 = S3ObjectsUtils.createObjectSummary(BUCKET_NAME, key2);
-        summaries.add(summary2);
-
-        try (S3Object s3Object1 = addInputStream(S3ObjectsUtils.createS3Object(summary1),
-                "Hello World1".getBytes(StandardCharsets.UTF_8));
-                S3Object s3Object2 = addInputStream(S3ObjectsUtils.createS3Object(summary2),
-                        "Hello World2".getBytes(StandardCharsets.UTF_8))) {
-            when(s3Client.getObject(summary1.getBucketName(), summary1.getKey())).thenReturn(s3Object1);
-            when(s3Client.getObject(summary2.getBucketName(), summary2.getKey())).thenReturn(s3Object2);
-
-            final ListObjectsV2Result listObjectsV2Result = S3ObjectsUtils.createListObjectsV2Result(summaries, null);
-
+        final String key = "topic-00001-abc123.txt";
+        final S3ObjectSummary summary = S3ObjectsUtils.createObjectSummary(BUCKET_NAME, key);
+        final ListObjectsV2Result listObjectsV2Result = S3ObjectsUtils
+                .createListObjectsV2Result(Collections.singletonList(summary), null);
+        // create S3Object with content.
+        try (S3Object s3Object = addInputStream(S3ObjectsUtils.createS3Object(summary),
+                "Hello World".getBytes(StandardCharsets.UTF_8))) {
+            when(s3Client.getObject(summary.getBucketName(), summary.getKey())).thenReturn(s3Object);
             when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result)
                     .thenReturn(new ListObjectsV2Result());
             sourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
 
-            when(offsetManager.shouldSkipRecord(any(), anyString(), anyLong()))
-                    .thenAnswer(invocation -> key1.equals(invocation.getArgument(1)));
+            final SourceRecordIterator underTest = new SourceRecordIterator(s3SourceConfig, offsetManager, transformer,
+                    sourceClient);
+
+            assertThat(underTest).isExhausted();
+            verify(transformer, times(0)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
+        }
+    }
+
+    @Test
+    void testMultipleRecordSkipRecords() throws Exception {
+
+        s3SourceConfig = new S3SourceConfig(standardConfigurationData());
+        offsetManager = mock(OffsetManager.class);
+        when(offsetManager.recordsProcessedForObjectKey(anyMap(), anyString())).thenReturn(1L);
+
+        transformer = new TestingTransformer();
+        s3Client = mock(AmazonS3.class);
+
+        final String key = "topic-00001-abc123.txt";
+        final S3ObjectSummary summary = S3ObjectsUtils.createObjectSummary(BUCKET_NAME, key);
+        final ListObjectsV2Result listObjectsV2Result = S3ObjectsUtils
+                .createListObjectsV2Result(Collections.singletonList(summary), null);
+        // create S3Object with content.
+        try (S3Object s3Object = addInputStream(S3ObjectsUtils.createS3Object(summary),
+                String.format("Hello World%nIt is nice to see you%nGoodbye cruel world")
+                        .getBytes(StandardCharsets.UTF_8))) {
+            when(s3Client.getObject(summary.getBucketName(), summary.getKey())).thenReturn(s3Object);
+            when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result)
+                    .thenReturn(new ListObjectsV2Result());
+            sourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
 
             final SourceRecordIterator underTest = new SourceRecordIterator(s3SourceConfig, offsetManager, transformer,
                     sourceClient);
 
             assertThat(underTest).hasNext();
-            final S3SourceRecord record = underTest.next();
-            assertThat(record.getObjectKey()).isEqualTo(key2);
-            assertThat(record.key()).isEqualTo(key2.getBytes(StandardCharsets.UTF_8));
-            assertThat(record.value()).isEqualTo("TESTING: Hello World2".getBytes(StandardCharsets.UTF_8));
+            S3SourceRecord record = underTest.next();
+            assertThat(record.getObjectKey()).isEqualTo(key);
+            assertThat(record.key()).isEqualTo(key.getBytes(StandardCharsets.UTF_8));
+            assertThat(record.value()).isEqualTo("TESTING: It is nice to see you".getBytes(StandardCharsets.UTF_8));
             assertThat(record.getTopic()).isEqualTo("topic");
-            assertThat(record.partition()).isEqualTo(2);
+            assertThat(record.partition()).isEqualTo(1);
+
+            assertThat(underTest).hasNext();
+            record = underTest.next();
+            assertThat(record.getObjectKey()).isEqualTo(key);
+            assertThat(record.key()).isEqualTo(key.getBytes(StandardCharsets.UTF_8));
+            assertThat(record.value()).isEqualTo("TESTING: Goodbye cruel world".getBytes(StandardCharsets.UTF_8));
+            assertThat(record.getTopic()).isEqualTo("topic");
+            assertThat(record.partition()).isEqualTo(1);
 
             assertThat(underTest).isExhausted();
         }
