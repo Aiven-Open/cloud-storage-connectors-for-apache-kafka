@@ -60,14 +60,14 @@ jobs:
           echo s3_tar_file=${s3_tar_file} >> $GITHUB_ENV
           echo s3_zip_file=${s3_zip_file} >> $GITHUB_ENV
           echo s3_tar_path=`realpath ./s3-sink-connector/build/distributions/${s3_tar_file}` >> $GITHUB_ENV
-          echo s3_zip_path=`realpath ./s3-sink-connector/build/distributions/${s3_tar_file}` >> $GITHUB_ENV
+          echo s3_zip_path=`realpath ./s3-sink-connector/build/distributions/${s3_zip_file}` >> $GITHUB_ENV
           
           export azure_tar_file=$(ls ./azure-sink-connector/build/distributions/ | grep tar)
           export azure_zip_file=$(ls ./azure-sink-connector/build/distributions/ | grep zip)
           echo azure_tar_file=${azure_tar_file} >> $GITHUB_ENV
           echo azure_zip_file=${azure_zip_file} >> $GITHUB_ENV
           echo azure_tar_path=`realpath ./azure-sink-connector/build/distributions/${azure_tar_file}` >> $GITHUB_ENV
-          echo azure_zip_path=`realpath ./azure-sink-connector/build/distributions/${azure_tar_file}` >> $GITHUB_ENV
+          echo azure_zip_path=`realpath ./azure-sink-connector/build/distributions/${azure_zip_file}` >> $GITHUB_ENV
 
       - name: Create tag
         run: |
