@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
+import io.confluent.connect.avro.AvroData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
@@ -50,7 +51,7 @@ final class ParquetTransformerTest {
 
     @BeforeEach
     public void setUp() {
-        parquetTransformer = new ParquetTransformer();
+        parquetTransformer = new ParquetTransformer(new AvroData(100));
     }
 
     @Test

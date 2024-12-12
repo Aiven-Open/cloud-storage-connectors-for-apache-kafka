@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -25,16 +24,15 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.json.JsonConverter;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,17 +53,8 @@ final class JsonTransformerTest {
 
     @BeforeEach
     void setUp() {
-        jsonTransformer = new JsonTransformer();
+        jsonTransformer = new JsonTransformer(new JsonConverter());
         sourceCommonConfig = mock(SourceCommonConfig.class);
-    }
-
-    @Test
-    void testConfigureValueConverter() {
-        final Map<String, String> config = new HashMap<>();
-
-        jsonTransformer.configureValueConverter(config, sourceCommonConfig);
-        assertThat(config).as("%s should be set to false", SCHEMAS_ENABLE)
-                .containsEntry(SCHEMAS_ENABLE, Boolean.FALSE.toString());
     }
 
     @Test
@@ -84,12 +73,14 @@ final class JsonTransformerTest {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
+
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
                 sourceCommonConfig, 25L);
 
         final List<Object> recs = jsonNodes.collect(Collectors.toList());
         assertThat(recs).hasSize(75);
-        assertThat(recs).extracting(record -> ((JsonNode) record).get("key").asText())
+
+        assertThat(recs).extracting(record -> ((Map) jsonTransformer.getValueData(record, "", null).value()).get("key"))
                 .doesNotContain("value1")
                 .doesNotContain("value2")
                 .doesNotContain("value25")
@@ -112,18 +103,20 @@ final class JsonTransformerTest {
 
     @Test
     void testSerializeJsonDataValid() throws IOException {
-        final InputStream validJsonInputStream = new ByteArrayInputStream(
-                "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
+        // Arrange: Prepare the valid JSON input stream
+        final String jsonString = "{\"key\":\"value\"}";
+        final InputStream validJsonInputStream = new ByteArrayInputStream(jsonString.getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
         final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
                 sourceCommonConfig, 0);
-        final byte[] serializedData = jsonTransformer.getValueBytes(jsonNodes.findFirst().get(), TESTTOPIC,
-                sourceCommonConfig);
+        final Object serializedData = jsonTransformer
+                .getValueData(
+                        jsonNodes.findFirst().orElseThrow(() -> new AssertionError("No records found in stream!")),
+                        TESTTOPIC, sourceCommonConfig)
+                .value();
 
-        final ObjectMapper objectMapper = new ObjectMapper();
-        final JsonNode expectedData = objectMapper.readTree(serializedData);
-
-        assertThat(expectedData.get("key").asText()).isEqualTo("value");
+        // Assert: Verify the serialized data
+        assertThat(serializedData).isInstanceOf(Map.class).extracting("key").isEqualTo("value");
     }
 
     @Test

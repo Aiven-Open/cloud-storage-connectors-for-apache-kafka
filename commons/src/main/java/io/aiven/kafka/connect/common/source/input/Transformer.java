@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import org.apache.commons.io.function.IOSupplier;
 
@@ -31,5 +32,7 @@ public interface Transformer {
     Stream<Object> getRecords(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition,
             AbstractConfig sourceConfig, long skipRecords);
 
-    byte[] getValueBytes(Object record, String topic, AbstractConfig sourceConfig);
+    SchemaAndValue getValueData(Object record, String topic, AbstractConfig sourceConfig);
+
+    SchemaAndValue getKeyData(Object record, String topic, AbstractConfig sourceConfig);
 }

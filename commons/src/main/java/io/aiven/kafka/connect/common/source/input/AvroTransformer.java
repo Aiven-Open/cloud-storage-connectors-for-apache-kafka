@@ -20,7 +20,7 @@ import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.function.Consumer;
@@ -28,7 +28,10 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.confluent.connect.avro.AvroData;
 import org.apache.avro.file.DataFileStream;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
@@ -39,8 +42,12 @@ import org.slf4j.LoggerFactory;
 
 public class AvroTransformer implements Transformer {
 
+    private final AvroData avroData;
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroTransformer.class);
 
+    AvroTransformer(final AvroData avroData) {
+        this.avroData = avroData;
+    }
     @Override
     public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
         config.put(SCHEMA_REGISTRY_URL, sourceConfig.getString(SCHEMA_REGISTRY_URL));
@@ -54,9 +61,13 @@ public class AvroTransformer implements Transformer {
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
-        return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
-                sourceConfig);
+    public SchemaAndValue getValueData(final Object record, final String topic, final AbstractConfig sourceConfig) {
+        return avroData.toConnectData(((GenericRecord) record).getSchema(), record);
+    }
+
+    @Override
+    public SchemaAndValue getKeyData(final Object record, final String topic, final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, ((String) record).getBytes(StandardCharsets.UTF_8));
     }
 
     private Stream<Object> readAvroRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,

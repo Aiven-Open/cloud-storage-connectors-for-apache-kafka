@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.common.source.input;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -25,6 +26,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
@@ -81,7 +83,12 @@ public class ByteArrayTransformer implements Transformer {
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
-        return (byte[]) record;
+    public SchemaAndValue getValueData(final Object record, final String topic, final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, record);
+    }
+
+    @Override
+    public SchemaAndValue getKeyData(final Object record, final String topic, final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, ((String) record).getBytes(StandardCharsets.UTF_8));
     }
 }
