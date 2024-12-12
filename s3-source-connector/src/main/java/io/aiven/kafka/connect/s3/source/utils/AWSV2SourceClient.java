@@ -85,14 +85,17 @@ public class AWSV2SourceClient {
         if (StringUtils.isNotBlank(startToken)) {
             request.withStartAfter(startToken);
         }
+        // Prefix is optional so only use if supplied
+        if (StringUtils.isNotBlank(s3SourceConfig.getAwsS3Prefix())) {
+            request.withPrefix(s3SourceConfig.getAwsS3Prefix());
+        }
 
         final Stream<String> s3ObjectKeyStream = Stream
                 .iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
                     // This is called every time next() is called on the iterator.
                     if (response.isTruncated()) {
-                        return s3Client.listObjectsV2(new ListObjectsV2Request().withBucketName(bucketName)
-                                .withMaxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
-                                .withContinuationToken(response.getNextContinuationToken()));
+                        return s3Client.listObjectsV2(
+                                new ListObjectsV2Request().withContinuationToken(response.getNextContinuationToken()));
                     } else {
                         return null;
                     }

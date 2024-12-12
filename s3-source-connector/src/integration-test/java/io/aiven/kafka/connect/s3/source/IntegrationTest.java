@@ -77,6 +77,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.platform.commons.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -253,7 +254,8 @@ final class IntegrationTest implements IntegrationBase {
         final var topicName = IntegrationBase.topicName(testInfo);
 
         final String partition = "00000";
-        final String fileName = topicName + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
+        final String fileName = addPrefixOrDefault("") + topicName + "-" + partition + "-" + System.currentTimeMillis()
+                + ".txt";
         final String name = "testuser";
 
         final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.PARQUET);
@@ -337,11 +339,16 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     private static String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
-        final String objectKey = topicName + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
+        final String objectKey = addPrefixOrDefault("") + topicName + "-" + partitionId + "-"
+                + System.currentTimeMillis() + ".txt";
         final PutObjectRequest request = new PutObjectRequest(TEST_BUCKET_NAME, objectKey,
                 new ByteArrayInputStream(testDataBytes), new ObjectMetadata());
         s3Client.putObject(request);
         return OBJECT_KEY + SEPARATOR + objectKey;
+    }
+
+    private static String addPrefixOrDefault(final String defaultValue) {
+        return StringUtils.isNotBlank(s3Prefix) ? s3Prefix : defaultValue;
     }
 
     private Map<String, String> getConfig(final String connectorName, final String topics, final int maxTasks) {

@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -40,12 +41,17 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 
 class AWSV2SourceClientTest {
 
     private AmazonS3 s3Client;
 
     private AWSV2SourceClient awsv2SourceClient;
+
+    @Captor
+    ArgumentCaptor<ListObjectsV2Request> requestCaptor;
 
     private static Map<String, String> getConfigMap(final int maxTasks, final int taskId) {
         final Map<String, String> configMap = new HashMap<>();
@@ -129,6 +135,72 @@ class AWSV2SourceClientTest {
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
         assertThat(summaries.next()).isNotNull();
         assertThat(summaries).isExhausted();
+    }
+
+    @Test
+    void testFetchObjectWithPrefix() {
+        final Map<String, String> configMap = getConfigMap(1, 0);
+        configMap.put(AWS_S3_PREFIX_CONFIG, "test/");
+        final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
+        s3Client = mock(AmazonS3.class);
+        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
+        requestCaptor = ArgumentCaptor.forClass(ListObjectsV2Request.class);
+        final S3ObjectSummary object1 = createObjectSummary(1, "key1");
+        final S3ObjectSummary object2 = createObjectSummary(1, "key2");
+
+        final ListObjectsV2Result firstResult = createListObjectsV2Result(List.of(object1), "nextToken");
+        final ListObjectsV2Result secondResult = createListObjectsV2Result(List.of(object2), null);
+
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
+
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
+
+        assertThat(summaries.next()).isNotNull();
+        assertThat(summaries.next()).isNotNull();
+
+        verify(s3Client, times(2)).listObjectsV2(requestCaptor.capture());
+        final List<ListObjectsV2Request> allRequests = requestCaptor.getAllValues();
+        assertThat(summaries).isExhausted();
+
+        assertThat(allRequests.get(0).getPrefix()).isEqualTo(s3SourceConfig.getAwsS3Prefix());
+        // Not required with continuation token
+        assertThat(allRequests.get(1).getPrefix()).isNull();
+        assertThat(allRequests.get(1).getContinuationToken()).isEqualTo("nextToken");
+
+    }
+
+    @Test
+    void testFetchObjectWithInitialStartAfter() {
+        final Map<String, String> configMap = getConfigMap(1, 0);
+        final String startAfter = "file-option-1-12000.txt";
+        final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
+        s3Client = mock(AmazonS3.class);
+        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
+        requestCaptor = ArgumentCaptor.forClass(ListObjectsV2Request.class);
+        final S3ObjectSummary object1 = createObjectSummary(1, "key1");
+        final S3ObjectSummary object2 = createObjectSummary(1, "key2");
+
+        final ListObjectsV2Result firstResult = createListObjectsV2Result(List.of(object1), "nextToken");
+        final ListObjectsV2Result secondResult = createListObjectsV2Result(List.of(object2), null);
+
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
+
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(startAfter);
+        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
+
+        assertThat(summaries.next()).isNotNull();
+        assertThat(summaries.next()).isNotNull();
+
+        verify(s3Client, times(2)).listObjectsV2(requestCaptor.capture());
+        final List<ListObjectsV2Request> allRequests = requestCaptor.getAllValues();
+        assertThat(summaries).isExhausted();
+
+        assertThat(allRequests.get(0).getStartAfter()).isEqualTo(startAfter);
+        // Not required with continuation token
+        assertThat(allRequests.get(1).getStartAfter()).isNull();
+        assertThat(allRequests.get(1).getContinuationToken()).isEqualTo("nextToken");
+
     }
 
     private ListObjectsV2Result createListObjectsV2Result(final List<S3ObjectSummary> summaries,
