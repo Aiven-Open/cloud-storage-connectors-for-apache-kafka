@@ -94,9 +94,8 @@ public class AWSV2SourceClient {
                 .iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
                     // This is called every time next() is called on the iterator.
                     if (response.isTruncated()) {
-                        return s3Client.listObjectsV2(new ListObjectsV2Request().withBucketName(bucketName)
-                                .withMaxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
-                                .withContinuationToken(response.getNextContinuationToken()));
+                        return s3Client.listObjectsV2(
+                                new ListObjectsV2Request().withContinuationToken(response.getNextContinuationToken()));
                     } else {
                         return null;
                     }
