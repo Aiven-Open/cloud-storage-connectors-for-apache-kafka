@@ -27,13 +27,12 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 
-import org.apache.kafka.connect.converters.ByteArrayConverter;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.Converter;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
@@ -130,13 +129,6 @@ final class S3SourceTaskTest {
         final S3SourceTask s3SourceTask = new S3SourceTask();
         startSourceTask(s3SourceTask);
 
-        final Optional<Converter> keyConverter = s3SourceTask.getKeyConverter();
-        assertThat(keyConverter).isPresent();
-        assertThat(keyConverter.get()).isInstanceOf(ByteArrayConverter.class);
-
-        final Converter valueConverter = s3SourceTask.getValueConverter();
-        assertThat(valueConverter).isInstanceOf(ByteArrayConverter.class);
-
         final Transformer transformer = s3SourceTask.getTransformer();
         assertThat(transformer).isInstanceOf(ByteArrayTransformer.class);
 
@@ -174,7 +166,9 @@ final class S3SourceTaskTest {
     }
 
     private static S3SourceRecord getAivenS3SourceRecord() {
-        return new S3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, new byte[0], new byte[0], "");
+        return new S3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, "",
+                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, new byte[0]),
+                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, new byte[0]));
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")

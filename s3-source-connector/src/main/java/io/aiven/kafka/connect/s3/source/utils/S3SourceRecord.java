@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -29,22 +28,21 @@ public class S3SourceRecord {
     private Map<String, Object> offsetMap;
     private final String topic;
     private final Integer topicPartition;
-    private final byte[] recordKey;
-    private final byte[] recordValue;
+    private final SchemaAndValue keyData;
+
+    private final SchemaAndValue valueData;
 
     private final String objectKey;
 
     public S3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
-            final String topic, final Integer topicPartition, final byte[] recordKey, final byte[] recordValue,
-            final String objectKey) {
+            final String topic, final Integer topicPartition, final String objectKey, final SchemaAndValue keyData,
+            final SchemaAndValue valueData) {
         this.partitionMap = new HashMap<>(partitionMap);
         this.offsetMap = new HashMap<>(offsetMap);
-
         this.topic = topic;
         this.topicPartition = topicPartition;
-        this.recordKey = recordKey.clone(); // Defensive copy
-        this.recordValue = recordValue.clone(); // Defensive copy
-
+        this.keyData = keyData;
+        this.valueData = valueData;
         this.objectKey = objectKey;
     }
 
@@ -64,14 +62,6 @@ public class S3SourceRecord {
         return topicPartition;
     }
 
-    public byte[] key() {
-        return (recordKey == null) ? null : recordKey.clone(); // Return a defensive copy
-    }
-
-    public byte[] value() {
-        return (recordValue == null) ? null : recordValue.clone(); // Return a defensive copy
-    }
-
     public String getObjectKey() {
         return objectKey;
     }
@@ -80,10 +70,8 @@ public class S3SourceRecord {
         this.offsetMap = new HashMap<>(offsetMap);
     }
 
-    public SourceRecord getSourceRecord(final String topic, final Optional<SchemaAndValue> keyData,
-            final SchemaAndValue schemaAndValue) {
-        return new SourceRecord(getPartitionMap(), getOffsetMap(), topic, partition(),
-                keyData.map(SchemaAndValue::schema).orElse(null), keyData.map(SchemaAndValue::value).orElse(null),
-                schemaAndValue.schema(), schemaAndValue.value());
+    public SourceRecord getSourceRecord() {
+        return new SourceRecord(getPartitionMap(), getOffsetMap(), topic, partition(), keyData.schema(),
+                keyData.value(), valueData.schema(), valueData.value());
     }
 }

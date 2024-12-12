@@ -76,7 +76,8 @@ final class ByteArrayTransformerTest {
     @Test
     void testGetValueBytes() {
         final byte[] record = { 1, 2, 3 };
-        final byte[] result = byteArrayTransformer.getValueBytes(record, TEST_TOPIC, sourceCommonConfig);
+        final byte[] result = (byte[]) byteArrayTransformer.getValueData(record, TEST_TOPIC, sourceCommonConfig)
+                .value();
 
         assertThat(result).containsExactlyInAnyOrder(record);
     }
