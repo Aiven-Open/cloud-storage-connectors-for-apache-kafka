@@ -53,7 +53,7 @@ final class ByteArrayTransformerTest {
         final InputStream inputStream = new ByteArrayInputStream(data);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<Object> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
+        final Stream<byte[]> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
                 sourceCommonConfig, 0);
 
         final List<Object> recs = records.collect(Collectors.toList());
@@ -67,7 +67,7 @@ final class ByteArrayTransformerTest {
 
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<Object> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
+        final Stream<byte[]> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
                 sourceCommonConfig, 0);
 
         assertThat(records).hasSize(0);
