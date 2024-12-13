@@ -27,10 +27,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.function.Consumer;
 
 import org.apache.kafka.common.config.AbstractConfig;
 
@@ -40,11 +37,11 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.parquet.avro.AvroParquetReader;
-import org.apache.parquet.io.InputFile;
+import org.apache.parquet.hadoop.ParquetReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ParquetTransformer implements Transformer {
+public class ParquetTransformer extends Transformer<GenericRecord> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ParquetTransformer.class);
 
@@ -54,70 +51,68 @@ public class ParquetTransformer implements Transformer {
     }
 
     @Override
-    public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
-        return getParquetStreamRecords(inputStreamIOSupplier, topic, topicPartition, skipRecords);
+    public byte[] getValueBytes(final GenericRecord record, final String topic, final AbstractConfig sourceConfig) {
+        return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList(record), topic, sourceConfig);
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
-        return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
-                sourceConfig);
-    }
+    public StreamSpliterator<GenericRecord> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
 
-    private Stream<Object> getParquetStreamRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final long skipRecords) {
-        final String timestamp = String.valueOf(Instant.now().toEpochMilli());
-        File parquetFile;
+        final StreamSpliterator<GenericRecord> spliterator = new StreamSpliterator<GenericRecord>(LOGGER,
+                inputStreamIOSupplier) {
 
-        try {
-            // Create a temporary file for the Parquet data
-            parquetFile = File.createTempFile(topic + "_" + topicPartition + "_" + timestamp, ".parquet");
-        } catch (IOException e) {
-            LOGGER.error("Error creating temp file for Parquet data: {}", e.getMessage(), e);
-            return Stream.empty();
-        }
+            private ParquetReader<GenericRecord> reader;
+            private File parquetFile;
 
-        try (OutputStream outputStream = Files.newOutputStream(parquetFile.toPath());
-                InputStream inputStream = inputStreamIOSupplier.get();) {
-            IOUtils.copy(inputStream, outputStream); // Copy input stream to temporary file
+            @Override
+            protected InputStream inputOpened(final InputStream input) throws IOException {
+                final String timestamp = String.valueOf(Instant.now().toEpochMilli());
 
-            final InputFile inputFile = new LocalInputFile(parquetFile.toPath());
-            final var parquetReader = AvroParquetReader.<GenericRecord>builder(inputFile).build();
+                try {
+                    // Create a temporary file for the Parquet data
+                    parquetFile = File.createTempFile(topic + "_" + topicPartition + "_" + timestamp, ".parquet");
+                } catch (IOException e) {
+                    LOGGER.error("Error creating temp file for Parquet data: {}", e.getMessage(), e);
+                    throw e;
+                }
 
-            return StreamSupport.stream(new Spliterators.AbstractSpliterator<Object>(Long.MAX_VALUE,
-                    Spliterator.ORDERED | Spliterator.NONNULL) {
-                @Override
-                public boolean tryAdvance(final java.util.function.Consumer<? super Object> action) {
+                try (OutputStream outputStream = Files.newOutputStream(parquetFile.toPath())) {
+                    IOUtils.copy(input, outputStream); // Copy input stream to temporary file
+                }
+                reader = AvroParquetReader.<GenericRecord>builder(new LocalInputFile(parquetFile.toPath())).build();
+                return input;
+            }
+
+            @Override
+            protected void doClose() {
+                if (reader != null) {
                     try {
-                        final GenericRecord record = parquetReader.read();
-                        if (record != null) {
-                            action.accept(record); // Pass record to the stream
-                            return true;
-                        } else {
-                            parquetReader.close(); // Close reader at end of file
-                            deleteTmpFile(parquetFile.toPath());
-                            return false;
-                        }
-                    } catch (IOException | RuntimeException e) { // NOPMD
-                        LOGGER.error("Error reading Parquet record: {}", e.getMessage(), e);
-                        deleteTmpFile(parquetFile.toPath());
-                        return false;
+                        reader.close(); // Close reader at end of file
+                    } catch (IOException e) {
+                        logger.error("Error closing reader: {}", e.getMessage(), e);
                     }
                 }
-            }, false).skip(skipRecords).onClose(() -> {
-                try {
-                    parquetReader.close(); // Ensure reader is closed when the stream is closed
-                } catch (IOException e) {
-                    LOGGER.error("Error closing Parquet reader: {}", e.getMessage(), e);
+                if (parquetFile != null) {
+                    deleteTmpFile(parquetFile.toPath());
                 }
-                deleteTmpFile(parquetFile.toPath());
-            });
-        } catch (IOException | RuntimeException e) { // NOPMD
-            LOGGER.error("Error processing Parquet data: {}", e.getMessage(), e);
-            deleteTmpFile(parquetFile.toPath());
-            return Stream.empty();
-        }
+            }
+
+            @Override
+            protected boolean doAdvance(final Consumer<? super GenericRecord> action) {
+                try {
+                    final GenericRecord record = reader.read();
+                    if (record != null) {
+                        action.accept(record); // Pass record to the stream
+                        return true;
+                    }
+                } catch (IOException e) {
+                    logger.error("Error reading record: {}", e.getMessage(), e);
+                }
+                return false;
+            }
+        };
+        return spliterator;
     }
 
     static void deleteTmpFile(final Path parquetFile) {
