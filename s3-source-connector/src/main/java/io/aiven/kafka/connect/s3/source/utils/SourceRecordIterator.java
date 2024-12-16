@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -35,7 +33,6 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.S3Object;
-import org.apache.commons.collections.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,6 +129,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             private List<S3SourceRecord> readNext() {
 
                 final long numberOfRecsAlreadyProcessed = s3OffsetManagerEntry.getRecordCount();
+                final List<S3SourceRecord> sourceRecords = new ArrayList<>();
 
                 // Optimizing without reading stream again.
                 if (checkBytesTransformation(transformer, numberOfRecsAlreadyProcessed)) {
@@ -139,7 +137,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 }
 
                 final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
-                final List<S3SourceRecord> sourceRecords = new ArrayList<>();
                 try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent, topic,
                         s3OffsetManagerEntry.getPartition(), s3SourceConfig, numberOfRecsAlreadyProcessed)) {
                     final Iterator<Object> recordIterator = recordStream.iterator();
