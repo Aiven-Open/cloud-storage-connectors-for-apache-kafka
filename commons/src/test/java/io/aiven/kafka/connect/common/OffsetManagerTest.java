@@ -75,13 +75,13 @@ final class OffsetManagerTest {
         final Map<Map<String, Object>, Map<String, Object>> offsets = new HashMap<>();
         offsets.put(offsetEntry.getManagerKey().getPartitionMap(), offsetEntry.getProperties());
 
-        OffsetManager<TestingOffsetManagerEntry> underTest = new OffsetManager<>(offsets);
+        OffsetManager<TestingOffsetManagerEntry> underTest = new OffsetManager<>(mock(SourceTaskContext.class), offsets);
 
         offsetEntry.setProperty("MyProperty", "WOW");
 
         underTest.updateCurrentOffsets(offsetEntry);
 
-        TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(), TestingOffsetManagerEntry::new);
+        TestingOffsetManagerEntry result = underTest.getEntry(offsetEntry.getManagerKey(), TestingOffsetManagerEntry::new);
 
 
 //        Map<Map<String, Object>, Map<String, Object>> offsetMap = underTest.getOffsets();

@@ -25,7 +25,7 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
 
-public class S3SourceRecord {
+public final class S3SourceRecord {
 
     /** The S3OffsetManagerEntry for this source record */
     private final S3OffsetManagerEntry offsetManagerEntry;

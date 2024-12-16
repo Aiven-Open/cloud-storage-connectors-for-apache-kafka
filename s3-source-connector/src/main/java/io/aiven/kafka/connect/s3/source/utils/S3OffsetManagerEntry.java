@@ -22,10 +22,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3OffsetManagerEntry> {
+public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3OffsetManagerEntry> {
 
     // package private statics for testing.
-    // TODO make this private after values in S3SourceTask are no longer needed
+    // TODO make this package private after values in S3SourceTask are no longer needed
     public static final String BUCKET = "bucket";
     public static final String OBJECT_KEY = "objectKey";
     public static final String TOPIC = "topic";
@@ -60,11 +60,11 @@ public class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3
     /**
      * Constructs an OffsetManagerEntry from an existing map.
      * used by {@link #fromProperties(Map)}.
+     * Package private for testing
      * @param properties the property map.
      */
-    private S3OffsetManagerEntry(final Map<String, Object> properties) {
-        data = new HashMap<>();
-        data.putAll(properties);
+     private S3OffsetManagerEntry(final Map<String, Object> properties) {
+        data = new HashMap<>(properties);
         for (String field : RESTRICTED_KEYS) {
             if (data.get(field) == null) {
                 throw new IllegalArgumentException("Missing '"+field+"' property");
@@ -84,12 +84,11 @@ public class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3
         if (properties == null) {
             return null;
         }
-        Long recordCount = (Long) properties.get(RECORD_COUNT);
+        Map<String, Object> ourProperties = new HashMap<>(properties);
+        Long recordCount = (Long) ourProperties.computeIfAbsent(RECORD_COUNT, s -> Long.valueOf(0L));
 
-        S3OffsetManagerEntry result = new S3OffsetManagerEntry(properties);
-        if (recordCount != null) {
-            result.recordCount = recordCount;
-        }
+        S3OffsetManagerEntry result = new S3OffsetManagerEntry(ourProperties);
+        result.recordCount = recordCount;
         return result;
     }
 
@@ -146,12 +145,19 @@ public class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3
 
     /**
      * Gets the Kafka topic for the current object.
-     * @return the Kafka topic for the current object..
+     * @return the Kafka topic for the current object.
      */
     public String getTopic() {
         return (String) data.get(TOPIC);
     }
 
+    /**
+     * Gets the S3 bucket for the current object.
+     * @return the S3 Bucket for the current object.
+     */
+    public String getBucket() {
+        return (String) data.get(BUCKET);
+    }
     /**
      * Creates a new offset map. No defensive copy is necessary.
      *

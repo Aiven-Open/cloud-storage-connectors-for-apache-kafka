@@ -43,6 +43,8 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -54,10 +56,16 @@ final class SourceRecordIteratorTest {
 
     private AWSV2SourceClient mockSourceApiClient;
 
+    private OffsetStorageReader offsetStorageReader;
+
     @BeforeEach
     public void setUp() {
         mockConfig = mock(S3SourceConfig.class);
-        offsetManager = new OffsetManager(new HashMap<>());
+
+        offsetStorageReader = mock(OffsetStorageReader.class);
+        SourceTaskContext taskContext = mock(SourceTaskContext.class);
+        when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
+        offsetManager = new OffsetManager(taskContext);
         mockTransformer = mock(Transformer.class);
         mockSourceApiClient = mock(AWSV2SourceClient.class);
     }
@@ -79,6 +87,8 @@ final class SourceRecordIteratorTest {
             final String outStr = "this is a test";
             when(mockTransformer.getValueBytes(any(), anyString(), any()))
                     .thenReturn(outStr.getBytes(StandardCharsets.UTF_8));
+
+            when(offsetStorageReader.offset(any())).thenReturn(Collections.emptyMap());
 
             when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.emptyIterator());
             SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, mockTransformer,

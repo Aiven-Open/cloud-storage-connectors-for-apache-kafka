@@ -40,7 +40,6 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
-import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
@@ -107,7 +106,8 @@ public class S3SourceTask extends SourceTask {
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager<S3OffsetManagerEntry>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
-        prepareReaderFromOffsetStorageReader();
+        setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
+                        awsv2SourceClient));
         this.taskInitialized = true;
     }
 
@@ -126,10 +126,12 @@ public class S3SourceTask extends SourceTask {
         }
     }
 
-    private void prepareReaderFromOffsetStorageReader() {
-        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
-                awsv2SourceClient);
+    // mostly for testing
+    protected void setSourceRecordIterator(Iterator<S3SourceRecord> iterator) {
+        sourceRecordIterator = iterator;
     }
+
+
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException {
@@ -144,6 +146,7 @@ public class S3SourceTask extends SourceTask {
 
             while (!connectorStopped.get()) {
                 try {
+                    waitForObjects();
                     extractSourceRecords(results);
                     LOGGER.info("Number of records extracted and sent: {}", results.size());
                     return results;
@@ -153,7 +156,9 @@ public class S3SourceTask extends SourceTask {
                                 exception);
                         pollLock.wait(ERROR_BACKOFF);
 
-                        prepareReaderFromOffsetStorageReader();
+                        setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
+                                awsv2SourceClient));
+
                     } else {
                         LOGGER.warn("Non-retryable AmazonS3Exception occurred. Stopping polling.", exception);
                         return null; // NOPMD
@@ -170,20 +175,35 @@ public class S3SourceTask extends SourceTask {
         }
     }
 
-    private List<SourceRecord> extractSourceRecords(final List<SourceRecord> results) throws InterruptedException {
-        waitForObjects();
+    // package private for testing
+    List<SourceRecord> extractSourceRecords(final List<SourceRecord> results) throws InterruptedException {
         if (connectorStopped.get()) {
             return results;
         }
-        return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
-                valueConverter, connectorStopped, this.transformer, awsv2SourceClient, offsetManager);
+        final int maxPollRecords = s3SourceConfig.getMaxPollRecords();
+
+        for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
+            final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
+            if (s3SourceRecord != null) {
+                try {
+                    offsetManager.updateCurrentOffsets(s3SourceRecord.getOffsetManagerEntry());
+                    results.add(s3SourceRecord.getSourceRecord(keyConverter, valueConverter));
+                } catch (DataException e) {
+                    LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
+                    awsv2SourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
+                }
+            }
+        }
+        return results;
     }
+
 
     private void waitForObjects() throws InterruptedException {
         while (!sourceRecordIterator.hasNext() && !connectorStopped.get()) {
             LOGGER.debug("Blocking until new S3 files are available.");
             Thread.sleep(S_3_POLL_INTERVAL_MS);
-            prepareReaderFromOffsetStorageReader();
+            setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
+                    awsv2SourceClient));
         }
     }
 

@@ -24,33 +24,45 @@ import java.util.function.Function;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class OffsetManager<E extends OffsetManager.OffsetManagerEntry> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(OffsetManager.class);
-    public static final String SEPARATOR = "_";
+    /**
+     * The local manager data.
+     */
     private final Map<Map<String, Object>, Map<String, Object>> offsets;
 
+    /**
+     * The context in which this is running.
+     */
     private final SourceTaskContext context;
 
+    /**
+     * Constructor
+     * @param context the context for this instance to use.
+     */
     public OffsetManager(final SourceTaskContext context) {
-        this.context = context;
-        offsets = new ConcurrentHashMap<>();
+        this(context, new ConcurrentHashMap<>());
     }
 
     /**
-     * FOR TESTING ONLY
+     * Package private for testing.
+     * @param context the context for this instance to use.
      * @param offsets the offsets
      */
-    protected OffsetManager(final Map<Map<String, Object>, Map<String, Object>> offsets) {
-        this.context = null;
+    protected OffsetManager(final SourceTaskContext context, final Map<Map<String, Object>, Map<String, Object>> offsets) {
+        this.context = context;
         this.offsets = offsets;
     }
 
-    public E getEntry(OffsetManagerKey key, Function<Map<String, Object>, E> creator) {
-        Map<String, Object> data = offsets.compute(key.getPartitionMap(), (k, v) -> {
+    /**
+     * Get an entry from the offset manager.
+     * This method will return the local copy if it has been created otherwise will get the data from Kafka.
+     * @param key the key for the entry.
+     * @param creator a function to create the connector defined offset entry from a Map of string to object.
+     * @return the entry.
+     */
+    public E getEntry(final OffsetManagerKey key, final Function<Map<String, Object>, E> creator) {
+        final Map<String, Object> data = offsets.compute(key.getPartitionMap(), (k, v) -> {
             if (v == null) {
                return context.offsetStorageReader().offset(key.getPartitionMap());
             } else {
@@ -59,7 +71,11 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry> {
         return creator.apply(data);
     }
 
-    public void updateCurrentOffsets(E entry) {
+    /**
+     * Copies the entry into the offset manager data.
+     * @param entry the entry to update.
+     */
+    public void updateCurrentOffsets(final E entry) {
         offsets.compute(entry.getManagerKey().getPartitionMap(), (k, v) -> {
             if (v == null) {
                 return new HashMap<>(entry.getProperties());
