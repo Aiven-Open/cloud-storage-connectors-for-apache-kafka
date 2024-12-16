@@ -30,6 +30,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.apache.commons.collections4.IteratorUtils;
 import org.codehaus.plexus.util.StringUtils;
 
 /**
@@ -78,7 +79,8 @@ public class AWSV2SourceClient {
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
     }
 
-    public Iterator<String> getListOfObjectKeys(final String startToken) {
+    public Iterator<S3ObjectSummary> getListOfObjectKeys(final String startToken) {
+
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
                 .withMaxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR);
 
@@ -90,24 +92,9 @@ public class AWSV2SourceClient {
             request.withPrefix(s3SourceConfig.getAwsS3Prefix());
         }
 
-        final Stream<String> s3ObjectKeyStream = Stream
-                .iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
-                    // This is called every time next() is called on the iterator.
-                    if (response.isTruncated()) {
-                        return s3Client.listObjectsV2(
-                                new ListObjectsV2Request().withContinuationToken(response.getNextContinuationToken()));
-                    } else {
-                        return null;
-                    }
-
-                })
-                .flatMap(response -> response.getObjectSummaries()
-                        .stream()
-                        .filter(filterPredicate)
-                        .filter(objectSummary -> assignObjectToTask(objectSummary.getKey()))
-                        .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey())))
-                .map(S3ObjectSummary::getKey);
-        return s3ObjectKeyStream.iterator();
+        Predicate<S3ObjectSummary> filter = filterPredicate.and(objectSummary -> assignObjectToTask(objectSummary.getKey()))
+                .and(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()));
+        return IteratorUtils.filteredIterator(new S3ObjectSummaryIterator(s3Client, request), filter::test);
     }
 
     public S3Object getObject(final String objectKey) {
