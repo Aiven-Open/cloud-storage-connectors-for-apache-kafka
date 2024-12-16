@@ -216,6 +216,10 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
 
+        configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
+
         configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, awsGroupCounter++, // NOPMD
                 // UnusedAssignment
@@ -252,10 +256,6 @@ public final class S3ConfigFragment extends ConfigFragment {
     }
 
     static void addDeprecatedConfiguration(final ConfigDef configDef) {
-        configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM,
-                "[Deprecated] Use `file.name.template` instead. Prefix for stored objects, e.g. cluster-1/", GROUP_AWS,
-                0, ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
         configDef.define(AWS_ACCESS_KEY_ID, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword() {
             @Override
