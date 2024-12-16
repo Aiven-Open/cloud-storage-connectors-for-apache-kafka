@@ -24,10 +24,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.function.Consumer;
 
 import org.apache.kafka.common.config.AbstractConfig;
 
@@ -35,10 +32,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
+import org.codehaus.plexus.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JsonTransformer implements Transformer {
+public class JsonTransformer extends Transformer<JsonNode> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JsonTransformer.class);
 
@@ -50,78 +48,65 @@ public class JsonTransformer implements Transformer {
     }
 
     @Override
-    public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
-        return readJsonRecordsAsStream(inputStreamIOSupplier, skipRecords);
+    public StreamSpliterator<JsonNode> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
+        final StreamSpliterator<JsonNode> spliterator = new StreamSpliterator<JsonNode>(LOGGER, inputStreamIOSupplier) {
+            BufferedReader reader;
+
+            @Override
+            protected InputStream inputOpened(final InputStream input) throws IOException {
+                reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+                return input;
+            }
+
+            @Override
+            public void doClose() {
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        LOGGER.error("Error closing reader: {}", e.getMessage(), e);
+                    }
+                }
+            }
+
+            @Override
+            public boolean doAdvance(final Consumer<? super JsonNode> action) {
+                String line = null;
+                try {
+                    // remove blank and empty lines.
+                    while (StringUtils.isBlank(line)) {
+                        line = reader.readLine();
+                        if (line == null) {
+                            // end of file
+                            return false;
+                        }
+                    }
+                    line = line.trim();
+                    try {
+                        action.accept(objectMapper.readTree(line)); // Parse the JSON
+                    } catch (IOException e) {
+                        LOGGER.error("Error parsing JSON record: {}", e.getMessage(), e);
+                        return false;
+                    }
+                    return true;
+                } catch (IOException e) {
+                    LOGGER.error("Error reading input stream: {}", e.getMessage(), e);
+                    return false;
+                }
+            }
+        };
+
+        return spliterator;
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
+    public byte[] getValueBytes(final JsonNode record, final String topic, final AbstractConfig sourceConfig) {
         try {
             return objectMapper.writeValueAsBytes(record);
         } catch (JsonProcessingException e) {
             LOGGER.error("Failed to serialize record to JSON bytes. Error: {}", e.getMessage(), e);
             return new byte[0];
-        }
-    }
-
-    private Stream<Object> readJsonRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final long skipRecords) {
-        // Use a Stream that lazily processes each line as a JSON object
-        CustomSpliterator customSpliteratorParam;
-        try {
-            customSpliteratorParam = new CustomSpliterator(inputStreamIOSupplier);
-        } catch (IOException e) {
-            LOGGER.error("Error creating Json transformer CustomSpliterator: {}", e.getMessage(), e);
-            return Stream.empty();
-        }
-        return StreamSupport.stream(customSpliteratorParam, false).onClose(() -> {
-            try {
-                customSpliteratorParam.reader.close(); // Ensure the reader is closed after streaming
-            } catch (IOException e) {
-                LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
-            }
-        }).skip(skipRecords);
-    }
-
-    /*
-     * This CustomSpliterator class is created so that BufferedReader instantiation is not closed before the all the
-     * records from stream is closed. With this now, we have a onclose method declared in parent declaration.
-     */
-    final class CustomSpliterator extends Spliterators.AbstractSpliterator<Object> {
-        BufferedReader reader;
-        String line;
-        CustomSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier) throws IOException {
-            super(Long.MAX_VALUE, Spliterator.ORDERED | Spliterator.NONNULL);
-            reader = new BufferedReader(new InputStreamReader(inputStreamIOSupplier.get(), StandardCharsets.UTF_8));
-        }
-
-        @Override
-        public boolean tryAdvance(final java.util.function.Consumer<? super Object> action) {
-            try {
-                if (line == null) {
-                    line = reader.readLine();
-                }
-                while (line != null) {
-                    line = line.trim();
-                    if (!line.isEmpty()) {
-                        try {
-                            final JsonNode jsonNode = objectMapper.readTree(line); // Parse the JSON
-                            // line
-                            action.accept(jsonNode); // Provide the parsed JSON node to the stream
-                        } catch (IOException e) {
-                            LOGGER.error("Error parsing JSON record: {}", e.getMessage(), e);
-                        }
-                        line = null; // NOPMD
-                        return true;
-                    }
-                    line = reader.readLine();
-                }
-                return false; // End of file
-            } catch (IOException e) {
-                LOGGER.error("Error reading S3 object stream: {}", e.getMessage(), e);
-                return false;
-            }
         }
     }
 }

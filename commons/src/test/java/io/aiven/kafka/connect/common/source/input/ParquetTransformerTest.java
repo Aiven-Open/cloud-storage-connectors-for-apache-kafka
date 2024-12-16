@@ -62,7 +62,7 @@ final class ParquetTransformerTest {
 
         final String topic = "test-topic";
         final int topicPartition = 0;
-        final Stream<Object> recs = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
+        final Stream<GenericRecord> recs = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
                 s3SourceConfig, 0L);
 
         assertThat(recs).isEmpty();
@@ -123,8 +123,8 @@ final class ParquetTransformerTest {
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final Stream<Object> records = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
-                s3SourceConfig, 0L);
+        final Stream<GenericRecord> records = parquetTransformer.getRecords(inputStreamIOSupplier, topic,
+                topicPartition, s3SourceConfig, 0L);
         assertThat(records).isEmpty();
     }
 
@@ -137,7 +137,7 @@ final class ParquetTransformerTest {
         assertThat(Files.exists(tempFile)).isFalse();
     }
 
-    private byte[] generateMockParquetData() throws IOException {
+    static byte[] generateMockParquetData() throws IOException {
         final Path path = ContentUtils.getTmpFilePath("name");
         return IOUtils.toByteArray(Files.newInputStream(path));
     }
@@ -149,8 +149,8 @@ final class ParquetTransformerTest {
                     .thenThrow(new IOException("Test IOException for temp file"));
 
             final IOSupplier<InputStream> inputStreamSupplier = mock(IOSupplier.class);
-            final Stream<Object> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic", 1,
-                    null, 0L);
+            final Stream<GenericRecord> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
+                    1, null, 0L);
 
             assertThat(resultStream).isEmpty();
         }
@@ -162,8 +162,8 @@ final class ParquetTransformerTest {
             when(inputStreamMock.read(any(byte[].class))).thenThrow(new IOException("Test IOException during copy"));
 
             final IOSupplier<InputStream> inputStreamSupplier = () -> inputStreamMock;
-            final Stream<Object> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic", 1,
-                    null, 0L);
+            final Stream<GenericRecord> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
+                    1, null, 0L);
 
             assertThat(resultStream).isEmpty();
         }

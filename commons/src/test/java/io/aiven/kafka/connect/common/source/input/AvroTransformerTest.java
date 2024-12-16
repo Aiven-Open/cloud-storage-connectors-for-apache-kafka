@@ -74,7 +74,8 @@ final class AvroTransformerTest {
     void testReadAvroRecordsInvalidData() {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
 
-        final Stream<Object> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig, 0);
+        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
+                0);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).isEmpty();
@@ -85,7 +86,8 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(25);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<Object> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig, 0);
+        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
+                0);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(25);
@@ -96,7 +98,8 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(20);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<Object> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig, 5);
+        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
+                5);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(15);
@@ -110,13 +113,14 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(20);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<Object> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig, 25);
+        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
+                25);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(0);
     }
 
-    ByteArrayOutputStream generateMockAvroData(final int numRecs) throws IOException {
+    static ByteArrayOutputStream generateMockAvroData(final int numRecs) throws IOException {
         final String schemaJson = "{\n" + "  \"type\": \"record\",\n" + "  \"name\": \"TestRecord\",\n"
                 + "  \"fields\": [\n" + "    {\"name\": \"message\", \"type\": \"string\"},\n"
                 + "    {\"name\": \"id\", \"type\": \"int\"}\n" + "  ]\n" + "}";
