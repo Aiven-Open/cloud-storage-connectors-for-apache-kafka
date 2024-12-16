@@ -134,16 +134,6 @@ final class JsonTransformerTest {
         assertThat(resultStream).isEmpty();
     }
 
-    // @Test
-    // void testCustomSpliteratorStreamProcessing() throws IOException {
-    // final String jsonContent = "{\"key\":\"value\"}\n{\"key2\":\"value2\"}";
-    // final InputStream inputStream = new ByteArrayInputStream(jsonContent.getBytes(StandardCharsets.UTF_8));
-    // final IOSupplier<InputStream> supplier = () -> inputStream;
-    //
-    // final JsonTransformer.CustomSpliterator spliterator = jsonTransformer.new CustomSpliterator(supplier);
-    // assertThat(spliterator.tryAdvance(jsonNode -> assertThat(jsonNode).isNotNull())).isTrue();
-    // }
-
     @Test
     void testCustomSpliteratorWithIOExceptionDuringInitialization() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException during initialization"));
