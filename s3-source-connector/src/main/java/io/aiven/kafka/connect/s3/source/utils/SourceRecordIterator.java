@@ -101,7 +101,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
         if (fileMatcher.find()) {
             // TODO move this from the SourceRecordIterator so that we can decouple it from S3 and make it API agnostic
-            try (S3Object s3Object = sourceClient.getObject(currentObjectKey);) {
+            try (S3Object s3Object = sourceClient.getObject(currentObjectKey)) {
 
                 topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
                 defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
@@ -121,18 +121,20 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             final int partition, final long startOffset, final Transformer transformer) {
         return new Iterator<>() {
             private final Iterator<S3SourceRecord> internalIterator = readNext().iterator();
-            S3OffsetManagerEntry keyEntry = new S3OffsetManagerEntry(bucketName, currentObjectKey, topic, partition);
 
             // this entry will keep track of the current record.
-            private final S3OffsetManagerEntry s3OffsetManagerEntry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties);
+            private S3OffsetManagerEntry s3OffsetManagerEntry;
 
             private List<S3SourceRecord> readNext() {
-
+                if (s3OffsetManagerEntry == null) {
+                    final S3OffsetManagerEntry keyEntry = new S3OffsetManagerEntry(bucketName, currentObjectKey, topic, partition);
+                     s3OffsetManagerEntry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties);
+                }
                 final long numberOfRecsAlreadyProcessed = s3OffsetManagerEntry.getRecordCount();
                 final List<S3SourceRecord> sourceRecords = new ArrayList<>();
 
                 // Optimizing without reading stream again.
-                if (checkBytesTransformation(transformer, numberOfRecsAlreadyProcessed)) {
+                if (checkBytesTransformation(transformer, s3OffsetManagerEntry.getRecordCount()) {
                     return sourceRecords;
                 }
 

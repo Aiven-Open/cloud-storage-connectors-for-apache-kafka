@@ -64,7 +64,8 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry> {
     public E getEntry(final OffsetManagerKey key, final Function<Map<String, Object>, E> creator) {
         final Map<String, Object> data = offsets.compute(key.getPartitionMap(), (k, v) -> {
             if (v == null) {
-               return context.offsetStorageReader().offset(key.getPartitionMap());
+                Map<String, Object> d = context.offsetStorageReader().offset(key.getPartitionMap());
+                return d == null || d.size() == 0 ?  new HashMap<>(key.getPartitionMap()) : d;
             } else {
                return v;
             }});
