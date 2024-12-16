@@ -44,8 +44,6 @@ import org.mockito.Mock;
 import scala.concurrent.java8.FuturesConvertersImpl;
 
 final class S3OffsetManagerEntryTest {
-
-    private Map<String, String> properties;
     static final String TEST_BUCKET = "test-bucket";
 
     static final String TOPIC = "TOPIC1";
@@ -54,10 +52,7 @@ final class S3OffsetManagerEntryTest {
 
     static final String OBJECT_KEY = "object_key";
 
-
     private SourceTaskContext sourceTaskContext;
-
-    private S3OffsetManagerEntry s3OffsetManagerEntry;
 
     private OffsetManager<S3OffsetManagerEntry> offsetManager;
 
@@ -65,7 +60,6 @@ final class S3OffsetManagerEntryTest {
 
     @BeforeEach
     public void setUp() {
-        properties = new HashMap<>();
         offsetStorageReader = mock(OffsetStorageReader.class);
         sourceTaskContext = mock(SourceTaskContext.class);
         when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
@@ -137,7 +131,6 @@ final class S3OffsetManagerEntryTest {
         assertThat(entry2.getTopic()).isEqualTo(TOPIC);
         assertThat(entry2.getBucket()).isEqualTo(TEST_BUCKET);
         assertThat(entry2.getProperty("random_entry")).isEqualTo(5L);
-        verify(sourceTaskContext.offsetStorageReader(), times(0));
-                // offset in map
+        verify(sourceTaskContext, times(0)).offsetStorageReader();
     }
 }
