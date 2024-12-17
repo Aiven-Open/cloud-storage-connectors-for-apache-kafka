@@ -32,7 +32,6 @@ import java.util.zip.GZIPInputStream;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.github.luben.zstd.ZstdInputStream;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
@@ -47,6 +46,7 @@ import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 public class BucketAccessor {
@@ -79,11 +79,9 @@ public class BucketAccessor {
                     .bucket(bucketName)
                     .delete(Delete.builder().objects(deleteIds).build())
                     .build());
-        } catch (final MultiObjectDeleteException e) {
-            for (final var err : e.getErrors()) {
-                LOGGER.warn(String.format("Couldn't delete object: %s. Reason: [%s] %s", err.getKey(), err.getCode(),
-                        err.getMessage()));
-            }
+        } catch (final S3Exception e) {
+            LOGGER.warn(
+                    String.format("Couldn't delete objects. Reason: [%s] %s", e.awsErrorDetails().errorMessage(), e));
         } catch (final SdkException e) {
 
             LOGGER.error("Couldn't delete objects: {}, Exception{} ", deleteIds, e.getMessage());

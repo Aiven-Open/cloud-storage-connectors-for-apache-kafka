@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -144,11 +143,9 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                     return sourceRecords;
                 }
 
-
                 try (Stream<Object> recordStream = transformer.getRecords(s3Object, topic, topicPartition,
                         s3SourceConfig, numberOfRecsAlreadyProcessed)) {
 
-                    final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
                     final Iterator<Object> recordIterator = recordStream.iterator();
                     while (recordIterator.hasNext()) {
                         final Object record = recordIterator.next();
