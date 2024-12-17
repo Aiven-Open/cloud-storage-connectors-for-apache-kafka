@@ -117,7 +117,7 @@ public class AWSV2SourceClient {
         }
         return null;
     }
-    // TODO is the response closeable or autocloseable
+
     public IOSupplier<InputStream> getObject(final String objectKey) {
         final GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(bucketName).key(objectKey).build();
         final ResponseBytes<GetObjectResponse> s3ObjectResponse = s3Client.getObjectAsBytes(getObjectRequest);

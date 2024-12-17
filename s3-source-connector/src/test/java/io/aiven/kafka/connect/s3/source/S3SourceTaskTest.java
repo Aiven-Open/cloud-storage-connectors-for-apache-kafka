@@ -22,7 +22,6 @@ import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_T
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static software.amazon.awssdk.http.SdkHttpConfigurationOption.TRUST_ALL_CERTIFICATES;
 
 import java.lang.reflect.Field;
 import java.net.URI;
@@ -59,10 +58,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryMode;
-import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.utils.AttributeMap;
 
 @ExtendWith(MockitoExtension.class)
 final class S3SourceTaskTest {
@@ -107,8 +104,6 @@ final class S3SourceTaskTest {
                 .overrideConfiguration(clientOverrideConfiguration)
                 .region(config.getAwsS3Region())
                 .endpointOverride(URI.create(config.getAwsS3EndPoint()))
-                .httpClient(UrlConnectionHttpClient.builder()
-                        .buildWithDefaults(AttributeMap.builder().put(TRUST_ALL_CERTIFICATES, Boolean.TRUE).build()))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
                 .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
                 .build();
