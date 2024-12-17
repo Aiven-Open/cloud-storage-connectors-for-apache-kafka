@@ -17,6 +17,8 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -32,10 +34,10 @@ import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.model.S3Object;
+import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
 
 /**
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
@@ -91,7 +93,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 recordIterator = createIteratorForCurrentFile();
             }
         } catch (IOException e) {
-            throw new AmazonClientException(e);
+            throw SdkException.create(e.getMessage(), e.getCause());
         }
     }
 
@@ -103,20 +105,20 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
         if (fileMatcher.find()) {
             // TODO move this from the SourceRecordIterator so that we can decouple it from S3 and make it API agnostic
-            try (S3Object s3Object = sourceClient.getObject(currentObjectKey);) {
 
-                topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
-                defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
+            final IOSupplier<InputStream> s3Object = sourceClient.getObject(currentObjectKey);
+            topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
+            defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
 
-                final long defaultStartOffsetId = 1L;
+            final long defaultStartOffsetId = 1L;
 
-                final String finalTopic = topicName;
-                final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
-                        bucketName);
+            final String finalTopic = topicName;
+            final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
+                    bucketName);
 
-                return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
-                        partitionMap);
-            }
+            return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
+                    partitionMap);
+
         } else {
             LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
             return Collections.emptyIterator();
@@ -124,7 +126,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     }
 
     @SuppressWarnings("PMD.CognitiveComplexity")
-    private Iterator<S3SourceRecord> getObjectIterator(final S3Object s3Object, final String topic,
+    private Iterator<S3SourceRecord> getObjectIterator(final IOSupplier<InputStream> s3Object, final String topic,
             final int topicPartition, final long startOffset, final Transformer transformer,
             final Map<String, Object> partitionMap) {
         return new Iterator<>() {
@@ -142,8 +144,11 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                     return sourceRecords;
                 }
 
-                try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent, topic,
-                        topicPartition, s3SourceConfig, numberOfRecsAlreadyProcessed)) {
+
+                try (Stream<Object> recordStream = transformer.getRecords(s3Object, topic, topicPartition,
+                        s3SourceConfig, numberOfRecsAlreadyProcessed)) {
+
+                    final byte[] keyBytes = currentObjectKey.getBytes(StandardCharsets.UTF_8);
                     final Iterator<Object> recordIterator = recordStream.iterator();
                     while (recordIterator.hasNext()) {
                         final Object record = recordIterator.next();
