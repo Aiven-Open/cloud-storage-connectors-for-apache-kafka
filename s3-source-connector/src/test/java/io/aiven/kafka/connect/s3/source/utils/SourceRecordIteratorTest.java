@@ -30,7 +30,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.stream.Stream;
 
@@ -75,10 +74,6 @@ final class SourceRecordIteratorTest {
             when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
                     .thenReturn(Stream.of(new Object()));
 
-            final String outStr = "this is a test";
-            when(mockTransformer.getValueBytes(any(), anyString(), any()))
-                    .thenReturn(outStr.getBytes(StandardCharsets.UTF_8));
-
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
             when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.emptyIterator());
@@ -114,11 +109,6 @@ final class SourceRecordIteratorTest {
             mockTransformer = mock(ByteArrayTransformer.class);
             when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
                     .thenReturn(Stream.of(new Object()));
-
-            final String outStr = "this is a test";
-
-            when(mockTransformer.getValueBytes(any(), anyString(), any()))
-                    .thenReturn(outStr.getBytes(StandardCharsets.UTF_8));
 
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
