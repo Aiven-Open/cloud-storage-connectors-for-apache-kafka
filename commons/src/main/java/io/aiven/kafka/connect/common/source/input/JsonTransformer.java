@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,30 +25,36 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.json.JsonConverter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
 import org.codehaus.plexus.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JsonTransformer extends Transformer<JsonNode> {
+public class JsonTransformer extends Transformer<byte[]> {
+
+    private final JsonConverter jsonConverter;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JsonTransformer.class);
 
     final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
-        config.put(SCHEMAS_ENABLE, "false");
+    JsonTransformer(final JsonConverter jsonConverter) {
+        super();
+        this.jsonConverter = jsonConverter;
     }
 
     @Override
-    public StreamSpliterator<JsonNode> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
+    }
+
+    @Override
+    public StreamSpliterator<byte[]> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
             final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
-        final StreamSpliterator<JsonNode> spliterator = new StreamSpliterator<JsonNode>(LOGGER, inputStreamIOSupplier) {
+        final StreamSpliterator<byte[]> spliterator = new StreamSpliterator<>(LOGGER, inputStreamIOSupplier) {
             BufferedReader reader;
 
             @Override
@@ -71,7 +75,7 @@ public class JsonTransformer extends Transformer<JsonNode> {
             }
 
             @Override
-            public boolean doAdvance(final Consumer<? super JsonNode> action) {
+            public boolean doAdvance(final Consumer<? super byte[]> action) {
                 String line = null;
                 try {
                     // remove blank and empty lines.
@@ -83,12 +87,7 @@ public class JsonTransformer extends Transformer<JsonNode> {
                         }
                     }
                     line = line.trim();
-                    try {
-                        action.accept(objectMapper.readTree(line)); // Parse the JSON
-                    } catch (IOException e) {
-                        LOGGER.error("Error parsing JSON record: {}", e.getMessage(), e);
-                        return false;
-                    }
+                    action.accept(line.getBytes(StandardCharsets.UTF_8));
                     return true;
                 } catch (IOException e) {
                     LOGGER.error("Error reading input stream: {}", e.getMessage(), e);
@@ -101,12 +100,13 @@ public class JsonTransformer extends Transformer<JsonNode> {
     }
 
     @Override
-    public byte[] getValueBytes(final JsonNode record, final String topic, final AbstractConfig sourceConfig) {
-        try {
-            return objectMapper.writeValueAsBytes(record);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to serialize record to JSON bytes. Error: {}", e.getMessage(), e);
-            return new byte[0];
-        }
+    public SchemaAndValue getValueData(final byte[] record, final String topic, final AbstractConfig sourceConfig) {
+        return jsonConverter.toConnectData(topic, record);
+    }
+
+    @Override
+    public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
+            final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 }

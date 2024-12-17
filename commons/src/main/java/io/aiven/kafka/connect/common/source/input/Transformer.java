@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
@@ -57,7 +58,9 @@ public abstract class Transformer<T> {
     protected abstract StreamSpliterator<T> createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier,
             String topic, int topicPartition, AbstractConfig sourceConfig);
 
-    public abstract byte[] getValueBytes(T record, String topic, AbstractConfig sourceConfig);
+    public abstract SchemaAndValue getValueData(T record, String topic, AbstractConfig sourceConfig);
+
+    public abstract SchemaAndValue getKeyData(Object cloudStorageKey, String topic, AbstractConfig sourceConfig);
 
     /**
      * A Spliterator that performs various checks on the opening/closing of the input stream.

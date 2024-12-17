@@ -18,11 +18,13 @@ package io.aiven.kafka.connect.common.source.input;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
@@ -76,7 +78,13 @@ public class ByteArrayTransformer extends Transformer<byte[]> {
     }
 
     @Override
-    public byte[] getValueBytes(final byte[] record, final String topic, final AbstractConfig sourceConfig) {
-        return record;
+    public SchemaAndValue getValueData(final byte[] record, final String topic, final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, record);
+    }
+
+    @Override
+    public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
+            final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 }

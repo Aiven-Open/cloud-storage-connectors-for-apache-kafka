@@ -34,6 +34,7 @@ import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
+import io.confluent.connect.avro.AvroData;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericData;
@@ -57,7 +58,7 @@ final class AvroTransformerTest {
 
     @BeforeEach
     void setUp() {
-        avroTransformer = new AvroTransformer();
+        avroTransformer = new AvroTransformer(new AvroData(100));
         config = new HashMap<>();
     }
 

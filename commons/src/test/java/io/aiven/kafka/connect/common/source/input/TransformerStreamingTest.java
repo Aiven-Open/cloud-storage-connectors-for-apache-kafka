@@ -32,9 +32,11 @@ import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.json.JsonConverter;
 
 import io.aiven.kafka.connect.common.config.CommonConfig;
 
+import io.confluent.connect.avro.AvroData;
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -84,17 +86,18 @@ class TransformerStreamingTest {
 
     static Stream<Arguments> testData() throws IOException {
         final List<Arguments> lst = new ArrayList<>();
-        lst.add(Arguments.of(new AvroTransformer(), AvroTransformerTest.generateMockAvroData(100).toByteArray(),
+        final AvroData avroData = new AvroData(100);
+        lst.add(Arguments.of(new AvroTransformer(avroData), AvroTransformerTest.generateMockAvroData(100).toByteArray(),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
         lst.add(Arguments.of(new ByteArrayTransformer(), "Hello World".getBytes(StandardCharsets.UTF_8),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 1));
-        lst.add(Arguments.of(new JsonTransformer(),
+        lst.add(Arguments.of(new JsonTransformer(new JsonConverter()),
                 JsonTransformerTest.getJsonRecs(100).getBytes(StandardCharsets.UTF_8),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
-        lst.add(Arguments.of(new ParquetTransformer(), ParquetTransformerTest.generateMockParquetData(),
+        lst.add(Arguments.of(new ParquetTransformer(avroData), ParquetTransformerTest.generateMockParquetData(),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
         return lst.stream();

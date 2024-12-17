@@ -18,8 +18,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -27,15 +25,11 @@ import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 import java.net.ConnectException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
@@ -86,10 +80,8 @@ class RecordProcessorTest {
             sourceRecordIterator,
             results,
             s3SourceConfig,
-            Optional.of(keyConverter),
-            valueConverter,
             connectorStopped,
-            transformer, sourceClient, offsetManager
+            sourceClient, offsetManager
         );
 
         assertThat(processedRecords).as("Processed records should be empty when there are no records.").isEmpty();
@@ -108,10 +100,8 @@ class RecordProcessorTest {
             sourceRecordIterator,
             results,
             s3SourceConfig,
-            Optional.of(keyConverter),
-            valueConverter,
             connectorStopped,
-            transformer, sourceClient, offsetManager
+            sourceClient, offsetManager
         );
 
         assertThat(results).hasSize(1);
@@ -128,10 +118,8 @@ class RecordProcessorTest {
             sourceRecordIterator,
             results,
             s3SourceConfig,
-            Optional.of(keyConverter),
-            valueConverter,
             connectorStopped,
-            transformer, sourceClient, offsetManager
+            sourceClient, offsetManager
         );
 
         assertThat(processedRecords).as("Processed records should be empty when connector is stopped.").isEmpty();
@@ -141,16 +129,10 @@ class RecordProcessorTest {
     @Test
     void testCreateSourceRecords() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getTopic()).thenReturn("test-topic");
-        when(mockRecord.key()).thenReturn("mock-key".getBytes(StandardCharsets.UTF_8));
-        when(mockRecord.value()).thenReturn("mock-value".getBytes(StandardCharsets.UTF_8));
+        when(mockRecord.getSourceRecord()).thenReturn(mock(SourceRecord.class));
 
-        when(valueConverter.toConnectData(anyString(), any()))
-                .thenReturn(new SchemaAndValue(null, "mock-value-converted"));
-        when(mockRecord.getSourceRecord(anyString(), any(), any())).thenReturn(mock(SourceRecord.class));
-
-        final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig,
-                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, sourceClient, offsetManager);
+        final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+                offsetManager);
 
         assertThat(sourceRecords).isNotNull();
     }
@@ -158,18 +140,12 @@ class RecordProcessorTest {
     @Test
     void errorToleranceOnNONE() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getTopic()).thenReturn("test-topic");
-        when(mockRecord.key()).thenReturn("mock-key".getBytes(StandardCharsets.UTF_8));
-        when(mockRecord.value()).thenReturn("mock-value".getBytes(StandardCharsets.UTF_8));
-
-        when(valueConverter.toConnectData(anyString(), any()))
-                .thenReturn(new SchemaAndValue(null, "mock-value-converted"));
-        when(mockRecord.getSourceRecord(anyString(), any(), any())).thenThrow(new DataException("generic issue"));
+        when(mockRecord.getSourceRecord()).thenThrow(new DataException("generic issue"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.NONE);
 
-        assertThatThrownBy(() -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig,
-                Optional.of(keyConverter), valueConverter, new HashMap<>(), transformer, sourceClient, offsetManager))
+        assertThatThrownBy(
+                () -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient, offsetManager))
                 .isInstanceOf(org.apache.kafka.connect.errors.ConnectException.class)
                 .hasMessage("Data Exception caught during S3 record to source record transformation");
 
@@ -178,18 +154,12 @@ class RecordProcessorTest {
     @Test
     void errorToleranceOnALL() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getTopic()).thenReturn("test-topic");
-        when(mockRecord.key()).thenReturn("mock-key".getBytes(StandardCharsets.UTF_8));
-        when(mockRecord.value()).thenReturn("mock-value".getBytes(StandardCharsets.UTF_8));
-
-        when(valueConverter.toConnectData(anyString(), any()))
-                .thenReturn(new SchemaAndValue(null, "mock-value-converted"));
-        when(mockRecord.getSourceRecord(anyString(), any(), any())).thenThrow(new DataException("generic issue"));
+        when(mockRecord.getSourceRecord()).thenThrow(new DataException("generic issue"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.ALL);
 
-        assertThat(RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, Optional.of(keyConverter),
-                valueConverter, new HashMap<>(), transformer, sourceClient, offsetManager)).isNull();
+        assertThat(RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient, offsetManager))
+                .isNull();
 
     }
 }

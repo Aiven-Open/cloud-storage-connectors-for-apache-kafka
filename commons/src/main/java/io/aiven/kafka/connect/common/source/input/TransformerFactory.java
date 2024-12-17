@@ -17,11 +17,21 @@
 package io.aiven.kafka.connect.common.source.input;
 
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
+import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.kafka.connect.json.JsonConverter;
 
 import io.aiven.kafka.connect.common.config.SchemaRegistryFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
+import io.confluent.connect.avro.AvroData;
+
 public final class TransformerFactory {
+
+    public static final int CACHE_SIZE = 100;
 
     private TransformerFactory() {
         // hidden
@@ -30,16 +40,24 @@ public final class TransformerFactory {
         final InputFormat inputFormatEnum = new SchemaRegistryFragment(sourceConfig).getInputFormat();
         switch (inputFormatEnum) {
             case AVRO :
-                return new AvroTransformer();
+                return new AvroTransformer(new AvroData(CACHE_SIZE));
             case PARQUET :
-                return new ParquetTransformer();
+                return new ParquetTransformer(new AvroData(CACHE_SIZE));
             case JSONL :
-                return new JsonTransformer();
+                final JsonConverter jsonConverter = new JsonConverter();
+                configureJsonConverter(jsonConverter);
+                return new JsonTransformer(jsonConverter);
             case BYTES :
                 return new ByteArrayTransformer();
             default :
                 throw new IllegalArgumentException(
                         "Unknown input format in configuration: " + sourceConfig.getString(INPUT_FORMAT_KEY));
         }
+    }
+
+    private static void configureJsonConverter(final JsonConverter jsonConverter) {
+        final Map<String, String> config = new HashMap<>();
+        config.put(SCHEMAS_ENABLE, "false");
+        jsonConverter.configure(config, false);
     }
 }
