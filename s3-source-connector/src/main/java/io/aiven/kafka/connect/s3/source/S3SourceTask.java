@@ -18,21 +18,17 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.MAX_POLL_RECORDS;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
-import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
@@ -71,10 +67,6 @@ public class S3SourceTask extends SourceTask {
     private AmazonS3 s3Client;
 
     private Iterator<S3SourceRecord> sourceRecordIterator;
-    private Optional<Converter> keyConverter;
-
-    private Converter valueConverter;
-
     private Transformer transformer;
 
     private boolean taskInitialized;
@@ -102,27 +94,11 @@ public class S3SourceTask extends SourceTask {
     public void start(final Map<String, String> props) {
         LOGGER.info("S3 Source task started.");
         s3SourceConfig = new S3SourceConfig(props);
-        initializeConverters();
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;
-    }
-
-    private void initializeConverters() {
-        try {
-            keyConverter = Optional
-                    .of((Converter) Class.forName((String) s3SourceConfig.originals().get("key.converter"))
-                            .getDeclaredConstructor()
-                            .newInstance());
-            valueConverter = (Converter) Class.forName((String) s3SourceConfig.originals().get("value.converter"))
-                    .getDeclaredConstructor()
-                    .newInstance();
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException
-                | NoSuchMethodException e) {
-            throw new ConnectException("Connect converters could not be instantiated.", e);
-        }
     }
 
     private void prepareReaderFromOffsetStorageReader() {
@@ -174,8 +150,8 @@ public class S3SourceTask extends SourceTask {
         if (connectorStopped.get()) {
             return results;
         }
-        return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, keyConverter,
-                valueConverter, connectorStopped, this.transformer, awsv2SourceClient, offsetManager);
+        return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, connectorStopped,
+                awsv2SourceClient, offsetManager);
     }
 
     private void waitForObjects() throws InterruptedException {
@@ -200,14 +176,6 @@ public class S3SourceTask extends SourceTask {
     }
 
     // below for visibility in tests
-    public Optional<Converter> getKeyConverter() {
-        return keyConverter;
-    }
-
-    public Converter getValueConverter() {
-        return valueConverter;
-    }
-
     public Transformer getTransformer() {
         return transformer;
     }

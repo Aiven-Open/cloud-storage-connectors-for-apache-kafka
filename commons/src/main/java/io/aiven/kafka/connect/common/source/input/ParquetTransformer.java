@@ -22,17 +22,19 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.source.input.parquet.LocalInputFile;
 
+import io.confluent.connect.avro.AvroData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
@@ -43,7 +45,14 @@ import org.slf4j.LoggerFactory;
 
 public class ParquetTransformer extends Transformer<GenericRecord> {
 
+    private final AvroData avroData;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ParquetTransformer.class);
+
+    ParquetTransformer(final AvroData avroData) {
+        super();
+        this.avroData = avroData;
+    }
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
@@ -51,16 +60,22 @@ public class ParquetTransformer extends Transformer<GenericRecord> {
     }
 
     @Override
-    public byte[] getValueBytes(final GenericRecord record, final String topic, final AbstractConfig sourceConfig) {
-        return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList(record), topic, sourceConfig);
+    public SchemaAndValue getValueData(final GenericRecord record, final String topic,
+            final AbstractConfig sourceConfig) {
+        return avroData.toConnectData(record.getSchema(), record);
+    }
+
+    @Override
+    public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
+            final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public StreamSpliterator<GenericRecord> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
             final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
 
-        final StreamSpliterator<GenericRecord> spliterator = new StreamSpliterator<GenericRecord>(LOGGER,
-                inputStreamIOSupplier) {
+        final StreamSpliterator<GenericRecord> spliterator = new StreamSpliterator<>(LOGGER, inputStreamIOSupplier) {
 
             private ParquetReader<GenericRecord> reader;
             private File parquetFile;
