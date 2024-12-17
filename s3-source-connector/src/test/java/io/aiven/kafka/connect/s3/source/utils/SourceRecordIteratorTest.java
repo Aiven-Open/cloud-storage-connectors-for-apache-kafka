@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.stream.Stream;
 
@@ -38,7 +39,6 @@ import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -64,8 +64,7 @@ final class SourceRecordIteratorTest {
         final String key = "topic-00001-abc123.txt";
 
         // Mock InputStream
-        try (S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
-                null);) {
+        try (InputStream mockInputStream = new ByteArrayInputStream(new byte[] {})) {
             when(mockSourceApiClient.getObject(anyString())).thenReturn(() -> mockInputStream);
 
             when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
@@ -96,8 +95,7 @@ final class SourceRecordIteratorTest {
         final String key = "topic-00001-abc123.txt";
 
         // Mock InputStream
-        try (S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
-                null);) {
+        try (InputStream mockInputStream = new ByteArrayInputStream(new byte[] {})) {
             when(mockSourceApiClient.getObject(anyString())).thenReturn(() -> mockInputStream);
 
             // With ByteArrayTransformer
