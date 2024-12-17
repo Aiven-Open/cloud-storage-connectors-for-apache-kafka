@@ -69,7 +69,6 @@ dependencies {
   implementation(project(":s3-commons"))
   implementation("software.amazon.awssdk:s3:$amazonS3Version")
   implementation("software.amazon.awssdk:sts:$amazonSTSVersion")
-  testImplementation("software.amazon.awssdk:url-connection-client:$amazonSTSVersion")
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
