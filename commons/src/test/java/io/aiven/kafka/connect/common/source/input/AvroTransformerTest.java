@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.common.source.input;
 
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.offset;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -32,14 +33,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
+import io.confluent.connect.avro.AvroData;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,12 +57,20 @@ final class AvroTransformerTest {
     private SourceCommonConfig sourceCommonConfig;
 
     private AvroTransformer avroTransformer;
+
+    @Mock
+    private OffsetManager.OffsetManagerEntry<?> offsetManagerEntry;
+
     private Map<String, String> config;
+
 
     @BeforeEach
     void setUp() {
-        avroTransformer = new AvroTransformer();
+        avroTransformer = new AvroTransformer(new AvroData(100));
         config = new HashMap<>();
+        when(offsetManagerEntry.getTopic()).thenReturn("topic");
+        when(offsetManagerEntry.getPartition()).thenReturn(0);
+
     }
 
     @Test
@@ -74,8 +86,7 @@ final class AvroTransformerTest {
     void testReadAvroRecordsInvalidData() {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
 
-        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                0);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).isEmpty();
@@ -86,8 +97,7 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(25);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                0);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(25);
@@ -95,11 +105,11 @@ final class AvroTransformerTest {
 
     @Test
     void testReadAvroRecordsSkipFew() throws Exception {
+        when(offsetManagerEntry.skipRecords()).thenReturn(5L);
         final ByteArrayOutputStream avroData = generateMockAvroData(20);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                5);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(15);
@@ -110,11 +120,11 @@ final class AvroTransformerTest {
 
     @Test
     void testReadAvroRecordsSkipMoreRecordsThanExist() throws Exception {
+        when(offsetManagerEntry.skipRecords()).thenReturn(25L);
         final ByteArrayOutputStream avroData = generateMockAvroData(20);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                25);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(0);

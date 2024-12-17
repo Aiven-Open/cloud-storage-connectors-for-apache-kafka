@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.source.SourceTaskContext;
 
 public class OffsetManager<E extends OffsetManager.OffsetManagerEntry> {
@@ -135,6 +136,14 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry> {
          * @return The offset manager key for this entry.
          */
         OffsetManagerKey getManagerKey();
+
+        String getTopic();
+
+        Integer getPartition();
+
+        default long skipRecords() {
+            return 0;
+        }
     }
 
     /**

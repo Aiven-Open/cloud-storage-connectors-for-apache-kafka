@@ -18,23 +18,19 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.MAX_POLL_RECORDS;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
-import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
-import org.apache.kafka.connect.storage.Converter;
 
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
@@ -53,7 +49,6 @@ import org.slf4j.LoggerFactory;
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
  * Connect records.
  */
-@SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports" })
 public class S3SourceTask extends SourceTask {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
@@ -71,10 +66,6 @@ public class S3SourceTask extends SourceTask {
     private AmazonS3 s3Client;
 
     private Iterator<S3SourceRecord> sourceRecordIterator;
-    private Optional<Converter> keyConverter;
-
-    private Converter valueConverter;
-
     private Transformer transformer;
 
     private boolean taskInitialized;
@@ -102,7 +93,6 @@ public class S3SourceTask extends SourceTask {
     public void start(final Map<String, String> props) {
         LOGGER.info("S3 Source task started.");
         s3SourceConfig = new S3SourceConfig(props);
-        initializeConverters();
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager<S3OffsetManagerEntry>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
@@ -111,23 +101,7 @@ public class S3SourceTask extends SourceTask {
         this.taskInitialized = true;
     }
 
-    private void initializeConverters() {
-        try {
-            keyConverter = Optional
-                    .of((Converter) Class.forName((String) s3SourceConfig.originals().get("key.converter"))
-                            .getDeclaredConstructor()
-                            .newInstance());
-            valueConverter = (Converter) Class.forName((String) s3SourceConfig.originals().get("value.converter"))
-                    .getDeclaredConstructor()
-                    .newInstance();
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException
-                | NoSuchMethodException e) {
-            throw new ConnectException("Connect converters could not be instantiated.", e);
-        }
-    }
-
-    // mostly for testing
-    protected void setSourceRecordIterator(Iterator<S3SourceRecord> iterator) {
+    private void prepareReaderFromOffsetStorageReader(Iterator<S3SourceRecord> iterator) {
         sourceRecordIterator = iterator;
     }
 
@@ -187,7 +161,7 @@ public class S3SourceTask extends SourceTask {
             if (s3SourceRecord != null) {
                 try {
                     offsetManager.updateCurrentOffsets(s3SourceRecord.getOffsetManagerEntry());
-                    results.add(s3SourceRecord.getSourceRecord(keyConverter, valueConverter));
+                    results.add(s3SourceRecord.getSourceRecord());
                 } catch (DataException e) {
                     LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
                     awsv2SourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
@@ -197,6 +171,9 @@ public class S3SourceTask extends SourceTask {
         return results;
     }
 
+    protected void setSourceRecordIterator(Iterator<S3SourceRecord> iterator) {
+        sourceRecordIterator = iterator;
+    }
 
     private void waitForObjects() throws InterruptedException {
         while (!sourceRecordIterator.hasNext() && !connectorStopped.get()) {
@@ -221,14 +198,6 @@ public class S3SourceTask extends SourceTask {
     }
 
     // below for visibility in tests
-    public Optional<Converter> getKeyConverter() {
-        return keyConverter;
-    }
-
-    public Converter getValueConverter() {
-        return valueConverter;
-    }
-
     public Transformer getTransformer() {
         return transformer;
     }

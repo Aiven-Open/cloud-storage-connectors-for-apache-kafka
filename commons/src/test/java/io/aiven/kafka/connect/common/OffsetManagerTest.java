@@ -238,6 +238,17 @@ final class OffsetManagerTest {
         }
 
         @Override
+        public String getTopic() {
+            return getProperty("topic").toString();
+        }
+
+        @Override
+        public Integer getPartition() {
+            Object value = getProperty("partition");
+            return value != null && value instanceof Integer ? (Integer) value : 0;
+        }
+
+        @Override
         public int compareTo(TestingOffsetManagerEntry other) {
             if (this == other) {
                 return 0;

@@ -18,11 +18,16 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
@@ -56,7 +61,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     private Iterator<S3Object> s3ObjectIterator;
 
-    private final Transformer<?> transformer;
+    private final Transformer transformer;
     // Once we decouple the S3Object from the Source Iterator we can change this to be the SourceApiClient
     // At which point it will work for al our integrations.
     private final AWSV2SourceClient sourceClient; // NOPMD
@@ -97,11 +102,9 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
 
     private Iterator<S3SourceRecord> getS3SourceRecordIterator(S3Object s3Object) {
-        final byte[] keyBytes = s3Object.getKey().getBytes(StandardCharsets.UTF_8);
-
-        return transformer.asStream(s3Object::getObjectContent, offsetManagerEntry.getTopic(),
-               offsetManagerEntry.getPartition(), s3SourceConfig, offsetManagerEntry.getRecordCount())
-                .map(b -> new S3SourceRecord(offsetManagerEntry, keyBytes, b))
+        Optional<SchemaAndValue> key =Optional.of(new SchemaAndValue(transformer.getKeySchema(),s3Object.getKey().getBytes(StandardCharsets.UTF_8)));
+        return transformer.getRecords(s3Object::getObjectContent, offsetManagerEntry)
+                .map(value -> new S3SourceRecord(offsetManagerEntry, key, value))
                 .iterator();
     }
 
@@ -125,7 +128,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         if (!hasNext()) {
             throw new NoSuchElementException();
         }
-
         return outerIterator.next();
     }
 

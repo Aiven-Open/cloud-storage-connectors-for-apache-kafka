@@ -42,6 +42,8 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.BeforeEach;
@@ -129,7 +131,7 @@ final class SourceRecordIteratorTest {
         }
     }
 
-    private class TestingTransformer extends Transformer<String> {
+    private class TestingTransformer extends Transformer {
 
         private final Logger LOGGER = LoggerFactory.getLogger(TestingTransformer.class);
         @Override
@@ -138,9 +140,14 @@ final class SourceRecordIteratorTest {
         }
 
         @Override
-        protected StreamSpliterator<String> createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition, AbstractConfig sourceConfig) {
+        public Schema getKeySchema() {
+            return null;
+        }
 
-                return new StreamSpliterator<String>(LOGGER, inputStreamIOSupplier) {
+        @Override
+        protected StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition, AbstractConfig sourceConfig) {
+
+                return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
                     @Override
                     protected InputStream inputOpened(final InputStream input) {
                         return input;
@@ -152,12 +159,12 @@ final class SourceRecordIteratorTest {
                     }
 
                     @Override
-                    protected boolean doAdvance(final Consumer<? super String> action) {
+                    protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
 
                         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                             IOUtils.copy(inputStream, baos);
                             String result = "Transformed: " + baos;
-                            action.accept(result);
+                            action.accept(new SchemaAndValue(null, result.getBytes(StandardCharsets.UTF_8)));
                             return true;
                         } catch (IOException e) {
                             LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
@@ -165,11 +172,6 @@ final class SourceRecordIteratorTest {
                         }
                     }
                 };
-        }
-
-        @Override
-        public byte[] getValueBytes(String record, String topic, AbstractConfig sourceConfig) {
-            return record.getBytes(StandardCharsets.UTF_8);
         }
     }
 }
