@@ -48,10 +48,6 @@ public class JsonTransformer extends Transformer {
         this.jsonConverter = jsonConverter;
     }
 
-    @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
-    }
-
     public Schema getKeySchema() {
         return null;
     }

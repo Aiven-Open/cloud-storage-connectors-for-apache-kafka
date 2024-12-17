@@ -74,15 +74,6 @@ final class AvroTransformerTest {
     }
 
     @Test
-    void testConfigureValueConverter() {
-        final String value = "http://localhost:8081";
-        when(sourceCommonConfig.getString(SCHEMA_REGISTRY_URL)).thenReturn(value);
-        avroTransformer.configureValueConverter(config, sourceCommonConfig);
-        assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("http://localhost:8081")
-                .describedAs("The schema registry URL should be correctly set in the config.");
-    }
-
-    @Test
     void testReadAvroRecordsInvalidData() {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
 

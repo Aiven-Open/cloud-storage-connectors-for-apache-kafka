@@ -50,11 +50,6 @@ public class AvroTransformer extends Transformer {
     }
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
-        config.put(SCHEMA_REGISTRY_URL, sourceConfig.getString(SCHEMA_REGISTRY_URL));
-    }
-
-    @Override
     public Schema getKeySchema() {
         return Schema.OPTIONAL_BYTES_SCHEMA;
     }

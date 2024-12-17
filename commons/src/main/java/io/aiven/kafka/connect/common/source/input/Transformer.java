@@ -34,8 +34,6 @@ import org.slf4j.Logger;
 
 public abstract class Transformer {
 
-    public abstract void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
-
     public final Stream<SchemaAndValue> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, AbstractConfig config) {
 
         final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, offsetManagerEntry.getTopic(),

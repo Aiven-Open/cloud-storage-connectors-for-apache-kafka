@@ -55,11 +55,6 @@ public class ParquetTransformer extends Transformer {
         this.avroData = avroData;
     }
 
-    @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
-        config.put(SCHEMA_REGISTRY_URL, sourceConfig.getString(SCHEMA_REGISTRY_URL));
-    }
-
     public Schema getKeySchema() {
         return null;
     }

@@ -37,11 +37,6 @@ public class ByteArrayTransformer extends Transformer {
 
     private static final int MAX_BUFFER_SIZE = 4096;
 
-    @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
-        // For byte array transformations, ByteArrayConverter is the converter which is the default config.
-    }
-
     public Schema getKeySchema() {
         return null;
     }

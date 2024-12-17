@@ -63,9 +63,9 @@ final class ByteArrayTransformerTest {
 
         final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
 
-        final List<Object> recs = records.collect(Collectors.toList());
+        final List<SchemaAndValue> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(1);
-        assertThat((byte[]) recs.get(0)).isEqualTo(data);
+        assertThat(recs.get(0).value()).isEqualTo(data);
     }
 
     @Test
@@ -78,13 +78,4 @@ final class ByteArrayTransformerTest {
 
         assertThat(records).hasSize(0);
     }
-
-//    @Test
-//    void testGetValueBytes() {
-//        final byte[] record = { 1, 2, 3 };
-//        final byte[] result = (byte[]) byteArrayTransformer.getValueData(record, TEST_TOPIC, sourceCommonConfig)
-//                .value();
-//
-//        assertThat(result).containsExactlyInAnyOrder(record);
-//    }
 }
