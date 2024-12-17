@@ -17,12 +17,15 @@
 package io.aiven.kafka.connect.s3.source.config;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Objects;
+import java.util.Random;
 
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryMode;
+import software.amazon.awssdk.retries.api.internal.backoff.ExponentialDelayWithJitter;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
@@ -32,11 +35,9 @@ public class S3ClientFactory {
 
     public S3Client createAmazonS3Client(final S3SourceConfig config) {
 
-        // EndpointConfiguration is no longer used in SDK 2.X
-        // TODO Review back off strategy
-        // final BackoffStrategy backoffStrategy =
-        // BackoffStrategy.exponentialDelayWithoutJitter(Duration.ofMillis(Math.toIntExact(config.getS3RetryBackoffDelayMs())),
-        // Duration.ofMillis(Math.toIntExact(config.getS3RetryBackoffMaxDelayMs())));
+        final ExponentialDelayWithJitter backoffStrategy = new ExponentialDelayWithJitter(Random::new,
+                Duration.ofMillis(Math.toIntExact(config.getS3RetryBackoffDelayMs())),
+                Duration.ofMillis(Math.toIntExact(config.getS3RetryBackoffMaxDelayMs())));
 
         final ClientOverrideConfiguration clientOverrideConfiguration = ClientOverrideConfiguration.builder()
                 .retryStrategy(RetryMode.STANDARD)
@@ -44,6 +45,7 @@ public class S3ClientFactory {
         if (Objects.isNull(config.getAwsS3EndPoint())) {
             return S3Client.builder()
                     .overrideConfiguration(clientOverrideConfiguration)
+                    .overrideConfiguration(o -> o.retryStrategy(r -> r.backoffStrategy(backoffStrategy)))
                     .region(config.getAwsS3Region())
                     .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
                     .build();
