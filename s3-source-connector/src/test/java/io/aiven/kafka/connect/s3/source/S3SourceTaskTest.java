@@ -22,8 +22,11 @@ import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_T
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static software.amazon.awssdk.http.SdkHttpConfigurationOption.TRUST_ALL_CERTIFICATES;
 
 import java.lang.reflect.Field;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,15 +42,12 @@ import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import io.findify.s3mock.S3Mock;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -57,6 +57,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.retry.RetryMode;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.utils.AttributeMap;
 
 @ExtendWith(MockitoExtension.class)
 final class S3SourceTaskTest {
@@ -66,9 +72,10 @@ final class S3SourceTaskTest {
 
     private static BucketAccessor testBucketAccessor;
     private static final String TEST_BUCKET = "test-bucket";
-
+    // TODO S3Mock has not been maintained in 4 years
+    // Adobe have an alternative we can move to.
     private static S3Mock s3Api;
-    private static AmazonS3 s3Client;
+    private static S3Client s3Client;
 
     private static Map<String, String> commonProperties;
 
@@ -79,7 +86,7 @@ final class S3SourceTaskTest {
     private OffsetStorageReader mockedOffsetStorageReader;
 
     @BeforeAll
-    public static void setUpClass() {
+    public static void setUpClass() throws URISyntaxException {
         final int s3Port = RANDOM.nextInt(10_000) + 10_000;
 
         s3Api = new S3Mock.Builder().withPort(s3Port).withInMemoryBackend().build();
@@ -90,17 +97,21 @@ final class S3SourceTaskTest {
                 S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET, S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG,
                 "http://localhost:" + s3Port, S3ConfigFragment.AWS_S3_REGION_CONFIG, "us-west-2");
 
-        final AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
-        final BasicAWSCredentials awsCreds = new BasicAWSCredentials(
-                commonProperties.get(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG),
-                commonProperties.get(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG));
-        builder.withCredentials(new AWSStaticCredentialsProvider(awsCreds));
-        builder.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                commonProperties.get(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG),
-                commonProperties.get(S3ConfigFragment.AWS_S3_REGION_CONFIG)));
-        builder.withPathStyleAccessEnabled(true);
+        final AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
+        final S3SourceConfig config = new S3SourceConfig(commonProperties);
+        final ClientOverrideConfiguration clientOverrideConfiguration = ClientOverrideConfiguration.builder()
+                .retryStrategy(RetryMode.STANDARD)
+                .build();
 
-        s3Client = builder.build();
+        s3Client = S3Client.builder()
+                .overrideConfiguration(clientOverrideConfiguration)
+                .region(config.getAwsS3Region())
+                .endpointOverride(URI.create(config.getAwsS3EndPoint()))
+                .httpClient(UrlConnectionHttpClient.builder()
+                        .buildWithDefaults(AttributeMap.builder().put(TRUST_ALL_CERTIFICATES, Boolean.TRUE).build()))
+                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                .build();
 
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET);
         testBucketAccessor.createBucket();
@@ -114,14 +125,14 @@ final class S3SourceTaskTest {
     @BeforeEach
     public void setUp() {
         properties = new HashMap<>(commonProperties);
-        s3Client.createBucket(TEST_BUCKET);
+        s3Client.createBucket(create -> create.bucket(TEST_BUCKET).build());
         mockedSourceTaskContext = mock(SourceTaskContext.class);
         mockedOffsetStorageReader = mock(OffsetStorageReader.class);
     }
 
     @AfterEach
     public void tearDown() {
-        s3Client.deleteBucket(TEST_BUCKET);
+        s3Client.deleteBucket(delete -> delete.bucket(TEST_BUCKET).build());
     }
 
     @Test

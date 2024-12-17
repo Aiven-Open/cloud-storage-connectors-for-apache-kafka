@@ -38,7 +38,6 @@ import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,12 +63,10 @@ final class SourceRecordIteratorTest {
 
         final String key = "topic-00001-abc123.txt";
 
-        // Mock S3Object and InputStream
-        try (S3Object mockS3Object = mock(S3Object.class);
-                S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
-                        null);) {
-            when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
-            when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
+        // Mock InputStream
+        try (S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
+                null);) {
+            when(mockSourceApiClient.getObject(anyString())).thenReturn(() -> mockInputStream);
 
             when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
                     .thenReturn(Stream.of(new Object()));
@@ -98,12 +95,10 @@ final class SourceRecordIteratorTest {
 
         final String key = "topic-00001-abc123.txt";
 
-        // Mock S3Object and InputStream
-        try (S3Object mockS3Object = mock(S3Object.class);
-                S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
-                        null);) {
-            when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
-            when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
+        // Mock InputStream
+        try (S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
+                null);) {
+            when(mockSourceApiClient.getObject(anyString())).thenReturn(() -> mockInputStream);
 
             // With ByteArrayTransformer
             mockTransformer = mock(ByteArrayTransformer.class);

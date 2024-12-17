@@ -27,9 +27,9 @@ import java.util.HashMap;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
-import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.regions.Region;
 
 final class S3SourceConfigTest {
     @Test
@@ -53,11 +53,11 @@ final class S3SourceConfigTest {
         final var conf = new S3SourceConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.accessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.secretAccessKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
-        assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion("us-east-1"));
+        assertThat(conf.getAwsS3Region()).isEqualTo(Region.of("us-east-1"));
 
         assertThat(conf.getInputFormat()).isEqualTo(InputFormat.AVRO);
         assertThat(conf.getTargetTopics()).isEqualTo("testtopic");
