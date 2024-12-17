@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.common.source.input;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;

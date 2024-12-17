@@ -45,7 +45,7 @@ public final class TransformerFactory {
      * @param inputFormatEnum the format to get.
      * @return the Transformer for the format.
      */
-    static Transformer getTransformer(InputFormat inputFormatEnum) {
+    public static Transformer getTransformer(InputFormat inputFormatEnum) {
         switch (inputFormatEnum) {
             case AVRO :
                 return new AvroTransformer(new AvroData(CACHE_SIZE));

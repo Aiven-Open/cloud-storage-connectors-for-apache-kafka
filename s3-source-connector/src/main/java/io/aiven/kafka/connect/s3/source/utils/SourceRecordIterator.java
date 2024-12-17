@@ -103,7 +103,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     private Iterator<S3SourceRecord> getS3SourceRecordIterator(S3Object s3Object) {
         Optional<SchemaAndValue> key =Optional.of(new SchemaAndValue(transformer.getKeySchema(),s3Object.getKey().getBytes(StandardCharsets.UTF_8)));
-        return transformer.getRecords(s3Object::getObjectContent, offsetManagerEntry)
+        return transformer.getRecords(s3Object::getObjectContent, offsetManagerEntry, s3SourceConfig)
                 .map(value -> new S3SourceRecord(offsetManagerEntry, key, value))
                 .iterator();
     }

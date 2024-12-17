@@ -37,9 +37,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
+import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.Converter;
@@ -136,13 +138,6 @@ final class S3SourceTaskTest {
         final S3SourceTask s3SourceTask = new S3SourceTask();
         startSourceTask(s3SourceTask);
 
-        final Optional<Converter> keyConverter = s3SourceTask.getKeyConverter();
-        assertThat(keyConverter).isPresent();
-        assertThat(keyConverter.get()).isInstanceOf(ByteArrayConverter.class);
-
-        final Converter valueConverter = s3SourceTask.getValueConverter();
-        assertThat(valueConverter).isInstanceOf(ByteArrayConverter.class);
-
         final Transformer transformer = s3SourceTask.getTransformer();
         assertThat(transformer).isInstanceOf(ByteArrayTransformer.class);
 
@@ -181,7 +176,7 @@ final class S3SourceTaskTest {
 
     private static S3SourceRecord getAivenS3SourceRecord() {
         S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
-        return new S3SourceRecord(entry, new byte[0], new byte[0]);
+        return new S3SourceRecord(entry, Optional.empty(), new SchemaAndValue(null, new byte[0]));
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
@@ -236,15 +231,25 @@ final class S3SourceTaskTest {
         assertThat(sourceRecord.key()).isEqualTo(s3Record.key());
         assertThat(sourceRecord.value()).isEqualTo(s3Record.value());
     }
+
+    private SchemaAndValue valueOf(Object value) {
+        return new SchemaAndValue(null, value);
+    }
+
+    private Optional<SchemaAndValue> keyOf(Object value) {
+        return value == null ? Optional.empty() : Optional.of(new SchemaAndValue(null, value));
+    }
+
+
     @Test
     void testExtractSourceRecordsWithRecords() throws ConnectException, InterruptedException {
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
         when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
         final List<S3SourceRecord> lst = new ArrayList<>();
         S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
-        lst.add(new S3SourceRecord(offsetManagerEntry, "Hello".getBytes(StandardCharsets.UTF_8), "Hello World".getBytes(StandardCharsets.UTF_8)));
+        lst.add(new S3SourceRecord(offsetManagerEntry, keyOf("Hello"), valueOf("Hello World")));
         offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY+"a", TOPIC, PARTITION);
-        lst.add(new S3SourceRecord(offsetManagerEntry, "Goodbye".getBytes(StandardCharsets.UTF_8), "Goodbye cruel World".getBytes(StandardCharsets.UTF_8)));
+        lst.add(new S3SourceRecord(offsetManagerEntry, keyOf("Goodbye"), valueOf("Goodbye cruel World")));
 
         final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
 
@@ -263,9 +268,9 @@ final class S3SourceTaskTest {
         when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
         final List<S3SourceRecord> lst = new ArrayList<>();
         S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
-        lst.add(new S3SourceRecord(offsetManagerEntry, "Hello".getBytes(StandardCharsets.UTF_8), "Hello World".getBytes(StandardCharsets.UTF_8)));
+        lst.add(new S3SourceRecord(offsetManagerEntry, keyOf("Hello"), valueOf("Hello World")));
         offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY+"a", TOPIC, PARTITION);
-        lst.add(new S3SourceRecord(offsetManagerEntry, "Goodbye".getBytes(StandardCharsets.UTF_8), "Goodbye cruel World".getBytes(StandardCharsets.UTF_8)));
+        lst.add(new S3SourceRecord(offsetManagerEntry, keyOf("Goodbye"), valueOf("Goodbye cruel World")));
 
         final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
 

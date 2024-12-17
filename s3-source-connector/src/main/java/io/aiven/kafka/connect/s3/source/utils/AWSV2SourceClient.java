@@ -31,12 +31,16 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.collections4.IteratorUtils;
 import org.codehaus.plexus.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Called AWSV2SourceClient as this source client implements the V2 version of the aws client library. Handles all calls
  * and authentication to AWS and returns useable objects to the SourceRecordIterator.
  */
 public class AWSV2SourceClient {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AWSV2SourceClient.class);
 
     public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
@@ -46,6 +50,9 @@ public class AWSV2SourceClient {
     private Predicate<S3ObjectSummary> filterPredicate = summary -> summary.getSize() > 0;
     private final Set<String> failedObjectKeys;
 
+    private final int maxTasks;
+    private final int taskId;
+
     /**
      * @param s3SourceConfig
      *            configuration for Source connector
@@ -53,11 +60,7 @@ public class AWSV2SourceClient {
      *            all objectKeys which have already been tried but have been unable to process.
      */
     public AWSV2SourceClient(final S3SourceConfig s3SourceConfig, final Set<String> failedObjectKeys) {
-        this.s3SourceConfig = s3SourceConfig;
-        final S3ClientFactory s3ClientFactory = new S3ClientFactory();
-        this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
-        this.bucketName = s3SourceConfig.getAwsS3BucketName();
-        this.failedObjectKeys = new HashSet<>(failedObjectKeys);
+        this(new S3ClientFactory().createAmazonS3Client(s3SourceConfig), s3SourceConfig, failedObjectKeys);
     }
 
     /**
@@ -76,6 +79,25 @@ public class AWSV2SourceClient {
         this.s3Client = s3Client;
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
+
+        int maxTasks;
+        try {
+            maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
+        } catch (NullPointerException | NumberFormatException e) {
+            LOGGER.warn("Invalid tasks.max: {}", e.getMessage());
+            LOGGER.info("Setting tasks.max to 1");
+            maxTasks = 1;
+        }
+        this.maxTasks = maxTasks;
+        int taskId;
+        try {
+            taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
+        } catch (NullPointerException | NumberFormatException e) {
+            LOGGER.warn("Invalid task.id: {}", e.getMessage());
+            LOGGER.info("Setting task.id to 0");
+            taskId = 0;
+        }
+        this.taskId = taskId;
     }
 
     public Iterator<S3Object> getIteratorOfObjects(final String startToken) {
@@ -91,7 +113,7 @@ public class AWSV2SourceClient {
             request.withPrefix(s3SourceConfig.getAwsS3Prefix());
         }
 
-        Predicate<S3ObjectSummary> filter = filterPredicate.and(objectSummary -> assignObjectToTask(objectSummary.getKey()))
+        Predicate<S3ObjectSummary> filter = filterPredicate.and(this::checkTaskAssignment)
                 .and(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()));
         Iterator<S3ObjectSummary> summaryIterator = IteratorUtils.filteredIterator(new S3ObjectSummaryIterator(s3Client, request), filter::test);
         Iterator<S3Object> objectIterator = IteratorUtils.transformedIterator(summaryIterator, s3ObjectSummary -> getObject(s3ObjectSummary.getKey()));
@@ -110,13 +132,9 @@ public class AWSV2SourceClient {
         filterPredicate = predicate;
     }
 
-    private boolean assignObjectToTask(final String objectKey) {
-        final int maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
-        final int taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
-        final int taskAssignment = Math.floorMod(objectKey.hashCode(), maxTasks);
-        return taskAssignment == taskId;
+    private boolean checkTaskAssignment(S3ObjectSummary summary) {
+        return  taskId == Math.floorMod(summary.getKey().hashCode(), maxTasks);
     }
-
     public void shutdown() {
         s3Client.shutdown();
     }

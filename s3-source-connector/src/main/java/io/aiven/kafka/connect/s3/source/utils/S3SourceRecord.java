@@ -38,8 +38,12 @@ public final class S3SourceRecord {
         this.recordValue = valueData;
     }
 
-    private Object key() {
+    public Object key() {
         return recordKey.map(SchemaAndValue::value).orElse(null);
+    }
+
+    public SchemaAndValue value() {
+        return recordValue;
     }
 
     public S3OffsetManagerEntry getOffsetManagerEntry() {

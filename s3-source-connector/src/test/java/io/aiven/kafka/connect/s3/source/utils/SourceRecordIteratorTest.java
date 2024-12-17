@@ -134,10 +134,6 @@ final class SourceRecordIteratorTest {
     private class TestingTransformer extends Transformer {
 
         private final Logger LOGGER = LoggerFactory.getLogger(TestingTransformer.class);
-        @Override
-        public void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig) {
-
-        }
 
         @Override
         public Schema getKeySchema() {

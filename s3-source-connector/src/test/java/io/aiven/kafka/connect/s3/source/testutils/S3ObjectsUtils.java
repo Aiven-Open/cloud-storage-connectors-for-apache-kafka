@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.s3.source.testutils;
 
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.amazonaws.services.s3.AmazonS3;
@@ -33,6 +34,8 @@ public final class S3ObjectsUtils {
     private S3ObjectsUtils() {
         // do not instantiate.
     }
+
+    public static final ListObjectsV2Result LAST_RESULT = createListObjectsV2Result(Collections.EMPTY_LIST, null);
 
     /**
      * Create a ListObjectV2Result from a list of summaries and an next token.
@@ -128,5 +131,19 @@ public final class S3ObjectsUtils {
         for (final S3ObjectSummary summary : result.getObjectSummaries()) {
             when(s3Client.getObject(summary.getBucketName(), summary.getKey())).thenReturn(createS3Object(summary));
         }
+    }
+
+    /**
+     * Add the result the S3Client so that it will return them.
+     *
+     * @param s3Client
+     *            the mock S3Client to add result to.
+     * @param summary
+     *            the S3ObjectSummary to place in the S3Client.
+     */
+    public static void populateS3Client(final AmazonS3 s3Client, final S3ObjectSummary summary) {
+        ListObjectsV2Result result = createListObjectsV2Result(List.of(summary), null);
+        when(s3Client.listObjectsV2(summary.getBucketName())).thenReturn(result).thenReturn(LAST_RESULT);
+        populateS3Client(s3Client, result);
     }
 }
