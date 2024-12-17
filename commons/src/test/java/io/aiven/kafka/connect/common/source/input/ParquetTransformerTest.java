@@ -41,6 +41,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.data.Struct;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,24 +61,31 @@ final class ParquetTransformerTest {
     @BeforeEach
     public void setUp() {
         parquetTransformer = new ParquetTransformer(new AvroData(100));
-        when(offsetManagerEntry.getTopic()).thenReturn("topic");
-        when(offsetManagerEntry.getPartition()).thenReturn(0);
+    }
+
+    private void configureOffsetManagerEntry() {
+         when(offsetManagerEntry.getTopic()).thenReturn("topic");
+         when(offsetManagerEntry.getPartition()).thenReturn(0);
     }
 
     @Test
     void testHandleValueDataWithZeroBytes() {
+        configureOffsetManagerEntry();
         final byte[] mockParquetData = new byte[0];
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-
 
         final Stream<SchemaAndValue> recs = parquetTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
 
         assertThat(recs).isEmpty();
     }
 
+    private String extractName(SchemaAndValue record) {
+        return ((Struct)record.value()).get("name").toString();
+    }
     @Test
     void testGetRecordsWithValidData() throws Exception {
+        configureOffsetManagerEntry();
         final byte[] mockParquetData = generateMockParquetData();
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
@@ -88,13 +96,14 @@ final class ParquetTransformerTest {
                 .collect(Collectors.toList());
 
         assertThat(records).hasSize(100);
-        assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
+        assertThat(records).extracting(this::extractName)
                 .contains("name1")
                 .contains("name2");
     }
 
     @Test
     void testGetRecordsWithValidDataSkipFew() throws Exception {
+        configureOffsetManagerEntry();
         when(offsetManagerEntry.skipRecords()).thenReturn(25L);
         final byte[] mockParquetData = generateMockParquetData();
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
@@ -106,7 +115,7 @@ final class ParquetTransformerTest {
                 .collect(Collectors.toList());
 
         assertThat(records).hasSize(75);
-        assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
+        assertThat(records).extracting(this::extractName)
                 .doesNotContain("name1")
                 .doesNotContain("name2")
                 .doesNotContain("name24")
@@ -117,6 +126,7 @@ final class ParquetTransformerTest {
 
     @Test
     void testGetRecordsWithInvalidData() {
+        configureOffsetManagerEntry();
         final byte[] invalidData = "invalid data".getBytes(StandardCharsets.UTF_8);
         final InputStream inputStream = new ByteArrayInputStream(invalidData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
@@ -154,6 +164,7 @@ final class ParquetTransformerTest {
 
     @Test
     void testIOExceptionDuringDataCopy() throws IOException {
+        configureOffsetManagerEntry();
         try (InputStream inputStreamMock = mock(InputStream.class)) {
             when(inputStreamMock.read(any(byte[].class))).thenThrow(new IOException("Test IOException during copy"));
 

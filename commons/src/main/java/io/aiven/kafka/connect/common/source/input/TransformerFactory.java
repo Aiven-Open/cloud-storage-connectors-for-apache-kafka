@@ -37,7 +37,15 @@ public final class TransformerFactory {
         // hidden
     }
     public static Transformer getTransformer(final SourceCommonConfig sourceConfig) {
-        final InputFormat inputFormatEnum = new SchemaRegistryFragment(sourceConfig).getInputFormat();
+        return getTransformer(new SchemaRegistryFragment(sourceConfig).getInputFormat());
+    }
+
+    /**
+     * Package private getTransformer for testing purposes.
+     * @param inputFormatEnum the format to get.
+     * @return the Transformer for the format.
+     */
+    static Transformer getTransformer(InputFormat inputFormatEnum) {
         switch (inputFormatEnum) {
             case AVRO :
                 return new AvroTransformer(new AvroData(CACHE_SIZE));
@@ -45,19 +53,13 @@ public final class TransformerFactory {
                 return new ParquetTransformer(new AvroData(CACHE_SIZE));
             case JSONL :
                 final JsonConverter jsonConverter = new JsonConverter();
-                configureJsonConverter(jsonConverter);
+                jsonConverter.configure(Map.of(SCHEMAS_ENABLE, "false"), false);
                 return new JsonTransformer(jsonConverter);
             case BYTES :
                 return new ByteArrayTransformer();
             default :
                 throw new IllegalArgumentException(
-                        "Unknown input format in configuration: " + sourceConfig.getString(INPUT_FORMAT_KEY));
+                        "Unknown input format in configuration: " + inputFormatEnum);
         }
-    }
-
-    private static void configureJsonConverter(final JsonConverter jsonConverter) {
-        final Map<String, String> config = new HashMap<>();
-        config.put(SCHEMAS_ENABLE, "false");
-        jsonConverter.configure(config, false);
     }
 }

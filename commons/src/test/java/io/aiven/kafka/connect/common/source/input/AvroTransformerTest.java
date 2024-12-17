@@ -44,6 +44,7 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.data.Struct;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -101,12 +102,11 @@ final class AvroTransformerTest {
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
         final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
-
-        final List<Object> recs = records.collect(Collectors.toList());
+        final List<SchemaAndValue> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(15);
         // get first rec
-        assertThat(((GenericRecord) recs.get(0)).get("message").toString())
-                .isEqualTo("Hello, Kafka Connect S3 Source! object 5");
+        Struct o = (Struct) recs.get(0).value();
+        assertThat(o.get("message")).isEqualTo("Hello, Kafka Connect S3 Source! object 5");
     }
 
     @Test

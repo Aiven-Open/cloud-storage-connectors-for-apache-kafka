@@ -95,18 +95,19 @@ class TransformerStreamingTest {
 
     static Stream<Arguments> testData() throws IOException {
         final List<Arguments> lst = new ArrayList<>();
-        final AvroData avroData = new AvroData(100);
-        lst.add(Arguments.of(new AvroTransformer(avroData), AvroTransformerTest.generateMockAvroData(100).toByteArray(),
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.AVRO), AvroTransformerTest.generateMockAvroData(100).toByteArray(),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
-        lst.add(Arguments.of(new ByteArrayTransformer(), "Hello World".getBytes(StandardCharsets.UTF_8),
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.BYTES), "Hello World".getBytes(StandardCharsets.UTF_8),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 1));
-        lst.add(Arguments.of(new JsonTransformer(new JsonConverter()),
+        JsonConverter jsonConverter = new JsonConverter();
+
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.JSONL),
                 JsonTransformerTest.getJsonRecs(100).getBytes(StandardCharsets.UTF_8),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
-        lst.add(Arguments.of(new ParquetTransformer(avroData), ParquetTransformerTest.generateMockParquetData(),
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.PARQUET), ParquetTransformerTest.generateMockParquetData(),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
         return lst.stream();

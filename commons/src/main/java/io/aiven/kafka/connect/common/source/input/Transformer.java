@@ -125,7 +125,7 @@ public abstract class Transformer {
         }
 
         /**
-         * Allows modification of input stream. Called immediatly after the input stream is opened. Implementations may
+         * Allows modification of input stream. Called immediately after the input stream is opened. Implementations may
          * modify the type of input stream by wrapping it with a specific implementation, or may create Readers from the
          * input stream. The modified input stream must be returned. If a Reader or similar class is created from the
          * input stream the input stream must be returned.
