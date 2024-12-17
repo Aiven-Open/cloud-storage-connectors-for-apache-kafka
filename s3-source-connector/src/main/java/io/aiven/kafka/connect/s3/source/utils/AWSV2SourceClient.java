@@ -18,11 +18,10 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.ClosableIterator;
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -79,7 +78,7 @@ public class AWSV2SourceClient {
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
     }
 
-    public Iterator<S3ObjectSummary> getListOfObjectKeys(final String startToken) {
+    public Iterator<S3Object> getIteratorOfObjects(final String startToken) {
 
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
                 .withMaxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR);
@@ -94,7 +93,9 @@ public class AWSV2SourceClient {
 
         Predicate<S3ObjectSummary> filter = filterPredicate.and(objectSummary -> assignObjectToTask(objectSummary.getKey()))
                 .and(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()));
-        return IteratorUtils.filteredIterator(new S3ObjectSummaryIterator(s3Client, request), filter::test);
+        Iterator<S3ObjectSummary> summaryIterator = IteratorUtils.filteredIterator(new S3ObjectSummaryIterator(s3Client, request), filter::test);
+        Iterator<S3Object> objectIterator = IteratorUtils.transformedIterator(summaryIterator, s3ObjectSummary -> getObject(s3ObjectSummary.getKey()));
+        return ClosableIterator.wrap(objectIterator);
     }
 
     public S3Object getObject(final String objectKey) {

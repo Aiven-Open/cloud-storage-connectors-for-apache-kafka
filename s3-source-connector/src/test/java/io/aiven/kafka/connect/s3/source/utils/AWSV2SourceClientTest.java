@@ -32,12 +32,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.amazonaws.services.s3.model.S3Object;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import io.aiven.kafka.connect.s3.source.testutils.S3ObjectsUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -69,17 +71,19 @@ class AWSV2SourceClientTest {
         final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(Collections.emptyList(), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        final Iterator<S3Object> summaries = awsv2SourceClient.getIteratorOfObjects(null);
         assertThat(summaries).isExhausted();
     }
 
     @ParameterizedTest
     @CsvSource({ "1, 0" })
-    void testFetchObjectSummariesWithOneObjectWithBasicConfig(final int maxTasks, final int taskId) {
+    void testFetchOneObjectWithBasicConfig(final int maxTasks, final int taskId) {
         final String objectKey = "any-key";
 
+
+        S3ObjectsUtils.populateS3Client(s3Client, );
         initializeWithTaskConfigs(maxTasks, taskId);
-        final Iterator<String> summaries = getS3ObjectKeysIterator(objectKey);
+        final Iterator<S3Object> summaries = getS3ObjectKeysIterator(objectKey);
         assertThat(summaries).hasNext();
     }
 
@@ -88,7 +92,7 @@ class AWSV2SourceClientTest {
     void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdAssigned(final int maxTasks, final int taskId,
             final String objectKey) {
         initializeWithTaskConfigs(maxTasks, taskId);
-        final Iterator<String> summaries = getS3ObjectKeysIterator(objectKey);
+        final Iterator<S3Object> summaries = getS3ObjectKeysIterator(objectKey);
         assertThat(summaries).hasNext();
     }
 
@@ -98,7 +102,7 @@ class AWSV2SourceClientTest {
     void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdUnassigned(final int maxTasks, final int taskId,
             final String objectKey) {
         initializeWithTaskConfigs(maxTasks, taskId);
-        final Iterator<String> summaries = getS3ObjectKeysIterator(objectKey);
+        final Iterator<S3Object> summaries = getS3ObjectKeysIterator(objectKey);
 
         assertThat(summaries).isExhausted();
     }
@@ -110,11 +114,11 @@ class AWSV2SourceClientTest {
         final ListObjectsV2Result listObjectsV2Result = getListObjectsV2Result();
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        final Iterator<S3Object> summaries = awsv2SourceClient.getIteratorOfObjects(null);
 
         // assigned 1 object to taskid
         assertThat(summaries).hasNext();
-        assertThat(summaries.next()).isNotBlank();
+        assertThat(summaries.next()).isNotNull();
         assertThat(summaries).isExhausted();
     }
 
@@ -131,7 +135,7 @@ class AWSV2SourceClientTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        final Iterator<S3Object> summaries = awsv2SourceClient.getIteratorOfObjects(null);
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
         assertThat(summaries.next()).isNotNull();
         assertThat(summaries).isExhausted();
@@ -153,7 +157,7 @@ class AWSV2SourceClientTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        final Iterator<S3Object> summaries = awsv2SourceClient.getIteratorOfObjects(null);
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
 
         assertThat(summaries.next()).isNotNull();
@@ -186,7 +190,7 @@ class AWSV2SourceClientTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(startAfter);
+        final Iterator<S3Object> summaries = awsv2SourceClient.getIteratorOfObjects(startAfter);
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
 
         assertThat(summaries.next()).isNotNull();
@@ -219,13 +223,13 @@ class AWSV2SourceClientTest {
         return summary;
     }
 
-    private Iterator<String> getS3ObjectKeysIterator(final String objectKey) {
+    private Iterator<S3Object> getS3ObjectKeysIterator(final String objectKey) {
         final S3ObjectSummary objectSummary = createObjectSummary(1, objectKey);
         final ListObjectsV2Result listObjectsV2Result = createListObjectsV2Result(
                 Collections.singletonList(objectSummary), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        return awsv2SourceClient.getListOfObjectKeys(null);
+        return awsv2SourceClient.getIteratorOfObjects(null);
     }
 
     public void initializeWithTaskConfigs(final int maxTasks, final int taskId) {

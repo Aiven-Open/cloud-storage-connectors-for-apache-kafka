@@ -34,7 +34,7 @@ public abstract class Transformer<T> {
     public abstract void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
 
     public final Stream<T> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
+                                final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
 
         final StreamSpliterator<T> spliterator = createSpliterator(inputStreamIOSupplier, topic, topicPartition,
                 sourceConfig);
@@ -58,6 +58,12 @@ public abstract class Transformer<T> {
             String topic, int topicPartition, AbstractConfig sourceConfig);
 
     public abstract byte[] getValueBytes(T record, String topic, AbstractConfig sourceConfig);
+
+    public final Stream<byte[]> asStream(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
+                                         final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
+        return getRecords(inputStreamIOSupplier, topic, topicPartition, sourceConfig,  skipRecords)
+                .map(t -> getValueBytes(t, topic, sourceConfig));
+    }
 
     /**
      * A Spliterator that performs various checks on the opening/closing of the input stream.

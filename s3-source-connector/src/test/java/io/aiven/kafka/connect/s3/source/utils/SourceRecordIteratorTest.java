@@ -18,11 +18,8 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -32,8 +29,9 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
-import java.util.stream.Stream;
+import java.util.function.Consumer;
 
+import io.aiven.kafka.connect.common.ClosableIterator;
 import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
@@ -48,6 +46,8 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 final class SourceRecordIteratorTest {
@@ -85,14 +85,17 @@ final class SourceRecordIteratorTest {
             when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(new ByteArrayInputStream("This is a test".getBytes(StandardCharsets.UTF_8)), null));
             when(offsetStorageReader.offset(any())).thenReturn(null);
-            when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.emptyIterator());
+            when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(ClosableIterator.wrap(Collections.emptyIterator()));
 
             SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer,
                     mockSourceApiClient);
 
             assertThat(iterator).isExhausted();
 
-            when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.singletonList(key).listIterator());
+            S3Object result = new S3Object();
+            result.setKey(key);
+
+            when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.singletonList(result).listIterator());
 
             iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
 
@@ -112,11 +115,13 @@ final class SourceRecordIteratorTest {
 
             when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(new ByteArrayInputStream("This is a test".getBytes(StandardCharsets.UTF_8)), null));
-            when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.emptyIterator());
+            when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.emptyIterator());
             S3OffsetManagerEntry entry = new S3OffsetManagerEntry("BUCKET", key, "topic", 1);
             entry.incrementRecordCount();
             when(offsetStorageReader.offset(any())).thenReturn(entry.getProperties());
-            when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.singletonList(key).listIterator());
+            S3Object s3Object = new S3Object();
+            s3Object.setKey(key);
+            when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.singletonList(s3Object).listIterator());
 
             SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
 
@@ -124,29 +129,47 @@ final class SourceRecordIteratorTest {
         }
     }
 
-    private class TestingTransformer implements Transformer {
+    private class TestingTransformer extends Transformer<String> {
 
+        private final Logger LOGGER = LoggerFactory.getLogger(TestingTransformer.class);
         @Override
         public void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig) {
 
         }
 
         @Override
-        public Stream<Object> getRecords(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition, AbstractConfig sourceConfig, long skipRecords) {
-            try (InputStream inputStream = inputStreamIOSupplier.get();
-                 ByteArrayOutputStream baos = new ByteArrayOutputStream()
-            ) {
-                IOUtils.copy(inputStream, baos);
-                return Stream.of("Transformed: "+baos);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        protected StreamSpliterator<String> createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition, AbstractConfig sourceConfig) {
 
+                return new StreamSpliterator<String>(LOGGER, inputStreamIOSupplier) {
+                    @Override
+                    protected InputStream inputOpened(final InputStream input) {
+                        return input;
+                    }
+
+                    @Override
+                    protected void doClose() {
+                        // nothing to do.
+                    }
+
+                    @Override
+                    protected boolean doAdvance(final Consumer<? super String> action) {
+
+                        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                            IOUtils.copy(inputStream, baos);
+                            String result = "Transformed: " + baos;
+                            action.accept(result);
+                            return true;
+                        } catch (IOException e) {
+                            LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
+                            return false;
+                        }
+                    }
+                };
         }
 
         @Override
-        public byte[] getValueBytes(Object record, String topic, AbstractConfig sourceConfig) {
-            return ((String) record).getBytes(StandardCharsets.UTF_8);
+        public byte[] getValueBytes(String record, String topic, AbstractConfig sourceConfig) {
+            return record.getBytes(StandardCharsets.UTF_8);
         }
     }
 }
