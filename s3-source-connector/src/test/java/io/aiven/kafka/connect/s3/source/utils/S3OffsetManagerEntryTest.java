@@ -72,15 +72,14 @@ final class S3OffsetManagerEntryTest {
     }
 
     @Test
-    void getEntry() {
+    void testGetEntry() {
         final Map<String, Object> storedData = new HashMap<>();
         storedData.putAll(createPartitionMap());
         storedData.put("random_entry", 5L);
 
         when(offsetStorageReader.offset(any())).thenReturn(storedData);
 
-        S3OffsetManagerEntry keyEntry = newEntry();
-
+        final S3OffsetManagerEntry keyEntry = newEntry();
         final S3OffsetManagerEntry entry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties);
 
         assertThat(entry.getPartition()).isEqualTo(PARTITION);
@@ -104,8 +103,7 @@ final class S3OffsetManagerEntryTest {
 
     @Test
     void testUpdate() {
-
-        S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
+        final S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
         assertThat(entry.getRecordCount()).isEqualTo(0L);
         assertThat(entry.getProperty("random_entry")).isNull();
 

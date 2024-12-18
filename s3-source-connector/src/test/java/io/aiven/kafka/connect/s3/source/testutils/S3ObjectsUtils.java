@@ -30,12 +30,12 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
  * Standard utilities to create objects from S3 for testing.
  */
 public final class S3ObjectsUtils {
+    /** A moarker that makes the ObjectSummaryIterator return false for {@code hasNext()}.*/
+    public static final ListObjectsV2Result LAST_RESULT = createListObjectsV2Result(Collections.EMPTY_LIST, null);
 
     private S3ObjectsUtils() {
         // do not instantiate.
     }
-
-    public static final ListObjectsV2Result LAST_RESULT = createListObjectsV2Result(Collections.EMPTY_LIST, null);
 
     /**
      * Create a ListObjectV2Result from a list of summaries and an next token.
@@ -142,7 +142,7 @@ public final class S3ObjectsUtils {
      *            the S3ObjectSummary to place in the S3Client.
      */
     public static void populateS3Client(final AmazonS3 s3Client, final S3ObjectSummary summary) {
-        ListObjectsV2Result result = createListObjectsV2Result(List.of(summary), null);
+        final ListObjectsV2Result result = createListObjectsV2Result(List.of(summary), null);
         when(s3Client.listObjectsV2(summary.getBucketName())).thenReturn(result).thenReturn(LAST_RESULT);
         populateS3Client(s3Client, result);
     }

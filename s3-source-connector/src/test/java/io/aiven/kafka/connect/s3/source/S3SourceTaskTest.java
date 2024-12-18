@@ -20,13 +20,10 @@ import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
-import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -82,9 +79,6 @@ final class S3SourceTaskTest {
 
     private static Map<String, String> commonProperties;
 
-
-    private OffsetStorageReader mockedOffsetStorageReader;
-
     @BeforeAll
     public static void setUpClass() {
         final int s3Port = RANDOM.nextInt(10_000) + 10_000;
@@ -109,7 +103,7 @@ final class S3SourceTaskTest {
 
         s3Client = builder.build();
 
-        BucketAccessor testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET);
+        final BucketAccessor testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET);
         testBucketAccessor.createBucket();
     }
 
@@ -171,7 +165,7 @@ final class S3SourceTaskTest {
     }
 
     private static S3SourceRecord getAivenS3SourceRecord() {
-        S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
+        final S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
         return new S3SourceRecord(entry, Optional.empty(), new SchemaAndValue(null, new byte[0]));
     }
 
@@ -185,8 +179,8 @@ final class S3SourceTaskTest {
     }
 
     private void startSourceTask(final S3SourceTask s3SourceTask) {
-        SourceTaskContext mockedSourceTaskContext = mock(SourceTaskContext.class);
-        mockedOffsetStorageReader = mock(OffsetStorageReader.class);
+        final SourceTaskContext mockedSourceTaskContext = mock(SourceTaskContext.class);
+        final OffsetStorageReader mockedOffsetStorageReader = mock(OffsetStorageReader.class);
         when(mockedSourceTaskContext.offsetStorageReader()).thenReturn(mockedOffsetStorageReader);
         s3SourceTask.initialize(mockedSourceTaskContext);
 
@@ -207,7 +201,7 @@ final class S3SourceTaskTest {
     }
 
     @Test
-    void testExtractSourceRecordsWithEmptyIterator() throws InterruptedException {
+    void testExtractSourceRecordsWithEmptyIterator() {
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
         when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
         final Iterator<S3SourceRecord> sourceRecordIterator = Collections.emptyIterator();
@@ -219,26 +213,26 @@ final class S3SourceTaskTest {
         assertThat(results).isEmpty();
     }
 
-    private void assertEquals(S3SourceRecord s3Record, SourceRecord sourceRecord) {
+    private void assertEquals(final S3SourceRecord s3Record, final SourceRecord sourceRecord) {
         assertThat(sourceRecord).isNotNull();
-        S3OffsetManagerEntry offsetManagerEntry = s3Record.getOffsetManagerEntry();
+        final S3OffsetManagerEntry offsetManagerEntry = s3Record.getOffsetManagerEntry();
         assertThat(sourceRecord.sourcePartition()).isEqualTo(offsetManagerEntry.getManagerKey().getPartitionMap());
         assertThat(sourceRecord.sourceOffset()).isEqualTo(offsetManagerEntry.getProperties());
         assertThat(sourceRecord.key()).isEqualTo(s3Record.key());
         assertThat(sourceRecord.value()).isEqualTo(s3Record.value().value());
     }
 
-    private SchemaAndValue valueOf(Object value) {
+    private SchemaAndValue valueOf(final Object value) {
         return new SchemaAndValue(null, value);
     }
 
-    private Optional<SchemaAndValue> keyOf(Object value) {
+    private Optional<SchemaAndValue> keyOf(final Object value) {
         return value == null ? Optional.empty() : Optional.of(new SchemaAndValue(null, value));
     }
 
 
     @Test
-    void testExtractSourceRecordsWithRecords() throws ConnectException, InterruptedException {
+    void testExtractSourceRecordsWithRecords()  {
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
         when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
         final List<S3SourceRecord> lst = new ArrayList<>();
@@ -259,7 +253,7 @@ final class S3SourceTaskTest {
     }
 
     @Test
-    void testExtractSourceRecordsWhenConnectorStopped() throws InterruptedException {
+    void testExtractSourceRecordsWhenConnectorStopped() {
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
         when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
         final List<S3SourceRecord> lst = new ArrayList<>();
@@ -279,15 +273,15 @@ final class S3SourceTaskTest {
         assertThat(results).isEmpty();
     }
 
-    private static class TestingS3SourceTask extends S3SourceTask {
+    private static class TestingS3SourceTask extends S3SourceTask { // NOPMD not a test class
 
-        TestingS3SourceTask(Iterator<S3SourceRecord> realIterator) {
+        TestingS3SourceTask(final Iterator<S3SourceRecord> realIterator) {
             super();
             super.setSourceRecordIterator(realIterator);
         }
 
         @Override
-        protected void setSourceRecordIterator(Iterator<S3SourceRecord> iterator) {
+        protected void setSourceRecordIterator(final Iterator<S3SourceRecord> iterator) {
             // do nothing.
         }
     }

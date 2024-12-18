@@ -66,7 +66,7 @@ final class SourceRecordIteratorTest {
         when(mockConfig.getAwsS3BucketName()).thenReturn("BUCKET");
 
         offsetStorageReader = mock(OffsetStorageReader.class);
-        SourceTaskContext taskContext = mock(SourceTaskContext.class);
+        final SourceTaskContext taskContext = mock(SourceTaskContext.class);
         when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
         offsetManager = new OffsetManager<>(taskContext);
         transformer = new TestingTransformer();
@@ -87,7 +87,7 @@ final class SourceRecordIteratorTest {
 
         assertThat(iterator).isExhausted();
 
-        S3Object result = new S3Object();
+        final S3Object result = new S3Object();  // NOPMD closed during testing below.
         result.setKey(key);
         result.setObjectContent(new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8)));
 
@@ -96,7 +96,7 @@ final class SourceRecordIteratorTest {
         iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
 
         assertThat(iterator).hasNext();
-        S3SourceRecord sourceRecord = iterator.next();
+        final S3SourceRecord sourceRecord = iterator.next();
         assertThat(sourceRecord).isNotNull();
         assertThat(sourceRecord.value().value()).isEqualTo("Transformed: Hello World");
         assertThat(sourceRecord.getObjectKey()).isEqualTo(key);
@@ -113,22 +113,21 @@ final class SourceRecordIteratorTest {
         try (S3Object mockS3Object = mock(S3Object.class)) {
             when(mockS3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(new ByteArrayInputStream("This is a test".getBytes(StandardCharsets.UTF_8)), null));
             when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.emptyIterator());
-            S3OffsetManagerEntry entry = new S3OffsetManagerEntry("BUCKET", key, "topic", 1);
+            final S3OffsetManagerEntry entry = new S3OffsetManagerEntry("BUCKET", key, "topic", 1);
             entry.incrementRecordCount();
             when(offsetStorageReader.offset(any())).thenReturn(entry.getProperties());
-            S3Object s3Object = new S3Object();
+            final S3Object s3Object = new S3Object(); // NOPMD object closed below
             s3Object.setKey(key);
             when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.singletonList(s3Object).listIterator());
 
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
-
+            final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
             assertThat(iterator).isExhausted();
         }
     }
 
+    @SuppressWarnings("TestClassWithoutTestCases")
     private static class TestingTransformer extends Transformer {
-
-        private final Logger LOGGER = LoggerFactory.getLogger(TestingTransformer.class);
+        private final static Logger LOGGER = LoggerFactory.getLogger(TestingTransformer.class);
 
         @Override
         public Schema getKeySchema() {
@@ -136,9 +135,9 @@ final class SourceRecordIteratorTest {
         }
 
         @Override
-        protected StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition, AbstractConfig sourceConfig) {
+        protected StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
 
-                return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
+                return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
                     private boolean wasRead;
                     @Override
                     protected InputStream inputOpened(final InputStream input) {
@@ -157,11 +156,11 @@ final class SourceRecordIteratorTest {
                         }
                         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                             IOUtils.copy(inputStream, baos);
-                            String result = "Transformed: " + baos;
+                            final String result = "Transformed: " + baos;
                             action.accept(new SchemaAndValue(null, result));
                             wasRead = true;
                             return true;
-                        } catch (RuntimeException | IOException e) {
+                        } catch (RuntimeException | IOException e) { // NOPMD must catch runtime exception here.
                             LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
                             wasRead = true;
                             return false;

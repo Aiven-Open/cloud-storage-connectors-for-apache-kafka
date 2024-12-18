@@ -115,7 +115,8 @@ final class OffsetManagerTest {
         assertThat(result.getProperty("test2")).isEqualTo("a thing");
     }
 
-    public static class TestingOffsetManagerEntry implements OffsetManager.OffsetManagerEntry<TestingOffsetManagerEntry> { // NOPMD is not a test class
+    @SuppressWarnings("TestClassWithoutTestCases")
+    public static class TestingOffsetManagerEntry implements OffsetManager.OffsetManagerEntry<TestingOffsetManagerEntry> {
         public Map<String, Object> data;
 
         public int recordCount;
