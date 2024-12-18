@@ -115,8 +115,8 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      * Increment the record count and return the result.
      * @return the new record count value.
      */
-    public long incrementRecordCount() {
-        return recordCount += 1;
+    public void incrementRecordCount() {
+        recordCount++;
     }
 
     /**

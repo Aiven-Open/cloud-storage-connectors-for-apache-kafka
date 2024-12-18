@@ -21,41 +21,45 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.function.Consumer;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.json.JsonConverter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
 import org.codehaus.plexus.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Transformer to read the input file line by line and process each line as a Json object.
+ */
 public class JsonTransformer extends Transformer {
-
+    /** The json converter to read with */
     private final JsonConverter jsonConverter;
-
+    /** The logger for this transform */
     private static final Logger LOGGER = LoggerFactory.getLogger(JsonTransformer.class);
 
-    final ObjectMapper objectMapper = new ObjectMapper();
-
+    /**
+     * Constructs a Json transform with the specified converter.
+     * @param jsonConverter the Json converter to read with.
+     */
     JsonTransformer(final JsonConverter jsonConverter) {
         super();
         this.jsonConverter = jsonConverter;
     }
 
+    @Override
     public Schema getKeySchema() {
         return null;
     }
 
     @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
-        return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
             BufferedReader reader;
 
             @Override
@@ -88,7 +92,7 @@ public class JsonTransformer extends Transformer {
                         }
                     }
                     line = line.trim();
-                    action.accept( jsonConverter.toConnectData(topic, line.getBytes(StandardCharsets.UTF_8)));
+                    action.accept( jsonConverter.toConnectData(offsetManagerEntry.getTopic(), line.getBytes(StandardCharsets.UTF_8)));
                     return true;
                 } catch (IOException e) {
                     LOGGER.error("Error reading input stream: {}", e.getMessage(), e);

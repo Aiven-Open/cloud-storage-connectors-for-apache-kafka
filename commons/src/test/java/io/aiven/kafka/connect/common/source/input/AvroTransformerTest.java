@@ -16,9 +16,9 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.offset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -27,9 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -62,16 +60,10 @@ final class AvroTransformerTest {
     @Mock
     private OffsetManager.OffsetManagerEntry<?> offsetManagerEntry;
 
-    private Map<String, String> config;
-
 
     @BeforeEach
     void setUp() {
         avroTransformer = new AvroTransformer(new AvroData(100));
-        config = new HashMap<>();
-        when(offsetManagerEntry.getTopic()).thenReturn("topic");
-        when(offsetManagerEntry.getPartition()).thenReturn(0);
-
     }
 
     @Test
@@ -81,6 +73,7 @@ final class AvroTransformerTest {
         final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
 
         final List<Object> recs = records.collect(Collectors.toList());
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
         assertThat(recs).isEmpty();
     }
 
@@ -90,8 +83,8 @@ final class AvroTransformerTest {
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
         final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
-
         final List<Object> recs = records.collect(Collectors.toList());
+        verify(offsetManagerEntry, times(25)).incrementRecordCount();
         assertThat(recs).hasSize(25);
     }
 
@@ -103,10 +96,11 @@ final class AvroTransformerTest {
 
         final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
         final List<SchemaAndValue> recs = records.collect(Collectors.toList());
+        verify(offsetManagerEntry, times(20)).incrementRecordCount();
         assertThat(recs).hasSize(15);
         // get first rec
-        Struct o = (Struct) recs.get(0).value();
-        assertThat(o.get("message")).isEqualTo("Hello, Kafka Connect S3 Source! object 5");
+        final Struct value = (Struct) recs.get(0).value();
+        assertThat(value.get("message")).isEqualTo("Hello, Kafka Connect S3 Source! object 5");
     }
 
     @Test
@@ -116,8 +110,8 @@ final class AvroTransformerTest {
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
         final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
-
         final List<Object> recs = records.collect(Collectors.toList());
+        verify(offsetManagerEntry, times(20)).incrementRecordCount();
         assertThat(recs).hasSize(0);
     }
 

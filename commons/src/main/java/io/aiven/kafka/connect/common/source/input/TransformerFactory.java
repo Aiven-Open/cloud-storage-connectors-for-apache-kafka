@@ -16,37 +16,32 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.connect.json.JsonConverter;
 
-import io.aiven.kafka.connect.common.config.SchemaRegistryFragment;
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-
 import io.confluent.connect.avro.AvroData;
 
+/**
+ * A factory to create Transformers.
+ */
 public final class TransformerFactory {
-
+    /** The cache size for systems that read Avro data */
     public static final int CACHE_SIZE = 100;
 
     private TransformerFactory() {
         // hidden
     }
-    public static Transformer getTransformer(final SourceCommonConfig sourceConfig) {
-        return getTransformer(new SchemaRegistryFragment(sourceConfig).getInputFormat());
-    }
 
     /**
-     * Package private getTransformer for testing purposes.
-     * @param inputFormatEnum the format to get.
-     * @return the Transformer for the format.
+     * Gets a configured Transformer.
+     * @param inputFormat The input format for the transformer.
+     * @return the Transformer for the specified input format.
      */
-    public static Transformer getTransformer(InputFormat inputFormatEnum) {
-        switch (inputFormatEnum) {
+    public static Transformer getTransformer(final InputFormat inputFormat) {
+        switch (inputFormat) {
             case AVRO :
                 return new AvroTransformer(new AvroData(CACHE_SIZE));
             case PARQUET :
@@ -59,7 +54,7 @@ public final class TransformerFactory {
                 return new ByteArrayTransformer();
             default :
                 throw new IllegalArgumentException(
-                        "Unknown input format in configuration: " + inputFormatEnum);
+                        "Unknown input format in configuration: " + inputFormat);
         }
     }
 }

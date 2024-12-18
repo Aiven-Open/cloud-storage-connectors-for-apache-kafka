@@ -34,11 +34,9 @@ import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.data.SchemaAndValue;
-import org.apache.kafka.connect.json.JsonConverter;
 
 import io.aiven.kafka.connect.common.config.CommonConfig;
 
-import io.confluent.connect.avro.AvroData;
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -50,7 +48,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class TransformerStreamingTest {
 
     private static OffsetManager.OffsetManagerEntry<?> getOffsetManagerEntry() {
-        OffsetManager.OffsetManagerEntry<?> offsetManagerEntry = mock(OffsetManager.OffsetManagerEntry.class);
+        final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry = mock(OffsetManager.OffsetManagerEntry.class);
         when(offsetManagerEntry.getTopic()).thenReturn("topic");
         when(offsetManagerEntry.getPartition()).thenReturn(0);
         return offsetManagerEntry;
@@ -101,8 +99,6 @@ class TransformerStreamingTest {
         lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.BYTES), "Hello World".getBytes(StandardCharsets.UTF_8),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 1));
-        JsonConverter jsonConverter = new JsonConverter();
-
         lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.JSONL),
                 JsonTransformerTest.getJsonRecs(100).getBytes(StandardCharsets.UTF_8),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {

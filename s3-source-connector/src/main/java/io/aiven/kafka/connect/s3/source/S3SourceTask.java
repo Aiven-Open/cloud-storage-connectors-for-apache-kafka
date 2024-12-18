@@ -92,7 +92,7 @@ public class S3SourceTask extends SourceTask {
     public void start(final Map<String, String> props) {
         LOGGER.info("S3 Source task started.");
         s3SourceConfig = new S3SourceConfig(props);
-        this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
+        this.transformer = s3SourceConfig.getTransformer();
         offsetManager = new OffsetManager<>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
         setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,

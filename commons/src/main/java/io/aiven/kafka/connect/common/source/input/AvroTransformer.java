@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.Consumer;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -33,12 +34,19 @@ import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A transformer that reads the inputstream as Avro data.
+ */
 public class AvroTransformer extends Transformer {
-
+    /** The AvroData instance to read with */
     private final AvroData avroData;
-
+    /** The logger for this transformer */
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroTransformer.class);
 
+    /**
+     * The constructor.
+     * @param avroData the AvroData object to read with.
+     */
     AvroTransformer(final AvroData avroData) {
         super();
         this.avroData = avroData;
@@ -50,9 +58,8 @@ public class AvroTransformer extends Transformer {
     }
 
     @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
-        return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
             private DataFileStream<GenericRecord> dataFileStream;
             private final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
 
@@ -76,7 +83,7 @@ public class AvroTransformer extends Transformer {
             @Override
             protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
                 if (dataFileStream.hasNext()) {
-                    GenericRecord record = dataFileStream.next();
+                    final GenericRecord record = dataFileStream.next();
                     action.accept(avroData.toConnectData(record.getSchema(), record));
                     return true;
                 }

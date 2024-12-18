@@ -18,11 +18,10 @@ package io.aiven.kafka.connect.common.source.input;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.function.Consumer;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -32,19 +31,23 @@ import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A transformer that  reads plain bytes from the input stream.
+ */
 public class ByteArrayTransformer extends Transformer {
+    /** The logger for this transformer */
     private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayTransformer.class);
-
+    /** The maximum record size this transform will read.  If more data is sent then the record is ignored. */
     private static final int MAX_BUFFER_SIZE = 4096;
 
+    @Override
     public Schema getKeySchema() {
         return null;
     }
 
     @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
-        return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
             @Override
             protected InputStream inputOpened(final InputStream input) {
                 return input;

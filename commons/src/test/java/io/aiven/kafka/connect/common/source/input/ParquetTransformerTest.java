@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -37,7 +39,6 @@ import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import io.confluent.connect.avro.AvroData;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -76,11 +77,11 @@ final class ParquetTransformerTest {
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
         final Stream<SchemaAndValue> recs = parquetTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
-
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
         assertThat(recs).isEmpty();
     }
 
-    private String extractName(SchemaAndValue record) {
+    private String extractName(final SchemaAndValue record) {
         return ((Struct)record.value()).get("name").toString();
     }
     @Test
@@ -89,12 +90,11 @@ final class ParquetTransformerTest {
         final byte[] mockParquetData = generateMockParquetData();
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-        final SourceCommonConfig s3SourceConfig = mock(SourceCommonConfig.class);
 
         final List<SchemaAndValue> records = parquetTransformer
                 .getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig)
                 .collect(Collectors.toList());
-
+        verify(offsetManagerEntry, times(100)).incrementRecordCount();
         assertThat(records).hasSize(100);
         assertThat(records).extracting(this::extractName)
                 .contains("name1")
@@ -113,7 +113,7 @@ final class ParquetTransformerTest {
         final List<SchemaAndValue> records = parquetTransformer
                 .getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig)
                 .collect(Collectors.toList());
-
+        verify(offsetManagerEntry, times(100)).incrementRecordCount();
         assertThat(records).hasSize(75);
         assertThat(records).extracting(this::extractName)
                 .doesNotContain("name1")
@@ -133,6 +133,7 @@ final class ParquetTransformerTest {
 
         final Stream<SchemaAndValue> records = parquetTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
         assertThat(records).isEmpty();
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
     }
 
     @Test

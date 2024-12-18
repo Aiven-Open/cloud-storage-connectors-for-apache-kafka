@@ -22,10 +22,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.source.SourceTaskContext;
 
-public class OffsetManager<E extends OffsetManager.OffsetManagerEntry> {
+public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
 
     /**
      * The local manager data.
@@ -65,8 +64,8 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry> {
     public E getEntry(final OffsetManagerKey key, final Function<Map<String, Object>, E> creator) {
         final Map<String, Object> data = offsets.compute(key.getPartitionMap(), (k, v) -> {
             if (v == null) {
-                Map<String, Object> d = context.offsetStorageReader().offset(key.getPartitionMap());
-                return d == null || d.size() == 0 ?  new HashMap<>(key.getPartitionMap()) : d;
+                final Map<String, Object> kafkaData = context.offsetStorageReader().offset(key.getPartitionMap());
+                return kafkaData == null || kafkaData.isEmpty() ?  new HashMap<>(key.getPartitionMap()) : kafkaData;
             } else {
                return v;
             }});
@@ -90,7 +89,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry> {
     /**
      * The definition of an entry in the OffsetManager.
      */
-    public interface OffsetManagerEntry<T extends OffsetManagerEntry> extends Comparable<T> {
+    public interface OffsetManagerEntry<T extends OffsetManagerEntry<T>> extends Comparable<T> {
 
         /**
          * Creates a new OffsetManagerEntry by wrapping the properties with the current implementation.
@@ -144,6 +143,8 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry> {
         default long skipRecords() {
             return 0;
         }
+
+        void incrementRecordCount();
     }
 
     /**

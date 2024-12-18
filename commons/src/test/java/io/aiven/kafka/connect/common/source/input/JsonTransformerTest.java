@@ -18,8 +18,9 @@ package io.aiven.kafka.connect.common.source.input;
 
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -34,7 +35,6 @@ import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.connect.data.SchemaAndValue;
-import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.json.JsonConverter;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
@@ -72,8 +72,6 @@ final class JsonTransformerTest {
 
         jsonTransformer = new JsonTransformer(jsonConverter);
         sourceCommonConfig = mock(SourceCommonConfig.class);
-        when(offsetManagerEntry.getTopic()).thenReturn(TESTTOPIC);
-        when(offsetManagerEntry.getPartition()).thenReturn(1);
     }
 
     @AfterEach
@@ -83,45 +81,49 @@ final class JsonTransformerTest {
 
     @Test
     void testHandleValueDataWithValidJson() {
+        when(offsetManagerEntry.getTopic()).thenReturn(TESTTOPIC);
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
         final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
 
         assertThat(jsonNodes).hasSize(1);
+        verify(offsetManagerEntry, times(1)).incrementRecordCount();
     }
 
-//    @Test
-//    void testHandleValueDataWithValidJsonSkipFew() {
-//        when(offsetManagerEntry.skipRecords()).thenReturn(25L);
-//        final InputStream validJsonInputStream = new ByteArrayInputStream(
-//                getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
-//        final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-//        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
-//
-//        final List<Object> recs = jsonNodes.map(SchemaAndValue::value).collect(Collectors.toList());
-//        assertThat(recs).hasSize(75);
-//        assertThat(recs).extracting(record -> ((Map) jsonTransformer.getValueData(record, "", null).value()).get("key"))
-//                .doesNotContain("value1")
-//                .doesNotContain("value2")
-//                .doesNotContain("value25")
-//                .contains("value26")
-//                .contains("value27")
-//                .contains("value100");
-//    }
-//
-//    @Test
-//    void testHandleValueDataWithInvalidJson() {
-//        final InputStream invalidJsonInputStream = new ByteArrayInputStream(
-//                "invalid-json".getBytes(StandardCharsets.UTF_8));
-//        final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
-//
-//        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
-//
-//        assertThatThrownBy(() -> jsonTransformer.getValueData(jsonNodes.findAny().get(), "", null))
-//                .isInstanceOf(DataException.class)
-//                .hasMessage("Converting byte[] to Kafka Connect data failed due to serialization error: ");
-//    }
+    @Test
+    void testHandleValueDataWithValidJsonSkipFew() {
+        when(offsetManagerEntry.getTopic()).thenReturn(TESTTOPIC);
+        when(offsetManagerEntry.skipRecords()).thenReturn(25L);
+        final InputStream validJsonInputStream = new ByteArrayInputStream(
+                getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
+        final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
+        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
+
+        final List<Object> recs = jsonNodes.map(SchemaAndValue::value).collect(Collectors.toList());
+        assertThat(recs).hasSize(75);
+        verify(offsetManagerEntry, times(100)).incrementRecordCount();
+        assertThat(recs).extracting(record -> ((Map)record).get("key"))
+                .doesNotContain("value1")
+                .doesNotContain("value2")
+                .doesNotContain("value25")
+                .contains("value26")
+                .contains("value27")
+                .contains("value100");
+    }
+
+    @Test
+    void testHandleValueDataWithInvalidJson() {
+        when(offsetManagerEntry.getTopic()).thenReturn(TESTTOPIC);
+        final InputStream invalidJsonInputStream = new ByteArrayInputStream(
+                "invalid-json".getBytes(StandardCharsets.UTF_8));
+        final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
+
+        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
+
+        assertThat(jsonNodes.count()).isEqualTo(0);
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
+    }
 //
 //    @Test
 //    void testSerializeJsonDataValid() throws IOException {
@@ -145,6 +147,7 @@ final class JsonTransformerTest {
         final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, offsetManagerEntry, sourceCommonConfig);
 
         assertThat(resultStream).isEmpty();
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
     }
 
     @Test
@@ -153,6 +156,8 @@ final class JsonTransformerTest {
         final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, offsetManagerEntry, sourceCommonConfig);
 
         assertThat(resultStream).isEmpty();
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
+
     }
 
     static String getJsonRecs(final int recordCount) {

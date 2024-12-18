@@ -17,7 +17,8 @@
 package io.aiven.kafka.connect.common.source.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -51,8 +52,6 @@ final class ByteArrayTransformerTest {
     @BeforeEach
     void setUp() {
         byteArrayTransformer = new ByteArrayTransformer();
-        when(offsetManagerEntry.getTopic()).thenReturn(TEST_TOPIC);
-        when(offsetManagerEntry.getPartition()).thenReturn(0);
     }
 
     @Test
@@ -62,8 +61,8 @@ final class ByteArrayTransformerTest {
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
         final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
-
         final List<SchemaAndValue> recs = records.collect(Collectors.toList());
+        verify(offsetManagerEntry, times(1)).incrementRecordCount();
         assertThat(recs).hasSize(1);
         assertThat(recs.get(0).value()).isEqualTo(data);
     }
@@ -75,7 +74,7 @@ final class ByteArrayTransformerTest {
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
         final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
-
         assertThat(records).hasSize(0);
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
     }
 }
