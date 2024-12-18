@@ -164,7 +164,7 @@ public abstract class Transformer {
         }
 
         @Override
-        public final Spliterator trySplit() { // NOPMD returning null is reqruied by API
+        public final Spliterator<SchemaAndValue> trySplit() { // NOPMD returning null is reqruied by API
             return null;
         }
 

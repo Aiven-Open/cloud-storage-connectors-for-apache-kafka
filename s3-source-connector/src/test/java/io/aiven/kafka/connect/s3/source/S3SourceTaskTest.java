@@ -229,7 +229,7 @@ final class S3SourceTaskTest {
         assertThat(sourceRecord.sourcePartition()).isEqualTo(offsetManagerEntry.getManagerKey().getPartitionMap());
         assertThat(sourceRecord.sourceOffset()).isEqualTo(offsetManagerEntry.getProperties());
         assertThat(sourceRecord.key()).isEqualTo(s3Record.key());
-        assertThat(sourceRecord.value()).isEqualTo(s3Record.value());
+        assertThat(sourceRecord.value()).isEqualTo(s3Record.value().value());
     }
 
     private SchemaAndValue valueOf(Object value) {

@@ -116,12 +116,8 @@ public class AWSV2SourceClient {
         Predicate<S3ObjectSummary> filter = filterPredicate.and(this::checkTaskAssignment)
                 .and(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()));
         Iterator<S3ObjectSummary> summaryIterator = IteratorUtils.filteredIterator(new S3ObjectSummaryIterator(s3Client, request), filter::test);
-        Iterator<S3Object> objectIterator = IteratorUtils.transformedIterator(summaryIterator, s3ObjectSummary -> getObject(s3ObjectSummary.getKey()));
+        Iterator<S3Object> objectIterator = IteratorUtils.transformedIterator(summaryIterator, s3ObjectSummary -> s3Client.getObject(bucketName, s3ObjectSummary.getKey()));
         return ClosableIterator.wrap(objectIterator);
-    }
-
-    public S3Object getObject(final String objectKey) {
-        return s3Client.getObject(bucketName, objectKey);
     }
 
     public void addFailedObjectKeys(final String objectKey) {

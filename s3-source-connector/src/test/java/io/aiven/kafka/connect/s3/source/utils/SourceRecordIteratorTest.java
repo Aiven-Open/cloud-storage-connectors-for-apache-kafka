@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -69,41 +68,40 @@ final class SourceRecordIteratorTest {
         offsetStorageReader = mock(OffsetStorageReader.class);
         SourceTaskContext taskContext = mock(SourceTaskContext.class);
         when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
-        offsetManager = new OffsetManager(taskContext);
+        offsetManager = new OffsetManager<>(taskContext);
         transformer = new TestingTransformer();
         mockSourceApiClient = mock(AWSV2SourceClient.class);
 
     }
 
     @Test
-    void testIteratorProcessesS3Objects() throws IOException {
+    void testIteratorProcessesS3Objects() {
 
         final String key = "topic-00001-abc123.txt";
 
-        // Mock S3Object and InputStream
-        try (S3Object mockS3Object = mock(S3Object.class)) {
+        when(offsetStorageReader.offset(any())).thenReturn(null);
+        when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(ClosableIterator.wrap(Collections.emptyIterator()));
 
-            when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
-            when(mockS3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(new ByteArrayInputStream("This is a test".getBytes(StandardCharsets.UTF_8)), null));
-            when(offsetStorageReader.offset(any())).thenReturn(null);
-            when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(ClosableIterator.wrap(Collections.emptyIterator()));
+        SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer,
+                mockSourceApiClient);
 
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer,
-                    mockSourceApiClient);
+        assertThat(iterator).isExhausted();
 
-            assertThat(iterator).isExhausted();
+        S3Object result = new S3Object();
+        result.setKey(key);
+        result.setObjectContent(new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8)));
 
-            S3Object result = new S3Object();
-            result.setKey(key);
+        when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.singletonList(result).listIterator()).thenReturn(Collections.emptyIterator());
 
-            when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.singletonList(result).listIterator());
+        iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
 
-            iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
-
-            assertThat(iterator).hasNext();
-            assertThat(iterator.next()).isNotNull();
-            assertThat(iterator).isExhausted();
-        }
+        assertThat(iterator).hasNext();
+        S3SourceRecord sourceRecord = iterator.next();
+        assertThat(sourceRecord).isNotNull();
+        assertThat(sourceRecord.value().value()).isEqualTo("Transformed: Hello World");
+        assertThat(sourceRecord.getObjectKey()).isEqualTo(key);
+        assertThat(sourceRecord.key()).isEqualTo(key.getBytes(StandardCharsets.UTF_8));
+        assertThat(iterator).isExhausted();
     }
 
     @Test
@@ -113,8 +111,6 @@ final class SourceRecordIteratorTest {
         transformer = new ByteArrayTransformer();
 
         try (S3Object mockS3Object = mock(S3Object.class)) {
-
-            when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
             when(mockS3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(new ByteArrayInputStream("This is a test".getBytes(StandardCharsets.UTF_8)), null));
             when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.emptyIterator());
             S3OffsetManagerEntry entry = new S3OffsetManagerEntry("BUCKET", key, "topic", 1);
@@ -130,7 +126,7 @@ final class SourceRecordIteratorTest {
         }
     }
 
-    private class TestingTransformer extends Transformer {
+    private static class TestingTransformer extends Transformer {
 
         private final Logger LOGGER = LoggerFactory.getLogger(TestingTransformer.class);
 
@@ -143,6 +139,7 @@ final class SourceRecordIteratorTest {
         protected StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier, String topic, int topicPartition, AbstractConfig sourceConfig) {
 
                 return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
+                    private boolean wasRead;
                     @Override
                     protected InputStream inputOpened(final InputStream input) {
                         return input;
@@ -155,14 +152,18 @@ final class SourceRecordIteratorTest {
 
                     @Override
                     protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
-
+                        if (wasRead) {
+                            return false;
+                        }
                         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                             IOUtils.copy(inputStream, baos);
                             String result = "Transformed: " + baos;
-                            action.accept(new SchemaAndValue(null, result.getBytes(StandardCharsets.UTF_8)));
+                            action.accept(new SchemaAndValue(null, result));
+                            wasRead = true;
                             return true;
-                        } catch (IOException e) {
+                        } catch (RuntimeException | IOException e) {
                             LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
+                            wasRead = true;
                             return false;
                         }
                     }

@@ -75,9 +75,8 @@ public class S3SourceTask extends SourceTask {
     private final Object pollLock = new Object();
     private AWSV2SourceClient awsv2SourceClient;
     private final Set<String> failedObjectKeys = new HashSet<>();
-    private final Set<String> inProcessObjectKeys = new HashSet<>();
 
-    private OffsetManager offsetManager;
+    private OffsetManager<S3OffsetManagerEntry> offsetManager;
 
     @SuppressWarnings("PMD.UnnecessaryConstructor")
     public S3SourceTask() {
@@ -94,18 +93,12 @@ public class S3SourceTask extends SourceTask {
         LOGGER.info("S3 Source task started.");
         s3SourceConfig = new S3SourceConfig(props);
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
-        offsetManager = new OffsetManager<S3OffsetManagerEntry>(context);
+        offsetManager = new OffsetManager<>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
         setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
                         awsv2SourceClient));
         this.taskInitialized = true;
     }
-
-    private void prepareReaderFromOffsetStorageReader(Iterator<S3SourceRecord> iterator) {
-        sourceRecordIterator = iterator;
-    }
-
-
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException {

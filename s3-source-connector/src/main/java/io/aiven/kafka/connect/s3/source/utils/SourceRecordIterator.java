@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +77,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.transformer = transformer;
         this.sourceClient = sourceClient;
         this.s3ObjectIterator = IteratorUtils.filteredIterator(sourceClient.getIteratorOfObjects(null), s3Object -> extractOffsetManagerEntry(s3Object));
+        this.outerIterator = Collections.emptyIterator();
     }
 
     private boolean extractOffsetManagerEntry(S3Object s3Object) {
@@ -102,7 +104,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
 
     private Iterator<S3SourceRecord> getS3SourceRecordIterator(S3Object s3Object) {
-        Optional<SchemaAndValue> key =Optional.of(new SchemaAndValue(transformer.getKeySchema(),s3Object.getKey().getBytes(StandardCharsets.UTF_8)));
+        Optional<SchemaAndValue> key = Optional.of(new SchemaAndValue(transformer.getKeySchema(), s3Object.getKey().getBytes(StandardCharsets.UTF_8)));
         return transformer.getRecords(s3Object::getObjectContent, offsetManagerEntry, s3SourceConfig)
                 .map(value -> new S3SourceRecord(offsetManagerEntry, key, value))
                 .iterator();
