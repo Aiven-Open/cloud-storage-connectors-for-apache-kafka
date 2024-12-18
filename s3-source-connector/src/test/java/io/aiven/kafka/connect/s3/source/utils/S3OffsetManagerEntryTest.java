@@ -16,9 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
-import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -26,22 +23,16 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
-import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import scala.concurrent.java8.FuturesConvertersImpl;
 
 final class S3OffsetManagerEntryTest {
 

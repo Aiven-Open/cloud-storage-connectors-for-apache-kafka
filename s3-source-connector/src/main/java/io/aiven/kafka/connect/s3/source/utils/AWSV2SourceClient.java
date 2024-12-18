@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 import io.aiven.kafka.connect.common.ClosableIterator;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -39,18 +40,26 @@ import org.slf4j.LoggerFactory;
  * and authentication to AWS and returns useable objects to the SourceRecordIterator.
  */
 public class AWSV2SourceClient {
-
+    /** The logger to use */
     private static final Logger LOGGER = LoggerFactory.getLogger(AWSV2SourceClient.class);
-
+    /**
+     * How many pages of data we will attempt to read at one go.
+     * The page size is defined in {@link S3ConfigFragment#getFetchPageSize()}
+     */
     public static final int PAGE_SIZE_FACTOR = 2;
+    /** The source configuration */
     private final S3SourceConfig s3SourceConfig;
+    /** The Amazon S3 client we use */
     private final AmazonS3 s3Client;
+    /** The bucket we ar ereading from. */
     private final String bucketName;
-
+    /** The predicate to filter S3ObjectSummaries */
     private Predicate<S3ObjectSummary> filterPredicate = summary -> summary.getSize() > 0;
+    /** The set of failed object keys */
     private final Set<String> failedObjectKeys;
-
+    /** The maximum number of tasks that may be executing */
     private final int maxTasks;
+    /** Our taks number */
     private final int taskId;
 
     /**
@@ -64,7 +73,7 @@ public class AWSV2SourceClient {
     }
 
     /**
-     * Valid for testing
+     * Constructor.
      *
      * @param s3Client
      *            amazonS3Client
@@ -80,10 +89,11 @@ public class AWSV2SourceClient {
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
 
+        // TODO the code below should be configured in some sort of taks assignement method/process/call.
         int maxTasks;
         try {
             maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
-        } catch (NullPointerException | NumberFormatException e) {
+        } catch (NullPointerException | NumberFormatException e) {  // NOPMD catch null pointer
             LOGGER.warn("Invalid tasks.max: {}", e.getMessage());
             LOGGER.info("Setting tasks.max to 1");
             maxTasks = 1;
@@ -92,7 +102,7 @@ public class AWSV2SourceClient {
         int taskId;
         try {
             taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
-        } catch (NullPointerException | NumberFormatException e) {
+        } catch (NullPointerException | NumberFormatException e) { // NOPMD catch null pointer
             LOGGER.warn("Invalid task.id: {}", e.getMessage());
             LOGGER.info("Setting task.id to 0");
             taskId = 0;
@@ -100,6 +110,12 @@ public class AWSV2SourceClient {
         this.taskId = taskId;
     }
 
+    /**
+     * Create an iterator of S3Objects.  The iterator will automatically close the objects when the next object is retrieved or when
+     * the end of the iterator is reached.
+     * @param startToken the Key to start searching from.
+     * @return An iterator on S3Objects.
+     */
     public Iterator<S3Object> getIteratorOfObjects(final String startToken) {
 
         final ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(bucketName)
@@ -113,26 +129,42 @@ public class AWSV2SourceClient {
             request.withPrefix(s3SourceConfig.getAwsS3Prefix());
         }
 
-        Predicate<S3ObjectSummary> filter = filterPredicate.and(this::checkTaskAssignment)
+        final Predicate<S3ObjectSummary> filter = filterPredicate.and(this::checkTaskAssignment)
                 .and(objectSummary -> !failedObjectKeys.contains(objectSummary.getKey()));
-        Iterator<S3ObjectSummary> summaryIterator = IteratorUtils.filteredIterator(new S3ObjectSummaryIterator(s3Client, request), filter::test);
-        Iterator<S3Object> objectIterator = IteratorUtils.transformedIterator(summaryIterator, s3ObjectSummary -> s3Client.getObject(bucketName, s3ObjectSummary.getKey()));
+        final Iterator<S3ObjectSummary> summaryIterator = IteratorUtils.filteredIterator(new S3ObjectSummaryIterator(s3Client, request), filter::test);
+        final Iterator<S3Object> objectIterator = IteratorUtils.transformedIterator(summaryIterator, s3ObjectSummary -> s3Client.getObject(bucketName, s3ObjectSummary.getKey()));
         return ClosableIterator.wrap(objectIterator);
     }
 
+    /**
+     * Add a failed object to the list of failed object keys.
+     * @param objectKey the object key that failed.
+     */
     public void addFailedObjectKeys(final String objectKey) {
         this.failedObjectKeys.add(objectKey);
     }
 
+    /**
+     * Set the filter predicate.  Overrides the default predicate.
+     * @param predicate the predicate to use instead of the default predicate.
+     */
     public void setFilterPredicate(final Predicate<S3ObjectSummary> predicate) {
         filterPredicate = predicate;
     }
 
-    private boolean checkTaskAssignment(S3ObjectSummary summary) {
-        return  taskId == Math.floorMod(summary.getKey().hashCode(), maxTasks);
+    /**
+     * Checks the task assignment.  This method should probalby be delivered by a task assignment object.
+     * @param summary the object summary to check
+     * @return {@code true} if the summary should be processed, {@code false otherwise}.
+     */
+    private boolean checkTaskAssignment(final S3ObjectSummary summary) {
+        return taskId == Math.floorMod(summary.getKey().hashCode(), maxTasks);
     }
+
+    /**
+     * Shut down this source client.  Shuts down the attached AmazonS3 client.
+     */
     public void shutdown() {
         s3Client.shutdown();
     }
-
 }

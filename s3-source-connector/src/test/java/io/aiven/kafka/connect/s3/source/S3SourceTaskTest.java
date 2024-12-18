@@ -27,7 +27,6 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.net.ConnectException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,14 +36,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
-import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
-import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.Converter;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
@@ -171,7 +167,7 @@ final class S3SourceTaskTest {
 
         final boolean taskInitialized = s3SourceTask.isTaskInitialized();
         assertThat(taskInitialized).isFalse();
-        assertThat(s3SourceTask.getConnectorStopped()).isTrue();
+        assertThat(s3SourceTask.isConnectorStopped()).isTrue();
     }
 
     private static S3SourceRecord getAivenS3SourceRecord() {

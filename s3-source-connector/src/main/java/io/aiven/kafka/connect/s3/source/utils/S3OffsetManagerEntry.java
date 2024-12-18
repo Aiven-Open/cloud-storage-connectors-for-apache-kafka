@@ -42,11 +42,11 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     private long recordCount;
 
     /**
-     * Constructs
-     * @param bucket
-     * @param s3ObjectKey
-     * @param topic
-     * @param partition
+     * Construct the S3OffsetManagerEntry.
+     * @param bucket the bucket we are using.
+     * @param s3ObjectKey the S3Object key.
+     * @param topic The topic we are using.
+     * @param partition the partition we are using.
      */
     public S3OffsetManagerEntry(final String bucket, final String s3ObjectKey, final String topic,
                                 final Integer partition) {
@@ -65,7 +65,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      */
      private S3OffsetManagerEntry(final Map<String, Object> properties) {
         data = new HashMap<>(properties);
-        for (String field : RESTRICTED_KEYS) {
+        for (final String field : RESTRICTED_KEYS) {
             if (data.get(field) == null) {
                 throw new IllegalArgumentException("Missing '"+field+"' property");
             }
@@ -84,16 +84,16 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         if (properties == null) {
             return null;
         }
-        Map<String, Object> ourProperties = new HashMap<>(properties);
-        Long recordCount = (Long) ourProperties.computeIfAbsent(RECORD_COUNT, s -> Long.valueOf(0L));
+        final Map<String, Object> ourProperties = new HashMap<>(properties);
+        final Long recordCount = (Long) ourProperties.computeIfAbsent(RECORD_COUNT, s -> 0L);
 
-        S3OffsetManagerEntry result = new S3OffsetManagerEntry(ourProperties);
+        final S3OffsetManagerEntry result = new S3OffsetManagerEntry(ourProperties);
         result.recordCount = recordCount;
         return result;
     }
 
     @Override
-    public Object getProperty(String key) {
+    public Object getProperty(final String key) {
         if (RECORD_COUNT.equals(key)) {
             return recordCount;
         }
@@ -111,10 +111,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         data.put(property, value);
     }
 
-    /**
-     * Increment the record count and return the result.
-     * @return the new record count value.
-     */
+    @Override
     public void incrementRecordCount() {
         recordCount++;
     }
@@ -135,18 +132,12 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         return (String) data.get(OBJECT_KEY);
     }
 
-    /**
-     * Gets the Kafka partition number for the current object.
-     * @return the Kafka partition number for the current object.
-     */
+    @Override
     public Integer getPartition() {
         return (Integer) data.get(PARTITION);
     }
 
-    /**
-     * Gets the Kafka topic for the current object.
-     * @return the Kafka topic for the current object.
-     */
+    @Override
     public String getTopic() {
         return (String) data.get(TOPIC);
     }
@@ -180,8 +171,8 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     @Override
-    public int compareTo(S3OffsetManagerEntry other) {
-        if (this == other) {
+    public int compareTo(final S3OffsetManagerEntry other) {
+        if (this == other) {  // NOPMD comparing instance
             return 0;
         }
         int result = ((String) getProperty(BUCKET)).compareTo((String) other.getProperty(BUCKET));
@@ -189,7 +180,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
             result = getTopic().compareTo(other.getTopic());
             if (result == 0) {
                 result = getPartition().compareTo(other.getPartition());
-                if (result == 0) {
+                if (result == 0) {  // NOPMD deeply nested if.
                     result = getKey().compareTo(other.getKey());
                     if (result == 0) {
                         result = Long.compare(getRecordCount(), other.getRecordCount());
