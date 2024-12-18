@@ -88,7 +88,7 @@ S3 Object files are text files that contain one record per line (i.e.,
 they're separated by `\n`) except `PARQUET` format.
 
 There are four types of data format available:
- 
+
 - Complex structure, where file is in format of [JSON lines](https://jsonlines.org/).
   It contains one record per line and each line is a valid JSON object(`jsonl`)
 
@@ -101,7 +101,7 @@ There are four types of data format available:
 - Complex structure, where file is in Apache Parquet file format.
 
   Configuration: ```input.format=parquet```.
-- 
+-
 - Complex structure, where file is in bytes format.
 
   Configuration: ```input.format=bytes```.
@@ -124,7 +124,7 @@ org.apache.kafka.connect.json.JsonConverter is used internally to convert this d
 **NB!**
 
 - Value/Key schema will not be presented in output kafka event, even if `value.converter.schemas.enable` property is `true`,
-  however, if this is set to true, it has no impact at the moment.  
+  however, if this is set to true, it has no impact at the moment.
 
 #### Parquet or Avro format example
 
@@ -185,10 +185,10 @@ the final `Avro` schema for `Parquet` is:
 
 ### Connector Configuration
 
-> **Important Note** Since this connector is developed aligning it with S3 sink connector, 
+> **Important Note** Since this connector is developed aligning it with S3 sink connector,
 > and since version `2.6`, all existing configuration in S3 sink
-is deprecated and will be replaced with new one during a certain transition period (within 2-3 releases). Most of the 
-> configuration parameters remain same. 
+is deprecated and will be replaced with new one during a certain transition period (within 2-3 releases). Most of the
+> configuration parameters remain same.
 
 List of deprecated configuration parameters:
 - `aws_access_key_id` - AWS Access Key ID for accessing S3 bucket. Mandatory.
