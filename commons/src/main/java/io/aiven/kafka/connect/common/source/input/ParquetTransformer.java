@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,11 +24,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
-import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.parquet.LocalInputFile;
 
 import io.confluent.connect.avro.AvroData;
@@ -42,9 +41,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A transformer to read parquet files.
- * The input file is read one Avro record at a time.
- * This implementation creates a temporary file to read the data from, and removes it at the end of processing.
+ * A transformer to read parquet files. The input file is read one Avro record at a time. This implementation creates a
+ * temporary file to read the data from, and removes it at the end of processing.
  */
 public class ParquetTransformer extends Transformer {
     /** The AvroData to read with */
@@ -54,7 +52,9 @@ public class ParquetTransformer extends Transformer {
 
     /**
      * Constructs a ParquetTransformer that reads with the AvroData.
-     * @param avroData The AvroData to read with.
+     *
+     * @param avroData
+     *            The AvroData to read with.
      */
     ParquetTransformer(final AvroData avroData) {
         super();
@@ -67,7 +67,8 @@ public class ParquetTransformer extends Transformer {
     }
 
     @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
 
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
 
@@ -78,7 +79,9 @@ public class ParquetTransformer extends Transformer {
             protected InputStream inputOpened(final InputStream input) throws IOException {
                 try {
                     // Create a temporary file for the Parquet data
-                    parquetFile = File.createTempFile(String.format("%s_%s", offsetManagerEntry.getTopic(), offsetManagerEntry.getPartition()), ".parquet");
+                    parquetFile = File.createTempFile(
+                            String.format("%s_%s", offsetManagerEntry.getTopic(), offsetManagerEntry.getPartition()),
+                            ".parquet");
                 } catch (IOException e) {
                     LOGGER.error("Error creating temp file for Parquet data: {}", e.getMessage(), e);
                     throw e;
@@ -123,7 +126,9 @@ public class ParquetTransformer extends Transformer {
 
     /**
      * Deletes the temporary file.
-     * @param parquetFile the temporary file to delete.
+     *
+     * @param parquetFile
+     *            the temporary file to delete.
      */
     static void deleteTmpFile(final Path parquetFile) {
         if (Files.exists(parquetFile)) {

@@ -30,11 +30,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.config.CommonConfig;
 
 import org.apache.commons.io.function.IOSupplier;
@@ -56,8 +56,8 @@ class TransformerStreamingTest {
 
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyExceptionDuringIOOpen(final Transformer transformer, final byte[] testData,
-            final AbstractConfig config, final int expectedCount) throws IOException {
+    void verifyExceptionDuringIOOpen(final Transformer transformer, final byte[] testData, final AbstractConfig config,
+            final int expectedCount) throws IOException {
         final IOSupplier<InputStream> ioSupplier = mock(IOSupplier.class);
         when(ioSupplier.get()).thenThrow(new IOException("Test IOException during initialization"));
         final Stream<SchemaAndValue> objStream = transformer.getRecords(ioSupplier, getOffsetManagerEntry(), config);
@@ -93,18 +93,19 @@ class TransformerStreamingTest {
 
     static Stream<Arguments> testData() throws IOException {
         final List<Arguments> lst = new ArrayList<>();
-        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.AVRO), AvroTransformerTest.generateMockAvroData(100).toByteArray(),
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.AVRO),
+                AvroTransformerTest.generateMockAvroData(100).toByteArray(),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
-        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.BYTES), "Hello World".getBytes(StandardCharsets.UTF_8),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.BYTES),
+                "Hello World".getBytes(StandardCharsets.UTF_8), new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 1));
         lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.JSONL),
                 JsonTransformerTest.getJsonRecs(100).getBytes(StandardCharsets.UTF_8),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
-        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.PARQUET), ParquetTransformerTest.generateMockParquetData(),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.PARQUET),
+                ParquetTransformerTest.generateMockParquetData(), new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
         return lst.stream();
     }

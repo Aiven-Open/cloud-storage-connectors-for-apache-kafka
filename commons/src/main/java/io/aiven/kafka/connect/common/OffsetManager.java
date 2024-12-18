@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.common;
 
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,7 +37,9 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
 
     /**
      * Constructor
-     * @param context the context for this instance to use.
+     *
+     * @param context
+     *            the context for this instance to use.
      */
     public OffsetManager(final SourceTaskContext context) {
         this(context, new ConcurrentHashMap<>());
@@ -46,35 +47,45 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
 
     /**
      * Package private for testing.
-     * @param context the context for this instance to use.
-     * @param offsets the offsets
+     *
+     * @param context
+     *            the context for this instance to use.
+     * @param offsets
+     *            the offsets
      */
-    protected OffsetManager(final SourceTaskContext context, final Map<Map<String, Object>, Map<String, Object>> offsets) {
+    protected OffsetManager(final SourceTaskContext context,
+            final Map<Map<String, Object>, Map<String, Object>> offsets) {
         this.context = context;
         this.offsets = offsets;
     }
 
     /**
-     * Get an entry from the offset manager.
-     * This method will return the local copy if it has been created otherwise will get the data from Kafka.
-     * @param key the key for the entry.
-     * @param creator a function to create the connector defined offset entry from a Map of string to object.
+     * Get an entry from the offset manager. This method will return the local copy if it has been created otherwise
+     * will get the data from Kafka.
+     *
+     * @param key
+     *            the key for the entry.
+     * @param creator
+     *            a function to create the connector defined offset entry from a Map of string to object.
      * @return the entry.
      */
     public E getEntry(final OffsetManagerKey key, final Function<Map<String, Object>, E> creator) {
         final Map<String, Object> data = offsets.compute(key.getPartitionMap(), (k, v) -> {
             if (v == null) {
                 final Map<String, Object> kafkaData = context.offsetStorageReader().offset(key.getPartitionMap());
-                return kafkaData == null || kafkaData.isEmpty() ?  new HashMap<>(key.getPartitionMap()) : kafkaData;
+                return kafkaData == null || kafkaData.isEmpty() ? new HashMap<>(key.getPartitionMap()) : kafkaData;
             } else {
-               return v;
-            }});
+                return v;
+            }
+        });
         return creator.apply(data);
     }
 
     /**
      * Copies the entry into the offset manager data.
-     * @param entry the entry to update.
+     *
+     * @param entry
+     *            the entry to update.
      */
     public void updateCurrentOffsets(final E entry) {
         offsets.compute(entry.getManagerKey().getPartitionMap(), (k, v) -> {
@@ -83,7 +94,8 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
             } else {
                 v.putAll(entry.getProperties());
                 return v;
-            }});
+            }
+        });
     }
 
     /**
@@ -92,9 +104,11 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     public interface OffsetManagerEntry<T extends OffsetManagerEntry<T>> extends Comparable<T> {
 
         /**
-         * Creates a new OffsetManagerEntry by wrapping the properties with the current implementation.
-         * This method may throw a RuntimeException if requried properties are not defined in the map.
-         * @param properties the properties to wrap.  May be {@code null}.
+         * Creates a new OffsetManagerEntry by wrapping the properties with the current implementation. This method may
+         * throw a RuntimeException if requried properties are not defined in the map.
+         *
+         * @param properties
+         *            the properties to wrap. May be {@code null}.
          * @return an OffsetManagerProperty
          */
         T fromProperties(Map<String, Object> properties);
@@ -107,11 +121,13 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
         Map<String, Object> getProperties();
 
         /**
-         * Gets the value of the named property.
-         * The value returned from a {@code null} key is implementation dependant.
-         * @param key the property to retrieve.
+         * Gets the value of the named property. The value returned from a {@code null} key is implementation dependant.
+         *
+         * @param key
+         *            the property to retrieve.
          * @return the value associated with the property or @{code null} if not set.
-         * @throws NullPointerException if a {@code null} key is not supported.
+         * @throws NullPointerException
+         *             if a {@code null} key is not supported.
          */
         Object getProperty(String key);
 
@@ -154,6 +170,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     public interface OffsetManagerKey {
         /**
          * gets the partition map used by Kafka to identify this Offset entry.
+         *
          * @return The partition map used by Kafka to identify this Offset entry.
          */
         Map<String, Object> getPartitionMap();

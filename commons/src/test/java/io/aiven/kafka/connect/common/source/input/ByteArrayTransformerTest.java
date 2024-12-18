@@ -26,11 +26,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.data.SchemaAndValue;
+
 import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.commons.io.function.IOSupplier;
-import org.apache.kafka.connect.data.SchemaAndValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,7 +61,8 @@ final class ByteArrayTransformerTest {
         final InputStream inputStream = new ByteArrayInputStream(data);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier,
+                offsetManagerEntry, sourceCommonConfig);
         final List<SchemaAndValue> recs = records.collect(Collectors.toList());
         verify(offsetManagerEntry, times(1)).incrementRecordCount();
         assertThat(recs).hasSize(1);
@@ -73,7 +75,8 @@ final class ByteArrayTransformerTest {
 
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier,
+                offsetManagerEntry, sourceCommonConfig);
         assertThat(records).hasSize(0);
         verify(offsetManagerEntry, times(0)).incrementRecordCount();
     }

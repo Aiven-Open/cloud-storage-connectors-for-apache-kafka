@@ -23,11 +23,12 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 
-import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.json.JsonConverter;
+
+import io.aiven.kafka.connect.common.OffsetManager;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.codehaus.plexus.util.StringUtils;
@@ -45,7 +46,9 @@ public class JsonTransformer extends Transformer {
 
     /**
      * Constructs a Json transform with the specified converter.
-     * @param jsonConverter the Json converter to read with.
+     *
+     * @param jsonConverter
+     *            the Json converter to read with.
      */
     JsonTransformer(final JsonConverter jsonConverter) {
         super();
@@ -58,7 +61,8 @@ public class JsonTransformer extends Transformer {
     }
 
     @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
             BufferedReader reader;
 
@@ -92,7 +96,8 @@ public class JsonTransformer extends Transformer {
                         }
                     }
                     line = line.trim();
-                    action.accept( jsonConverter.toConnectData(offsetManagerEntry.getTopic(), line.getBytes(StandardCharsets.UTF_8)));
+                    action.accept(jsonConverter.toConnectData(offsetManagerEntry.getTopic(),
+                            line.getBytes(StandardCharsets.UTF_8)));
                     return true;
                 } catch (IOException e) {
                     LOGGER.error("Error reading input stream: {}", e.getMessage(), e);

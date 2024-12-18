@@ -20,14 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
-
+import com.google.common.base.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +55,8 @@ final class OffsetManagerTest {
         offsetValue.put("object_key_file", 5L);
         when(offsetStorageReader.offset(partitionKey)).thenReturn(offsetValue);
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(() -> partitionKey, TestingOffsetManagerEntry::new);
+        final TestingOffsetManagerEntry result = offsetManager.getEntry(() -> partitionKey,
+                TestingOffsetManagerEntry::new);
         assertThat(result.data).isEqualTo(offsetValue);
     }
 
@@ -68,7 +68,8 @@ final class OffsetManagerTest {
         partitionKey.put("segment3", "something else");
         when(offsetStorageReader.offset(partitionKey)).thenReturn(new HashMap<>());
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(() -> partitionKey, TestingOffsetManagerEntry::new);
+        final TestingOffsetManagerEntry result = offsetManager.getEntry(() -> partitionKey,
+                TestingOffsetManagerEntry::new);
         assertThat(result.data).isEqualTo(partitionKey);
     }
 
@@ -84,7 +85,8 @@ final class OffsetManagerTest {
 
         offsetManager.updateCurrentOffsets(offsetEntry);
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(), TestingOffsetManagerEntry::new);
+        final TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(),
+                TestingOffsetManagerEntry::new);
         assertThat(result.getProperty("MyProperty")).isEqualTo("WOW");
         assertThat(result.getProperties()).isEqualTo(offsetEntry.getProperties());
     }
@@ -95,7 +97,8 @@ final class OffsetManagerTest {
         offsetEntry.setProperty("Random-property", "random value");
         offsetManager.updateCurrentOffsets(offsetEntry);
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(), offsetEntry::fromProperties);
+        final TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(),
+                offsetEntry::fromProperties);
         assertThat(result.getProperties()).isEqualTo(offsetEntry.getProperties());
     }
 
@@ -109,14 +112,17 @@ final class OffsetManagerTest {
         offsetEntry2.setProperty("test2", "a thing");
         offsetManager.updateCurrentOffsets(offsetEntry2);
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(), offsetEntry::fromProperties);
+        final TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(),
+                offsetEntry::fromProperties);
 
         assertThat(result.getProperty("test")).isEqualTo("WOW");
         assertThat(result.getProperty("test2")).isEqualTo("a thing");
     }
 
-    @SuppressWarnings("TestClassWithoutTestCases")
-    public static class TestingOffsetManagerEntry implements OffsetManager.OffsetManagerEntry<TestingOffsetManagerEntry> {
+    @SuppressWarnings("PMD.TestClassWithoutTestCases") // TODO figure out why this fails.
+    public static class TestingOffsetManagerEntry // NOPMD the above suppress warnings does not work.
+            implements
+                OffsetManager.OffsetManagerEntry<TestingOffsetManagerEntry> {
         public Map<String, Object> data;
 
         public int recordCount;
@@ -130,9 +136,9 @@ final class OffsetManagerTest {
 
         public TestingOffsetManagerEntry() {
             data = new HashMap<>();
-            data.put("segment1", "The First Segment" );
-            data.put("segment2", "The Second Segment" );
-            data.put("segment3", "The Third Segment" );
+            data.put("segment1", "The First Segment");
+            data.put("segment2", "The Second Segment");
+            data.put("segment3", "The Third Segment");
         }
 
         public TestingOffsetManagerEntry(final Map<String, Object> properties) {
@@ -162,7 +168,8 @@ final class OffsetManagerTest {
 
         @Override
         public OffsetManager.OffsetManagerKey getManagerKey() {
-            return () -> Map.of("segment1", data.get("segment1"), "segment2", data.get("segment2"), "segment3", data.get("segment3"));
+            return () -> Map.of("segment1", data.get("segment1"), "segment2", data.get("segment2"), "segment3",
+                    data.get("segment3"));
         }
 
         @Override
@@ -182,13 +189,26 @@ final class OffsetManagerTest {
         }
 
         @Override
+        public boolean equals(final Object other) {
+            if (other instanceof TestingOffsetManagerEntry) {
+                return this.compareTo((TestingOffsetManagerEntry) other) == 0;
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(getProperty("segment1"), getProperty("segment2"), getProperty("segment3"));
+        }
+
+        @Override
         public int compareTo(final TestingOffsetManagerEntry other) {
-            if (this == other) {  //NOPMD checking same object.
+            if (other == this) { // NOPMD
                 return 0;
             }
             int result = ((String) getProperty("segment1")).compareTo((String) other.getProperty("segment1"));
             if (result == 0) {
-                result =((String) getProperty("segment2")).compareTo((String) other.getProperty("segment2"));
+                result = ((String) getProperty("segment2")).compareTo((String) other.getProperty("segment2"));
                 if (result == 0) {
                     result = ((String) getProperty("segment3")).compareTo((String) other.getProperty("segment3"));
                 }

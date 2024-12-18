@@ -31,6 +31,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.data.Struct;
+
 import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
@@ -41,8 +44,6 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
-import org.apache.kafka.connect.data.SchemaAndValue;
-import org.apache.kafka.connect.data.Struct;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,7 +61,6 @@ final class AvroTransformerTest {
     @Mock
     private OffsetManager.OffsetManagerEntry<?> offsetManagerEntry;
 
-
     @BeforeEach
     void setUp() {
         avroTransformer = new AvroTransformer(new AvroData(100));
@@ -70,7 +70,8 @@ final class AvroTransformerTest {
     void testReadAvroRecordsInvalidData() {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
 
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry,
+                sourceCommonConfig);
 
         final List<Object> recs = records.collect(Collectors.toList());
         verify(offsetManagerEntry, times(0)).incrementRecordCount();
@@ -82,7 +83,8 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(25);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry, sourceCommonConfig);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, offsetManagerEntry,
+                sourceCommonConfig);
         final List<Object> recs = records.collect(Collectors.toList());
         verify(offsetManagerEntry, times(25)).incrementRecordCount();
         assertThat(recs).hasSize(25);

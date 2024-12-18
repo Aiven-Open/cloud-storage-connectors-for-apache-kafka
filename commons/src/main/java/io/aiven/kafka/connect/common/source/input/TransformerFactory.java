@@ -37,7 +37,9 @@ public final class TransformerFactory {
 
     /**
      * Gets a configured Transformer.
-     * @param inputFormat The input format for the transformer.
+     *
+     * @param inputFormat
+     *            The input format for the transformer.
      * @return the Transformer for the specified input format.
      */
     public static Transformer getTransformer(final InputFormat inputFormat) {
@@ -53,8 +55,7 @@ public final class TransformerFactory {
             case BYTES :
                 return new ByteArrayTransformer();
             default :
-                throw new IllegalArgumentException(
-                        "Unknown input format in configuration: " + inputFormat);
+                throw new IllegalArgumentException("Unknown input format in configuration: " + inputFormat);
         }
     }
 }
