@@ -16,11 +16,13 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import io.aiven.kafka.connect.common.OffsetManager;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import io.aiven.kafka.connect.common.OffsetManager;
+
+import com.google.common.base.Objects;
 
 public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3OffsetManagerEntry> {
 
@@ -38,18 +40,23 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     static final List<String> RESTRICTED_KEYS = List.of(BUCKET, OBJECT_KEY, TOPIC, PARTITION, RECORD_COUNT);
     /** The data map that stores all the values */
     private final Map<String, Object> data;
-    /** THe record count for the data map.  Extracted here because it is used/updated frequently duirng processing */
+    /** THe record count for the data map. Extracted here because it is used/updated frequently duirng processing */
     private long recordCount;
 
     /**
      * Construct the S3OffsetManagerEntry.
-     * @param bucket the bucket we are using.
-     * @param s3ObjectKey the S3Object key.
-     * @param topic The topic we are using.
-     * @param partition the partition we are using.
+     *
+     * @param bucket
+     *            the bucket we are using.
+     * @param s3ObjectKey
+     *            the S3Object key.
+     * @param topic
+     *            The topic we are using.
+     * @param partition
+     *            the partition we are using.
      */
     public S3OffsetManagerEntry(final String bucket, final String s3ObjectKey, final String topic,
-                                final Integer partition) {
+            final Integer partition) {
         data = new HashMap<>();
         data.put(BUCKET, bucket);
         data.put(OBJECT_KEY, s3ObjectKey);
@@ -58,26 +65,29 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     /**
-     * Constructs an OffsetManagerEntry from an existing map.
-     * used by {@link #fromProperties(Map)}.
-     * Package private for testing
-     * @param properties the property map.
+     * Constructs an OffsetManagerEntry from an existing map. used by {@link #fromProperties(Map)}. Package private for
+     * testing
+     *
+     * @param properties
+     *            the property map.
      */
-     private S3OffsetManagerEntry(final Map<String, Object> properties) {
+    private S3OffsetManagerEntry(final Map<String, Object> properties) {
         data = new HashMap<>(properties);
         for (final String field : RESTRICTED_KEYS) {
             if (data.get(field) == null) {
-                throw new IllegalArgumentException("Missing '"+field+"' property");
+                throw new IllegalArgumentException("Missing '" + field + "' property");
             }
         }
     }
 
     /**
-     * Creates an S3OffsetManagerEntry.
-     * Will return {@code null} if properties is {@code null}.
-     * @param properties the properties to wrap.  May be {@code null}.
+     * Creates an S3OffsetManagerEntry. Will return {@code null} if properties is {@code null}.
+     *
+     * @param properties
+     *            the properties to wrap. May be {@code null}.
      * @return an S3OffsetManagerEntry.
-     * @throws IllegalArgumentException if one of the {@link #RESTRICTED_KEYS} is missing.
+     * @throws IllegalArgumentException
+     *             if one of the {@link #RESTRICTED_KEYS} is missing.
      */
     @Override
     public S3OffsetManagerEntry fromProperties(final Map<String, Object> properties) {
@@ -100,8 +110,6 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         return data.get(key);
     }
 
-
-
     @Override
     public void setProperty(final String property, final Object value) {
         if (RESTRICTED_KEYS.contains(property)) {
@@ -117,7 +125,8 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     /**
-     *  Gets the umber of records extracted from data returned from S3.
+     * Gets the umber of records extracted from data returned from S3.
+     *
      * @return the umber of records extracted from data returned from S3.
      */
     public long getRecordCount() {
@@ -125,7 +134,8 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     /**
-     *  Gets the S3Object key for the current object.
+     * Gets the S3Object key for the current object.
+     *
      * @return the S3ObjectKey.
      */
     public String getKey() {
@@ -144,6 +154,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
 
     /**
      * Gets the S3 bucket for the current object.
+     *
      * @return the S3 Bucket for the current object.
      */
     public String getBucket() {
@@ -163,16 +174,31 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
 
     /**
      * Returns the OffsetManagerKey for this Entry.
+     *
      * @return the OffsetManagerKey for this Entry.
      */
     @Override
     public OffsetManager.OffsetManagerKey getManagerKey() {
-        return () -> Map.of(BUCKET, data.get(BUCKET), TOPIC, data.get(TOPIC), PARTITION, data.get(PARTITION), OBJECT_KEY, data.get(OBJECT_KEY));
+        return () -> Map.of(BUCKET, data.get(BUCKET), TOPIC, data.get(TOPIC), PARTITION, data.get(PARTITION),
+                OBJECT_KEY, data.get(OBJECT_KEY));
+    }
+
+    @Override
+    public boolean equals(final Object other) {
+        if (other instanceof S3OffsetManagerEntry) {
+            return compareTo((S3OffsetManagerEntry) other) == 0;
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getBucket(), getTopic(), getPartition());
     }
 
     @Override
     public int compareTo(final S3OffsetManagerEntry other) {
-        if (this == other) {  // NOPMD comparing instance
+        if (this == other) { // NOPMD comparing instance
             return 0;
         }
         int result = ((String) getProperty(BUCKET)).compareTo((String) other.getProperty(BUCKET));
@@ -180,7 +206,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
             result = getTopic().compareTo(other.getTopic());
             if (result == 0) {
                 result = getPartition().compareTo(other.getPartition());
-                if (result == 0) {  // NOPMD deeply nested if.
+                if (result == 0) { // NOPMD deeply nested if.
                     result = getKey().compareTo(other.getKey());
                     if (result == 0) {
                         result = Long.compare(getRecordCount(), other.getRecordCount());
@@ -191,4 +217,3 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         return result;
     }
 }
-

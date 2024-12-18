@@ -26,10 +26,10 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.OffsetManager;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,7 +88,6 @@ final class S3OffsetManagerEntryTest {
         assertThat(entry.getBucket()).isEqualTo(TEST_BUCKET);
         assertThat(entry.getProperty("random_entry")).isEqualTo(5L);
         verify(sourceTaskContext, times(1)).offsetStorageReader();
-
 
         // verify second read reads from local data
 

@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
@@ -44,7 +42,9 @@ import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
@@ -59,7 +59,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 
 final class S3SourceTaskTest {
 
@@ -230,15 +229,14 @@ final class S3SourceTaskTest {
         return value == null ? Optional.empty() : Optional.of(new SchemaAndValue(null, value));
     }
 
-
     @Test
-    void testExtractSourceRecordsWithRecords()  {
+    void testExtractSourceRecordsWithRecords() {
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
         when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
         final List<S3SourceRecord> lst = new ArrayList<>();
         S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
         lst.add(new S3SourceRecord(offsetManagerEntry, keyOf("Hello"), valueOf("Hello World")));
-        offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY+"a", TOPIC, PARTITION);
+        offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY + "a", TOPIC, PARTITION);
         lst.add(new S3SourceRecord(offsetManagerEntry, keyOf("Goodbye"), valueOf("Goodbye cruel World")));
 
         final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
@@ -259,7 +257,7 @@ final class S3SourceTaskTest {
         final List<S3SourceRecord> lst = new ArrayList<>();
         S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
         lst.add(new S3SourceRecord(offsetManagerEntry, keyOf("Hello"), valueOf("Hello World")));
-        offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY+"a", TOPIC, PARTITION);
+        offsetManagerEntry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY + "a", TOPIC, PARTITION);
         lst.add(new S3SourceRecord(offsetManagerEntry, keyOf("Goodbye"), valueOf("Goodbye cruel World")));
 
         final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
@@ -267,7 +265,6 @@ final class S3SourceTaskTest {
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
         startSourceTask(s3SourceTask);
         s3SourceTask.stop();
-
 
         final List<SourceRecord> results = s3SourceTask.extractSourceRecords(new ArrayList<>());
         assertThat(results).isEmpty();

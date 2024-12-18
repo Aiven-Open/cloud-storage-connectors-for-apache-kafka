@@ -29,6 +29,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.function.Consumer;
 
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+
 import io.aiven.kafka.connect.common.ClosableIterator;
 import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
@@ -39,16 +45,10 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaAndValue;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 final class SourceRecordIteratorTest {
 
@@ -80,18 +80,21 @@ final class SourceRecordIteratorTest {
         final String key = "topic-00001-abc123.txt";
 
         when(offsetStorageReader.offset(any())).thenReturn(null);
-        when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(ClosableIterator.wrap(Collections.emptyIterator()));
+        when(mockSourceApiClient.getIteratorOfObjects(any()))
+                .thenReturn(ClosableIterator.wrap(Collections.emptyIterator()));
 
         SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer,
                 mockSourceApiClient);
 
         assertThat(iterator).isExhausted();
 
-        final S3Object result = new S3Object();  // NOPMD closed during testing below.
+        final S3Object result = new S3Object(); // NOPMD closed during testing below.
         result.setKey(key);
         result.setObjectContent(new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8)));
 
-        when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.singletonList(result).listIterator()).thenReturn(Collections.emptyIterator());
+        when(mockSourceApiClient.getIteratorOfObjects(any()))
+                .thenReturn(Collections.singletonList(result).listIterator())
+                .thenReturn(Collections.emptyIterator());
 
         iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
 
@@ -111,22 +114,26 @@ final class SourceRecordIteratorTest {
         transformer = new ByteArrayTransformer();
 
         try (S3Object mockS3Object = mock(S3Object.class)) {
-            when(mockS3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(new ByteArrayInputStream("This is a test".getBytes(StandardCharsets.UTF_8)), null));
+            when(mockS3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(
+                    new ByteArrayInputStream("This is a test".getBytes(StandardCharsets.UTF_8)), null));
             when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.emptyIterator());
             final S3OffsetManagerEntry entry = new S3OffsetManagerEntry("BUCKET", key, "topic", 1);
             entry.incrementRecordCount();
             when(offsetStorageReader.offset(any())).thenReturn(entry.getProperties());
             final S3Object s3Object = new S3Object(); // NOPMD object closed below
             s3Object.setKey(key);
-            when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.singletonList(s3Object).listIterator());
+            when(mockSourceApiClient.getIteratorOfObjects(any()))
+                    .thenReturn(Collections.singletonList(s3Object).listIterator());
 
-            final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
+            final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer,
+                    mockSourceApiClient);
             assertThat(iterator).isExhausted();
         }
     }
 
-    @SuppressWarnings("TestClassWithoutTestCases")
-    private static class TestingTransformer extends Transformer {
+    @SuppressWarnings("PMD.TestClassWithoutTestCases") // TODO figure out why this fails.
+    private static class TestingTransformer extends Transformer { // NOPMD because the above supress warnings does not
+                                                                  // work.
         private final static Logger LOGGER = LoggerFactory.getLogger(TestingTransformer.class);
 
         @Override
@@ -135,38 +142,39 @@ final class SourceRecordIteratorTest {
         }
 
         @Override
-        protected StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+        protected StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+                final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
 
-                return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
-                    private boolean wasRead;
-                    @Override
-                    protected InputStream inputOpened(final InputStream input) {
-                        return input;
-                    }
+            return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
+                private boolean wasRead;
+                @Override
+                protected InputStream inputOpened(final InputStream input) {
+                    return input;
+                }
 
-                    @Override
-                    protected void doClose() {
-                        // nothing to do.
-                    }
+                @Override
+                protected void doClose() {
+                    // nothing to do.
+                }
 
-                    @Override
-                    protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
-                        if (wasRead) {
-                            return false;
-                        }
-                        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                            IOUtils.copy(inputStream, baos);
-                            final String result = "Transformed: " + baos;
-                            action.accept(new SchemaAndValue(null, result));
-                            wasRead = true;
-                            return true;
-                        } catch (RuntimeException | IOException e) { // NOPMD must catch runtime exception here.
-                            LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
-                            wasRead = true;
-                            return false;
-                        }
+                @Override
+                protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
+                    if (wasRead) {
+                        return false;
                     }
-                };
+                    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                        IOUtils.copy(inputStream, baos);
+                        final String result = "Transformed: " + baos;
+                        action.accept(new SchemaAndValue(null, result));
+                        wasRead = true;
+                        return true;
+                    } catch (RuntimeException | IOException e) { // NOPMD must catch runtime exception here.
+                        LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
+                        wasRead = true;
+                        return false;
+                    }
+                }
+            };
         }
     }
 }

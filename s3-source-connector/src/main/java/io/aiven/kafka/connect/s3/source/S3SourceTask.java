@@ -26,15 +26,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.aiven.kafka.connect.common.OffsetManager;
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
@@ -73,10 +73,10 @@ public class S3SourceTask extends SourceTask {
     /** The offset manager this task uses */
     private OffsetManager<S3OffsetManagerEntry> offsetManager;
 
-//    @SuppressWarnings("PMD.UnnecessaryConstructor")
-//    public S3SourceTask() {
-//        super();
-//    }
+    // @SuppressWarnings("PMD.UnnecessaryConstructor")
+    // public S3SourceTask() {
+    // super();
+    // }
 
     @Override
     public String version() {
@@ -90,8 +90,8 @@ public class S3SourceTask extends SourceTask {
         this.transformer = s3SourceConfig.getTransformer();
         offsetManager = new OffsetManager<>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
-        setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
-                        awsv2SourceClient));
+        setSourceRecordIterator(
+                new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, awsv2SourceClient));
         this.taskInitialized = true;
     }
 
@@ -118,8 +118,12 @@ public class S3SourceTask extends SourceTask {
                                 exception);
                         pollLock.wait(ERROR_BACKOFF);
 
-                        setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, //NOPMD createing object in loop.
-                                awsv2SourceClient));
+                        setSourceRecordIterator(
+                                new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, // NOPMD
+                                                                                                          // createing
+                                                                                                          // object in
+                                                                                                          // loop.
+                                        awsv2SourceClient));
 
                     } else {
                         LOGGER.warn("Non-retryable AmazonS3Exception occurred. Stopping polling.", exception);
@@ -138,10 +142,11 @@ public class S3SourceTask extends SourceTask {
     }
 
     /**
-     * Create a list of source records.
-     * Package private for testing.
-     * @param results a list of SourceRecords to add the results to.
-     * @return  the {@code results} parameter.
+     * Create a list of source records. Package private for testing.
+     *
+     * @param results
+     *            a list of SourceRecords to add the results to.
+     * @return the {@code results} parameter.
      */
     List<SourceRecord> extractSourceRecords(final List<SourceRecord> results) {
         if (connectorStopped.get()) {
@@ -165,9 +170,10 @@ public class S3SourceTask extends SourceTask {
     }
 
     /**
-     * Set the S3 source record iterator that this task is using.
-     * protected to be overridden in testing impl.
-     * @param iterator The S3SourceRecord iterator to use.
+     * Set the S3 source record iterator that this task is using. protected to be overridden in testing impl.
+     *
+     * @param iterator
+     *            The S3SourceRecord iterator to use.
      */
     protected void setSourceRecordIterator(final Iterator<S3SourceRecord> iterator) {
         sourceRecordIterator = iterator;
@@ -175,13 +181,18 @@ public class S3SourceTask extends SourceTask {
 
     /**
      * Wait until objects are available to be read
-     * @throws InterruptedException on error.
+     *
+     * @throws InterruptedException
+     *             on error.
      */
     private void waitForObjects() throws InterruptedException {
         while (!sourceRecordIterator.hasNext() && !connectorStopped.get()) {
             LOGGER.debug("Blocking until new S3 files are available.");
             Thread.sleep(S_3_POLL_INTERVAL_MS);
-            setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, // NOPMD creating object in loop
+            setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, // NOPMD
+                                                                                                              // creating
+                                                                                                              // object
+                                                                                                              // in loop
                     awsv2SourceClient));
         }
     }
@@ -203,6 +214,7 @@ public class S3SourceTask extends SourceTask {
 
     /**
      * Get the transformer that we are using.
+     *
      * @return the transformer that we are using.
      */
     public Transformer getTransformer() {
@@ -211,6 +223,7 @@ public class S3SourceTask extends SourceTask {
 
     /**
      * Get the initialized flag.
+     *
      * @return {@code true} if the task has been initialized, {@code false} otherwise.
      */
     public boolean isTaskInitialized() {
@@ -219,6 +232,7 @@ public class S3SourceTask extends SourceTask {
 
     /**
      * Gets the state of the connector stopped flag.
+     *
      * @return The state of the connector stopped flag.
      */
     public boolean isConnectorStopped() {

@@ -29,10 +29,8 @@ public final class S3SourceRecord {
     private final Optional<SchemaAndValue> recordKey;
     private final SchemaAndValue recordValue;
 
-
-
-    public S3SourceRecord(final S3OffsetManagerEntry offsetManagerEntry,  final Optional<SchemaAndValue> keyData,
-                          final SchemaAndValue valueData) {
+    public S3SourceRecord(final S3OffsetManagerEntry offsetManagerEntry, final Optional<SchemaAndValue> keyData,
+            final SchemaAndValue valueData) {
         this.offsetManagerEntry = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
         this.recordKey = keyData;
         this.recordValue = valueData;
@@ -57,7 +55,6 @@ public final class S3SourceRecord {
     public SourceRecord getSourceRecord() {
         return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(),
                 offsetManagerEntry.getProperties(), offsetManagerEntry.getTopic(), offsetManagerEntry.getPartition(),
-                recordKey.map(SchemaAndValue::schema).orElse(null), key(),
-                recordValue.schema(), recordValue.value());
+                recordKey.map(SchemaAndValue::schema).orElse(null), key(), recordValue.schema(), recordValue.value());
     }
 }

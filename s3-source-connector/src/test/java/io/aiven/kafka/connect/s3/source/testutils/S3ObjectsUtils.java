@@ -30,8 +30,8 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
  * Standard utilities to create objects from S3 for testing.
  */
 public final class S3ObjectsUtils {
-    /** A moarker that makes the ObjectSummaryIterator return false for {@code hasNext()}.*/
-    public static final ListObjectsV2Result LAST_RESULT = createListObjectsV2Result(Collections.EMPTY_LIST, null);
+    /** A moarker that makes the ObjectSummaryIterator return false for {@code hasNext()}. */
+    public static final ListObjectsV2Result LAST_RESULT = createListObjectsV2Result(Collections.emptyList(), null);
 
     private S3ObjectsUtils() {
         // do not instantiate.
@@ -47,7 +47,7 @@ public final class S3ObjectsUtils {
      * @return the ListObjectV2Result from a list of summaries and an next token.
      */
     public static ListObjectsV2Result createListObjectsV2Result(final List<S3ObjectSummary> summaries,
-                                                                final String nextToken) {
+            final String nextToken) {
         final ListObjectsV2Result result = new ListObjectsV2Result() {
             @Override
             public List<S3ObjectSummary> getObjectSummaries() {
@@ -84,7 +84,7 @@ public final class S3ObjectsUtils {
      * @return an S3ObjectSummary with the specified size and object key.
      */
     public static S3ObjectSummary createObjectSummary(final long sizeOfObject, final String bucket,
-                                                      final String objectKey) {
+            final String objectKey) {
         final S3ObjectSummary summary = new S3ObjectSummary();
         summary.setSize(sizeOfObject);
         summary.setKey(objectKey);
