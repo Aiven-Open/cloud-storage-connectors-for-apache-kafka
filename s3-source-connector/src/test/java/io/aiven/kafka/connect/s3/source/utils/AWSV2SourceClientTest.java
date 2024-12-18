@@ -125,7 +125,6 @@ class AWSV2SourceClientTest {
         ListObjectsV2Result result = createListObjectsV2Result(lst, null);
         populateS3Client(s3Client, result);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(result).thenReturn(LAST_RESULT);
-        ;
 
         final Iterator<S3Object> objects = awsv2SourceClient.getIteratorOfObjects(null);
         assertThat(objects).hasNext();
@@ -136,14 +135,16 @@ class AWSV2SourceClientTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"4, 1, key1", "4, 3, key1", "4, 0, key1", "4, 1, key2", "4, 2, key2", "4, 0, key2", "4, 1, key3",
-            "4, 2, key3", "4, 3, key3", "4, 0, key4", "4, 2, key4", "4, 3, key4"})
-    void testFetchObjectsWithOneNonZeroByteObjectWithTaskIdUnassigned(final int maxTasks, final int taskId,
-                                                                      final String objectKey) {
-        initializeSourceClient(maxTasks, taskId);
-        populateS3Client(s3Client, createObjectSummary(BUCKET_NAME, objectKey));
-        final Iterator<S3Object> objects = awsv2SourceClient.getIteratorOfObjects(null);
+    @CsvSource({"key1", "key2", "key3", "key4"})
+    void testFetchObjectWithTaskIdUnassigned(final String objectKey) {
+        initializeSourceClient(4, keyTaskMap.get(objectKey));
+        List<S3ObjectSummary> lst = new ArrayList<>();
+        keyTaskMap.keySet().stream().filter(k -> !objectKey.equals(k)).forEach(key -> lst.add(S3ObjectsUtils.createObjectSummary(BUCKET_NAME, key)));
+        ListObjectsV2Result result = createListObjectsV2Result(lst, null);
+        populateS3Client(s3Client, result);
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(result).thenReturn(LAST_RESULT);
 
+        final Iterator<S3Object> objects = awsv2SourceClient.getIteratorOfObjects(null);
         assertThat(objects).isExhausted();
     }
 
@@ -181,7 +182,7 @@ class AWSV2SourceClientTest {
         final ListObjectsV2Result firstResult = createListObjectsV2Result(List.of(object1), "nextToken");
         final ListObjectsV2Result secondResult = createListObjectsV2Result(List.of(object2), null);
 
-        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult).thenReturn(LAST_RESULT);
 
         final Iterator<S3Object> objects = awsv2SourceClient.getIteratorOfObjects(null);
         while (objects.hasNext()) {
@@ -198,11 +199,9 @@ class AWSV2SourceClientTest {
 
     @Test
     void testFetchObjectWithInitialStartAfter() {
-        final Map<String, String> configMap = getConfigMap(1, 0);
+
         final String startAfter = "file-option-1-12000.txt";
-        final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
-        s3Client = mock(AmazonS3.class);
-        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
+        initializeSourceClient();
         requestCaptor = ArgumentCaptor.forClass(ListObjectsV2Request.class);
         final S3ObjectSummary object1 = createObjectSummary(BUCKET_NAME, "key1");
         final S3ObjectSummary object2 = createObjectSummary(BUCKET_NAME, "key2");
@@ -210,23 +209,32 @@ class AWSV2SourceClientTest {
         final ListObjectsV2Result firstResult = createListObjectsV2Result(List.of(object1), "nextToken");
         final ListObjectsV2Result secondResult = createListObjectsV2Result(List.of(object2), null);
 
-        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult).thenReturn(LAST_RESULT);
+        populateS3Client(s3Client, firstResult);
+        populateS3Client(s3Client, secondResult);
 
         final Iterator<S3Object> objects = awsv2SourceClient.getIteratorOfObjects(startAfter);
-        verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
 
-        assertThat(objects.next()).isNotNull();
-        assertThat(objects.next()).isNotNull();
+        assertThat(objects).hasNext();
+        verify(s3Client, times(1)).listObjectsV2(requestCaptor.capture());
+        ListObjectsV2Request request = requestCaptor.getValue();
+        assertThat(request.getStartAfter()).isEqualTo(startAfter);
+        objects.next();
 
+
+        assertThat(objects).hasNext();
         verify(s3Client, times(2)).listObjectsV2(requestCaptor.capture());
-        final List<ListObjectsV2Request> allRequests = requestCaptor.getAllValues();
+        request = requestCaptor.getValue();
+        assertThat(request.getStartAfter()).isNull();
+        assertThat(request.getContinuationToken()).isEqualTo("nextToken");
+        objects.next();
+
         assertThat(objects).isExhausted();
-
-        assertThat(allRequests.get(0).getStartAfter()).isEqualTo(startAfter);
-        // Not required with continuation token
-        assertThat(allRequests.get(1).getStartAfter()).isNull();
-        assertThat(allRequests.get(1).getContinuationToken()).isEqualTo("nextToken");
-
+        verify(s3Client, times(3)).listObjectsV2(requestCaptor.capture());
+        final List<ListObjectsV2Request> allRequests = requestCaptor.getAllValues();
+        request = requestCaptor.getValue();
+        assertThat(request.getStartAfter()).isEqualTo("key2");
+        assertThat(request.getContinuationToken()).isNull();
     }
 
     private ListObjectsV2Result getListObjectsV2Result() {
@@ -245,7 +253,7 @@ class AWSV2SourceClientTest {
                 .createListObjectsV2Result(Collections.singletonList(objectSummary), null);
         S3ObjectsUtils.populateS3Client(s3Client, listObjectsV2Result);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result)
-                .thenReturn(new ListObjectsV2Result());
+                .thenReturn(LAST_RESULT);
 
         final Iterator<S3Object> s3ObjectIterator = awsv2SourceClient.getIteratorOfObjects(null);
 
@@ -267,7 +275,7 @@ class AWSV2SourceClientTest {
                 .createListObjectsV2Result(List.of(zeroByteObject, nonZeroByteObject1, nonZeroByteObject2), null);
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result)
-                .thenReturn(new ListObjectsV2Result());
+                .thenReturn(LAST_RESULT);
         S3ObjectsUtils.populateS3Client(s3Client, listObjectsV2Result);
 
         awsv2SourceClient.addFailedObjectKeys("key2");
@@ -299,7 +307,7 @@ class AWSV2SourceClientTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult)
                 .thenReturn(secondResult)
-                .thenReturn(new ListObjectsV2Result());
+                .thenReturn(LAST_RESULT);
         S3ObjectsUtils.populateS3Client(s3Client, firstResult);
         S3ObjectsUtils.populateS3Client(s3Client, secondResult);
 
@@ -316,6 +324,42 @@ class AWSV2SourceClientTest {
         }
 
         assertThat(s3ObjectIterator).isExhausted();
+    }
+
+    @Test
+    void testFetchNewInputAfterNoNext() throws IOException {
+        initializeSourceClient();
+        final S3ObjectSummary object1 = S3ObjectsUtils.createObjectSummary(1, BUCKET_NAME, "key1");
+        final S3ObjectSummary object2 = S3ObjectsUtils.createObjectSummary(2, BUCKET_NAME, "key2");
+        final List<S3ObjectSummary> firstBatch = List.of(object1);
+        final List<S3ObjectSummary> secondBatch = List.of(object2);
+
+        final ListObjectsV2Result firstResult = S3ObjectsUtils.createListObjectsV2Result(firstBatch, "nextToken");
+        final ListObjectsV2Result secondResult = S3ObjectsUtils.createListObjectsV2Result(secondBatch, null);
+
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult)
+                .thenReturn(LAST_RESULT)
+                .thenReturn(secondResult)
+                .thenReturn(LAST_RESULT);
+        S3ObjectsUtils.populateS3Client(s3Client, firstResult);
+        S3ObjectsUtils.populateS3Client(s3Client, secondResult);
+
+        final Iterator<S3Object> s3ObjectIterator = awsv2SourceClient.getIteratorOfObjects(null);
+
+        assertThat(s3ObjectIterator).hasNext();
+        try (S3Object s3Object = s3ObjectIterator.next()) {
+            assertThat(s3Object.getKey()).isEqualTo("key1");
+        }
+
+        assertThat(s3ObjectIterator).isExhausted();
+
+        assertThat(s3ObjectIterator).hasNext();
+        try (S3Object s3Object = s3ObjectIterator.next()) {
+            assertThat(s3Object.getKey()).isEqualTo("key2");
+        }
+
+        assertThat(s3ObjectIterator).isExhausted();
+
     }
 
 }

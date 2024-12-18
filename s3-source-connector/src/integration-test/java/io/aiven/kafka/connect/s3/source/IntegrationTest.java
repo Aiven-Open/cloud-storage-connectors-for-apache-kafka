@@ -28,7 +28,6 @@ import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_ENDPOINT_
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
-import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManager.SEPARATOR;
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -344,7 +343,7 @@ final class IntegrationTest implements IntegrationBase {
         final PutObjectRequest request = new PutObjectRequest(TEST_BUCKET_NAME, objectKey,
                 new ByteArrayInputStream(testDataBytes), new ObjectMetadata());
         s3Client.putObject(request);
-        return OBJECT_KEY + SEPARATOR + objectKey;
+        return objectKey;
     }
 
     private static String addPrefixOrDefault(final String defaultValue) {

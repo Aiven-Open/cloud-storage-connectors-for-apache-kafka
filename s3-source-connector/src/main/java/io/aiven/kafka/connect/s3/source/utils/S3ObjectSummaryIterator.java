@@ -67,14 +67,13 @@ public class S3ObjectSummaryIterator implements Iterator<S3ObjectSummary> {
         if (!this.innerIterator.hasNext()) {
             if (objectListing.isTruncated()) {
                 // get the next set of data and create an iterator on it.
+                request.setStartAfter(null);
                 request.withContinuationToken(objectListing.getContinuationToken());
                 objectListing = s3Client.listObjectsV2(request);
             } else {
                 // there is no more data -- reread the bucket
                 request.withContinuationToken(null);
-                if (lastObjectSummaryKey != null) {
-                    request.withStartAfter(lastObjectSummaryKey);
-                }
+                request.withStartAfter(lastObjectSummaryKey);
                 objectListing = s3Client.listObjectsV2(request);
             }
             innerIterator = objectListing.getObjectSummaries().iterator();

@@ -44,6 +44,7 @@ import org.mockito.Mock;
 import scala.concurrent.java8.FuturesConvertersImpl;
 
 final class S3OffsetManagerEntryTest {
+
     static final String TEST_BUCKET = "test-bucket";
 
     static final String TOPIC = "TOPIC1";
