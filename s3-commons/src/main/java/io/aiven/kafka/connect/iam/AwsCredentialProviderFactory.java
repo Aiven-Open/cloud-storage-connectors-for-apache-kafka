@@ -26,6 +26,11 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 
 public class AwsCredentialProviderFactory {
 
@@ -58,4 +63,33 @@ public class AwsCredentialProviderFactory {
         }
         return AWSSecurityTokenServiceClientBuilder.defaultClient();
     }
+
+    public AwsCredentialsProvider getAwsV2Provider(final S3ConfigFragment config) {
+
+        if (config.hasAwsStsRole()) {
+            return getV2StsProvider(config);
+        }
+        final AwsBasicCredentials awsCredentials = config.getAwsCredentialsV2();
+        if (Objects.isNull(awsCredentials)) {
+            return config.getCustomCredentialsProviderV2();
+        }
+        return StaticCredentialsProvider.create(awsCredentials);
+
+    }
+
+    private StsAssumeRoleCredentialsProvider getV2StsProvider(final S3ConfigFragment config) {
+        if (config.hasAwsStsRole()) {
+            return StsAssumeRoleCredentialsProvider.builder()
+                    .refreshRequest(() -> AssumeRoleRequest.builder()
+                            .roleArn(config.getStsRole().getArn())
+                            // Maker this a unique identifier
+                            .roleSessionName("AwsV2SDKConnectorSession")
+                            .build())
+                    .build();
+        }
+
+        return StsAssumeRoleCredentialsProvider.builder().build();
+
+    }
+
 }

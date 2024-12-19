@@ -16,45 +16,51 @@
 
 package io.aiven.kafka.connect.s3.source.config;
 
+import java.net.URI;
+import java.time.Duration;
 import java.util.Objects;
+import java.util.Random;
 
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 
-import com.amazonaws.PredefinedClientConfigurations;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.retry.PredefinedBackoffStrategies;
-import com.amazonaws.retry.PredefinedRetryPolicies;
-import com.amazonaws.retry.RetryPolicy;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.retry.RetryMode;
+import software.amazon.awssdk.retries.api.internal.backoff.ExponentialDelayWithJitter;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 
 public class S3ClientFactory {
 
     private final AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
 
-    public AmazonS3 createAmazonS3Client(final S3SourceConfig config) {
-        final var awsEndpointConfig = newEndpointConfiguration(config);
-        final var clientConfig = PredefinedClientConfigurations.defaultConfig()
-                .withRetryPolicy(new RetryPolicy(PredefinedRetryPolicies.DEFAULT_RETRY_CONDITION,
-                        new PredefinedBackoffStrategies.FullJitterBackoffStrategy(
-                                Math.toIntExact(config.getS3RetryBackoffDelayMs()),
-                                Math.toIntExact(config.getS3RetryBackoffMaxDelayMs())),
-                        config.getS3RetryBackoffMaxRetries(), false));
-        final var s3ClientBuilder = AmazonS3ClientBuilder.standard()
-                .withCredentials(credentialFactory.getProvider(config.getS3ConfigFragment()))
-                .withClientConfiguration(clientConfig);
-        if (Objects.isNull(awsEndpointConfig)) {
-            s3ClientBuilder.withRegion(config.getAwsS3Region().getName());
+    public S3Client createAmazonS3Client(final S3SourceConfig config) {
+
+        final ExponentialDelayWithJitter backoffStrategy = new ExponentialDelayWithJitter(Random::new,
+                Duration.ofMillis(Math.toIntExact(config.getS3RetryBackoffDelayMs())),
+                Duration.ofMillis(Math.toIntExact(config.getS3RetryBackoffMaxDelayMs())));
+
+        final ClientOverrideConfiguration clientOverrideConfiguration = ClientOverrideConfiguration.builder()
+                .retryStrategy(RetryMode.STANDARD)
+                .build();
+        if (Objects.isNull(config.getAwsS3EndPoint())) {
+            return S3Client.builder()
+                    .overrideConfiguration(clientOverrideConfiguration)
+                    .overrideConfiguration(o -> o.retryStrategy(
+                            r -> r.backoffStrategy(backoffStrategy).maxAttempts(config.getS3RetryBackoffMaxRetries())))
+                    .region(config.getAwsS3Region())
+                    .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                    .build();
         } else {
-            s3ClientBuilder.withEndpointConfiguration(awsEndpointConfig).withPathStyleAccessEnabled(true);
+            // TODO This is definitely used for testing but not sure if customers use it.
+            return S3Client.builder()
+                    .overrideConfiguration(clientOverrideConfiguration)
+                    .region(config.getAwsS3Region())
+                    .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                    .endpointOverride(URI.create(config.getAwsS3EndPoint()))
+                    .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                    .build();
         }
-        return s3ClientBuilder.build();
+
     }
 
-    private AwsClientBuilder.EndpointConfiguration newEndpointConfiguration(final S3SourceConfig config) {
-        if (Objects.isNull(config.getAwsS3EndPoint())) {
-            return null;
-        }
-        return new AwsClientBuilder.EndpointConfiguration(config.getAwsS3EndPoint(), config.getAwsS3Region().getName());
-    }
 }
