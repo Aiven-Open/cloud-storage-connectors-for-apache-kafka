@@ -347,8 +347,8 @@ public final class S3ConfigFragment extends ConfigFragment {
             }
         } else {
             final BasicAWSCredentials awsCredentials = getAwsCredentials();
-            final AwsBasicCredentials awsV2Credentials = getAwsV2Credentials();
-            if (awsCredentials == null && awsV2Credentials == null) {
+            final AwsBasicCredentials awsCredentialsV2 = getAwsCredentialsV2();
+            if (awsCredentials == null && awsCredentialsV2 == null) {
                 LOGGER.info(
                         "Connector use {} as credential Provider, "
                                 + "when configuration for {{}, {}} OR {{}, {}} are absent",
@@ -435,7 +435,7 @@ public final class S3ConfigFragment extends ConfigFragment {
         return null;
     }
 
-    public AwsBasicCredentials getAwsV2Credentials() {
+    public AwsBasicCredentials getAwsCredentialsV2() {
         if (Objects.nonNull(cfg.getPassword(AWS_ACCESS_KEY_ID_CONFIG))
                 && Objects.nonNull(cfg.getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
 
@@ -467,7 +467,7 @@ public final class S3ConfigFragment extends ConfigFragment {
         }
     }
 
-    public software.amazon.awssdk.regions.Region getAwsV2S3Region() {
+    public software.amazon.awssdk.regions.Region getAwsS3RegionV2() {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
         if (Objects.nonNull(cfg.getString(AWS_S3_REGION_CONFIG))) {
@@ -515,7 +515,7 @@ public final class S3ConfigFragment extends ConfigFragment {
         return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
     }
 
-    public AwsCredentialsProvider getCustomV2CredentialsProvider() {
+    public AwsCredentialsProvider getCustomCredentialsProviderV2() {
         return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AwsCredentialsProvider.class);
     }
 

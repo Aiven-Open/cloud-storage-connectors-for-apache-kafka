@@ -45,7 +45,8 @@ public class S3ClientFactory {
         if (Objects.isNull(config.getAwsS3EndPoint())) {
             return S3Client.builder()
                     .overrideConfiguration(clientOverrideConfiguration)
-                    .overrideConfiguration(o -> o.retryStrategy(r -> r.backoffStrategy(backoffStrategy)))
+                    .overrideConfiguration(o -> o.retryStrategy(
+                            r -> r.backoffStrategy(backoffStrategy).maxAttempts(config.getS3RetryBackoffMaxRetries())))
                     .region(config.getAwsS3Region())
                     .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
                     .build();
