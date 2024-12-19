@@ -65,6 +65,28 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     /**
+     * Wraps an existing property map as an S3OffsetManagerEntry.
+     * Creates a copy of the map for its internal use.
+     * @param properties the map of properties to wrap.
+     * @return an S3OffsetManagerEntry.
+     * @throws IllegalArgumentException if all the required fields are not present.
+     */
+    public static S3OffsetManagerEntry wrap(final Map<String, Object> properties) {
+        if (properties == null) {
+            return null;
+        }
+        final Map<String, Object> ourProperties = new HashMap<>(properties);
+        long recordCount = 0;
+        Object recordCountProperty = ourProperties.computeIfAbsent(RECORD_COUNT, s -> 0L);
+        if (recordCountProperty instanceof Number) {
+            recordCount = ((Number)recordCountProperty).longValue();
+        }
+        final S3OffsetManagerEntry result = new S3OffsetManagerEntry(ourProperties);
+        result.recordCount = recordCount;
+        return result;
+    }
+
+    /**
      * Constructs an OffsetManagerEntry from an existing map.  Used to reconstitute previously serialized
      * S3OffsetManagerEntries.
      * used by {@link #fromProperties(Map)}
@@ -72,7 +94,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      * @param properties
      *            the property map.
      */
-    public S3OffsetManagerEntry(final Map<String, Object> properties) {
+    private S3OffsetManagerEntry(final Map<String, Object> properties) {
         data = new HashMap<>(properties);
         for (final String field : RESTRICTED_KEYS) {
             if (data.get(field) == null) {
@@ -92,15 +114,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      */
     @Override
     public S3OffsetManagerEntry fromProperties(final Map<String, Object> properties) {
-        if (properties == null) {
-            return null;
-        }
-        final Map<String, Object> ourProperties = new HashMap<>(properties);
-        final Long recordCount = (Long) ourProperties.computeIfAbsent(RECORD_COUNT, s -> 0L);
-
-        final S3OffsetManagerEntry result = new S3OffsetManagerEntry(ourProperties);
-        result.recordCount = recordCount;
-        return result;
+        return wrap(properties);
     }
 
     @Override

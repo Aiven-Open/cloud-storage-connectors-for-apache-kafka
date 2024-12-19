@@ -48,7 +48,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -290,6 +289,7 @@ final class IntegrationTest implements IntegrationBase {
 
     @Test
     void jsonTest(final TestInfo testInfo) {
+        List<String> test = testBucketAccessor.listObjects();
         final int messageCount = 500;
         final String topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1);
@@ -305,14 +305,13 @@ final class IntegrationTest implements IntegrationBase {
         final byte[] jsonBytes = jsonBuilder.toString().getBytes(StandardCharsets.UTF_8);
 
         final String offsetKey = writeToS3(topicName, jsonBytes, "00001");
-        await().atMost(1, TimeUnit.SECONDS);
         // Poll Json messages from the Kafka topic and deserialize them
-        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 1,
+        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, messageCount,
                 connectRunner.getBootstrapServers());
 
         assertThat(records).map(jsonNode -> jsonNode.get("payload")).anySatisfy(jsonNode -> {
             assertThat(jsonNode.get("message").asText()).contains(testMessage);
-            assertThat(jsonNode.get("id").asText()).contains("1");
+            assertThat(jsonNode.get("id").asText()).contains(Integer.toString(messageCount-1));
         });
 
         // Verify offset positions -- 0 based counting.

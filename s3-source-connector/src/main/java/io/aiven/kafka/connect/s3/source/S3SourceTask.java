@@ -73,11 +73,6 @@ public class S3SourceTask extends SourceTask {
     /** The offset manager this task uses */
     private OffsetManager<S3OffsetManagerEntry> offsetManager;
 
-    // @SuppressWarnings("PMD.UnnecessaryConstructor")
-    // public S3SourceTask() {
-    // super();
-    // }
-
     @Override
     public String version() {
         return Version.VERSION;
@@ -117,14 +112,7 @@ public class S3SourceTask extends SourceTask {
                         LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
                                 exception);
                         pollLock.wait(ERROR_BACKOFF);
-
-                        setSourceRecordIterator(
-                                new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, // NOPMD
-                                                                                                          // createing
-                                                                                                          // object in
-                                                                                                          // loop.
-                                        awsv2SourceClient));
-
+                        // TODO validate that the iterator does not lose an S3Object.  Add test to S3ObjectIterator.
                     } else {
                         LOGGER.warn("Non-retryable AmazonS3Exception occurred. Stopping polling.", exception);
                         return null; // NOPMD
@@ -189,11 +177,6 @@ public class S3SourceTask extends SourceTask {
         while (!sourceRecordIterator.hasNext() && !connectorStopped.get()) {
             LOGGER.debug("Blocking until new S3 files are available.");
             Thread.sleep(S_3_POLL_INTERVAL_MS);
-            setSourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, // NOPMD
-                                                                                                              // creating
-                                                                                                              // object
-                                                                                                              // in loop
-                    awsv2SourceClient));
         }
     }
 
