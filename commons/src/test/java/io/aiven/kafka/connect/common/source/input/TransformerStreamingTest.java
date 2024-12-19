@@ -89,6 +89,8 @@ class TransformerStreamingTest {
         }
         assertThat(count).isEqualTo(expectedCount);
         assertThat(stream.closeCount).isGreaterThan(0);
+
+        assertThat(iter).as("Calling hasNext() after last item should return false").isExhausted();
     }
 
     static Stream<Arguments> testData() throws IOException {

@@ -152,14 +152,30 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
          */
         OffsetManagerKey getManagerKey();
 
+        /**
+         * Gets the Kafka topic for this entry.
+         * @return The Kafka topic for this entry.
+         */
         String getTopic();
 
+        /**
+         * Gets the Kafka partition for this entry.
+         * @return The Kafka partition for this entry.
+         */
         Integer getPartition();
 
+        /**
+         * Gets the number of records to skip to get to this record.
+         * This is the same as the zero-based index of this record if all records were in an array.
+         * @return The number of records to skip to get to this record.
+         */
         default long skipRecords() {
             return 0;
         }
 
+        /**
+         * Increments the record count.
+         */
         void incrementRecordCount();
     }
 

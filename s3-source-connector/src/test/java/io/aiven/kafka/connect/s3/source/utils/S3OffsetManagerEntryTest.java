@@ -122,4 +122,23 @@ final class S3OffsetManagerEntryTest {
         assertThat(entry2.getProperty("random_entry")).isEqualTo(5L);
         verify(sourceTaskContext, times(0)).offsetStorageReader();
     }
+
+    @Test
+    void testFromProperties() {
+        final S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
+        assertThat(entry.getRecordCount()).isEqualTo(0L);
+        assertThat(entry.getProperty("random_entry")).isNull();
+
+        entry.setProperty("random_entry", 5L);
+        entry.incrementRecordCount();
+        assertThat(entry.getRecordCount()).isEqualTo(1L);
+        assertThat(entry.getProperty("random_entry")).isEqualTo(5L);
+
+        S3OffsetManagerEntry other = entry.fromProperties(entry.getProperties());
+        assertThat(other.getRecordCount()).isEqualTo(1L);
+        assertThat(other.getProperty("random_entry")).isEqualTo(5L);
+
+
+
+    }
 }

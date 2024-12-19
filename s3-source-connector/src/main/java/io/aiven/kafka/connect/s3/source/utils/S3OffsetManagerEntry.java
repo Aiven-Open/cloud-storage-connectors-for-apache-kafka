@@ -65,13 +65,14 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     /**
-     * Constructs an OffsetManagerEntry from an existing map. used by {@link #fromProperties(Map)}. Package private for
-     * testing
+     * Constructs an OffsetManagerEntry from an existing map.  Used to reconstitute previously serialized
+     * S3OffsetManagerEntries.
+     * used by {@link #fromProperties(Map)}
      *
      * @param properties
      *            the property map.
      */
-    private S3OffsetManagerEntry(final Map<String, Object> properties) {
+    public S3OffsetManagerEntry(final Map<String, Object> properties) {
         data = new HashMap<>(properties);
         for (final String field : RESTRICTED_KEYS) {
             if (data.get(field) == null) {

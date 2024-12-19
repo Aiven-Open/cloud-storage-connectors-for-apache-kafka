@@ -35,6 +35,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -170,14 +171,14 @@ public interface IntegrationBase {
         }
     }
 
-    static Map<String, Object> consumeOffsetMessages(KafkaConsumer<byte[], byte[]> consumer) throws IOException {
+    static List<S3OffsetManagerEntry> consumeOffsetMessages(KafkaConsumer<byte[], byte[]> consumer) throws IOException {
         // Poll messages from the topic
-        final Map<String, Object> messages = new HashMap<>();
+        final List<S3OffsetManagerEntry> messages = new ArrayList<>();
         final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(1));
         for (final ConsumerRecord<byte[], byte[]> record : records) {
             Map<String, Object> offsetRec = OBJECT_MAPPER.readValue(record.value(), new TypeReference<>() { // NOPMD
             });
-            messages.putAll(offsetRec);
+            messages.add(new S3OffsetManagerEntry(offsetRec));
         }
         return messages;
     }

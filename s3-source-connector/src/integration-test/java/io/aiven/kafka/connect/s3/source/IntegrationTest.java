@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -187,7 +188,7 @@ final class IntegrationTest implements IntegrationBase {
         // Verify offset positions
         final Map<String, Object> expectedOffsetRecords = offsetKeys.subList(0, offsetKeys.size() - 1)
                 .stream()
-                .collect(Collectors.toMap(Function.identity(), s -> 1));
+                .collect(Collectors.toMap(Function.identity(), s -> 0L));
         verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
     }
 
@@ -289,7 +290,8 @@ final class IntegrationTest implements IntegrationBase {
 
     @Test
     void jsonTest(final TestInfo testInfo) {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final int messageCount = 500;
+        final String topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1);
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.JSONL.getValue());
         connectorConfig.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.json.JsonConverter");
@@ -297,16 +299,15 @@ final class IntegrationTest implements IntegrationBase {
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
         final String testMessage = "This is a test ";
         final StringBuilder jsonBuilder = new StringBuilder();
-        for (int i = 0; i < 500; i++) {
-            final String jsonContent = "{\"message\": \"" + testMessage + "\", \"id\":\"" + i + "\"}";
-            jsonBuilder.append(jsonContent).append("\n"); // NOPMD
+        for (int i = 0; i < messageCount; i++) {
+            jsonBuilder.append(String.format("{\"message\": \"%s\", \"id\":\"%s\"}%n", testMessage, i)); // NOPMD
         }
         final byte[] jsonBytes = jsonBuilder.toString().getBytes(StandardCharsets.UTF_8);
 
         final String offsetKey = writeToS3(topicName, jsonBytes, "00001");
-
+        await().atMost(1, TimeUnit.SECONDS);
         // Poll Json messages from the Kafka topic and deserialize them
-        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 500,
+        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 1,
                 connectRunner.getBootstrapServers());
 
         assertThat(records).map(jsonNode -> jsonNode.get("payload")).anySatisfy(jsonNode -> {
@@ -314,8 +315,8 @@ final class IntegrationTest implements IntegrationBase {
             assertThat(jsonNode.get("id").asText()).contains("1");
         });
 
-        // Verify offset positions
-        verifyOffsetPositions(Map.of(offsetKey, 500), connectRunner.getBootstrapServers());
+        // Verify offset positions -- 0 based counting.
+        verifyOffsetPositions(Map.of(offsetKey, (long)messageCount-1), connectRunner.getBootstrapServers());
     }
 
     private static byte[] generateNextAvroMessagesStartingFromId(final int messageId, final int noOfAvroRecs,
@@ -379,7 +380,7 @@ final class IntegrationTest implements IntegrationBase {
         try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProperties)) {
             consumer.subscribe(Collections.singletonList("connect-offset-topic-" + CONNECTOR_NAME));
             await().atMost(Duration.ofMinutes(1)).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-                offsetRecs.putAll(IntegrationBase.consumeOffsetMessages(consumer));
+                IntegrationBase.consumeOffsetMessages(consumer).forEach(s -> offsetRecs.put(s.getKey(), s.getRecordCount()));
                 assertThat(offsetRecs).containsExactlyInAnyOrderEntriesOf(expectedRecords);
             });
         }

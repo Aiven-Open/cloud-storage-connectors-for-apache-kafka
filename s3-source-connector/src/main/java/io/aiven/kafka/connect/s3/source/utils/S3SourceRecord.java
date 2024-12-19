@@ -21,6 +21,9 @@ import java.util.Optional;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 
+/**
+ * The S3SourceRecord creates an immutable copy of the offsetManagerEntry, the recordKey and the recordValue.
+ */
 public final class S3SourceRecord {
 
     /** The S3OffsetManagerEntry for this source record */
@@ -41,7 +44,7 @@ public final class S3SourceRecord {
     }
 
     public SchemaAndValue value() {
-        return recordValue;
+        return new SchemaAndValue(recordValue.schema(), recordValue.value());
     }
 
     public S3OffsetManagerEntry getOffsetManagerEntry() {

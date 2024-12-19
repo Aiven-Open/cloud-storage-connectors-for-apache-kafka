@@ -173,7 +173,7 @@ public abstract class Transformer {
         public final boolean tryAdvance(final Consumer<? super SchemaAndValue> action) {
             boolean result = false;
             if (closed) {
-                logger.error("Attempt to advance after closed");
+                return false;
             }
             try {
                 if (inputStream == null) {

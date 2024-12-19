@@ -50,6 +50,7 @@ public class ByteArrayTransformer extends Transformer {
     public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
             final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
+
             @Override
             protected InputStream inputOpened(final InputStream input) {
                 return input;
