@@ -30,17 +30,15 @@ import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
-import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
-import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,41 +47,31 @@ import org.slf4j.LoggerFactory;
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
  * Connect records.
  */
-@SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports" })
 public class S3SourceTask extends SourceTask {
-
+    /** The loger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
-
-    public static final String BUCKET = "bucket";
-    public static final String TOPIC = "topic";
-
-    public static final String OBJECT_KEY = "object_key";
-    public static final String PARTITION = "topicPartition";
-
+    /** How log to wait for data */
     private static final long S_3_POLL_INTERVAL_MS = 10_000L;
+    /** How much to backoff when no data is available */
     private static final long ERROR_BACKOFF = 1000L;
-
+    /** The S3Source configuration */
     private S3SourceConfig s3SourceConfig;
-    private AmazonS3 s3Client;
-
+    /** An iterator or S3SourceRecords */
     private Iterator<S3SourceRecord> sourceRecordIterator;
+    /** The transformer that we are using */
     private Transformer transformer;
-
+    /** The task initialized flag */
     private boolean taskInitialized;
-
+    /** The connector stopped flag */
     private final AtomicBoolean connectorStopped = new AtomicBoolean();
-
+    /** The poll lock object */
     private final Object pollLock = new Object();
+    /** The AWS Source client */
     private AWSV2SourceClient awsv2SourceClient;
+    /** The list of failed object keys */
     private final Set<String> failedObjectKeys = new HashSet<>();
-    private final Set<String> inProcessObjectKeys = new HashSet<>();
-
-    private OffsetManager offsetManager;
-
-    @SuppressWarnings("PMD.UnnecessaryConstructor")
-    public S3SourceTask() {
-        super();
-    }
+    /** The offset manager this task uses */
+    private OffsetManager<S3OffsetManagerEntry> offsetManager;
 
     @Override
     public String version() {
@@ -94,16 +82,12 @@ public class S3SourceTask extends SourceTask {
     public void start(final Map<String, String> props) {
         LOGGER.info("S3 Source task started.");
         s3SourceConfig = new S3SourceConfig(props);
-        this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
-        offsetManager = new OffsetManager(context, s3SourceConfig);
+        this.transformer = s3SourceConfig.getTransformer();
+        offsetManager = new OffsetManager<>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
-        prepareReaderFromOffsetStorageReader();
+        setSourceRecordIterator(
+                new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, awsv2SourceClient));
         this.taskInitialized = true;
-    }
-
-    private void prepareReaderFromOffsetStorageReader() {
-        sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
-                awsv2SourceClient);
     }
 
     @Override
@@ -119,6 +103,7 @@ public class S3SourceTask extends SourceTask {
 
             while (!connectorStopped.get()) {
                 try {
+                    waitForObjects();
                     extractSourceRecords(results);
                     LOGGER.info("Number of records extracted and sent: {}", results.size());
                     return results;
@@ -127,8 +112,7 @@ public class S3SourceTask extends SourceTask {
                         LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
                                 exception);
                         pollLock.wait(ERROR_BACKOFF);
-
-                        prepareReaderFromOffsetStorageReader();
+                        // TODO validate that the iterator does not lose an S3Object.  Add test to S3ObjectIterator.
                     } else {
                         LOGGER.warn("Non-retryable AmazonS3Exception occurred. Stopping polling.", exception);
                         return null; // NOPMD
@@ -145,20 +129,54 @@ public class S3SourceTask extends SourceTask {
         }
     }
 
-    private List<SourceRecord> extractSourceRecords(final List<SourceRecord> results) throws InterruptedException {
-        waitForObjects();
+    /**
+     * Create a list of source records. Package private for testing.
+     *
+     * @param results
+     *            a list of SourceRecords to add the results to.
+     * @return the {@code results} parameter.
+     */
+    List<SourceRecord> extractSourceRecords(final List<SourceRecord> results) {
         if (connectorStopped.get()) {
             return results;
         }
-        return RecordProcessor.processRecords(sourceRecordIterator, results, s3SourceConfig, connectorStopped,
-                awsv2SourceClient, offsetManager);
+        final int maxPollRecords = s3SourceConfig.getMaxPollRecords();
+
+        for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
+            final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
+            if (s3SourceRecord != null) {
+                try {
+                    offsetManager.updateCurrentOffsets(s3SourceRecord.getOffsetManagerEntry());
+                    results.add(s3SourceRecord.getSourceRecord());
+                } catch (DataException e) {
+                    LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
+                    awsv2SourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
+                }
+            }
+        }
+        return results;
     }
 
+    /**
+     * Set the S3 source record iterator that this task is using. protected to be overridden in testing impl.
+     *
+     * @param iterator
+     *            The S3SourceRecord iterator to use.
+     */
+    protected void setSourceRecordIterator(final Iterator<S3SourceRecord> iterator) {
+        sourceRecordIterator = iterator;
+    }
+
+    /**
+     * Wait until objects are available to be read
+     *
+     * @throws InterruptedException
+     *             on error.
+     */
     private void waitForObjects() throws InterruptedException {
         while (!sourceRecordIterator.hasNext() && !connectorStopped.get()) {
             LOGGER.debug("Blocking until new S3 files are available.");
             Thread.sleep(S_3_POLL_INTERVAL_MS);
-            prepareReaderFromOffsetStorageReader();
         }
     }
 
@@ -176,15 +194,31 @@ public class S3SourceTask extends SourceTask {
     }
 
     // below for visibility in tests
+
+    /**
+     * Get the transformer that we are using.
+     *
+     * @return the transformer that we are using.
+     */
     public Transformer getTransformer() {
         return transformer;
     }
 
+    /**
+     * Get the initialized flag.
+     *
+     * @return {@code true} if the task has been initialized, {@code false} otherwise.
+     */
     public boolean isTaskInitialized() {
         return taskInitialized;
     }
 
-    public AtomicBoolean getConnectorStopped() {
-        return new AtomicBoolean(connectorStopped.get());
+    /**
+     * Gets the state of the connector stopped flag.
+     *
+     * @return The state of the connector stopped flag.
+     */
+    public boolean isConnectorStopped() {
+        return connectorStopped.get();
     }
 }

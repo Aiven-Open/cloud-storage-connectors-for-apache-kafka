@@ -16,48 +16,46 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.connect.json.JsonConverter;
 
-import io.aiven.kafka.connect.common.config.SchemaRegistryFragment;
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-
 import io.confluent.connect.avro.AvroData;
 
+/**
+ * A factory to create Transformers.
+ */
 public final class TransformerFactory {
-
+    /** The cache size for systems that read Avro data */
     public static final int CACHE_SIZE = 100;
 
     private TransformerFactory() {
         // hidden
     }
-    public static Transformer getTransformer(final SourceCommonConfig sourceConfig) {
-        final InputFormat inputFormatEnum = new SchemaRegistryFragment(sourceConfig).getInputFormat();
-        switch (inputFormatEnum) {
+
+    /**
+     * Gets a configured Transformer.
+     *
+     * @param inputFormat
+     *            The input format for the transformer.
+     * @return the Transformer for the specified input format.
+     */
+    public static Transformer getTransformer(final InputFormat inputFormat) {
+        switch (inputFormat) {
             case AVRO :
                 return new AvroTransformer(new AvroData(CACHE_SIZE));
             case PARQUET :
                 return new ParquetTransformer(new AvroData(CACHE_SIZE));
             case JSONL :
                 final JsonConverter jsonConverter = new JsonConverter();
-                configureJsonConverter(jsonConverter);
+                jsonConverter.configure(Map.of(SCHEMAS_ENABLE, "false"), false);
                 return new JsonTransformer(jsonConverter);
             case BYTES :
                 return new ByteArrayTransformer();
             default :
-                throw new IllegalArgumentException(
-                        "Unknown input format in configuration: " + sourceConfig.getString(INPUT_FORMAT_KEY));
+                throw new IllegalArgumentException("Unknown input format in configuration: " + inputFormat);
         }
-    }
-
-    private static void configureJsonConverter(final JsonConverter jsonConverter) {
-        final Map<String, String> config = new HashMap<>();
-        config.put(SCHEMAS_ENABLE, "false");
-        jsonConverter.configure(config, false);
     }
 }

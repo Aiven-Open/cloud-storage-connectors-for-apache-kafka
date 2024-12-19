@@ -35,6 +35,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -135,7 +136,7 @@ public interface IntegrationBase {
             String bootstrapServers) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, ByteArrayDeserializer.class,
                 ByteArrayDeserializer.class);
-        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, consumerProperties);
+        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, consumerProperties, Duration.ofMinutes(2));
         return objects.stream().map(String::new).collect(Collectors.toList());
     }
 
@@ -143,23 +144,23 @@ public interface IntegrationBase {
             final String bootstrapServers, final String schemaRegistryUrl) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, StringDeserializer.class,
                 KafkaAvroDeserializer.class, schemaRegistryUrl);
-        return consumeMessages(topic, expectedMessageCount, consumerProperties);
+        return consumeMessages(topic, expectedMessageCount, consumerProperties, Duration.ofMinutes(5));
     }
 
     static List<JsonNode> consumeJsonMessages(final String topic, final int expectedMessageCount,
             final String bootstrapServers) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, StringDeserializer.class,
                 JsonDeserializer.class);
-        return consumeMessages(topic, expectedMessageCount, consumerProperties);
+        return consumeMessages(topic, expectedMessageCount, consumerProperties, Duration.ofMinutes(2));
     }
 
     static <K, V> List<V> consumeMessages(final String topic, final int expectedMessageCount,
-            final Properties consumerProperties) {
+            final Properties consumerProperties, Duration maxTime) {
         try (KafkaConsumer<K, V> consumer = new KafkaConsumer<>(consumerProperties)) {
             consumer.subscribe(Collections.singletonList(topic));
 
             final List<V> recordValues = new ArrayList<>();
-            await().atMost(Duration.ofMinutes(5)).pollInterval(Duration.ofSeconds(5)).untilAsserted(() -> {
+            await().atMost(maxTime).pollInterval(Duration.ofSeconds(5)).untilAsserted(() -> {
                 final ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(500L));
                 for (final ConsumerRecord<K, V> record : records) {
                     recordValues.add(record.value());
@@ -170,14 +171,14 @@ public interface IntegrationBase {
         }
     }
 
-    static Map<String, Object> consumeOffsetMessages(KafkaConsumer<byte[], byte[]> consumer) throws IOException {
+    static List<S3OffsetManagerEntry> consumeOffsetMessages(KafkaConsumer<byte[], byte[]> consumer) throws IOException {
         // Poll messages from the topic
-        final Map<String, Object> messages = new HashMap<>();
+        final List<S3OffsetManagerEntry> messages = new ArrayList<>();
         final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(1));
         for (final ConsumerRecord<byte[], byte[]> record : records) {
             Map<String, Object> offsetRec = OBJECT_MAPPER.readValue(record.value(), new TypeReference<>() { // NOPMD
             });
-            messages.putAll(offsetRec);
+            messages.add(S3OffsetManagerEntry.wrap(offsetRec));
         }
         return messages;
     }

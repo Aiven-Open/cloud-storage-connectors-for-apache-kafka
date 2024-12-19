@@ -21,40 +21,49 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.json.JsonConverter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aiven.kafka.connect.common.OffsetManager;
+
 import org.apache.commons.io.function.IOSupplier;
 import org.codehaus.plexus.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JsonTransformer extends Transformer<byte[]> {
-
+/**
+ * Transformer to read the input file line by line and process each line as a Json object.
+ */
+public class JsonTransformer extends Transformer {
+    /** The json converter to read with */
     private final JsonConverter jsonConverter;
-
+    /** The logger for this transform */
     private static final Logger LOGGER = LoggerFactory.getLogger(JsonTransformer.class);
 
-    final ObjectMapper objectMapper = new ObjectMapper();
-
+    /**
+     * Constructs a Json transform with the specified converter.
+     *
+     * @param jsonConverter
+     *            the Json converter to read with.
+     */
     JsonTransformer(final JsonConverter jsonConverter) {
         super();
         this.jsonConverter = jsonConverter;
     }
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
+    public Schema getKeySchema() {
+        return null;
     }
 
     @Override
-    public StreamSpliterator<byte[]> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
-        final StreamSpliterator<byte[]> spliterator = new StreamSpliterator<>(LOGGER, inputStreamIOSupplier) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
             BufferedReader reader;
 
             @Override
@@ -75,7 +84,7 @@ public class JsonTransformer extends Transformer<byte[]> {
             }
 
             @Override
-            public boolean doAdvance(final Consumer<? super byte[]> action) {
+            public boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
                 String line = null;
                 try {
                     // remove blank and empty lines.
@@ -87,7 +96,8 @@ public class JsonTransformer extends Transformer<byte[]> {
                         }
                     }
                     line = line.trim();
-                    action.accept(line.getBytes(StandardCharsets.UTF_8));
+                    action.accept(jsonConverter.toConnectData(offsetManagerEntry.getTopic(),
+                            line.getBytes(StandardCharsets.UTF_8)));
                     return true;
                 } catch (IOException e) {
                     LOGGER.error("Error reading input stream: {}", e.getMessage(), e);
@@ -95,18 +105,5 @@ public class JsonTransformer extends Transformer<byte[]> {
                 }
             }
         };
-
-        return spliterator;
-    }
-
-    @Override
-    public SchemaAndValue getValueData(final byte[] record, final String topic, final AbstractConfig sourceConfig) {
-        return jsonConverter.toConnectData(topic, record);
-    }
-
-    @Override
-    public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
-            final AbstractConfig sourceConfig) {
-        return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 }

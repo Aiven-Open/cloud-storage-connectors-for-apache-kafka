@@ -16,125 +16,165 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.BYTES_TRANSFORMATION_NUM_OF_RECS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.stream.Stream;
+import java.util.function.Consumer;
 
-import io.aiven.kafka.connect.common.source.input.AvroTransformer;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+
+import io.aiven.kafka.connect.common.ClosableIterator;
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class SourceRecordIteratorTest {
 
     private S3SourceConfig mockConfig;
-    private OffsetManager mockOffsetManager;
-    private Transformer mockTransformer;
+    private OffsetManager<S3OffsetManagerEntry> offsetManager;
+    private Transformer transformer;
 
     private AWSV2SourceClient mockSourceApiClient;
+
+    private OffsetStorageReader offsetStorageReader;
 
     @BeforeEach
     public void setUp() {
         mockConfig = mock(S3SourceConfig.class);
-        mockOffsetManager = mock(OffsetManager.class);
-        mockTransformer = mock(Transformer.class);
+        when(mockConfig.getAwsS3BucketName()).thenReturn("BUCKET");
+
+        offsetStorageReader = mock(OffsetStorageReader.class);
+        final SourceTaskContext taskContext = mock(SourceTaskContext.class);
+        when(taskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
+        offsetManager = new OffsetManager<>(taskContext);
+        transformer = new TestingTransformer();
         mockSourceApiClient = mock(AWSV2SourceClient.class);
+
     }
 
     @Test
-    void testIteratorProcessesS3Objects() throws Exception {
+    void testIteratorProcessesS3Objects() {
 
         final String key = "topic-00001-abc123.txt";
 
-        // Mock S3Object and InputStream
-        try (S3Object mockS3Object = mock(S3Object.class);
-                S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
-                        null);) {
-            when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
-            when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
+        when(offsetStorageReader.offset(any())).thenReturn(null);
+        when(mockSourceApiClient.getIteratorOfObjects(any()))
+                .thenReturn(ClosableIterator.wrap(Collections.emptyIterator()));
 
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-                    .thenReturn(Stream.of(new Object()));
+        SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer,
+                mockSourceApiClient);
 
-            when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
+        assertThat(iterator).isExhausted();
 
-            when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.emptyIterator());
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+        final S3Object result = new S3Object(); // NOPMD closed during testing below.
+        result.setKey(key);
+        result.setObjectContent(new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8)));
+
+        when(mockSourceApiClient.getIteratorOfObjects(any()))
+                .thenReturn(Collections.singletonList(result).listIterator())
+                .thenReturn(Collections.emptyIterator());
+
+        iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer, mockSourceApiClient);
+
+        assertThat(iterator).hasNext();
+        final S3SourceRecord sourceRecord = iterator.next();
+        assertThat(sourceRecord).isNotNull();
+        assertThat(sourceRecord.value().value()).isEqualTo("Transformed: Hello World");
+        assertThat(sourceRecord.getObjectKey()).isEqualTo(key);
+        assertThat(sourceRecord.key()).isEqualTo(key.getBytes(StandardCharsets.UTF_8));
+        assertThat(iterator).isExhausted();
+    }
+
+    @Test
+    void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws IOException {
+
+        final String key = "topic-00001-abc123.txt";
+        transformer = new ByteArrayTransformer();
+
+        try (S3Object mockS3Object = mock(S3Object.class)) {
+            when(mockS3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(
+                    new ByteArrayInputStream("This is a test".getBytes(StandardCharsets.UTF_8)), null));
+            when(mockSourceApiClient.getIteratorOfObjects(any())).thenReturn(Collections.emptyIterator());
+            final S3OffsetManagerEntry entry = new S3OffsetManagerEntry("BUCKET", key, "topic", 1);
+            entry.incrementRecordCount();
+            when(offsetStorageReader.offset(any())).thenReturn(entry.getProperties());
+            final S3Object s3Object = new S3Object(); // NOPMD object closed below
+            s3Object.setKey(key);
+            when(mockSourceApiClient.getIteratorOfObjects(any()))
+                    .thenReturn(Collections.singletonList(s3Object).listIterator());
+
+            final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, offsetManager, transformer,
                     mockSourceApiClient);
-
-            assertThat(iterator.hasNext()).isFalse();
-            assertThat(iterator.next()).isNull();
-
-            when(mockSourceApiClient.getListOfObjectKeys(any()))
-                    .thenReturn(Collections.singletonList(key).listIterator());
-
-            iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
-
-            assertThat(iterator.hasNext()).isTrue();
-            assertThat(iterator.next()).isNotNull();
+            assertThat(iterator).isExhausted();
         }
     }
 
-    @Test
-    void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws Exception {
+    @SuppressWarnings("PMD.TestClassWithoutTestCases") // TODO figure out why this fails.
+    private static class TestingTransformer extends Transformer { // NOPMD because the above supress warnings does not
+                                                                  // work.
+        private final static Logger LOGGER = LoggerFactory.getLogger(TestingTransformer.class);
 
-        final String key = "topic-00001-abc123.txt";
+        @Override
+        public Schema getKeySchema() {
+            return null;
+        }
 
-        // Mock S3Object and InputStream
-        try (S3Object mockS3Object = mock(S3Object.class);
-                S3ObjectInputStream mockInputStream = new S3ObjectInputStream(new ByteArrayInputStream(new byte[] {}),
-                        null);) {
-            when(mockSourceApiClient.getObject(anyString())).thenReturn(mockS3Object);
-            when(mockS3Object.getObjectContent()).thenReturn(mockInputStream);
+        @Override
+        protected StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+                final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
 
-            // With ByteArrayTransformer
-            mockTransformer = mock(ByteArrayTransformer.class);
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-                    .thenReturn(Stream.of(new Object()));
+            return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
+                private boolean wasRead;
+                @Override
+                protected InputStream inputOpened(final InputStream input) {
+                    return input;
+                }
 
-            when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
+                @Override
+                protected void doClose() {
+                    // nothing to do.
+                }
 
-            when(mockSourceApiClient.getListOfObjectKeys(any()))
-                    .thenReturn(Collections.singletonList(key).listIterator());
-            when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
-                    .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
-
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
-                    mockSourceApiClient);
-            assertThat(iterator.hasNext()).isTrue();
-            iterator.next();
-            verify(mockTransformer, never()).getRecords(any(), anyString(), anyInt(), any(), anyLong());
-
-            // With AvroTransformer
-            mockTransformer = mock(AvroTransformer.class);
-            when(mockSourceApiClient.getListOfObjectKeys(any()))
-                    .thenReturn(Collections.singletonList(key).listIterator());
-            when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
-                    .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
-
-            iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
-            assertThat(iterator.hasNext()).isTrue();
-            iterator.next();
-
-            verify(mockTransformer, times(1)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
+                @Override
+                protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
+                    if (wasRead) {
+                        return false;
+                    }
+                    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                        IOUtils.copy(inputStream, baos);
+                        final String result = "Transformed: " + baos;
+                        action.accept(new SchemaAndValue(null, result));
+                        wasRead = true;
+                        return true;
+                    } catch (RuntimeException | IOException e) { // NOPMD must catch runtime exception here.
+                        LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
+                        wasRead = true;
+                        return false;
+                    }
+                }
+            };
         }
     }
 }
