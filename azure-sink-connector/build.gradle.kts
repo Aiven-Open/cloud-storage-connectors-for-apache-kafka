@@ -71,7 +71,7 @@ dependencies {
 
   implementation(project(":commons"))
 
-  implementation("com.azure:azure-storage-blob:12.26.1")
+  implementation("com.azure:azure-storage-blob:12.29.0")
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
