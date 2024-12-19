@@ -86,7 +86,7 @@ final public class S3SourceConfig extends SourceCommonConfig {
     }
 
     public AwsBasicCredentials getAwsCredentials() {
-        return s3ConfigFragment.getAwsV2Credentials();
+        return s3ConfigFragment.getAwsCredentialsV2();
     }
 
     public String getAwsS3EndPoint() {
@@ -94,7 +94,7 @@ final public class S3SourceConfig extends SourceCommonConfig {
     }
 
     public Region getAwsS3Region() {
-        return s3ConfigFragment.getAwsV2S3Region();
+        return s3ConfigFragment.getAwsS3RegionV2();
     }
 
     public String getAwsS3BucketName() {

@@ -69,9 +69,9 @@ public class AwsCredentialProviderFactory {
         if (config.hasAwsStsRole()) {
             return getV2StsProvider(config);
         }
-        final AwsBasicCredentials awsCredentials = config.getAwsV2Credentials();
+        final AwsBasicCredentials awsCredentials = config.getAwsCredentialsV2();
         if (Objects.isNull(awsCredentials)) {
-            return config.getCustomV2CredentialsProvider();
+            return config.getCustomCredentialsProviderV2();
         }
         return StaticCredentialsProvider.create(awsCredentials);
 
