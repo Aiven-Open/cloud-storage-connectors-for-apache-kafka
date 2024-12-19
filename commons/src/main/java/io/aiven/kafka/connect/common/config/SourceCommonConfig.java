@@ -20,8 +20,55 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+
 public class SourceCommonConfig extends CommonConfig {
+
+    private final SchemaRegistryFragment schemaRegistryFragment;
+    private final SourceConfigFragment sourceConfigFragment;
+    private final FileNameFragment fileNameFragment;
+    private final OutputFormatFragment outputFormatFragment;
+
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
         super(definition, originals);
+        // Construct Fragments
+        schemaRegistryFragment = new SchemaRegistryFragment(this);
+        sourceConfigFragment = new SourceConfigFragment(this);
+        fileNameFragment = new FileNameFragment(this);
+        outputFormatFragment = new OutputFormatFragment(this);
+
+        validate(); // NOPMD ConstructorCallsOverridableMethod
     }
+
+    private void validate() {
+        schemaRegistryFragment.validate();
+        sourceConfigFragment.validate();
+        fileNameFragment.validate();
+        outputFormatFragment.validate();
+    }
+
+    public InputFormat getInputFormat() {
+        return schemaRegistryFragment.getInputFormat();
+    }
+
+    public String getSchemaRegistryUrl() {
+        return schemaRegistryFragment.getSchemaRegistryUrl();
+    }
+
+    public String getTargetTopics() {
+        return sourceConfigFragment.getTargetTopics();
+    }
+    public String getTargetTopicPartitions() {
+        return sourceConfigFragment.getTargetTopicPartitions();
+    }
+
+    public ErrorsTolerance getErrorsTolerance() {
+        return ErrorsTolerance.forName(sourceConfigFragment.getErrorsTolerance());
+    }
+
+    public int getMaxPollRecords() {
+        return sourceConfigFragment.getMaxPollRecords();
+    }
+
 }
