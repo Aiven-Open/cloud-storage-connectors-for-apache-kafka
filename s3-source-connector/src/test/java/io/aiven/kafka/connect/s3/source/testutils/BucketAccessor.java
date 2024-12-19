@@ -32,58 +32,71 @@ import java.util.zip.GZIPInputStream;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.github.luben.zstd.ZstdInputStream;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.SnappyInputStream;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 public class BucketAccessor {
 
     private final String bucketName;
-    private final AmazonS3 s3Client;
+    private final S3Client s3Client;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BucketAccessor.class);
 
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable s3Client object")
-    public BucketAccessor(final AmazonS3 s3Client, final String bucketName) {
+    public BucketAccessor(final S3Client s3Client, final String bucketName) {
         this.bucketName = bucketName;
         this.s3Client = s3Client;
     }
 
     public final void createBucket() {
-        s3Client.createBucket(bucketName);
+        s3Client.createBucket(builder -> builder.bucket(bucketName).build());
     }
 
     public final void removeBucket() {
-        final var chunk = s3Client.listObjects(bucketName)
-                .getObjectSummaries()
+        final var deleteIds = s3Client.listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build())
+                .contents()
                 .stream()
-                .map(S3ObjectSummary::getKey)
-                .toArray(String[]::new);
+                .map(S3Object::key)
+                .map(key -> ObjectIdentifier.builder().key(key).build())
+                .collect(Collectors.toList());
 
-        final var deleteObjectsRequest = new DeleteObjectsRequest(bucketName).withKeys(chunk);
         try {
-            s3Client.deleteObjects(deleteObjectsRequest);
-        } catch (final MultiObjectDeleteException e) {
-            for (final var err : e.getErrors()) {
-                LOGGER.warn(String.format("Couldn't delete object: %s. Reason: [%s] %s", err.getKey(), err.getCode(),
-                        err.getMessage()));
-            }
-        } catch (final AmazonClientException e) {
-            LOGGER.error("Couldn't delete objects: {}",
-                    Arrays.stream(chunk).reduce(" ", String::concat) + e.getMessage());
+            s3Client.deleteObjects(DeleteObjectsRequest.builder()
+                    .bucket(bucketName)
+                    .delete(Delete.builder().objects(deleteIds).build())
+                    .build());
+        } catch (final S3Exception e) {
+            LOGGER.warn(
+                    String.format("Couldn't delete objects. Reason: [%s] %s", e.awsErrorDetails().errorMessage(), e));
+        } catch (final SdkException e) {
+
+            LOGGER.error("Couldn't delete objects: {}, Exception{} ", deleteIds, e.getMessage());
         }
-        s3Client.deleteBucket(bucketName);
+        s3Client.deleteBucket(DeleteBucketRequest.builder().bucket(bucketName).build());
     }
 
+    // TODO NOT Currently used
     public final Boolean doesObjectExist(final String objectName) {
-        return s3Client.doesObjectExist(bucketName, objectName);
+        try {
+            s3Client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(objectName).build());
+            return true;
+        } catch (NoSuchKeyException e) {
+            return false;
+        }
     }
 
     public final List<List<String>> readAndDecodeLines(final String blobName, final String compression,
@@ -104,7 +117,8 @@ public class BucketAccessor {
 
     public final byte[] readBytes(final String blobName, final String compression) throws IOException {
         Objects.requireNonNull(blobName, "blobName cannot be null");
-        final byte[] blobBytes = s3Client.getObject(bucketName, blobName).getObjectContent().readAllBytes();
+        final byte[] blobBytes = s3Client.getObjectAsBytes(builder -> builder.key(blobName).bucket(bucketName).build())
+                .asByteArray();
         try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
                 InputStream decompressedStream = getDecompressedStream(bais, compression);
                 ByteArrayOutputStream decompressedBytes = new ByteArrayOutputStream()) {
@@ -135,10 +149,11 @@ public class BucketAccessor {
     }
 
     public final List<String> listObjects() {
-        return s3Client.listObjects(bucketName)
-                .getObjectSummaries()
+
+        return s3Client.listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build())
+                .contents()
                 .stream()
-                .map(S3ObjectSummary::getKey)
+                .map(S3Object::key)
                 .collect(Collectors.toList());
     }
 

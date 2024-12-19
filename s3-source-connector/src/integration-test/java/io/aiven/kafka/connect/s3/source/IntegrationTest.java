@@ -33,7 +33,6 @@ import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -62,9 +61,6 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
@@ -83,6 +79,9 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Testcontainers
 @SuppressWarnings("PMD.ExcessiveImports")
@@ -111,7 +110,7 @@ final class IntegrationTest implements IntegrationBase {
     private AdminClient adminClient;
     private ConnectRunner connectRunner;
 
-    private static AmazonS3 s3Client;
+    private static S3Client s3Client;
 
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
@@ -263,7 +262,7 @@ final class IntegrationTest implements IntegrationBase {
         final Path path = ContentUtils.getTmpFilePath(name);
 
         try {
-            s3Client.putObject(TEST_BUCKET_NAME, fileName, Files.newInputStream(path), null);
+            s3Client.putObject(PutObjectRequest.builder().bucket(TEST_BUCKET_NAME).key(fileName).build(), path);
         } catch (final Exception e) { // NOPMD broad exception caught
             LOGGER.error("Error in reading file {}", e.getMessage(), e);
         } finally {
@@ -341,9 +340,8 @@ final class IntegrationTest implements IntegrationBase {
     private static String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
         final String objectKey = addPrefixOrDefault("") + topicName + "-" + partitionId + "-"
                 + System.currentTimeMillis() + ".txt";
-        final PutObjectRequest request = new PutObjectRequest(TEST_BUCKET_NAME, objectKey,
-                new ByteArrayInputStream(testDataBytes), new ObjectMetadata());
-        s3Client.putObject(request);
+        final PutObjectRequest request = PutObjectRequest.builder().bucket(TEST_BUCKET_NAME).key(objectKey).build();
+        s3Client.putObject(request, RequestBody.fromBytes(testDataBytes));
         return OBJECT_KEY + SEPARATOR + objectKey;
     }
 

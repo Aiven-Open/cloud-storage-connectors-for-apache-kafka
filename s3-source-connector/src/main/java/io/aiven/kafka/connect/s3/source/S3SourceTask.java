@@ -40,10 +40,10 @@ import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.S3Client;
 
 /**
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
@@ -64,7 +64,7 @@ public class S3SourceTask extends SourceTask {
     private static final long ERROR_BACKOFF = 1000L;
 
     private S3SourceConfig s3SourceConfig;
-    private AmazonS3 s3Client;
+    private S3Client s3Client;
 
     private Iterator<S3SourceRecord> sourceRecordIterator;
     private Transformer transformer;
@@ -122,8 +122,8 @@ public class S3SourceTask extends SourceTask {
                     extractSourceRecords(results);
                     LOGGER.info("Number of records extracted and sent: {}", results.size());
                     return results;
-                } catch (AmazonS3Exception exception) {
-                    if (exception.isRetryable()) {
+                } catch (SdkException exception) {
+                    if (exception.retryable()) {
                         LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
                                 exception);
                         pollLock.wait(ERROR_BACKOFF);

@@ -32,12 +32,10 @@ import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.Region;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.regions.Region;
 
 final public class S3SourceConfig extends SourceCommonConfig {
 
@@ -87,12 +85,8 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getStsEndpointConfig();
     }
 
-    public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
-        return s3ConfigFragment.getAwsEndpointConfiguration();
-    }
-
-    public BasicAWSCredentials getAwsCredentials() {
-        return s3ConfigFragment.getAwsCredentials();
+    public AwsBasicCredentials getAwsCredentials() {
+        return s3ConfigFragment.getAwsV2Credentials();
     }
 
     public String getAwsS3EndPoint() {
@@ -100,7 +94,7 @@ final public class S3SourceConfig extends SourceCommonConfig {
     }
 
     public Region getAwsS3Region() {
-        return s3ConfigFragment.getAwsS3Region();
+        return s3ConfigFragment.getAwsV2S3Region();
     }
 
     public String getAwsS3BucketName() {
@@ -129,10 +123,6 @@ final public class S3SourceConfig extends SourceCommonConfig {
 
     public int getS3RetryBackoffMaxRetries() {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
-    }
-
-    public AWSCredentialsProvider getCustomCredentialsProvider() {
-        return s3ConfigFragment.getCustomCredentialsProvider();
     }
 
     public S3ConfigFragment getS3ConfigFragment() {
