@@ -23,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -142,7 +141,7 @@ final class S3SourceTaskTest {
         SourceRecordIterator mockSourceRecordIterator;
 
         mockSourceRecordIterator = mock(SourceRecordIterator.class);
-        setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
+        s3SourceTask.setS3SourceRecordIterator(mockSourceRecordIterator);
         when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
 
         final S3SourceRecord s3SourceRecordList = getAivenS3SourceRecord();
@@ -159,22 +158,13 @@ final class S3SourceTaskTest {
         s3SourceTask.stop();
 
         final boolean taskInitialized = s3SourceTask.isTaskInitialized();
-        assertThat(taskInitialized).isFalse();
-        assertThat(s3SourceTask.isConnectorStopped()).isTrue();
+        assertThat(taskInitialized).isTrue();
+        assertThat(s3SourceTask.isRunning()).isFalse();
     }
 
     private static S3SourceRecord getAivenS3SourceRecord() {
         final S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
         return new S3SourceRecord(entry, Optional.empty(), new SchemaAndValue(null, new byte[0]));
-    }
-
-    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
-    private void setPrivateField(final Object object, final String fieldName, final Object value)
-            throws NoSuchFieldException, IllegalAccessException {
-        Field field;
-        field = object.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(object, value);
     }
 
     private void startSourceTask(final S3SourceTask s3SourceTask) {
@@ -208,7 +198,7 @@ final class S3SourceTaskTest {
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
         startSourceTask(s3SourceTask);
 
-        final List<SourceRecord> results = s3SourceTask.extractSourceRecords(new ArrayList<>());
+        final List<SourceRecord> results = s3SourceTask.poll();
         assertThat(results).isEmpty();
     }
 
@@ -244,7 +234,7 @@ final class S3SourceTaskTest {
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
         startSourceTask(s3SourceTask);
 
-        final List<SourceRecord> results = s3SourceTask.extractSourceRecords(new ArrayList<>());
+        final List<SourceRecord> results = s3SourceTask.poll();
         assertThat(results).hasSize(2);
         assertEquals(lst.get(0), results.get(0));
         assertEquals(lst.get(1), results.get(1));
@@ -266,7 +256,7 @@ final class S3SourceTaskTest {
         startSourceTask(s3SourceTask);
         s3SourceTask.stop();
 
-        final List<SourceRecord> results = s3SourceTask.extractSourceRecords(new ArrayList<>());
+        final List<SourceRecord> results = s3SourceTask.poll();
         assertThat(results).isEmpty();
     }
 
@@ -274,11 +264,11 @@ final class S3SourceTaskTest {
 
         TestingS3SourceTask(final Iterator<S3SourceRecord> realIterator) {
             super();
-            super.setSourceRecordIterator(realIterator);
+            super.setS3SourceRecordIterator(realIterator);
         }
 
         @Override
-        protected void setSourceRecordIterator(final Iterator<S3SourceRecord> iterator) {
+        protected void setS3SourceRecordIterator(final Iterator<S3SourceRecord> iterator) {
             // do nothing.
         }
     }
