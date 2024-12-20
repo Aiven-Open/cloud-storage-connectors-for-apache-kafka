@@ -18,8 +18,9 @@ package io.aiven.kafka.connect.common.source.input;
 
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -32,9 +33,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.json.JsonConverter;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.commons.io.function.IOSupplier;
@@ -52,6 +54,9 @@ final class JsonTransformerTest {
     JsonTransformer jsonTransformer;
 
     SourceCommonConfig sourceCommonConfig;
+
+    @Mock
+    private OffsetManager.OffsetManagerEntry<?> offsetManagerEntry;
 
     @Mock
     private IOSupplier<InputStream> inputStreamIOSupplierMock;
@@ -76,26 +81,29 @@ final class JsonTransformerTest {
 
     @Test
     void testHandleValueDataWithValidJson() {
+        when(offsetManagerEntry.getTopic()).thenReturn(TESTTOPIC);
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig, 0);
+        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
 
         assertThat(jsonNodes).hasSize(1);
+        verify(offsetManagerEntry, times(1)).incrementRecordCount();
     }
 
     @Test
     void testHandleValueDataWithValidJsonSkipFew() {
+        when(offsetManagerEntry.getTopic()).thenReturn(TESTTOPIC);
+        when(offsetManagerEntry.skipRecords()).thenReturn(25L);
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig, 25L);
+        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
 
-        final List<byte[]> recs = jsonNodes.collect(Collectors.toList());
+        final List<Object> recs = jsonNodes.map(SchemaAndValue::value).collect(Collectors.toList());
         assertThat(recs).hasSize(75);
-        assertThat(recs).extracting(record -> ((Map) jsonTransformer.getValueData(record, "", null).value()).get("key"))
+        verify(offsetManagerEntry, times(100)).incrementRecordCount();
+        assertThat(recs).extracting(record -> ((Map)record).get("key"))
                 .doesNotContain("value1")
                 .doesNotContain("value2")
                 .doesNotContain("value25")
@@ -106,16 +114,15 @@ final class JsonTransformerTest {
 
     @Test
     void testHandleValueDataWithInvalidJson() {
+        when(offsetManagerEntry.getTopic()).thenReturn(TESTTOPIC);
         final InputStream invalidJsonInputStream = new ByteArrayInputStream(
                 "invalid-json".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
 
-        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig, 0);
+        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig);
 
-        assertThatThrownBy(() -> jsonTransformer.getValueData(jsonNodes.findAny().get(), "", null))
-                .isInstanceOf(DataException.class)
-                .hasMessage("Converting byte[] to Kafka Connect data failed due to serialization error: ");
+        assertThat(jsonNodes.count()).isEqualTo(0);
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
     }
 
     @Test
@@ -123,32 +130,34 @@ final class JsonTransformerTest {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig, 0);
-        final Object serializedData = jsonTransformer
-                .getValueData(
-                        jsonNodes.findFirst().orElseThrow(() -> new AssertionError("No records found in stream!")),
-                        TESTTOPIC, sourceCommonConfig)
-                .value();
+        final List<SchemaAndValue> jsonNodes = jsonTransformer
+                .getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig)
+                .collect(Collectors.toList());
+
+        assertThat(jsonNodes).hasSize(1);
+        final SchemaAndValue result = jsonNodes.get(0);
 
         // Assert: Verify the serialized data
-        assertThat(serializedData).isInstanceOf(Map.class).extracting("key").isEqualTo("value");
+        assertThat(result.value()).isInstanceOf(Map.class).extracting("key").isEqualTo("value");
     }
 
     @Test
     void testGetRecordsWithIOException() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException"));
-        final Stream<byte[]> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
+        final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, offsetManagerEntry, sourceCommonConfig);
 
         assertThat(resultStream).isEmpty();
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
     }
 
     @Test
     void testCustomSpliteratorWithIOExceptionDuringInitialization() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException during initialization"));
-        final Stream<byte[]> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
+        final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, offsetManagerEntry, sourceCommonConfig);
 
         assertThat(resultStream).isEmpty();
+        verify(offsetManagerEntry, times(0)).incrementRecordCount();
+
     }
 
     static String getJsonRecs(final int recordCount) {

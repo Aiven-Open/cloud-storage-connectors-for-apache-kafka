@@ -28,7 +28,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -46,6 +45,8 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.connect.json.JsonDeserializer;
+
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -135,7 +136,8 @@ public interface IntegrationBase {
             String bootstrapServers) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, ByteArrayDeserializer.class,
                 ByteArrayDeserializer.class);
-        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, consumerProperties);
+        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, consumerProperties,
+                Duration.ofMinutes(2));
         return objects.stream().map(String::new).collect(Collectors.toList());
     }
 
@@ -143,41 +145,49 @@ public interface IntegrationBase {
             final String bootstrapServers, final String schemaRegistryUrl) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, StringDeserializer.class,
                 KafkaAvroDeserializer.class, schemaRegistryUrl);
-        return consumeMessages(topic, expectedMessageCount, consumerProperties);
+        return consumeMessages(topic, expectedMessageCount, consumerProperties, Duration.ofMinutes(5));
     }
 
     static List<JsonNode> consumeJsonMessages(final String topic, final int expectedMessageCount,
             final String bootstrapServers) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, StringDeserializer.class,
                 JsonDeserializer.class);
-        return consumeMessages(topic, expectedMessageCount, consumerProperties);
+        return consumeMessages(topic, expectedMessageCount, consumerProperties, Duration.ofMinutes(2));
     }
 
     static <K, V> List<V> consumeMessages(final String topic, final int expectedMessageCount,
-            final Properties consumerProperties) {
+            final Properties consumerProperties, Duration maxTime) {
         try (KafkaConsumer<K, V> consumer = new KafkaConsumer<>(consumerProperties)) {
             consumer.subscribe(Collections.singletonList(topic));
 
             final List<V> recordValues = new ArrayList<>();
-            await().atMost(Duration.ofMinutes(5)).pollInterval(Duration.ofSeconds(5)).untilAsserted(() -> {
-                final ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(500L));
-                for (final ConsumerRecord<K, V> record : records) {
-                    recordValues.add(record.value());
-                }
-                assertThat(recordValues).hasSize(expectedMessageCount);
+            await().atMost(maxTime).pollInterval(Duration.ofSeconds(2)).untilAsserted(() -> {
+                assertThat(assertAllRecordsConsumed(consumer, recordValues)).hasSize(expectedMessageCount);
             });
             return recordValues;
         }
     }
 
-    static Map<String, Object> consumeOffsetMessages(KafkaConsumer<byte[], byte[]> consumer) throws IOException {
+    private static <K, V> List<V> assertAllRecordsConsumed(KafkaConsumer<K, V> consumer, List<V> recordValues) {
+        int recordsRetrieved = 0;
+        do {
+            final ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(500L));
+            recordsRetrieved = records.count();
+            for (final ConsumerRecord<K, V> record : records) {
+                recordValues.add(record.value());
+            }
+        } while (recordsRetrieved == 500);
+        return recordValues;
+    }
+
+    static List<S3OffsetManagerEntry> consumeOffsetMessages(KafkaConsumer<byte[], byte[]> consumer) throws IOException {
         // Poll messages from the topic
-        final Map<String, Object> messages = new HashMap<>();
+        final List<S3OffsetManagerEntry> messages = new ArrayList<>();
         final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(1));
         for (final ConsumerRecord<byte[], byte[]> record : records) {
             Map<String, Object> offsetRec = OBJECT_MAPPER.readValue(record.value(), new TypeReference<>() { // NOPMD
             });
-            messages.putAll(offsetRec);
+            messages.add(S3OffsetManagerEntry.wrap(offsetRec));
         }
         return messages;
     }

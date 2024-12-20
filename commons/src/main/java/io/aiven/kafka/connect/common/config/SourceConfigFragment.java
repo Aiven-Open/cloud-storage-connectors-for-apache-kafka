@@ -88,8 +88,8 @@ public final class SourceConfigFragment extends ConfigFragment {
         return cfg.getInt(EXPECTED_MAX_MESSAGE_BYTES);
     }
 
-    public String getErrorsTolerance() {
-        return cfg.getString(ERRORS_TOLERANCE);
+    public ErrorsTolerance getErrorsTolerance() {
+        return ErrorsTolerance.forName(cfg.getString(ERRORS_TOLERANCE));
     }
 
     private static class ErrorsToleranceValidator implements ConfigDef.Validator {
