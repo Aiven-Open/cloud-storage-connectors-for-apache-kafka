@@ -172,28 +172,27 @@ public abstract class Transformer {
         @Override
         public final boolean tryAdvance(final Consumer<? super SchemaAndValue> action) {
             boolean result = false;
-            if (closed) {
-                return false;
-            }
-            try {
-                if (inputStream == null) {
-                    try {
-                        inputStream = inputOpened(inputStreamIOSupplier.get());
-                    } catch (IOException e) {
-                        logger.error("Error trying to open inputStream: {}", e.getMessage(), e);
-                        close();
-                        return false;
+            if (!closed) {
+                try {
+                    if (inputStream == null) {
+                        try {
+                            inputStream = inputOpened(inputStreamIOSupplier.get());
+                        } catch (IOException e) {
+                            logger.error("Error trying to open inputStream: {}", e.getMessage(), e);
+                            close();
+                            return false;
+                        }
                     }
+                    result = doAdvance(action);
+                    if (result) {
+                        offsetManagerEntry.incrementRecordCount();
+                    }
+                } catch (RuntimeException e) { // NOPMD must catch runtime exception here.
+                    logger.error("Error trying to advance data: {}", e.getMessage(), e);
                 }
-                result = doAdvance(action);
-                if (result) {
-                    offsetManagerEntry.incrementRecordCount();
+                if (!result) {
+                    close();
                 }
-            } catch (RuntimeException e) { // NOPMD must catch runtime exception here.
-                logger.error("Error trying to advance data: {}", e.getMessage(), e);
-            }
-            if (!result) {
-                close();
             }
             return result;
         }

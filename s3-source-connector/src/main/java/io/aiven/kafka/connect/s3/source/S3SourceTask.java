@@ -96,10 +96,10 @@ public class S3SourceTask extends SourceTask {
     }
 
     @Override
-    public void commitRecord(SourceRecord record) throws InterruptedException {
+    public void commitRecord(final SourceRecord record) throws InterruptedException {
         if (LOGGER.isInfoEnabled()) {
-            Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
-            S3OffsetManagerEntry entry = S3OffsetManagerEntry.wrap(map);
+            final Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
+            final S3OffsetManagerEntry entry = S3OffsetManagerEntry.wrap(map);
             LOGGER.info("Committed individual record {} {} {} committed", entry.getBucket(), entry.getKey(),
                     entry.getRecordCount());
         }
@@ -162,7 +162,7 @@ public class S3SourceTask extends SourceTask {
             final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
             if (s3SourceRecord != null) {
                 try {
-                    S3OffsetManagerEntry entry = s3SourceRecord.getOffsetManagerEntry();
+                    final S3OffsetManagerEntry entry = s3SourceRecord.getOffsetManagerEntry();
                     offsetManager.updateCurrentOffsets(entry);
                     results.add(s3SourceRecord.getSourceRecord());
                     lastRecord = entry.getRecordCount();

@@ -134,7 +134,7 @@ final class S3OffsetManagerEntryTest {
         assertThat(entry.getRecordCount()).isEqualTo(1L);
         assertThat(entry.getProperty("random_entry")).isEqualTo(5L);
 
-        S3OffsetManagerEntry other = entry.fromProperties(entry.getProperties());
+        final S3OffsetManagerEntry other = entry.fromProperties(entry.getProperties());
         assertThat(other.getRecordCount()).isEqualTo(1L);
         assertThat(other.getProperty("random_entry")).isEqualTo(5L);
 

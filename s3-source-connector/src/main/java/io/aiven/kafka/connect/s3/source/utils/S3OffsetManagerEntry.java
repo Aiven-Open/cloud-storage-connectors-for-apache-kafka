@@ -79,7 +79,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         }
         final Map<String, Object> ourProperties = new HashMap<>(properties);
         long recordCount = 0;
-        Object recordCountProperty = ourProperties.computeIfAbsent(RECORD_COUNT, s -> 0L);
+        final Object recordCountProperty = ourProperties.computeIfAbsent(RECORD_COUNT, s -> 0L);
         if (recordCountProperty instanceof Number) {
             recordCount = ((Number) recordCountProperty).longValue();
         }
