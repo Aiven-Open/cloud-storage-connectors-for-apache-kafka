@@ -24,7 +24,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.kafka.common.config.AbstractConfig;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.OffsetManager;
@@ -66,8 +66,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private final Iterator<S3Object> s3ObjectIterator;
     /** The transformer we apply to the data */
     private final Transformer transformer;
-    /** The Source client we are reading from */
-    private final AWSV2SourceClient sourceClient; // NOPMD
     /** THe iterator we will return data from */
     private Iterator<S3SourceRecord> outerIterator;
 
@@ -89,9 +87,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
         this.transformer = transformer;
-        this.sourceClient = sourceClient;
         this.s3ObjectIterator = IteratorUtils.filteredIterator(sourceClient.getIteratorOfObjects(null),
-                s3Object -> extractOffsetManagerEntry(s3Object));
+                this::extractOffsetManagerEntry);
         this.outerIterator = Collections.emptyIterator();
     }
 
@@ -99,7 +96,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
      * Construct the OffsetManagerEntry from the S3Object file name. This probalby should occur earlier in the chain. If
      * this method returns false the object will be skipped.
      *
-     * @param s3Object
+     * @param s3Object The object to extract the offset manager data from.
      * @return true if the offset can be extracted, false otherwise.
      */
     private boolean extractOffsetManagerEntry(final S3Object s3Object) {
@@ -136,7 +133,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     /**
      * Get the S3SourceRecord iterator that reads from a single object. This method applies the transformer to the
      * object and returns an iterator based on the stream returned from
-     * {@link Transformer#getRecords(IOSupplier, OffsetManager.OffsetManagerEntry, AbstractConfig)}.
+     * {@link Transformer#getRecords(IOSupplier, OffsetManager.OffsetManagerEntry, SourceCommonConfig)}.
      *
      * @param s3Object
      *            the object to get S3Source records from.
