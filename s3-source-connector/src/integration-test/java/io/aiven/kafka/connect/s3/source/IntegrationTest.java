@@ -241,7 +241,8 @@ final class IntegrationTest implements IntegrationBase {
                         entry(4 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (4 * numOfRecsFactor)),
                         entry(5 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (5 * numOfRecsFactor)));
 
-        final Map<String, Long> expectedOffsetRecords = offsetKeys.stream().collect(Collectors.toMap(Function.identity(), s -> (long) numOfRecsFactor - 1));
+        final Map<String, Long> expectedOffsetRecords = offsetKeys.stream()
+                .collect(Collectors.toMap(Function.identity(), s -> (long) numOfRecsFactor - 1));
         verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
     }
 
@@ -312,7 +313,7 @@ final class IntegrationTest implements IntegrationBase {
         });
 
         // Verify offset positions -- 0 based counting.
-        verifyOffsetPositions(Map.of(offsetKey, (long)messageCount - 1), connectRunner.getBootstrapServers());
+        verifyOffsetPositions(Map.of(offsetKey, (long) messageCount - 1), connectRunner.getBootstrapServers());
     }
 
     private static byte[] generateNextAvroMessagesStartingFromId(final int messageId, final int noOfAvroRecs,
@@ -377,8 +378,9 @@ final class IntegrationTest implements IntegrationBase {
             consumer.subscribe(Collections.singletonList("connect-offset-topic-" + CONNECTOR_NAME));
             await().atMost(Duration.ofMinutes(2)).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
                 IntegrationBase.consumeOffsetMessages(consumer).forEach(s -> {
-                        offsetRecs.merge(s.getKey(), s.getRecordCount(), (x, y) -> x > y ? x : y);
-                        LOGGER.info("Read Offset Position: {} {} ", s.getKey(), s.getRecordCount());}); // TODO remove tis line
+                    offsetRecs.merge(s.getKey(), s.getRecordCount(), (x, y) -> x > y ? x : y);
+                    LOGGER.info("Read Offset Position: {} {} ", s.getKey(), s.getRecordCount());
+                }); // TODO remove tis line
                 assertThat(offsetRecs).containsExactlyInAnyOrderEntriesOf(expectedRecords);
             });
         }

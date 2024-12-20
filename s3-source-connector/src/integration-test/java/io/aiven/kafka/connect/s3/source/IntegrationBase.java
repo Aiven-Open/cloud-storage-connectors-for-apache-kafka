@@ -34,7 +34,6 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -46,6 +45,8 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.connect.json.JsonDeserializer;
+
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -135,7 +136,8 @@ public interface IntegrationBase {
             String bootstrapServers) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, ByteArrayDeserializer.class,
                 ByteArrayDeserializer.class);
-        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, consumerProperties, Duration.ofMinutes(2));
+        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, consumerProperties,
+                Duration.ofMinutes(2));
         return objects.stream().map(String::new).collect(Collectors.toList());
     }
 

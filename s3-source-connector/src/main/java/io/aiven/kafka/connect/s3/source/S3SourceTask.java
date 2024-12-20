@@ -100,7 +100,8 @@ public class S3SourceTask extends SourceTask {
         if (LOGGER.isInfoEnabled()) {
             Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
             S3OffsetManagerEntry entry = S3OffsetManagerEntry.wrap(map);
-            LOGGER.info("Committed individual record {} {} {} committed", entry.getBucket(), entry.getKey(), entry.getRecordCount());
+            LOGGER.info("Committed individual record {} {} {} committed", entry.getBucket(), entry.getKey(),
+                    entry.getRecordCount());
         }
     }
 
@@ -126,7 +127,7 @@ public class S3SourceTask extends SourceTask {
                         LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
                                 exception);
                         pollLock.wait(ERROR_BACKOFF);
-                        // TODO validate that the iterator does not lose an S3Object.  Add test to S3ObjectIterator.
+                        // TODO validate that the iterator does not lose an S3Object. Add test to S3ObjectIterator.
                     } else {
                         LOGGER.warn("Non-retryable AmazonS3Exception occurred. Stopping polling.", exception);
                         return null; // NOPMD

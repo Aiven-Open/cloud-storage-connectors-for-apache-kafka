@@ -65,11 +65,13 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     /**
-     * Wraps an existing property map as an S3OffsetManagerEntry.
-     * Creates a copy of the map for its internal use.
-     * @param properties the map of properties to wrap.
+     * Wraps an existing property map as an S3OffsetManagerEntry. Creates a copy of the map for its internal use.
+     *
+     * @param properties
+     *            the map of properties to wrap.
      * @return an S3OffsetManagerEntry.
-     * @throws IllegalArgumentException if all the required fields are not present.
+     * @throws IllegalArgumentException
+     *             if all the required fields are not present.
      */
     public static S3OffsetManagerEntry wrap(final Map<String, Object> properties) {
         if (properties == null) {
@@ -79,7 +81,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         long recordCount = 0;
         Object recordCountProperty = ourProperties.computeIfAbsent(RECORD_COUNT, s -> 0L);
         if (recordCountProperty instanceof Number) {
-            recordCount = ((Number)recordCountProperty).longValue();
+            recordCount = ((Number) recordCountProperty).longValue();
         }
         final S3OffsetManagerEntry result = new S3OffsetManagerEntry(ourProperties);
         result.recordCount = recordCount;
@@ -87,9 +89,8 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     /**
-     * Constructs an OffsetManagerEntry from an existing map.  Used to reconstitute previously serialized
-     * S3OffsetManagerEntries.
-     * used by {@link #fromProperties(Map)}
+     * Constructs an OffsetManagerEntry from an existing map. Used to reconstitute previously serialized
+     * S3OffsetManagerEntries. used by {@link #fromProperties(Map)}
      *
      * @param properties
      *            the property map.
