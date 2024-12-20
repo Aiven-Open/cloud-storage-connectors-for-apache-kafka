@@ -91,6 +91,20 @@ public class S3SourceTask extends SourceTask {
     }
 
     @Override
+    public void commit() throws InterruptedException {
+        LOGGER.info("Committed all records through last poll()");
+    }
+
+    @Override
+    public void commitRecord(SourceRecord record) throws InterruptedException {
+        if (LOGGER.isInfoEnabled()) {
+            Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
+            S3OffsetManagerEntry entry = S3OffsetManagerEntry.wrap(map);
+            LOGGER.info("Committed individual record {} {} {} committed", entry.getBucket(), entry.getKey(), entry.getRecordCount());
+        }
+    }
+
+    @Override
     public List<SourceRecord> poll() throws InterruptedException {
         LOGGER.info("Polling for new records...");
         synchronized (pollLock) {
@@ -119,12 +133,13 @@ public class S3SourceTask extends SourceTask {
                     }
                 } catch (DataException exception) {
                     LOGGER.warn("DataException occurred during polling. No retries will be attempted.", exception);
-                } catch (final Throwable t) { // NOPMD
-                    LOGGER.error("Unexpected error encountered. Closing resources and stopping task.", t);
+                } catch (final RuntimeException t) { // NOPMD
+                    LOGGER.error("Unexpected Exception encountered. Closing resources and stopping task.", t);
                     closeResources();
                     throw t;
                 }
             }
+            LOGGER.debug("Poll returning {} records.", results.size());
             return results;
         }
     }
@@ -141,19 +156,22 @@ public class S3SourceTask extends SourceTask {
             return results;
         }
         final int maxPollRecords = s3SourceConfig.getMaxPollRecords();
-
+        long lastRecord = 0;
         for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
             final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
             if (s3SourceRecord != null) {
                 try {
-                    offsetManager.updateCurrentOffsets(s3SourceRecord.getOffsetManagerEntry());
+                    S3OffsetManagerEntry entry = s3SourceRecord.getOffsetManagerEntry();
+                    offsetManager.updateCurrentOffsets(entry);
                     results.add(s3SourceRecord.getSourceRecord());
+                    lastRecord = entry.getRecordCount();
                 } catch (DataException e) {
                     LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
                     awsv2SourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
                 }
             }
         }
+        LOGGER.info("Last record in batch: {}", lastRecord);
         return results;
     }
 

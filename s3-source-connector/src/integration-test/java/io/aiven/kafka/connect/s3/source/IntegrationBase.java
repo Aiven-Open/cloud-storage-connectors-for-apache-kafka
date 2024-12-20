@@ -28,7 +28,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -160,15 +159,23 @@ public interface IntegrationBase {
             consumer.subscribe(Collections.singletonList(topic));
 
             final List<V> recordValues = new ArrayList<>();
-            await().atMost(maxTime).pollInterval(Duration.ofSeconds(5)).untilAsserted(() -> {
-                final ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(500L));
-                for (final ConsumerRecord<K, V> record : records) {
-                    recordValues.add(record.value());
-                }
-                assertThat(recordValues).hasSize(expectedMessageCount);
+            await().atMost(maxTime).pollInterval(Duration.ofSeconds(2)).untilAsserted(() -> {
+                assertThat(assertAllRecordsConsumed(consumer, recordValues)).hasSize(expectedMessageCount);
             });
             return recordValues;
         }
+    }
+
+    private static <K, V> List<V> assertAllRecordsConsumed(KafkaConsumer<K, V> consumer, List<V> recordValues) {
+        int recordsRetrieved = 0;
+        do {
+            final ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(500L));
+            recordsRetrieved = records.count();
+            for (final ConsumerRecord<K, V> record : records) {
+                recordValues.add(record.value());
+            }
+        } while (recordsRetrieved == 500);
+        return recordValues;
     }
 
     static List<S3OffsetManagerEntry> consumeOffsetMessages(KafkaConsumer<byte[], byte[]> consumer) throws IOException {
