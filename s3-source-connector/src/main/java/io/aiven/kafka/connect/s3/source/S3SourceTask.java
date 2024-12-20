@@ -31,6 +31,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
 import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
@@ -146,6 +147,21 @@ public class S3SourceTask extends SourceTask {
     }
 
     /**
+     * Handle an exception that may result in the task shutdown.
+     *
+     * @param s3SourceRecord
+     *            the source record that was being read.
+     */
+    private void handleException(final S3SourceRecord s3SourceRecord) {
+        if (s3SourceConfig.getErrorsTolerance() == ErrorsTolerance.NONE) {
+            LOGGER.error("Stopping Task");
+            connectorStopped.set(true);
+        } else {
+            awsv2SourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
+        }
+
+    }
+    /**
      * Create a list of source records. Package private for testing.
      *
      * @param results
@@ -168,7 +184,7 @@ public class S3SourceTask extends SourceTask {
                     lastRecord = entry.getRecordCount();
                 } catch (DataException e) {
                     LOGGER.error("Error in reading s3 object stream {}", e.getMessage(), e);
-                    awsv2SourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
+                    handleException(s3SourceRecord);
                 }
             }
         }

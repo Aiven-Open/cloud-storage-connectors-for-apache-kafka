@@ -24,11 +24,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.parquet.LocalInputFile;
 
 import io.confluent.connect.avro.AvroData;
@@ -68,7 +68,7 @@ public class ParquetTransformer extends Transformer {
 
     @Override
     public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final SourceCommonConfig sourceConfig) {
 
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
 

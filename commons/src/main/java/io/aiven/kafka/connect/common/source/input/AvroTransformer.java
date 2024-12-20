@@ -20,11 +20,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.Consumer;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import io.confluent.connect.avro.AvroData;
 import org.apache.avro.file.DataFileStream;
@@ -62,7 +62,7 @@ public class AvroTransformer extends Transformer {
 
     @Override
     public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final SourceCommonConfig sourceConfig) {
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
             private DataFileStream<GenericRecord> dataFileStream;
             private final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();

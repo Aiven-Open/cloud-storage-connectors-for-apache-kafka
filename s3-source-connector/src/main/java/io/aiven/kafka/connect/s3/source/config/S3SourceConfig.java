@@ -138,4 +138,5 @@ final public class S3SourceConfig extends SourceCommonConfig {
     public S3ConfigFragment getS3ConfigFragment() {
         return s3ConfigFragment;
     }
+
 }

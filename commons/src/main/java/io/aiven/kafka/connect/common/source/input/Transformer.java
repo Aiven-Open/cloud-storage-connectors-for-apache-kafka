@@ -23,11 +23,11 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
@@ -53,7 +53,7 @@ public abstract class Transformer {
      * @return a Stream of SchemaAndValue objects.
      */
     public final Stream<SchemaAndValue> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig config) {
+            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final SourceCommonConfig config) {
         final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, offsetManagerEntry, config);
         return StreamSupport.stream(spliterator, false)
                 .onClose(spliterator::close)
@@ -61,7 +61,8 @@ public abstract class Transformer {
     }
 
     /**
-     * Get the schema to use for the key.
+     * Get the schema to use for the key. Some keys do not have a schema, in those cases @{code null} should be
+     * returned.
      *
      * @return the Schema to use for the key.
      */
@@ -79,7 +80,7 @@ public abstract class Transformer {
      * @return a StreamSpliterator instance.
      */
     protected abstract StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier,
-            OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, AbstractConfig sourceConfig);
+            OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, SourceCommonConfig sourceConfig);
 
     /**
      * A Spliterator that performs various checks on the opening/closing of the input stream.

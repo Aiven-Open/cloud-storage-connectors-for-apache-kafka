@@ -124,23 +124,22 @@ final class JsonTransformerTest {
         assertThat(jsonNodes.count()).isEqualTo(0);
         verify(offsetManagerEntry, times(0)).incrementRecordCount();
     }
-    //
-    // @Test
-    // void testSerializeJsonDataValid() throws IOException {
-    // final InputStream validJsonInputStream = new ByteArrayInputStream(
-    // "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
-    // final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-    // final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, offsetManagerEntry,
-    // sourceCommonConfig);
-    // final Object serializedData = jsonTransformer
-    // .getValueData(
-    // jsonNodes.findFirst().orElseThrow(() -> new AssertionError("No records found in stream!")),
-    // TESTTOPIC, sourceCommonConfig)
-    // .value();
-    //
-    // // Assert: Verify the serialized data
-    // assertThat(serializedData).isInstanceOf(Map.class).extracting("key").isEqualTo("value");
-    // }
+
+    @Test
+    void testSerializeJsonDataValid() throws IOException {
+        final InputStream validJsonInputStream = new ByteArrayInputStream(
+                "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
+        final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
+        final List<SchemaAndValue> jsonNodes = jsonTransformer
+                .getRecords(inputStreamIOSupplier, offsetManagerEntry, sourceCommonConfig)
+                .collect(Collectors.toList());
+
+        assertThat(jsonNodes).hasSize(1);
+        final SchemaAndValue result = jsonNodes.get(0);
+
+        // Assert: Verify the serialized data
+        assertThat(result.value()).isInstanceOf(Map.class).extracting("key").isEqualTo("value");
+    }
 
     @Test
     void testGetRecordsWithIOException() throws IOException {

@@ -23,12 +23,12 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.json.JsonConverter;
 
 import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.codehaus.plexus.util.StringUtils;
@@ -62,7 +62,7 @@ public class JsonTransformer extends Transformer {
 
     @Override
     public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final SourceCommonConfig sourceConfig) {
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
             BufferedReader reader;
 

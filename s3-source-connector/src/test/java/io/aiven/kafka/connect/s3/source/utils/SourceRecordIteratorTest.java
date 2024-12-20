@@ -29,7 +29,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.function.Consumer;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceTaskContext;
@@ -37,6 +36,7 @@ import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.ClosableIterator;
 import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -143,7 +143,7 @@ final class SourceRecordIteratorTest {
 
         @Override
         protected StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-                final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final AbstractConfig sourceConfig) {
+                final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final SourceCommonConfig sourceConfig) {
 
             return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
                 private boolean wasRead;
