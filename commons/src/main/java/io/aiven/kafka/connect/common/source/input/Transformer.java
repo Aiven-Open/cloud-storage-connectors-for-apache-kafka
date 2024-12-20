@@ -18,57 +18,74 @@ package io.aiven.kafka.connect.common.source.input;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
+
+import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 
-public abstract class Transformer<T> {
+/**
+ * The abstract base class for a Transformer. This class handles opening and closing the input stream. Implementations
+ * of this class must implement a {@link StreamSpliterator}. The Stream Spliterator focuses on reading one record from
+ * the inputstream.
+ */
+public abstract class Transformer {
 
-    public abstract void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
-
-    public final Stream<T> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
-
-        final StreamSpliterator<T> spliterator = createSpliterator(inputStreamIOSupplier, topic, topicPartition,
-                sourceConfig);
-        return StreamSupport.stream(spliterator, false).onClose(spliterator::close).skip(skipRecords);
+    /**
+     * Creates a stream of SchemaAndValue objects from the input stream. The input stream will be closed when the last
+     * object is read from the stream. Will skip the number of records specified by the
+     * {@link OffsetManager.OffsetManagerEntry#skipRecords()} value.
+     *
+     * @param inputStreamIOSupplier
+     *            the supplier of an input stream.
+     * @param offsetManagerEntry
+     *            the offsetManagerEntry to use.
+     * @param config
+     *            the Abstract Config to use.
+     * @return a Stream of SchemaAndValue objects.
+     */
+    public final Stream<SchemaAndValue> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final SourceCommonConfig config) {
+        final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, offsetManagerEntry, config);
+        return StreamSupport.stream(spliterator, false)
+                .onClose(spliterator::close)
+                .skip(offsetManagerEntry.skipRecords());
     }
+
+    /**
+     * Get the schema to use for the key. Some keys do not have a schema, in those cases @{code null} should be
+     * returned.
+     *
+     * @return the Schema to use for the key.
+     */
+    public abstract Schema getKeySchema();
 
     /**
      * Creates the stream spliterator for this transformer.
      *
      * @param inputStreamIOSupplier
      *            the input stream supplier.
-     * @param topic
-     *            the topic.
-     * @param topicPartition
-     *            the partition.
+     * @param offsetManagerEntry
+     *            the offsetManagerEntry to use.
      * @param sourceConfig
      *            the source configuraiton.
      * @return a StreamSpliterator instance.
      */
-    protected abstract StreamSpliterator<T> createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier,
-            String topic, int topicPartition, AbstractConfig sourceConfig);
-
-    public abstract SchemaAndValue getValueData(T record, String topic, AbstractConfig sourceConfig);
-
-    public abstract SchemaAndValue getKeyData(Object cloudStorageKey, String topic, AbstractConfig sourceConfig);
+    protected abstract StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier,
+            OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, SourceCommonConfig sourceConfig);
 
     /**
      * A Spliterator that performs various checks on the opening/closing of the input stream.
-     *
-     * @param <T>
-     *            the type of item created by this Spliterator.
      */
-    protected abstract static class StreamSpliterator<T> implements Spliterator<T> {
+    protected abstract static class StreamSpliterator implements Spliterator<SchemaAndValue> {
         /**
          * The input stream supplier.
          */
@@ -82,7 +99,10 @@ public abstract class Transformer<T> {
          * not be closed or otherwise made unreadable.
          */
         protected InputStream inputStream;
-
+        /**
+         * The OffsetManager to use for record tracking if necessary.
+         */
+        protected final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry;
         /**
          * A flag indicate that the input stream has been closed.
          */
@@ -93,12 +113,16 @@ public abstract class Transformer<T> {
          *
          * @param logger
          *            The logger for this Spliterator to use.
+         * @param offsetManagerEntry
+         *            the offsetManagerEntry to use.
          * @param inputStreamIOSupplier
          *            the InputStream supplier
          */
-        protected StreamSpliterator(final Logger logger, final IOSupplier<InputStream> inputStreamIOSupplier) {
+        protected StreamSpliterator(final Logger logger, final IOSupplier<InputStream> inputStreamIOSupplier,
+                final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry) {
             this.logger = logger;
             this.inputStreamIOSupplier = inputStreamIOSupplier;
+            this.offsetManagerEntry = offsetManagerEntry;
         }
 
         /**
@@ -109,13 +133,17 @@ public abstract class Transformer<T> {
          *            the Consumer to call if record is created.
          * @return {@code true} if a record was processed, {@code false} otherwise.
          */
-        abstract protected boolean doAdvance(Consumer<? super T> action);
+        abstract protected boolean doAdvance(Consumer<? super SchemaAndValue> action);
 
         /**
-         * Method to close additional inputs if needed.
+         * Method to close additional inputs if needed. This method is called during the {@link #close()} method before
+         * the input stream is closed.
          */
         abstract protected void doClose();
 
+        /**
+         * Closes the Spliterator which closes the input stream.
+         */
         public final void close() {
             doClose();
             try {
@@ -129,7 +157,7 @@ public abstract class Transformer<T> {
         }
 
         /**
-         * Allows modification of input stream. Called immediatly after the input stream is opened. Implementations may
+         * Allows modification of input stream. Called immediately after the input stream is opened. Implementations may
          * modify the type of input stream by wrapping it with a specific implementation, or may create Readers from the
          * input stream. The modified input stream must be returned. If a Reader or similar class is created from the
          * input stream the input stream must be returned.
@@ -143,33 +171,35 @@ public abstract class Transformer<T> {
         abstract protected InputStream inputOpened(InputStream input) throws IOException;
 
         @Override
-        public final boolean tryAdvance(final Consumer<? super T> action) {
+        public final boolean tryAdvance(final Consumer<? super SchemaAndValue> action) {
             boolean result = false;
-            if (closed) {
-                logger.error("Attempt to advance after closed");
-            }
-            try {
-                if (inputStream == null) {
-                    try {
-                        inputStream = inputOpened(inputStreamIOSupplier.get());
-                    } catch (IOException e) {
-                        logger.error("Error trying to open inputStream: {}", e.getMessage(), e);
-                        close();
-                        return false;
+            if (!closed) {
+                try {
+                    if (inputStream == null) {
+                        try {
+                            inputStream = inputOpened(inputStreamIOSupplier.get());
+                        } catch (IOException e) {
+                            logger.error("Error trying to open inputStream: {}", e.getMessage(), e);
+                            close();
+                            return false;
+                        }
                     }
+                    result = doAdvance(action);
+                    if (result) {
+                        offsetManagerEntry.incrementRecordCount();
+                    }
+                } catch (RuntimeException e) { // NOPMD must catch runtime exception here.
+                    logger.error("Error trying to advance data: {}", e.getMessage(), e);
                 }
-                result = doAdvance(action);
-            } catch (RuntimeException e) { // NOPMD must catch runtime exception here.
-                logger.error("Error trying to advance data: {}", e.getMessage(), e);
-            }
-            if (!result) {
-                close();
+                if (!result) {
+                    close();
+                }
             }
             return result;
         }
 
         @Override
-        public final Spliterator<T> trySplit() { // NOPMD returning null is reqruied by API
+        public final Spliterator<SchemaAndValue> trySplit() { // NOPMD returning null is reqruied by API
             return null;
         }
 
