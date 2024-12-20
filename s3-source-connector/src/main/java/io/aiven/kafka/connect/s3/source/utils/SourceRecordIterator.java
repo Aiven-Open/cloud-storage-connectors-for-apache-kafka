@@ -24,10 +24,10 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -96,7 +96,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
      * Construct the OffsetManagerEntry from the S3Object file name. This probalby should occur earlier in the chain. If
      * this method returns false the object will be skipped.
      *
-     * @param s3Object The object to extract the offset manager data from.
+     * @param s3Object
+     *            The object to extract the offset manager data from.
      * @return true if the offset can be extracted, false otherwise.
      */
     private boolean extractOffsetManagerEntry(final S3Object s3Object) {
