@@ -100,6 +100,7 @@ final class SourceRecordIteratorTest {
 
         assertThat(iterator).hasNext();
         final S3SourceRecord sourceRecord = iterator.next();
+        assertThat(sourceRecord.getOffsetManagerEntry().getRecordCount()).isEqualTo(1);
         assertThat(sourceRecord).isNotNull();
         assertThat(sourceRecord.value().value()).isEqualTo("Transformed: Hello World");
         assertThat(sourceRecord.getObjectKey()).isEqualTo(key);

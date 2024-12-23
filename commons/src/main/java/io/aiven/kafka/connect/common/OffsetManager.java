@@ -18,12 +18,17 @@ package io.aiven.kafka.connect.common;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
+    /** The loger to write to */
+    private static final Logger LOGGER = LoggerFactory.getLogger(OffsetManager.class);
 
     /**
      * The local manager data.
@@ -69,16 +74,18 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      *            a function to create the connector defined offset entry from a Map of string to object.
      * @return the entry.
      */
-    public E getEntry(final OffsetManagerKey key, final Function<Map<String, Object>, E> creator) {
+    public Optional<E> getEntry(final OffsetManagerKey key, final Function<Map<String, Object>, E> creator) {
         final Map<String, Object> data = offsets.compute(key.getPartitionMap(), (k, v) -> {
             if (v == null) {
                 final Map<String, Object> kafkaData = context.offsetStorageReader().offset(key.getPartitionMap());
-                return kafkaData == null || kafkaData.isEmpty() ? new HashMap<>(key.getPartitionMap()) : kafkaData;
+                LOGGER.info("Context stored offset map {}", kafkaData);
+                return kafkaData == null || kafkaData.isEmpty() ? null : kafkaData;
             } else {
+                LOGGER.info("Previously stored offset map {}", v);
                 return v;
             }
         });
-        return creator.apply(data);
+        return data == null ? Optional.empty() : Optional.of(creator.apply(data));
     }
 
     /**
@@ -146,6 +153,45 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
         void setProperty(String key, Object value);
 
         /**
+         * Gets the value of the named property as an {@code int}.
+         *
+         * @param key
+         *            the property to retrieve.
+         * @return the value associated with the property or @{code null} if not set.
+         * @throws NullPointerException
+         *             if a {@code null} key is not supported.
+         */
+        default int getInt(String key) {
+            return ((Number) getProperty(key)).intValue();
+        }
+
+        /**
+         * Gets the value of the named property as a {@code long}
+         *
+         * @param key
+         *            the property to retrieve.
+         * @return the value associated with the property or @{code null} if not set.
+         * @throws NullPointerException
+         *             if a {@code null} key is not supported.
+         */
+        default long getLong(String key) {
+            return ((Number) getProperty(key)).longValue();
+        }
+
+        /**
+         * Gets the value of the named property as a String.
+         *
+         * @param key
+         *            the property to retrieve.
+         * @return the value associated with the property or @{code null} if not set.
+         * @throws NullPointerException
+         *             if a {@code null} key is not supported.
+         */
+        default String getString(String key) {
+            return getProperty(key).toString();
+        }
+
+        /**
          * ManagerKey getManagerKey
          *
          * @return The offset manager key for this entry.
@@ -164,7 +210,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
          *
          * @return The Kafka partition for this entry.
          */
-        Integer getPartition();
+        int getPartition();
 
         /**
          * Gets the number of records to skip to get to this record. This is the same as the zero-based index of this

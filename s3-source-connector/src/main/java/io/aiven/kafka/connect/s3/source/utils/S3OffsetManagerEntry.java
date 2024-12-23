@@ -40,7 +40,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     static final List<String> RESTRICTED_KEYS = List.of(BUCKET, OBJECT_KEY, TOPIC, PARTITION, RECORD_COUNT);
     /** The data map that stores all the values */
     private final Map<String, Object> data;
-    /** THe record count for the data map. Extracted here because it is used/updated frequently duirng processing */
+    /** THe record count for the data map. Extracted here because it is used/updated frequently during processing */
     private long recordCount;
 
     /**
@@ -159,13 +159,13 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     @Override
-    public Integer getPartition() {
-        return (Integer) data.get(PARTITION);
+    public int getPartition() {
+        return getInt(PARTITION);
     }
 
     @Override
     public String getTopic() {
-        return (String) data.get(TOPIC);
+        return getString(TOPIC);
     }
 
     /**
@@ -174,7 +174,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      * @return the S3 Bucket for the current object.
      */
     public String getBucket() {
-        return (String) data.get(BUCKET);
+        return getString(BUCKET);
     }
     /**
      * Creates a new offset map. No defensive copy is necessary.
@@ -195,8 +195,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      */
     @Override
     public OffsetManager.OffsetManagerKey getManagerKey() {
-        return () -> Map.of(BUCKET, data.get(BUCKET), TOPIC, data.get(TOPIC), PARTITION, data.get(PARTITION),
-                OBJECT_KEY, data.get(OBJECT_KEY));
+        return () -> Map.of(BUCKET, data.get(BUCKET), OBJECT_KEY, data.get(OBJECT_KEY));
     }
 
     @Override
@@ -219,15 +218,9 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         }
         int result = ((String) getProperty(BUCKET)).compareTo((String) other.getProperty(BUCKET));
         if (result == 0) {
-            result = getTopic().compareTo(other.getTopic());
+            result = getKey().compareTo(other.getKey());
             if (result == 0) {
-                result = getPartition().compareTo(other.getPartition());
-                if (result == 0) { // NOPMD deeply nested if.
-                    result = getKey().compareTo(other.getKey());
-                    if (result == 0) {
-                        result = Long.compare(getRecordCount(), other.getRecordCount());
-                    }
-                }
+                result = Long.compare(getRecordCount(), other.getRecordCount());
             }
         }
         return result;

@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
@@ -55,9 +56,10 @@ final class OffsetManagerTest {
         offsetValue.put("object_key_file", 5L);
         when(offsetStorageReader.offset(partitionKey)).thenReturn(offsetValue);
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(() -> partitionKey,
+        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(() -> partitionKey,
                 TestingOffsetManagerEntry::new);
-        assertThat(result.data).isEqualTo(offsetValue);
+        assertThat(result).isPresent();
+        assertThat(result.get().data).isEqualTo(offsetValue);
     }
 
     @Test
@@ -68,9 +70,9 @@ final class OffsetManagerTest {
         partitionKey.put("segment3", "something else");
         when(offsetStorageReader.offset(partitionKey)).thenReturn(new HashMap<>());
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(() -> partitionKey,
+        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(() -> partitionKey,
                 TestingOffsetManagerEntry::new);
-        assertThat(result.data).isEqualTo(partitionKey);
+        assertThat(result).isNotPresent();
     }
 
     @Test
@@ -85,10 +87,11 @@ final class OffsetManagerTest {
 
         offsetManager.updateCurrentOffsets(offsetEntry);
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(),
+        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(offsetEntry.getManagerKey(),
                 TestingOffsetManagerEntry::new);
-        assertThat(result.getProperty("MyProperty")).isEqualTo("WOW");
-        assertThat(result.getProperties()).isEqualTo(offsetEntry.getProperties());
+        assertThat(result).isPresent();
+        assertThat(result.get().getProperty("MyProperty")).isEqualTo("WOW");
+        assertThat(result.get().getProperties()).isEqualTo(offsetEntry.getProperties());
     }
 
     @Test
@@ -97,9 +100,10 @@ final class OffsetManagerTest {
         offsetEntry.setProperty("Random-property", "random value");
         offsetManager.updateCurrentOffsets(offsetEntry);
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(),
+        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(offsetEntry.getManagerKey(),
                 offsetEntry::fromProperties);
-        assertThat(result.getProperties()).isEqualTo(offsetEntry.getProperties());
+        assertThat(result).isPresent();
+        assertThat(result.get().getProperties()).isEqualTo(offsetEntry.getProperties());
     }
 
     @Test
@@ -112,11 +116,11 @@ final class OffsetManagerTest {
         offsetEntry2.setProperty("test2", "a thing");
         offsetManager.updateCurrentOffsets(offsetEntry2);
 
-        final TestingOffsetManagerEntry result = offsetManager.getEntry(offsetEntry.getManagerKey(),
+        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(offsetEntry.getManagerKey(),
                 offsetEntry::fromProperties);
-
-        assertThat(result.getProperty("test")).isEqualTo("WOW");
-        assertThat(result.getProperty("test2")).isEqualTo("a thing");
+        assertThat(result).isPresent();
+        assertThat(result.get().getProperty("test")).isEqualTo("WOW");
+        assertThat(result.get().getProperty("test2")).isEqualTo("a thing");
     }
 
     @SuppressWarnings("PMD.TestClassWithoutTestCases") // TODO figure out why this fails.
@@ -178,7 +182,7 @@ final class OffsetManagerTest {
         }
 
         @Override
-        public Integer getPartition() {
+        public int getPartition() {
             final Object value = getProperty("partition");
             return value instanceof Integer ? (Integer) value : 0;
         }
