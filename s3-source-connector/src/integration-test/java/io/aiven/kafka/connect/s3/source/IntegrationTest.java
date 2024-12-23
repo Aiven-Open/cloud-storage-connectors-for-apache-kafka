@@ -52,15 +52,11 @@ import java.util.stream.IntStream;
 
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -190,8 +186,6 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, Long> expectedOffsetRecords = offsetKeys.subList(0, offsetKeys.size())
                 .stream()
                 .collect(Collectors.toMap(Function.identity(), s -> 0L));
-
-        sendExtraMessages(topicName, (Map) connectorConfig);
         verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
     }
 
@@ -249,8 +243,6 @@ final class IntegrationTest implements IntegrationBase {
 
         final Map<String, Long> expectedOffsetRecords = offsetKeys.stream()
                 .collect(Collectors.toMap(Function.identity(), s -> (long) numOfRecsFactor));
-
-        sendExtraMessages(topicName, (Map) connectorConfig);
         verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
     }
 
@@ -320,30 +312,8 @@ final class IntegrationTest implements IntegrationBase {
             assertThat(jsonNode.get("id").asText()).contains(Integer.toString(messageCount - 1));
         });
 
-        sendExtraMessages(topicName, (Map) connectorConfig);
+        // Verify offset positions -- 0 based counting.
         verifyOffsetPositions(Map.of(offsetKey, (long) messageCount), connectRunner.getBootstrapServers());
-    }
-
-    private void sendExtraMessages(String topic, Map<String, Object> props) {
-        try (Producer<String, String> producer = new KafkaProducer<>(props)) {
-            int i = 1;
-            String key = Integer.toString(i);
-            String message = "this is message " + Integer.toString(i);
-
-            producer.send(new ProducerRecord<String, String>(topic, key, message));
-
-            // log a confirmation once the message is written
-            System.out.println("sent msg " + key);
-            try {
-                // Sleep for a second
-                Thread.sleep(1000);
-            } catch (Exception e) {
-                // do nothin;
-            }
-
-        } catch (Exception e) {
-            System.out.println("Could not start producer: " + e);
-        }
     }
 
     private static byte[] generateNextAvroMessagesStartingFromId(final int messageId, final int noOfAvroRecs,
@@ -406,26 +376,13 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, Long> offsetRecs = new HashMap<>();
         try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProperties)) {
             consumer.subscribe(Collections.singletonList("connect-offset-topic-" + CONNECTOR_NAME));
-
-            await().atMost(Duration.ofMinutes(1)).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-                readOffsetPositions(consumer, offsetRecs);
-                LOGGER.error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> offset record count: {}",
-                        offsetRecs.size());
+            await().atMost(Duration.ofMinutes(2)).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+                IntegrationBase.consumeOffsetMessages(consumer).forEach(s -> {
+                    offsetRecs.merge(s.getKey(), s.getRecordCount(), (x, y) -> x > y ? x : y);
+                    LOGGER.info("Read Offset Position: {} {} ", s.getKey(), s.getRecordCount());
+                }); // TODO remove tis line
                 assertThat(offsetRecs).containsExactlyInAnyOrderEntriesOf(expectedRecords);
             });
-        }
-    }
-
-    static void readOffsetPositions(final KafkaConsumer<byte[], byte[]> consumer, final Map<String, Long> offsetRecs)
-            throws IOException {
-        boolean read = true;
-        while (read) {
-            List<S3OffsetManagerEntry> entries = IntegrationBase.consumeOffsetMessages(consumer);
-            if (!entries.isEmpty()) {
-                entries.forEach(s -> offsetRecs.merge(s.getKey(), s.getRecordCount(), (x, y) -> x > y ? x : y));
-            } else {
-                read = false;
-            }
         }
     }
 }

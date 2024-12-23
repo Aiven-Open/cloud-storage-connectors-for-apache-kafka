@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,8 +67,8 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
 
     /**
      * Get an entry from the offset manager. This method will return the local copy if it has been created otherwise
-     * will get the data from Kafka.  If there is not a local copy and not one from Kafka then an empty Optional
-     * is returned
+     * will get the data from Kafka. If there is not a local copy and not one from Kafka then an empty Optional is
+     * returned
      *
      * @param key
      *            the key for the entry.
@@ -162,7 +163,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
          * @throws NullPointerException
          *             if a {@code null} key is not supported.
          */
-        default int getInt(String key) {
+        default int getInt(final String key) {
             return ((Number) getProperty(key)).intValue();
         }
 
@@ -175,7 +176,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
          * @throws NullPointerException
          *             if a {@code null} key is not supported.
          */
-        default long getLong(String key) {
+        default long getLong(final String key) {
             return ((Number) getProperty(key)).longValue();
         }
 
@@ -188,7 +189,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
          * @throws NullPointerException
          *             if a {@code null} key is not supported.
          */
-        default String getString(String key) {
+        default String getString(final String key) {
             return getProperty(key).toString();
         }
 

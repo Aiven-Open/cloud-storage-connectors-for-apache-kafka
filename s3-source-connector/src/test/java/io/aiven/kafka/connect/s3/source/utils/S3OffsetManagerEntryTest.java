@@ -81,7 +81,8 @@ final class S3OffsetManagerEntryTest {
         when(offsetStorageReader.offset(any())).thenReturn(storedData);
 
         final S3OffsetManagerEntry keyEntry = newEntry();
-        final Optional<S3OffsetManagerEntry> entry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties);
+        final Optional<S3OffsetManagerEntry> entry = offsetManager.getEntry(keyEntry.getManagerKey(),
+                keyEntry::fromProperties);
         assertThat(entry).isPresent();
         assertThat(entry.get().getPartition()).isEqualTo(PARTITION);
         assertThat(entry.get().getRecordCount()).isEqualTo(0);
@@ -92,7 +93,8 @@ final class S3OffsetManagerEntryTest {
 
         // verify second read reads from local data
 
-        final Optional<S3OffsetManagerEntry> entry2 = offsetManager.getEntry(entry.get().getManagerKey(), entry.get()::fromProperties);
+        final Optional<S3OffsetManagerEntry> entry2 = offsetManager.getEntry(entry.get().getManagerKey(),
+                entry.get()::fromProperties);
         assertThat(entry2).isPresent();
         assertThat(entry2.get().getPartition()).isEqualTo(PARTITION);
         assertThat(entry2.get().getRecordCount()).isEqualTo(0);
@@ -116,7 +118,8 @@ final class S3OffsetManagerEntryTest {
 
         offsetManager.updateCurrentOffsets(entry);
 
-        final Optional<S3OffsetManagerEntry> entry2 = offsetManager.getEntry(entry.getManagerKey(), entry::fromProperties);
+        final Optional<S3OffsetManagerEntry> entry2 = offsetManager.getEntry(entry.getManagerKey(),
+                entry::fromProperties);
         assertThat(entry2).isPresent();
         assertThat(entry2.get().getPartition()).isEqualTo(PARTITION);
         assertThat(entry2.get().getRecordCount()).isEqualTo(1L);

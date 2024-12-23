@@ -107,7 +107,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             final S3OffsetManagerEntry keyEntry = new S3OffsetManagerEntry(s3SourceConfig.getAwsS3BucketName(),
                     s3Object.getKey(), fileMatcher.group(PATTERN_TOPIC_KEY),
                     Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY)));
-            offsetManagerEntry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties).orElse(keyEntry);
+            offsetManagerEntry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties)
+                    .orElse(keyEntry);
             return !checkBytesTransformation(transformer, offsetManagerEntry.getRecordCount());
         }
         LOGGER.error("File naming doesn't match to any topic. {}", s3Object.getKey());
@@ -145,7 +146,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 .of(new SchemaAndValue(transformer.getKeySchema(), s3Object.getKey().getBytes(StandardCharsets.UTF_8)));
         // Do not stream and map as the offsetManagerEntry updates in getRecords() will not be seen in S3SourceRecord
         // constructor.
-        Iterator<SchemaAndValue> iter = transformer
+        final Iterator<SchemaAndValue> iter = transformer
                 .getRecords(s3Object::getObjectContent, offsetManagerEntry, s3SourceConfig)
                 .iterator();
         return IteratorUtils.transformedIterator(iter, value -> new S3SourceRecord(offsetManagerEntry, key, value));
