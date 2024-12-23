@@ -66,7 +66,8 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
 
     /**
      * Get an entry from the offset manager. This method will return the local copy if it has been created otherwise
-     * will get the data from Kafka.
+     * will get the data from Kafka.  If there is not a local copy and not one from Kafka then an empty Optional
+     * is returned
      *
      * @param key
      *            the key for the entry.
