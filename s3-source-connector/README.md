@@ -1,6 +1,6 @@
 # Aiven's S3 Source Connector for Apache Kafka
 
-This is a source Apache Kafka Connect connector that stores AWS S3 bucket objects in Apache Kafka.
+This is a source Apache Kafka Connect connector that stores AWS S3 bucket objects onto an Apache Kafka topic.
 
 **Table of Contents**
 
@@ -75,9 +75,8 @@ Connector class name, in this case: `io.aiven.kafka.connect.s3.AivenKafkaConnect
 
 ### S3 Object Names
 
-S3 connector stores series of files in the specified bucket.
-Each object is named using pattern `[<aws.s3.prefix>]<topic>-<partition>-<start_offset>-<extension>`
-(see [#file-name-format](File name format section) for more patterns).
+S3 connector reads series of files in the specified bucket.
+Each object would be of pattern `[<aws.s3.prefix>]<topic>-<partition>-<start_offset>-<extension>`
 
 ### Kafka topic names
 S3 object keys have format with topic names which would be the target kafka topics.
@@ -190,14 +189,6 @@ the final `Avro` schema for `Parquet` is:
 is deprecated and will be replaced with new one during a certain transition period (within 2-3 releases). Most of the
 > configuration parameters remain same.
 
-List of deprecated configuration parameters:
-- `aws_access_key_id` - AWS Access Key ID for accessing S3 bucket. Mandatory.
-- `aws_secret_access_key` - AWS S3 Secret Access Key. Mandatory.
-- `aws_s3_endpoint` - The endpoint configuration (service endpoint & signing region) to be used for requests.
-- `aws_s3_region` - Name of the region for the bucket used for storing the records. Defaults to `us-east-1`.
-- `aws_s3_bucket` - Name of an existing bucket for storing the records. Mandatory.
-- `aws_s3_prefix` - The prefix that will be added to the file name in the bucket. Can be used for putting output files into a subdirectory.
-
 List of new configuration parameters:
 - `aws.access.key.id` - AWS Access Key ID for accessing S3 bucket.
 - `aws.secret.access.key` - AWS S3 Secret Access Key.
@@ -271,9 +262,7 @@ aws.s3.prefix=file-prefix
 
 #Errors tolerance
 # Possible values 'none' or 'all'. Default being 'none'
-# If 'none', then any errors during data transformations or reading objects would cause the connector to fail and shutdown.
-# If 'all', then any errors during data transformations or reading objects would have no impact and the connector and
-# worker task will continue with next records.
+# Errors are logged and ignored for 'all'
 errors.tolerance=none
 ```
 
