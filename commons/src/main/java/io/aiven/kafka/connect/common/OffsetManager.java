@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
@@ -34,7 +35,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     /**
      * The local manager data.
      */
-    private final Map<Map<String, Object>, Map<String, Object>> offsets;
+    private final ConcurrentMap<Map<String, Object>, Map<String, Object>> offsets;
 
     /**
      * The context in which this is running.
@@ -60,7 +61,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      *            the offsets
      */
     protected OffsetManager(final SourceTaskContext context,
-            final Map<Map<String, Object>, Map<String, Object>> offsets) {
+            final ConcurrentMap<Map<String, Object>, Map<String, Object>> offsets) {
         this.context = context;
         this.offsets = offsets;
     }
