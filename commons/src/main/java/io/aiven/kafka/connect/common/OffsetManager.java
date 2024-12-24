@@ -77,6 +77,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      * @return the entry.
      */
     public Optional<E> getEntry(final OffsetManagerKey key, final Function<Map<String, Object>, E> creator) {
+        LOGGER.info("getEntry: {}", key.getPartitionMap());
         final Map<String, Object> data = offsets.compute(key.getPartitionMap(), (k, v) -> {
             if (v == null) {
                 final Map<String, Object> kafkaData = context.offsetStorageReader().offset(key.getPartitionMap());
@@ -97,6 +98,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      *            the entry to update.
      */
     public void updateCurrentOffsets(final E entry) {
+        LOGGER.debug("updating current offsets: {}", entry.getManagerKey().getPartitionMap());
         offsets.compute(entry.getManagerKey().getPartitionMap(), (k, v) -> {
             if (v == null) {
                 return new HashMap<>(entry.getProperties());
