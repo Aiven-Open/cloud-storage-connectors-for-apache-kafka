@@ -187,7 +187,6 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         result.put(RECORD_COUNT, recordCount);
         return result;
     }
-
     /**
      * Returns the OffsetManagerKey for this Entry.
      *

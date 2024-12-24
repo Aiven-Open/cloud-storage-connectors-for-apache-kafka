@@ -110,9 +110,11 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     }
 
     /**
-     * Removes the specified entry from the in memory table.  Does not impact the records stored in the
+     * Removes the specified entry from the in memory table. Does not impact the records stored in the
      * {@link SourceTaskContext}.
-     * @param key the key for the entry to remove.
+     *
+     * @param key
+     *            the key for the entry to remove.
      */
     public void remove(final OffsetManagerKey key) {
         LOGGER.info("Removing: {}", key.getPartitionMap());
