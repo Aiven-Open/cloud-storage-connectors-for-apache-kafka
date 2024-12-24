@@ -98,7 +98,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      *            the entry to update.
      */
     public void updateCurrentOffsets(final E entry) {
-        LOGGER.debug("updating current offsets: {}", entry.getManagerKey().getPartitionMap());
+        LOGGER.debug("Updating current offsets: {}", entry.getManagerKey().getPartitionMap());
         offsets.compute(entry.getManagerKey().getPartitionMap(), (k, v) -> {
             if (v == null) {
                 return new HashMap<>(entry.getProperties());
@@ -107,6 +107,16 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
                 return v;
             }
         });
+    }
+
+    /**
+     * Removes the specified entry from the in memory table.  Does not impact the records stored in the
+     * {@link SourceTaskContext}.
+     * @param key the key for the entry to remove.
+     */
+    public void remove(final OffsetManagerKey key) {
+        LOGGER.info("Removing: {}", key.getPartitionMap());
+        offsets.remove(key.getPartitionMap());
     }
 
     /**

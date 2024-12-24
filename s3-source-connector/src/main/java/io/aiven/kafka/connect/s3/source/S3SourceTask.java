@@ -103,6 +103,7 @@ public class S3SourceTask extends SourceTask {
             final S3OffsetManagerEntry entry = S3OffsetManagerEntry.wrap(map);
             LOGGER.info("Committed individual record {} {} {} committed", entry.getBucket(), entry.getKey(),
                     entry.getRecordCount());
+            offsetManager.remove(entry.getManagerKey());
         }
     }
 
