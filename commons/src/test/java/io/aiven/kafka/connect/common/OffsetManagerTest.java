@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
@@ -79,7 +80,7 @@ final class OffsetManagerTest {
     void testUpdateCurrentEntry() {
         final TestingOffsetManagerEntry offsetEntry = new TestingOffsetManagerEntry("bucket", "topic1", "thing");
 
-        final Map<Map<String, Object>, Map<String, Object>> offsets = new HashMap<>();
+        final ConcurrentHashMap<Map<String, Object>, Map<String, Object>> offsets = new ConcurrentHashMap<>();
         offsets.put(offsetEntry.getManagerKey().getPartitionMap(), offsetEntry.getProperties());
 
         offsetManager = new OffsetManager<>(sourceTaskContext, offsets);

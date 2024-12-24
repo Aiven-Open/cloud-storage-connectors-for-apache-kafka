@@ -182,12 +182,11 @@ final class IntegrationTest implements IntegrationBase {
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).containsOnly(testData1, testData2);
 
-        // Verify offset positions
         final Map<String, Long> expectedOffsetRecords = offsetKeys.subList(0, offsetKeys.size())
                 .stream()
                 .collect(Collectors.toMap(Function.identity(), s -> 0L));
-        // offset position verification fails due to KAFKA-14947
-        //verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers(), Duration.ofMinutes(2));
+
+        verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers(), Duration.ofMinutes(2));
     }
 
     @Test
@@ -244,8 +243,8 @@ final class IntegrationTest implements IntegrationBase {
 
         final Map<String, Long> expectedOffsetRecords = offsetKeys.stream()
                 .collect(Collectors.toMap(Function.identity(), s -> (long) numOfRecsFactor));
-        // offset position verification fails due to KAFKA-14947
-//        verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers(), Duration.ofMinutes(2));
+        verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers(), Duration.ofMinutes(2));
+
     }
 
     @Test
@@ -314,8 +313,9 @@ final class IntegrationTest implements IntegrationBase {
             assertThat(jsonNode.get("id").asText()).contains(Integer.toString(messageCount - 1));
         });
 
-        // offset position verification fails due to KAFKA-14947
-        //verifyOffsetPositions(Map.of(offsetKey, (long) messageCount), connectRunner.getBootstrapServers(), Duration.ofMinutes(1));
+        verifyOffsetPositions(Map.of(offsetKey, (long) messageCount), connectRunner.getBootstrapServers(),
+                Duration.ofMinutes(1));
+
     }
 
     private static byte[] generateNextAvroMessagesStartingFromId(final int messageId, final int noOfAvroRecs,
@@ -371,7 +371,8 @@ final class IntegrationTest implements IntegrationBase {
         return config;
     }
 
-    static void verifyOffsetPositions(final Map<String, Long> expectedRecords, final String bootstrapServers, final Duration atMost) {
+    static void verifyOffsetPositions(final Map<String, Long> expectedRecords, final String bootstrapServers,
+            final Duration atMost) {
         final Properties consumerProperties = IntegrationBase.getConsumerProperties(bootstrapServers,
                 ByteArrayDeserializer.class, ByteArrayDeserializer.class);
 
@@ -381,9 +382,10 @@ final class IntegrationTest implements IntegrationBase {
             await().atMost(atMost).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
                 IntegrationBase.consumeOffsetMessages(consumer).forEach(s -> {
                     offsetRecs.merge(s.getKey(), s.getRecordCount(), (x, y) -> x > y ? x : y);
-                    LOGGER.info("Read Offset Position: {} {} ", s.getKey(), s.getRecordCount());
-                }); // TODO remove tis line
-                assertThat(offsetRecs).containsExactlyInAnyOrderEntriesOf(expectedRecords);
+                });
+                // FIXME after KAFKA-14947 is fixed.
+                //assertThat(offsetRecs).containsExactlyInAnyOrderEntriesOf(expectedRecords);
+                assertThat(offsetRecs).isNotEmpty();
             });
         }
     }
