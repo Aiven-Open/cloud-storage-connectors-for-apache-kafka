@@ -16,17 +16,15 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
-
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.function.Consumer;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
+
+import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import io.confluent.connect.avro.AvroData;
 import org.apache.avro.file.DataFileStream;
@@ -37,26 +35,35 @@ import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AvroTransformer extends Transformer<GenericRecord> {
-
+/**
+ * A transformer that reads the inputstream as Avro data.
+ */
+public class AvroTransformer extends Transformer {
+    /** The AvroData instance to read with */
     private final AvroData avroData;
-
+    /** The logger for this transformer */
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroTransformer.class);
 
+    /**
+     * The constructor.
+     *
+     * @param avroData
+     *            the AvroData object to read with.
+     */
     AvroTransformer(final AvroData avroData) {
         super();
         this.avroData = avroData;
     }
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
-        config.put(SCHEMA_REGISTRY_URL, sourceConfig.getString(SCHEMA_REGISTRY_URL));
+    public Schema getKeySchema() {
+        return Schema.OPTIONAL_BYTES_SCHEMA;
     }
 
     @Override
-    public StreamSpliterator<GenericRecord> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
-        return new StreamSpliterator<>(LOGGER, inputStreamIOSupplier) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final OffsetManager.OffsetManagerEntry<?> offsetManagerEntry, final SourceCommonConfig sourceConfig) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier, offsetManagerEntry) {
             private DataFileStream<GenericRecord> dataFileStream;
             private final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
 
@@ -78,26 +85,14 @@ public class AvroTransformer extends Transformer<GenericRecord> {
             }
 
             @Override
-            protected boolean doAdvance(final Consumer<? super GenericRecord> action) {
+            protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
                 if (dataFileStream.hasNext()) {
-                    action.accept(dataFileStream.next());
+                    final GenericRecord record = dataFileStream.next();
+                    action.accept(avroData.toConnectData(record.getSchema(), record));
                     return true;
                 }
                 return false;
             }
         };
-    }
-
-    @Override
-    public SchemaAndValue getValueData(final GenericRecord record, final String topic,
-            final AbstractConfig sourceConfig) {
-        return avroData.toConnectData(record.getSchema(), record);
-    }
-
-    @Override
-    public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
-            final AbstractConfig sourceConfig) {
-        return new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA,
-                ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 }

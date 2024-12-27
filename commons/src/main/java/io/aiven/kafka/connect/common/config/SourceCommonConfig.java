@@ -22,6 +22,8 @@ import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 
 public class SourceCommonConfig extends CommonConfig {
 
@@ -64,11 +66,15 @@ public class SourceCommonConfig extends CommonConfig {
     }
 
     public ErrorsTolerance getErrorsTolerance() {
-        return ErrorsTolerance.forName(sourceConfigFragment.getErrorsTolerance());
+        return sourceConfigFragment.getErrorsTolerance();
     }
 
     public int getMaxPollRecords() {
         return sourceConfigFragment.getMaxPollRecords();
+    }
+
+    public Transformer getTransformer() {
+        return TransformerFactory.getTransformer(schemaRegistryFragment.getInputFormat());
     }
 
 }

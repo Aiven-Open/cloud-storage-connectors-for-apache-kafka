@@ -16,215 +16,167 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.S3Object;
+import org.apache.commons.collections4.IteratorUtils;
+import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
- * Parquet).
+ * Iterator that reads from an S3Object iterator and processes each S3Object into one or more records to be returned as
+ * S3SourceRecords.
  */
 public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
+    /** The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
+
+    /** The file name pattern topic key. TODO move this to a file matching class */
     public static final String PATTERN_TOPIC_KEY = "topicName";
+    /** The file name pattern partition key. TODO move this to a file matching class */
     public static final String PATTERN_PARTITION_KEY = "partitionId";
-
+    /** The file name matching pattern. TODO move this to a file matching class */
     public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
-            + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
+            + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // e.g.
+                                                                                                        // topic-00001.txt
+    /** Maximum number of records that the Byte transformer returns. This should be handled by the Transformer itself */
     public static final long BYTES_TRANSFORMATION_NUM_OF_RECS = 1L;
-    private String currentObjectKey;
-
-    private Iterator<String> objectListIterator;
-    private Iterator<S3SourceRecord> recordIterator = Collections.emptyIterator();
-
-    private final OffsetManager offsetManager;
-
+    /** The OffsetManager that we are using */
+    private final OffsetManager<S3OffsetManagerEntry> offsetManager;
+    /** The offset manager Entry we are working with */
+    private S3OffsetManagerEntry offsetManagerEntry;
+    /** The Configuration that we are using */
     private final S3SourceConfig s3SourceConfig;
-    private final String bucketName;
-
+    /** The S3Object iterator that we read from */
+    private final Iterator<S3Object> s3ObjectIterator;
+    /** The transformer we apply to the data */
     private final Transformer transformer;
-    // Once we decouple the S3Object from the Source Iterator we can change this to be the SourceApiClient
-    // At which point it will work for al our integrations.
-    private final AWSV2SourceClient sourceClient; // NOPMD
+    /** THe iterator we will return data from */
+    private Iterator<S3SourceRecord> outerIterator;
 
-    public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
-            final Transformer transformer, final AWSV2SourceClient sourceClient) {
+    /**
+     * Constructor.
+     *
+     * @param s3SourceConfig
+     *            The configuration.
+     * @param offsetManager
+     *            the offset manager.
+     * @param transformer
+     *            the transformer to sue.
+     * @param sourceClient
+     *            the source client to read from.
+     */
+    public SourceRecordIterator(final S3SourceConfig s3SourceConfig,
+            final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer,
+            final AWSV2SourceClient sourceClient) {
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
-
-        this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
-        this.sourceClient = sourceClient;
-        objectListIterator = sourceClient.getListOfObjectKeys(null);
+        this.s3ObjectIterator = IteratorUtils.filteredIterator(sourceClient.getIteratorOfObjects(null),
+                this::extractOffsetManagerEntry);
+        this.outerIterator = Collections.emptyIterator();
     }
 
-    private void nextS3Object() {
-        if (!objectListIterator.hasNext()) {
-            // Start after the object Key we have just finished with.
-            objectListIterator = sourceClient.getListOfObjectKeys(currentObjectKey);
-            if (!objectListIterator.hasNext()) {
-                recordIterator = Collections.emptyIterator();
-                return;
-            }
-        }
-
-        try {
-            currentObjectKey = objectListIterator.next();
-            if (currentObjectKey != null) {
-                recordIterator = createIteratorForCurrentFile();
-            }
-        } catch (IOException e) {
-            throw new AmazonClientException(e);
-        }
-    }
-
-    private Iterator<S3SourceRecord> createIteratorForCurrentFile() throws IOException {
-
-        final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(currentObjectKey);
-        String topicName;
-        int defaultPartitionId;
-
+    /**
+     * Construct the OffsetManagerEntry from the S3Object file name. This probalby should occur earlier in the chain. If
+     * this method returns false the object will be skipped.
+     *
+     * @param s3Object
+     *            The object to extract the offset manager data from.
+     * @return true if the offset can be extracted, false otherwise.
+     */
+    private boolean extractOffsetManagerEntry(final S3Object s3Object) {
+        final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(s3Object.getKey());
         if (fileMatcher.find()) {
             // TODO move this from the SourceRecordIterator so that we can decouple it from S3 and make it API agnostic
-            try (S3Object s3Object = sourceClient.getObject(currentObjectKey);) {
-
-                topicName = fileMatcher.group(PATTERN_TOPIC_KEY);
-                defaultPartitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
-
-                final long defaultStartOffsetId = 1L;
-
-                final String finalTopic = topicName;
-                final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topicName, defaultPartitionId,
-                        bucketName);
-
-                return getObjectIterator(s3Object, finalTopic, defaultPartitionId, defaultStartOffsetId, transformer,
-                        partitionMap);
-            }
-        } else {
-            LOGGER.error("File naming doesn't match to any topic. {}", currentObjectKey);
-            return Collections.emptyIterator();
+            final S3OffsetManagerEntry keyEntry = new S3OffsetManagerEntry(s3SourceConfig.getAwsS3BucketName(),
+                    s3Object.getKey(), fileMatcher.group(PATTERN_TOPIC_KEY),
+                    Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY)));
+            offsetManagerEntry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties)
+                    .orElse(keyEntry);
+            return !checkBytesTransformation(transformer, offsetManagerEntry.getRecordCount());
         }
+        LOGGER.error("File naming doesn't match to any topic. {}", s3Object.getKey());
+        // TODO log bad key here.
+        return false;
     }
 
-    @SuppressWarnings("PMD.CognitiveComplexity")
-    private Iterator<S3SourceRecord> getObjectIterator(final S3Object s3Object, final String topic,
-            final int topicPartition, final long startOffset, final Transformer transformer,
-            final Map<String, Object> partitionMap) {
-        return new Iterator<>() {
-            private final Iterator<S3SourceRecord> internalIterator = readNext().iterator();
+    /**
+     * Checks if the transformer should be skipped becasue the number of records exceeds what it returns. This check
+     * should probalby be converted into a S3OffsetManager entry call for "isComplete" and converted into a predicate
+     * check.
+     *
+     * @param transformer
+     *            The transformer we are using.
+     * @param numberOfRecsAlreadyProcessed
+     *            the number of records processed.
+     * @return true if we should skip the object.
+     */
+    private boolean checkBytesTransformation(final Transformer transformer, final long numberOfRecsAlreadyProcessed) {
+        return transformer instanceof ByteArrayTransformer
+                && numberOfRecsAlreadyProcessed == BYTES_TRANSFORMATION_NUM_OF_RECS;
+    }
 
-            private List<S3SourceRecord> readNext() {
-
-                final List<S3SourceRecord> sourceRecords = new ArrayList<>();
-
-                final long numberOfRecsAlreadyProcessed = offsetManager.recordsProcessedForObjectKey(partitionMap,
-                        currentObjectKey);
-
-                // Optimizing without reading stream again.
-                if (checkBytesTransformation(transformer, numberOfRecsAlreadyProcessed)) {
-                    return sourceRecords;
-                }
-
-                try (Stream<Object> recordStream = transformer.getRecords(s3Object::getObjectContent, topic,
-                        topicPartition, s3SourceConfig, numberOfRecsAlreadyProcessed)) {
-                    final Iterator<Object> recordIterator = recordStream.iterator();
-                    while (recordIterator.hasNext()) {
-                        final Object record = recordIterator.next();
-
-                        sourceRecords.add(getSourceRecord(topic, topicPartition, offsetManager, startOffset,
-                                partitionMap, transformer.getValueData(record, topic, s3SourceConfig),
-                                transformer.getKeyData(currentObjectKey, topic, s3SourceConfig)));
-
-                        // Break if we have reached the max records per poll
-                        if (sourceRecords.size() >= s3SourceConfig.getMaxPollRecords()) {
-                            break;
-                        }
-                    }
-                }
-
-                return sourceRecords;
-            }
-
-            // For bytes transformation, read whole file as 1 record
-            private boolean checkBytesTransformation(final Transformer transformer,
-                    final long numberOfRecsAlreadyProcessed) {
-                return transformer instanceof ByteArrayTransformer
-                        && numberOfRecsAlreadyProcessed == BYTES_TRANSFORMATION_NUM_OF_RECS;
-            }
-
-            private S3SourceRecord getSourceRecord(final String topic, final int topicPartition,
-                    final OffsetManager offsetManager, final long startOffset, final Map<String, Object> partitionMap,
-                    final SchemaAndValue valueData, final SchemaAndValue keyData) {
-
-                long currentOffset;
-
-                if (offsetManager.getOffsets().containsKey(partitionMap)) {
-                    LOGGER.info("***** offsetManager.getOffsets() ***** {}", offsetManager.getOffsets());
-                    currentOffset = offsetManager.incrementAndUpdateOffsetMap(partitionMap, currentObjectKey,
-                            startOffset);
-                } else {
-                    LOGGER.info("Into else block ...");
-                    currentOffset = startOffset;
-                    offsetManager.createNewOffsetMap(partitionMap, currentObjectKey, currentOffset);
-                }
-
-                final Map<String, Object> offsetMap = offsetManager.getOffsetValueMap(currentObjectKey, currentOffset);
-
-                return new S3SourceRecord(partitionMap, offsetMap, topic, topicPartition, currentObjectKey, keyData,
-                        valueData);
-            }
-
-            @Override
-            public boolean hasNext() {
-                return internalIterator.hasNext();
-            }
-
-            @Override
-            public S3SourceRecord next() {
-                return internalIterator.next();
-            }
-        };
+    /**
+     * Get the S3SourceRecord iterator that reads from a single object. This method applies the transformer to the
+     * object and returns an iterator based on the stream returned from
+     * {@link Transformer#getRecords(IOSupplier, OffsetManager.OffsetManagerEntry, SourceCommonConfig)}.
+     *
+     * @param s3Object
+     *            the object to get S3Source records from.
+     * @return An iterator over the S3SourceRecords from the Object.
+     */
+    private Iterator<S3SourceRecord> getS3SourceRecordIterator(final S3Object s3Object) {
+        final Optional<SchemaAndValue> key = Optional
+                .of(new SchemaAndValue(transformer.getKeySchema(), s3Object.getKey().getBytes(StandardCharsets.UTF_8)));
+        // Do not stream and map as the offsetManagerEntry updates in getRecords() will not be seen in S3SourceRecord
+        // constructor.
+        final Iterator<SchemaAndValue> iter = transformer
+                .getRecords(s3Object::getObjectContent, offsetManagerEntry, s3SourceConfig)
+                .iterator();
+        return IteratorUtils.transformedIterator(iter, value -> new S3SourceRecord(offsetManagerEntry, key, value));
     }
 
     @Override
     public boolean hasNext() {
-        return recordIterator.hasNext() || objectListIterator.hasNext();
+        if (outerIterator.hasNext()) {
+            return true;
+        }
+
+        while (s3ObjectIterator.hasNext()) {
+            outerIterator = getS3SourceRecordIterator(s3ObjectIterator.next());
+            if (outerIterator.hasNext()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public S3SourceRecord next() {
-        if (!recordIterator.hasNext()) {
-            nextS3Object();
+        if (!hasNext()) {
+            throw new NoSuchElementException();
         }
-
-        if (!recordIterator.hasNext()) {
-            // If there are still no records, return null or throw an exception
-            return null; // Or throw new NoSuchElementException();
-        }
-
-        return recordIterator.next();
+        return outerIterator.next();
     }
 
     @Override
     public void remove() {
         throw new UnsupportedOperationException("This iterator is unmodifiable");
     }
-
 }
