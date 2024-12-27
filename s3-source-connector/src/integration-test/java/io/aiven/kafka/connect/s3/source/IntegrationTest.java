@@ -384,7 +384,7 @@ final class IntegrationTest implements IntegrationBase {
                     offsetRecs.merge(s.getKey(), s.getRecordCount(), (x, y) -> x > y ? x : y);
                 });
                 // FIXME after KAFKA-14947 is fixed.
-                //assertThat(offsetRecs).containsExactlyInAnyOrderEntriesOf(expectedRecords);
+                // assertThat(offsetRecs).containsExactlyInAnyOrderEntriesOf(expectedRecords);
                 assertThat(offsetRecs).isNotEmpty();
             });
         }
