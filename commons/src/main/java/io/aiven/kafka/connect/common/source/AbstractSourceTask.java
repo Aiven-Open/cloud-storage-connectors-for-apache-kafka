@@ -57,7 +57,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * The maximum time to spend polling. This is set to 5 seconds as that is the time that is allotted to a system for
      * shutdown.
      */
-    protected static final Duration MAX_POLL_TIME = Duration.ofSeconds(5);
+    public static final Duration MAX_POLL_TIME = Duration.ofSeconds(5);
     /**
      * The boolean that indicates the connector is stopped.
      */
@@ -97,8 +97,8 @@ public abstract class AbstractSourceTask extends SourceTask {
         super();
         this.logger = logger;
         connectorStopped = new AtomicBoolean();
-        backoff = new Backoff(MAX_POLL_TIME);
         timer = new Timer(MAX_POLL_TIME);
+        backoff = new Backoff(timer::millisecondsRemaining);
     }
 
     /**
@@ -111,9 +111,11 @@ public abstract class AbstractSourceTask extends SourceTask {
      * this iterator executes may cause the task to abort.
      * </p>
      *
+     * @param timer
+     *            a SupplierOfLong that provides the amount of time remaining before the polling expires.
      * @return The iterator of SourceRecords.
      */
-    abstract protected Iterator<SourceRecord> getIterator();
+    abstract protected Iterator<SourceRecord> getIterator(SupplierOfLong timer);
 
     /**
      * Called by {@link #start} to allows the concrete implementation to configure itself based on properties.
@@ -128,7 +130,7 @@ public abstract class AbstractSourceTask extends SourceTask {
         logger.debug("Starting");
         config = configure(props);
         maxPollRecords = config.getMaxPollRecords();
-        sourceRecordIterator = getIterator();
+        sourceRecordIterator = getIterator(timer::millisecondsRemaining);
     }
 
     /**
@@ -184,13 +186,16 @@ public abstract class AbstractSourceTask extends SourceTask {
         final List<SourceRecord> results = new ArrayList<>();
         try {
             while (stillPolling() && results.size() < maxPollRecords) {
-                // if we could not get a record and the results are not empty return them
-                if (!tryAdd(results, sourceRecordIterator) && !results.isEmpty()) {
-                    break;
+                if (!tryAdd(results, sourceRecordIterator)) {
+                    if (!results.isEmpty()) {
+                        // if we could not get a record and the results are not empty return them
+                        break;
+                    }
+                    // attempt a backoff
+                    backoff.cleanDelay();
                 }
-                // attempt a backoff
-                backoff.cleanDelay();
             }
+
         } catch (RuntimeException e) { // NOPMD must catch runtime here.
             logger.error("Error during poll(): {}", e.getMessage(), e);
             if (config.getErrorsTolerance() == ErrorsTolerance.NONE) {
@@ -242,6 +247,15 @@ public abstract class AbstractSourceTask extends SourceTask {
         }
 
         /**
+         * Gets the maximum duration for this timer.
+         *
+         * @return the maximum duration for the timer.
+         */
+        public long millisecondsRemaining() {
+            return super.isStarted() ? super.getTime() - duration : duration;
+        }
+
+        /**
          * Returns {@code true} if the timer has expired.
          *
          * @return {@code true} if the timer has expired.
@@ -252,18 +266,19 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     /**
-     * Calculates the amount of time to sleep during a backoff performs the sleep. Backoff calculation uses an
-     * expenantially increasing delay until the maxDelay is reached. Then all delays are maxDelay length.
+     * Performs a delay based on the number of successive {@link #delay()} or {@link #cleanDelay()} calls without a
+     * {@link #reset()}. Delay increases exponentially but never exceeds the time remaining by more than 0.512 seconds.
      */
     protected static class Backoff {
         /**
-         * The maximum wait time.
+         * A supplier of the time remaining (in milliseconds) on the overriding timer.
          */
-        private final long maxWait;
+        private final SupplierOfLong timeRemaining;
+
         /**
          * The maximum number of times {@link #delay()} will be called before maxWait is reached.
          */
-        private final int maxCount;
+        private int maxCount;
         /**
          * The number of times {@link #delay()} has been called.
          */
@@ -277,23 +292,28 @@ public abstract class AbstractSourceTask extends SourceTask {
         /**
          * Constructor.
          *
-         * @param maxDelay
-         *            The maximum delay that this instance will use.
+         * @param timeRemaining
+         *            A supplier of long as milliseconds remaining before time expires.
          */
-        public Backoff(final Duration maxDelay) {
-            // calculate the approx wait time.
-            maxWait = maxDelay.toMillis();
-            maxCount = (int) (Math.log10(maxWait) / Math.log10(2));
-            waitCount = 0;
+        public Backoff(final SupplierOfLong timeRemaining) {
+            this.timeRemaining = timeRemaining;
+            reset();
         }
 
         /**
          * Reset the backoff time so that delay is again at the minimum.
          */
-        public void reset() {
+        public final void reset() {
+            // calculate the approx wait count.
+            maxCount = (int) (Math.log10(timeRemaining.get()) / Math.log10(2));
             waitCount = 0;
         }
 
+        private long timeWithJitter() {
+            // generate approx +/- 0.512 seconds of jitter
+            final int jitter = random.nextInt(1024) - 512;
+            return (long) Math.pow(2, waitCount) + jitter;
+        }
         /**
          * Delay execution based on the number of times this method has been called.
          *
@@ -301,16 +321,15 @@ public abstract class AbstractSourceTask extends SourceTask {
          *             If any thread interrupts this thread.
          */
         public void delay() throws InterruptedException {
-            // power of 2 next int is faster and so we generate approx +/- 0.512 seconds of jitter
-            final int jitter = random.nextInt(1024) - 512;
 
+            long sleepTime = timeRemaining.get();
             if (waitCount < maxCount) {
                 waitCount++;
-                final long sleep = (long) Math.pow(2, waitCount) + jitter;
-                // don't allow jitter to set sleep argument negative.
-                Thread.sleep(Math.max(0, sleep));
-            } else {
-                Thread.sleep(maxWait + jitter);
+                sleepTime = Math.min(sleepTime, timeWithJitter());
+            }
+            // don't sleep negative time.
+            if (sleepTime > 0) {
+                Thread.sleep(sleepTime);
             }
         }
 
@@ -324,5 +343,13 @@ public abstract class AbstractSourceTask extends SourceTask {
                 // do nothing return results below
             }
         }
+    }
+
+    /**
+     * A functional interface to return long values.
+     */
+    @FunctionalInterface
+    public interface SupplierOfLong {
+        long get();
     }
 }

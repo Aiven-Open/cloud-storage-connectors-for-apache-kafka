@@ -23,8 +23,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -35,13 +38,14 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.utils.ConnectUtils;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
-import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -49,34 +53,35 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import io.findify.s3mock.S3Mock;
+import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
 final class S3SourceTaskTest {
+
+    /**
+     * The amount of extra time that we will allow for timing errors.
+     */
+    private static final long TIMING_DELTA = 500;
 
     private static final Random RANDOM = new Random();
     private Map<String, String> properties;
 
-    private static BucketAccessor testBucketAccessor;
     private static final String TEST_BUCKET = "test-bucket";
+
+    private static final String TOPIC = "TOPIC1";
+
+    private static final int PARTITION = 1;
+
+    private static final String OBJECT_KEY = "object_key";
 
     private static S3Mock s3Api;
     private static AmazonS3 s3Client;
 
     private static Map<String, String> commonProperties;
-
-    @Mock
-    private SourceTaskContext mockedSourceTaskContext;
-
-    @Mock
-    private OffsetStorageReader mockedOffsetStorageReader;
 
     @BeforeAll
     public static void setUpClass() {
@@ -102,7 +107,7 @@ final class S3SourceTaskTest {
 
         s3Client = builder.build();
 
-        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET);
+        final BucketAccessor testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET);
         testBucketAccessor.createBucket();
     }
 
@@ -115,8 +120,6 @@ final class S3SourceTaskTest {
     public void setUp() {
         properties = new HashMap<>(commonProperties);
         s3Client.createBucket(TEST_BUCKET);
-        mockedSourceTaskContext = mock(SourceTaskContext.class);
-        mockedOffsetStorageReader = mock(OffsetStorageReader.class);
     }
 
     @AfterEach
@@ -129,29 +132,9 @@ final class S3SourceTaskTest {
         final S3SourceTask s3SourceTask = new S3SourceTask();
         startSourceTask(s3SourceTask);
 
-        final Transformer transformer = s3SourceTask.getTransformer();
-        assertThat(transformer).isInstanceOf(ByteArrayTransformer.class);
+        assertThat(s3SourceTask.getTransformer()).isInstanceOf(ByteArrayTransformer.class);
 
-        final boolean taskInitialized = s3SourceTask.isTaskInitialized();
-        assertThat(taskInitialized).isTrue();
-    }
-
-    @Test
-    void testPoll() throws Exception {
-        final S3SourceTask s3SourceTask = new S3SourceTask();
-        startSourceTask(s3SourceTask);
-
-        SourceRecordIterator mockSourceRecordIterator;
-
-        mockSourceRecordIterator = mock(SourceRecordIterator.class);
-        setPrivateField(s3SourceTask, "sourceRecordIterator", mockSourceRecordIterator);
-        when(mockSourceRecordIterator.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
-
-        final S3SourceRecord s3SourceRecordList = getAivenS3SourceRecord();
-        when(mockSourceRecordIterator.next()).thenReturn(s3SourceRecordList);
-
-        final List<SourceRecord> sourceRecordList = s3SourceTask.poll();
-        assertThat(sourceRecordList).isNotEmpty();
+        assertThat(s3SourceTask.isRunning()).isTrue();
     }
 
     @Test
@@ -160,29 +143,22 @@ final class S3SourceTaskTest {
         startSourceTask(s3SourceTask);
         s3SourceTask.stop();
 
-        final boolean taskInitialized = s3SourceTask.isTaskInitialized();
-        assertThat(taskInitialized).isFalse();
-        assertThat(s3SourceTask.getConnectorStopped()).isTrue();
+        assertThat(s3SourceTask.isRunning()).isFalse();
     }
 
-    private static S3SourceRecord getAivenS3SourceRecord() {
-        return new S3SourceRecord(new HashMap<>(), new HashMap<>(), "testtopic", 0, "",
-                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, new byte[0]),
-                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, new byte[0]));
-    }
-
-    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
-    private void setPrivateField(final Object object, final String fieldName, final Object value)
-            throws NoSuchFieldException, IllegalAccessException {
-        Field field;
-        field = object.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(object, value);
+    private static S3SourceRecord createS3SourceRecord(final String topicName, final Integer defaultPartitionId,
+            final String bucketName, final String objectKey, final byte[] key, final byte[] value) {
+        return new S3SourceRecord(ConnectUtils.getPartitionMap(topicName, defaultPartitionId, bucketName),
+                new HashMap<>(), topicName, defaultPartitionId, objectKey,
+                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, key),
+                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, value));
     }
 
     private void startSourceTask(final S3SourceTask s3SourceTask) {
-        s3SourceTask.initialize(mockedSourceTaskContext);
+        final SourceTaskContext mockedSourceTaskContext = mock(SourceTaskContext.class);
+        final OffsetStorageReader mockedOffsetStorageReader = mock(OffsetStorageReader.class);
         when(mockedSourceTaskContext.offsetStorageReader()).thenReturn(mockedOffsetStorageReader);
+        s3SourceTask.initialize(mockedSourceTaskContext);
 
         setBasicProperties();
         s3SourceTask.start(properties);
@@ -198,5 +174,89 @@ final class S3SourceTaskTest {
         properties.put(TARGET_TOPIC_PARTITIONS, "0,1");
         properties.put(TARGET_TOPICS, "testtopic");
 
+    }
+
+    @Test
+    void testPollWithEmptyIterator() {
+        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
+        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
+        final Iterator<S3SourceRecord> sourceRecordIterator = Collections.emptyIterator();
+        final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
+
+        startSourceTask(s3SourceTask);
+        final StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        final List<SourceRecord> results = s3SourceTask.poll();
+        stopWatch.stop();
+        assertThat(results).isEmpty();
+        assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis() + TIMING_DELTA);
+    }
+
+    private void assertEquals(final S3SourceRecord s3Record, final SourceRecord sourceRecord) {
+        assertThat(sourceRecord).isNotNull();
+        assertThat(sourceRecord.sourcePartition()).isEqualTo(s3Record.getPartitionMap());
+        assertThat(sourceRecord.sourceOffset()).isEqualTo(s3Record.getOffsetMap());
+        assertThat(sourceRecord.key()).isEqualTo(s3Record.getKey().value());
+        assertThat(sourceRecord.value()).isEqualTo(s3Record.getValue().value());
+    }
+
+    @Test
+    void testPollsWithRecords() {
+        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
+        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
+        final List<S3SourceRecord> lst = new ArrayList<>();
+        lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY,
+                "Hello".getBytes(StandardCharsets.UTF_8), "Hello World".getBytes(StandardCharsets.UTF_8)));
+        lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY + "a",
+                "Goodbye".getBytes(StandardCharsets.UTF_8), "Goodbye cruel World".getBytes(StandardCharsets.UTF_8)));
+        final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
+        final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
+
+        startSourceTask(s3SourceTask);
+        final StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        final List<SourceRecord> results = s3SourceTask.poll();
+        stopWatch.stop();
+
+        assertThat(results).hasSize(2);
+        assertEquals(lst.get(0), results.get(0));
+        assertEquals(lst.get(1), results.get(1));
+        assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis());
+    }
+
+    @Test
+    void testPollWhenConnectorStopped() {
+        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
+        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
+        final List<S3SourceRecord> lst = new ArrayList<>();
+        lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY,
+                "Hello".getBytes(StandardCharsets.UTF_8), "Hello World".getBytes(StandardCharsets.UTF_8)));
+        lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY + "a",
+                "Goodbye".getBytes(StandardCharsets.UTF_8), "Goodbye cruel World".getBytes(StandardCharsets.UTF_8)));
+        final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
+        final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
+
+        startSourceTask(s3SourceTask);
+        s3SourceTask.stop();
+        final StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        final List<SourceRecord> results = s3SourceTask.poll();
+        stopWatch.stop();
+        assertThat(results).isEmpty();
+        assertThat(stopWatch.getTime()).isLessThan(TIMING_DELTA);
+
+    }
+
+    private static class TestingS3SourceTask extends S3SourceTask { // NOPMD not a test class
+
+        TestingS3SourceTask(final Iterator<S3SourceRecord> realIterator) {
+            super();
+            super.setS3SourceRecordIterator(realIterator);
+        }
+
+        @Override
+        protected void setS3SourceRecordIterator(final Iterator<S3SourceRecord> iterator) {
+            // do nothing.
+        }
     }
 }

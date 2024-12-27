@@ -28,7 +28,7 @@ import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -61,12 +61,12 @@ class RecordProcessorTest {
     @Mock
     private AWSV2SourceClient sourceClient;
 
-    private AtomicBoolean connectorStopped;
+    private static final Supplier<Boolean> TRUE = () -> true;
+    private static final Supplier<Boolean> FALSE = () -> false;
     private Iterator<S3SourceRecord> sourceRecordIterator;
 
     @BeforeEach
     void setUp() {
-        connectorStopped = new AtomicBoolean(false);
         sourceRecordIterator = mock(Iterator.class);
     }
 
@@ -80,7 +80,7 @@ class RecordProcessorTest {
             sourceRecordIterator,
             results,
             s3SourceConfig,
-            connectorStopped,
+                TRUE,
             sourceClient, offsetManager
         );
 
@@ -100,7 +100,7 @@ class RecordProcessorTest {
             sourceRecordIterator,
             results,
             s3SourceConfig,
-            connectorStopped,
+                TRUE,
             sourceClient, offsetManager
         );
 
@@ -111,14 +111,13 @@ class RecordProcessorTest {
     @Test
     void testProcessRecordsConnectorStopped() {
         when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
-        connectorStopped.set(true); // Simulate connector stopped
 
         final List<SourceRecord> results = new ArrayList<>();
         final List<SourceRecord> processedRecords = RecordProcessor.processRecords(
             sourceRecordIterator,
             results,
             s3SourceConfig,
-            connectorStopped,
+            FALSE,
             sourceClient, offsetManager
         );
 

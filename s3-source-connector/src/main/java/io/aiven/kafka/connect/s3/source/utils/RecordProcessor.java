@@ -18,7 +18,7 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
@@ -39,12 +39,12 @@ public final class RecordProcessor {
     }
 
     public static List<SourceRecord> processRecords(final Iterator<S3SourceRecord> sourceRecordIterator,
-            final List<SourceRecord> results, final S3SourceConfig s3SourceConfig, final AtomicBoolean connectorStopped,
+            final List<SourceRecord> results, final S3SourceConfig s3SourceConfig, final Supplier<Boolean> stillPolling,
             final AWSV2SourceClient sourceClient, final OffsetManager offsetManager) {
 
         final int maxPollRecords = s3SourceConfig.getMaxPollRecords();
 
-        for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && !connectorStopped.get(); i++) {
+        for (int i = 0; sourceRecordIterator.hasNext() && i < maxPollRecords && stillPolling.get(); i++) {
             final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
             if (s3SourceRecord != null) {
                 final SourceRecord sourceRecord = createSourceRecord(s3SourceRecord, s3SourceConfig, sourceClient,

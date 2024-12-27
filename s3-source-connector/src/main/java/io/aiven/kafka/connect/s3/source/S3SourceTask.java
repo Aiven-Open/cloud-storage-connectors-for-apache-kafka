@@ -16,13 +16,14 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import io.aiven.kafka.connect.common.source.input.TransformerFactory;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import org.apache.kafka.connect.source.SourceRecord;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
@@ -30,6 +31,8 @@ import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
+import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
+import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
@@ -52,21 +55,19 @@ public class S3SourceTask extends AbstractSourceTask {
     public static final String OBJECT_KEY = "object_key";
     public static final String PARTITION = "topicPartition";
 
-
     /** An iterator or S3SourceRecords */
     private Iterator<S3SourceRecord> s3SourceRecordIterator;
     /**
      * The transformer that we are using TODO move this to AbstractSourceTask
      */
-    private Transformer transformer;
-    /** The task initialized flag */
-    private boolean taskInitialized;
+    private Transformer<?> transformer;
     /** The AWS Source client */
     private AWSV2SourceClient awsv2SourceClient;
     /** The list of failed object keys */
     private final Set<String> failedObjectKeys = new HashSet<>();
     /** The offset manager this task uses */
     private OffsetManager offsetManager;
+    private S3SourceConfig s3SourceConfig;
 
     public S3SourceTask() {
         super(LOGGER);
@@ -78,10 +79,10 @@ public class S3SourceTask extends AbstractSourceTask {
     }
 
     @Override
-    protected Iterator<SourceRecord> getIterator() { // NOPMD cognatavie complexity
-        return new Iterator<SourceRecord>() {
+    protected Iterator<SourceRecord> getIterator(SupplierOfLong timer) { // NOPMD cognatavie complexity
+        return new Iterator<>() {
             /** The backoff for Amazon retryable exceptions */
-            final Backoff backoff = new Backoff(MAX_POLL_TIME);
+            final Backoff backoff = new Backoff(timer);
             @Override
             public boolean hasNext() {
                 try {
@@ -116,8 +117,12 @@ public class S3SourceTask extends AbstractSourceTask {
             @Override
             public SourceRecord next() {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
-                offsetManager.incrementAndUpdateOffsetMap(s3SourceRecord.getPartitionMap(), s3SourceRecord.getObjectKey(), 1L);
-                return s3SourceRecord.getSourceRecord(s3SourceRecord.getTopic());
+                offsetManager.incrementAndUpdateOffsetMap(s3SourceRecord.getPartitionMap(),
+                        s3SourceRecord.getObjectKey(), 1L);
+                final List<SourceRecord> result = RecordProcessor.processRecords(
+                        Collections.singletonList(s3SourceRecord).iterator(), new ArrayList<>(), s3SourceConfig,
+                        S3SourceTask.this::stillPolling, awsv2SourceClient, offsetManager);
+                return result.get(0);
             }
         };
     }
@@ -125,26 +130,27 @@ public class S3SourceTask extends AbstractSourceTask {
     @Override
     protected SourceCommonConfig configure(final Map<String, String> props) {
         LOGGER.info("S3 Source task started.");
-        final S3SourceConfig s3SourceConfig = new S3SourceConfig(props);
-        this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
+        this.s3SourceConfig = new S3SourceConfig(props);
+        this.transformer = s3SourceConfig.getTransformer();
         offsetManager = new OffsetManager(context, s3SourceConfig);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
         setS3SourceRecordIterator(
                 new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, awsv2SourceClient));
-        this.taskInitialized = true;
         return s3SourceConfig;
     }
 
     @Override
-    public void commit() throws InterruptedException {
+    public void commit() {
         LOGGER.info("Committed all records through last poll()");
     }
 
     @Override
-    public void commitRecord(final SourceRecord record) throws InterruptedException {
+    public void commitRecord(final SourceRecord record) {
         if (LOGGER.isInfoEnabled()) {
             final Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
-            LOGGER.info("Committed individual record {} {} {} committed", map.get(BUCKET), map.get(OBJECT_KEY), offsetManager.recordsProcessedForObjectKey((Map)record.sourcePartition(), map.get(OBJECT_KEY).toString()));
+            LOGGER.info("Committed individual record {} {} {} committed", map.get(BUCKET), map.get(OBJECT_KEY),
+                    offsetManager.recordsProcessedForObjectKey((Map<String, Object>) record.sourcePartition(),
+                            map.get(OBJECT_KEY).toString()));
         }
     }
 
@@ -170,16 +176,7 @@ public class S3SourceTask extends AbstractSourceTask {
      *
      * @return the transformer that we are using.
      */
-    public Transformer getTransformer() {
+    public Transformer<?> getTransformer() {
         return transformer;
-    }
-
-    /**
-     * Get the initialized flag.
-     *
-     * @return {@code true} if the task has been initialized, {@code false} otherwise.
-     */
-    public boolean isTaskInitialized() {
-        return taskInitialized;
     }
 }

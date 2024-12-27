@@ -66,6 +66,14 @@ public class S3SourceRecord {
         return objectKey;
     }
 
+    public SchemaAndValue getKey() {
+        return new SchemaAndValue(keyData.schema(), keyData.value());
+    }
+
+    public SchemaAndValue getValue() {
+        return new SchemaAndValue(valueData.schema(), valueData.value());
+    }
+
     public void setOffsetMap(final Map<String, Object> offsetMap) {
         this.offsetMap = new HashMap<>(offsetMap);
     }
