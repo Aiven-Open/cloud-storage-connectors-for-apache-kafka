@@ -18,20 +18,23 @@ package io.aiven.kafka.connect.common.source.input;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.function.Consumer;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ByteArrayTransformer implements Transformer {
+public class ByteArrayTransformer extends Transformer<byte[]> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayTransformer.class);
+
+    private static final int MAX_BUFFER_SIZE = 4096;
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
@@ -39,49 +42,49 @@ public class ByteArrayTransformer implements Transformer {
     }
 
     @Override
-    public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
-
-        // Create a Stream that processes each chunk lazily
-        return StreamSupport.stream(new Spliterators.AbstractSpliterator<>(Long.MAX_VALUE, Spliterator.ORDERED) {
-            final byte[] buffer = new byte[4096];
-            InputStream inputStream;
-
-            {
-                try {
-                    inputStream = inputStreamIOSupplier.get(); // Open the InputStream once
-                } catch (IOException e) {
-                    LOGGER.error("Error closing stream: {}", e.getMessage(), e);
-                }
+    public StreamSpliterator<byte[]> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
+        return new StreamSpliterator<byte[]>(LOGGER, inputStreamIOSupplier) {
+            @Override
+            protected InputStream inputOpened(final InputStream input) {
+                return input;
             }
 
             @Override
-            public boolean tryAdvance(final java.util.function.Consumer<? super Object> action) {
+            protected void doClose() {
+                // nothing to do.
+            }
+
+            @Override
+            protected boolean doAdvance(final Consumer<? super byte[]> action) {
+                final byte[] buffer = new byte[MAX_BUFFER_SIZE];
                 try {
-                    final int bytesRead = inputStream.read(buffer);
-                    if (bytesRead == -1) {
+                    final int bytesRead = IOUtils.read(inputStream, buffer);
+                    if (bytesRead == 0) {
                         return false;
                     }
-                    final byte[] chunk = new byte[bytesRead];
-                    System.arraycopy(buffer, 0, chunk, 0, bytesRead);
-                    action.accept(chunk);
+                    if (bytesRead < MAX_BUFFER_SIZE) {
+                        action.accept(Arrays.copyOf(buffer, bytesRead));
+                    } else {
+                        action.accept(buffer);
+                    }
                     return true;
                 } catch (IOException e) {
-                    LOGGER.error("Error trying to advance byte stream: {}", e.getMessage(), e);
+                    LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
                     return false;
                 }
             }
-        }, false).onClose(() -> {
-            try {
-                inputStreamIOSupplier.get().close(); // Ensure the reader is closed after streaming
-            } catch (IOException e) {
-                LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
-            }
-        });
+        };
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
-        return (byte[]) record;
+    public SchemaAndValue getValueData(final byte[] record, final String topic, final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, record);
+    }
+
+    @Override
+    public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
+            final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 }

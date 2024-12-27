@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.common.source.input;
 
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -31,11 +32,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.json.JsonConverter;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,19 +56,22 @@ final class JsonTransformerTest {
     @Mock
     private IOSupplier<InputStream> inputStreamIOSupplierMock;
 
+    JsonConverter jsonConverter;
+
     @BeforeEach
     void setUp() {
-        jsonTransformer = new JsonTransformer();
+        jsonConverter = new JsonConverter();
+        final Map<String, String> config = new HashMap<>();
+        config.put(SCHEMAS_ENABLE, "false");
+        jsonConverter.configure(config, false);
+
+        jsonTransformer = new JsonTransformer(jsonConverter);
         sourceCommonConfig = mock(SourceCommonConfig.class);
     }
 
-    @Test
-    void testConfigureValueConverter() {
-        final Map<String, String> config = new HashMap<>();
-
-        jsonTransformer.configureValueConverter(config, sourceCommonConfig);
-        assertThat(config).as("%s should be set to false", SCHEMAS_ENABLE)
-                .containsEntry(SCHEMAS_ENABLE, Boolean.FALSE.toString());
+    @AfterEach
+    void destroy() {
+        jsonConverter.close();
     }
 
     @Test
@@ -73,7 +79,7 @@ final class JsonTransformerTest {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
                 sourceCommonConfig, 0);
 
         assertThat(jsonNodes).hasSize(1);
@@ -84,12 +90,12 @@ final class JsonTransformerTest {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
                 sourceCommonConfig, 25L);
 
-        final List<Object> recs = jsonNodes.collect(Collectors.toList());
+        final List<byte[]> recs = jsonNodes.collect(Collectors.toList());
         assertThat(recs).hasSize(75);
-        assertThat(recs).extracting(record -> ((JsonNode) record).get("key").asText())
+        assertThat(recs).extracting(record -> ((Map) jsonTransformer.getValueData(record, "", null).value()).get("key"))
                 .doesNotContain("value1")
                 .doesNotContain("value2")
                 .doesNotContain("value25")
@@ -104,10 +110,12 @@ final class JsonTransformerTest {
                 "invalid-json".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
 
-        final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
                 sourceCommonConfig, 0);
 
-        assertThat(jsonNodes).isEmpty();
+        assertThatThrownBy(() -> jsonTransformer.getValueData(jsonNodes.findAny().get(), "", null))
+                .isInstanceOf(DataException.class)
+                .hasMessage("Converting byte[] to Kafka Connect data failed due to serialization error: ");
     }
 
     @Test
@@ -115,44 +123,35 @@ final class JsonTransformerTest {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<Object> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
                 sourceCommonConfig, 0);
-        final byte[] serializedData = jsonTransformer.getValueBytes(jsonNodes.findFirst().get(), TESTTOPIC,
-                sourceCommonConfig);
+        final Object serializedData = jsonTransformer
+                .getValueData(
+                        jsonNodes.findFirst().orElseThrow(() -> new AssertionError("No records found in stream!")),
+                        TESTTOPIC, sourceCommonConfig)
+                .value();
 
-        final ObjectMapper objectMapper = new ObjectMapper();
-        final JsonNode expectedData = objectMapper.readTree(serializedData);
-
-        assertThat(expectedData.get("key").asText()).isEqualTo("value");
+        // Assert: Verify the serialized data
+        assertThat(serializedData).isInstanceOf(Map.class).extracting("key").isEqualTo("value");
     }
 
     @Test
     void testGetRecordsWithIOException() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException"));
-        final Stream<Object> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
+        final Stream<byte[]> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
 
         assertThat(resultStream).isEmpty();
-    }
-
-    @Test
-    void testCustomSpliteratorStreamProcessing() throws IOException {
-        final String jsonContent = "{\"key\":\"value\"}\n{\"key2\":\"value2\"}";
-        final InputStream inputStream = new ByteArrayInputStream(jsonContent.getBytes(StandardCharsets.UTF_8));
-        final IOSupplier<InputStream> supplier = () -> inputStream;
-
-        final JsonTransformer.CustomSpliterator spliterator = jsonTransformer.new CustomSpliterator(supplier);
-        assertThat(spliterator.tryAdvance(jsonNode -> assertThat(jsonNode).isNotNull())).isTrue();
     }
 
     @Test
     void testCustomSpliteratorWithIOExceptionDuringInitialization() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException during initialization"));
-        final Stream<Object> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
+        final Stream<byte[]> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
 
         assertThat(resultStream).isEmpty();
     }
 
-    String getJsonRecs(final int recordCount) {
+    static String getJsonRecs(final int recordCount) {
         final StringBuilder jsonRecords = new StringBuilder();
         for (int i = 1; i <= recordCount; i++) {
             jsonRecords.append(String.format("{\"key\":\"value%d\"}", i));

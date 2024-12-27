@@ -16,112 +16,97 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import java.util.function.Consumer;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.json.JsonConverter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
+import org.codehaus.plexus.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JsonTransformer implements Transformer {
+public class JsonTransformer extends Transformer<byte[]> {
+
+    private final JsonConverter jsonConverter;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JsonTransformer.class);
 
     final ObjectMapper objectMapper = new ObjectMapper();
 
+    JsonTransformer(final JsonConverter jsonConverter) {
+        super();
+        this.jsonConverter = jsonConverter;
+    }
+
     @Override
     public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
-        config.put(SCHEMAS_ENABLE, "false");
     }
 
     @Override
-    public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
-        return readJsonRecordsAsStream(inputStreamIOSupplier, skipRecords);
-    }
+    public StreamSpliterator<byte[]> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
+        final StreamSpliterator<byte[]> spliterator = new StreamSpliterator<>(LOGGER, inputStreamIOSupplier) {
+            BufferedReader reader;
 
-    @Override
-    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
-        try {
-            return objectMapper.writeValueAsBytes(record);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to serialize record to JSON bytes. Error: {}", e.getMessage(), e);
-            return new byte[0];
-        }
-    }
-
-    private Stream<Object> readJsonRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final long skipRecords) {
-        // Use a Stream that lazily processes each line as a JSON object
-        CustomSpliterator customSpliteratorParam;
-        try {
-            customSpliteratorParam = new CustomSpliterator(inputStreamIOSupplier);
-        } catch (IOException e) {
-            LOGGER.error("Error creating Json transformer CustomSpliterator: {}", e.getMessage(), e);
-            return Stream.empty();
-        }
-        return StreamSupport.stream(customSpliteratorParam, false).onClose(() -> {
-            try {
-                customSpliteratorParam.reader.close(); // Ensure the reader is closed after streaming
-            } catch (IOException e) {
-                LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
+            @Override
+            protected InputStream inputOpened(final InputStream input) throws IOException {
+                reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+                return input;
             }
-        }).skip(skipRecords);
-    }
 
-    /*
-     * This CustomSpliterator class is created so that BufferedReader instantiation is not closed before the all the
-     * records from stream is closed. With this now, we have a onclose method declared in parent declaration.
-     */
-    final class CustomSpliterator extends Spliterators.AbstractSpliterator<Object> {
-        BufferedReader reader;
-        String line;
-        CustomSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier) throws IOException {
-            super(Long.MAX_VALUE, Spliterator.ORDERED | Spliterator.NONNULL);
-            reader = new BufferedReader(new InputStreamReader(inputStreamIOSupplier.get(), StandardCharsets.UTF_8));
-        }
-
-        @Override
-        public boolean tryAdvance(final java.util.function.Consumer<? super Object> action) {
-            try {
-                if (line == null) {
-                    line = reader.readLine();
-                }
-                while (line != null) {
-                    line = line.trim();
-                    if (!line.isEmpty()) {
-                        try {
-                            final JsonNode jsonNode = objectMapper.readTree(line); // Parse the JSON
-                            // line
-                            action.accept(jsonNode); // Provide the parsed JSON node to the stream
-                        } catch (IOException e) {
-                            LOGGER.error("Error parsing JSON record: {}", e.getMessage(), e);
-                        }
-                        line = null; // NOPMD
-                        return true;
+            @Override
+            public void doClose() {
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        LOGGER.error("Error closing reader: {}", e.getMessage(), e);
                     }
-                    line = reader.readLine();
                 }
-                return false; // End of file
-            } catch (IOException e) {
-                LOGGER.error("Error reading S3 object stream: {}", e.getMessage(), e);
-                return false;
             }
-        }
+
+            @Override
+            public boolean doAdvance(final Consumer<? super byte[]> action) {
+                String line = null;
+                try {
+                    // remove blank and empty lines.
+                    while (StringUtils.isBlank(line)) {
+                        line = reader.readLine();
+                        if (line == null) {
+                            // end of file
+                            return false;
+                        }
+                    }
+                    line = line.trim();
+                    action.accept(line.getBytes(StandardCharsets.UTF_8));
+                    return true;
+                } catch (IOException e) {
+                    LOGGER.error("Error reading input stream: {}", e.getMessage(), e);
+                    return false;
+                }
+            }
+        };
+
+        return spliterator;
+    }
+
+    @Override
+    public SchemaAndValue getValueData(final byte[] record, final String topic, final AbstractConfig sourceConfig) {
+        return jsonConverter.toConnectData(topic, record);
+    }
+
+    @Override
+    public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
+            final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -20,15 +20,15 @@ import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collections;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Spliterator;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.confluent.connect.avro.AvroData;
 import org.apache.avro.file.DataFileStream;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
@@ -37,9 +37,16 @@ import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AvroTransformer implements Transformer {
+public class AvroTransformer extends Transformer<GenericRecord> {
+
+    private final AvroData avroData;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroTransformer.class);
+
+    AvroTransformer(final AvroData avroData) {
+        super();
+        this.avroData = avroData;
+    }
 
     @Override
     public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
@@ -47,80 +54,50 @@ public class AvroTransformer implements Transformer {
     }
 
     @Override
-    public Stream<Object> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
-        final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
-        return readAvroRecordsAsStream(inputStreamIOSupplier, datumReader, skipRecords);
+    public StreamSpliterator<GenericRecord> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
+        return new StreamSpliterator<>(LOGGER, inputStreamIOSupplier) {
+            private DataFileStream<GenericRecord> dataFileStream;
+            private final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+
+            @Override
+            protected InputStream inputOpened(final InputStream input) throws IOException {
+                dataFileStream = new DataFileStream<>(input, datumReader);
+                return input;
+            }
+
+            @Override
+            public void doClose() {
+                if (dataFileStream != null) {
+                    try {
+                        dataFileStream.close();
+                    } catch (IOException e) {
+                        LOGGER.error("Error closing reader: {}", e.getMessage(), e);
+                    }
+                }
+            }
+
+            @Override
+            protected boolean doAdvance(final Consumer<? super GenericRecord> action) {
+                if (dataFileStream.hasNext()) {
+                    action.accept(dataFileStream.next());
+                    return true;
+                }
+                return false;
+            }
+        };
     }
 
     @Override
-    public byte[] getValueBytes(final Object record, final String topic, final AbstractConfig sourceConfig) {
-        return TransformationUtils.serializeAvroRecordToBytes(Collections.singletonList((GenericRecord) record), topic,
-                sourceConfig);
+    public SchemaAndValue getValueData(final GenericRecord record, final String topic,
+            final AbstractConfig sourceConfig) {
+        return avroData.toConnectData(record.getSchema(), record);
     }
 
-    private Stream<Object> readAvroRecordsAsStream(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final DatumReader<GenericRecord> datumReader, final long skipRecords) {
-        InputStream inputStream; // NOPMD CloseResource: being closed in try resources iterator
-        DataFileStream<GenericRecord> dataFileStream; // NOPMD CloseResource: being closed in try resources iterator
-        try {
-            // Open input stream from S3
-            inputStream = inputStreamIOSupplier.get();
-
-            // Ensure the DataFileStream is initialized correctly with the open stream
-            dataFileStream = new DataFileStream<>(inputStream, datumReader);
-
-            // Wrap DataFileStream in a Stream using a custom Spliterator for lazy processing
-            return StreamSupport.stream(new AvroRecordSpliterator<>(dataFileStream), false)
-                    .skip(skipRecords)
-                    .onClose(() -> {
-                        try {
-                            dataFileStream.close(); // Ensure the reader is closed after streaming
-                        } catch (IOException e) {
-                            LOGGER.error("Error closing BufferedReader: {}", e.getMessage(), e);
-                        }
-                    });
-        } catch (IOException e) {
-            LOGGER.error("Error in DataFileStream: {}", e.getMessage(), e);
-            return Stream.empty(); // Return an empty stream if initialization fails
-        }
-    }
-
-    private static class AvroRecordSpliterator<T> implements Spliterator<T> {
-        private final DataFileStream<GenericRecord> dataFileStream;
-
-        public AvroRecordSpliterator(final DataFileStream<GenericRecord> dataFileStream) {
-            this.dataFileStream = dataFileStream;
-        }
-
-        @Override
-        public boolean tryAdvance(final Consumer<? super T> action) {
-            try {
-                if (dataFileStream.hasNext()) {
-                    final GenericRecord record = dataFileStream.next();
-                    action.accept((T) record);
-                    return true;
-                }
-            } catch (Exception e) { // NOPMD AvoidCatchingGenericException
-                LOGGER.error("Error while reading Avro record: {}", e.getMessage(), e);
-                return false;
-            }
-            return false;
-        }
-
-        @Override
-        public Spliterator<T> trySplit() {
-            return null; // Can't split the data stream as DataFileStream is sequential
-        }
-
-        @Override
-        public long estimateSize() {
-            return Long.MAX_VALUE; // We don't know the size upfront
-        }
-
-        @Override
-        public int characteristics() {
-            return Spliterator.ORDERED | Spliterator.NONNULL;
-        }
+    @Override
+    public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
+            final AbstractConfig sourceConfig) {
+        return new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA,
+                ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -53,7 +53,7 @@ final class ByteArrayTransformerTest {
         final InputStream inputStream = new ByteArrayInputStream(data);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<Object> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
+        final Stream<byte[]> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
                 sourceCommonConfig, 0);
 
         final List<Object> recs = records.collect(Collectors.toList());
@@ -67,7 +67,7 @@ final class ByteArrayTransformerTest {
 
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<Object> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
+        final Stream<byte[]> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
                 sourceCommonConfig, 0);
 
         assertThat(records).hasSize(0);
@@ -76,7 +76,8 @@ final class ByteArrayTransformerTest {
     @Test
     void testGetValueBytes() {
         final byte[] record = { 1, 2, 3 };
-        final byte[] result = byteArrayTransformer.getValueBytes(record, TEST_TOPIC, sourceCommonConfig);
+        final byte[] result = (byte[]) byteArrayTransformer.getValueData(record, TEST_TOPIC, sourceCommonConfig)
+                .value();
 
         assertThat(result).containsExactlyInAnyOrder(record);
     }
