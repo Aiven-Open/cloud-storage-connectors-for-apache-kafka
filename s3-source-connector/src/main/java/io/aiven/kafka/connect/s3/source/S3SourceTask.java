@@ -16,12 +16,10 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.kafka.connect.source.SourceRecord;
@@ -38,6 +36,7 @@ import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,38 +79,36 @@ public class S3SourceTask extends AbstractSourceTask {
 
     @Override
     protected Iterator<SourceRecord> getIterator(SupplierOfLong timer) { // NOPMD cognatavie complexity
-        return new Iterator<>() {
-            /** The backoff for Amazon retryable exceptions */
+        Iterator<SourceRecord> inner = new Iterator<>() {
+            /**
+             * The backoff for Amazon retryable exceptions
+             */
             final Backoff backoff = new Backoff(timer);
+
             @Override
             public boolean hasNext() {
-                try {
-                    // this timer is the master timer from the AbstractSourceTask.
-                    while (stillPolling()) {
-                        try {
-                            return s3SourceRecordIterator.hasNext();
-                        } catch (AmazonS3Exception exception) {
-                            if (exception.isRetryable()) {
-                                LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
-                                        exception);
-                                try {
-                                    backoff.delay();
-                                } catch (InterruptedException e) {
-                                    LOGGER.warn("Backoff delay was interrupted.  Throwing original exception: {}",
-                                            exception.getMessage());
-                                    throw exception;
-                                }
-                            } else {
-                                // TODO validate that the iterator does not lose an S3Object. Add test to
-                                // S3ObjectIterator.
+                while (stillPolling()) {
+                    try {
+                        return s3SourceRecordIterator.hasNext();
+                    } catch (AmazonS3Exception exception) {
+                        if (exception.isRetryable()) {
+                            LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
+                                    exception);
+                            try {
+                                backoff.delay();
+                            } catch (InterruptedException e) {
+                                LOGGER.warn("Backoff delay was interrupted.  Throwing original exception: {}",
+                                        exception.getMessage());
                                 throw exception;
                             }
+                        } else {
+                            // TODO validate that the iterator does not lose an S3Object. Add test to
+                            // S3ObjectIterator.
+                            throw exception;
                         }
                     }
-                    return false;
-                } finally {
-                    backoff.reset();
                 }
+                return false;
             }
 
             @Override
@@ -119,12 +116,11 @@ public class S3SourceTask extends AbstractSourceTask {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
                 offsetManager.incrementAndUpdateOffsetMap(s3SourceRecord.getPartitionMap(),
                         s3SourceRecord.getObjectKey(), 1L);
-                final List<SourceRecord> result = RecordProcessor.processRecords(
-                        Collections.singletonList(s3SourceRecord).iterator(), new ArrayList<>(), s3SourceConfig,
-                        S3SourceTask.this::stillPolling, awsv2SourceClient, offsetManager);
-                return result.get(0);
+                return RecordProcessor.createSourceRecord(s3SourceRecord, s3SourceConfig, awsv2SourceClient,
+                        offsetManager);
             }
         };
+        return IteratorUtils.filteredIterator(inner, Objects::nonNull);
     }
 
     @Override

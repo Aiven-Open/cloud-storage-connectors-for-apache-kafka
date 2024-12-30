@@ -17,19 +17,18 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-import java.net.ConnectException;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.function.Supplier;
 
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
@@ -71,58 +70,39 @@ class RecordProcessorTest {
     }
 
     @Test
-    void testProcessRecordsNoRecords() {
-        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
-        when(sourceRecordIterator.hasNext()).thenReturn(false);
+    void testCreateSourceRecord() throws ConnectException {
 
-        final List<SourceRecord> results = new ArrayList<>();
-        final List<SourceRecord> processedRecords = RecordProcessor.processRecords(
-            sourceRecordIterator,
-            results,
-            s3SourceConfig,
-                TRUE,
-            sourceClient, offsetManager
-        );
+        final SourceRecord mockSourceRecord = mock(SourceRecord.class);
+        final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
+        when(mockRecord.getSourceRecord()).thenReturn(mockSourceRecord);
 
-        assertThat(processedRecords).as("Processed records should be empty when there are no records.").isEmpty();
+        SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+                offsetManager);
+
+        verify(offsetManager, times(1)).updateCurrentOffsets(any(), any());
+        verify(mockRecord, times(1)).setOffsetMap(any());
+        verify(mockRecord, times(1)).getOffsetMap();
+        verify(mockRecord, times(2)).getPartitionMap();
+        assertThat(result).isEqualTo(mockSourceRecord);
+
     }
 
     @Test
-    void testProcessRecordsWithRecords() throws ConnectException {
-        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
-        when(sourceRecordIterator.hasNext()).thenReturn(true, false); // One iteration with records
+    void testCreateSourceRecordWithDataError() throws ConnectException {
 
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(sourceRecordIterator.next()).thenReturn(mockRecord);
+        when(mockRecord.getSourceRecord()).thenThrow(new DataException("Testing exception"));
 
-        final List<SourceRecord> results = new ArrayList<>();
-        RecordProcessor.processRecords(
-            sourceRecordIterator,
-            results,
-            s3SourceConfig,
-                TRUE,
-            sourceClient, offsetManager
-        );
+        when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.NONE);
 
-        assertThat(results).hasSize(1);
-        verify(sourceRecordIterator, times(1)).next();
-    }
+        assertThatExceptionOfType(ConnectException.class).as("Errors tolerance: NONE")
+                .isThrownBy(() -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+                        offsetManager));
 
-    @Test
-    void testProcessRecordsConnectorStopped() {
-        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
-
-        final List<SourceRecord> results = new ArrayList<>();
-        final List<SourceRecord> processedRecords = RecordProcessor.processRecords(
-            sourceRecordIterator,
-            results,
-            s3SourceConfig,
-            FALSE,
-            sourceClient, offsetManager
-        );
-
-        assertThat(processedRecords).as("Processed records should be empty when connector is stopped.").isEmpty();
-        verify(sourceRecordIterator, never()).next();
+        when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.ALL);
+        SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+                offsetManager);
+        assertThat(result).isNull();
     }
 
     @Test

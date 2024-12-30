@@ -33,6 +33,7 @@ import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class handles extracting records from an iterator and returning them to Kafka. It uses an exponential backoff
@@ -164,14 +165,20 @@ public abstract class AbstractSourceTask extends SourceTask {
     public final List<SourceRecord> poll() {
         logger.debug("Polling");
         if (connectorStopped.get()) {
+            logger.info("Stopping");
             closeResources();
             return Collections.emptyList();
         } else {
             timer.start();
             try {
-                return populateList();
+                final List<SourceRecord> result = populateList();
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Poll() returning {} SourceRecords.", result == null ? null : result.size());
+                }
+                return result;
             } finally {
                 timer.stop();
+                timer.reset();
             }
         }
     }
@@ -188,10 +195,11 @@ public abstract class AbstractSourceTask extends SourceTask {
             while (stillPolling() && results.size() < maxPollRecords) {
                 if (!tryAdd(results, sourceRecordIterator)) {
                     if (!results.isEmpty()) {
+                        logger.debug("tryAdd() did not add to the list, returning current results.");
                         // if we could not get a record and the results are not empty return them
                         break;
                     }
-                    // attempt a backoff
+                    logger.debug("Attempting {}", backoff);
                     backoff.cleanDelay();
                 }
             }
@@ -241,7 +249,7 @@ public abstract class AbstractSourceTask extends SourceTask {
          * @param duration
          *            the length of time the timer should run.
          */
-        private Timer(final Duration duration) {
+        Timer(final Duration duration) {
             super();
             this.duration = duration.toMillis();
         }
@@ -252,7 +260,7 @@ public abstract class AbstractSourceTask extends SourceTask {
          * @return the maximum duration for the timer.
          */
         public long millisecondsRemaining() {
-            return super.isStarted() ? super.getTime() - duration : duration;
+            return super.isStarted() ? duration - super.getTime() : duration;
         }
 
         /**
@@ -263,13 +271,48 @@ public abstract class AbstractSourceTask extends SourceTask {
         public boolean expired() {
             return super.getTime() >= duration;
         }
+
+        @Override
+        public void start() {
+            try {
+                super.start();
+            } catch (IllegalStateException e) {
+                throw new IllegalStateException("Timer: " + e.getMessage());
+            }
+        }
+
+        @Override
+        public void stop() {
+            try {
+                super.stop();
+            } catch (IllegalStateException e) {
+                throw new IllegalStateException("Timer: " + e.getMessage());
+            }
+        }
+
+        @Override
+        public void reset() {
+            try {
+                super.reset();
+            } catch (IllegalStateException e) {
+                throw new IllegalStateException("Timer: " + e.getMessage());
+            }
+        }
     }
 
     /**
      * Performs a delay based on the number of successive {@link #delay()} or {@link #cleanDelay()} calls without a
      * {@link #reset()}. Delay increases exponentially but never exceeds the time remaining by more than 0.512 seconds.
      */
-    protected static class Backoff {
+    public static class Backoff {
+        /** The logger to write to */
+        private static final Logger LOGGER = LoggerFactory.getLogger(Backoff.class);
+        /**
+         * The maximum jitter random number. Should be a power of 2 for speed.
+         */
+        public static final int MAX_JITTER = 1024;
+
+        public static final int JITTER_SUBTRAHEND = MAX_JITTER / 2;
         /**
          * A supplier of the time remaining (in milliseconds) on the overriding timer.
          */
@@ -304,14 +347,39 @@ public abstract class AbstractSourceTask extends SourceTask {
          * Reset the backoff time so that delay is again at the minimum.
          */
         public final void reset() {
-            // calculate the approx wait count.
-            maxCount = (int) (Math.log10(timeRemaining.get()) / Math.log10(2));
+            // if the reminaing time is 0 or negative the maxCount will be infinity
+            // so make sure that it is 0 in that case.
+            final long remainingTime = timeRemaining.get();
+            maxCount = remainingTime < 1L ? 0 : (int) (Math.log10(remainingTime) / Math.log10(2));
             waitCount = 0;
+            LOGGER.debug("Reset {}", this);
+        }
+
+        /**
+         * Calculates the delay wihtout jitter.
+         *
+         * @return the number of milliseconds the delay will be.
+         */
+        public long estimatedDelay() {
+            long sleepTime = timeRemaining.get();
+            if (sleepTime > 0 && waitCount < maxCount) {
+                sleepTime = (long) Math.min(sleepTime, Math.pow(2, waitCount + 1));
+            }
+            return sleepTime < 0 ? 0 : sleepTime;
+        }
+
+        /**
+         * Calculates the range of jitter in milliseconds.
+         *
+         * @return the maximum jitter in milliseconds. jitter is +/- maximum jitter.
+         */
+        public int getMaxJitter() {
+            return MAX_JITTER - JITTER_SUBTRAHEND;
         }
 
         private long timeWithJitter() {
             // generate approx +/- 0.512 seconds of jitter
-            final int jitter = random.nextInt(1024) - 512;
+            final int jitter = random.nextInt(MAX_JITTER) - JITTER_SUBTRAHEND;
             return (long) Math.pow(2, waitCount) + jitter;
         }
         /**
@@ -321,15 +389,16 @@ public abstract class AbstractSourceTask extends SourceTask {
          *             If any thread interrupts this thread.
          */
         public void delay() throws InterruptedException {
-
             long sleepTime = timeRemaining.get();
-            if (waitCount < maxCount) {
-                waitCount++;
-                sleepTime = Math.min(sleepTime, timeWithJitter());
-            }
-            // don't sleep negative time.
             if (sleepTime > 0) {
-                Thread.sleep(sleepTime);
+                if (waitCount < maxCount) {
+                    waitCount++;
+                    sleepTime = Math.min(sleepTime, timeWithJitter());
+                }
+                // don't sleep negative time. Jitter can introduce negative tme.
+                if (sleepTime > 0) {
+                    Thread.sleep(sleepTime);
+                }
             }
         }
 
@@ -342,6 +411,11 @@ public abstract class AbstractSourceTask extends SourceTask {
             } catch (InterruptedException exception) {
                 // do nothing return results below
             }
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Backoff %s/%s, %s milliseconds remaining.", waitCount, maxCount, timeRemaining.get());
         }
     }
 

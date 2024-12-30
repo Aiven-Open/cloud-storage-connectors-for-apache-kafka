@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,6 +39,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
@@ -165,19 +167,19 @@ final class S3SourceTaskTest {
     }
 
     private void setBasicProperties() {
-        properties.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
-        properties.put("name", "test_source_connector");
-        properties.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        properties.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        properties.put("tasks.max", "1");
-        properties.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
-        properties.put(TARGET_TOPIC_PARTITIONS, "0,1");
-        properties.put(TARGET_TOPICS, "testtopic");
+        properties.putIfAbsent(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
+        properties.putIfAbsent("name", "test_source_connector");
+        properties.putIfAbsent("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
+        properties.putIfAbsent("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
+        properties.putIfAbsent("tasks.max", "1");
+        properties.putIfAbsent("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
+        properties.putIfAbsent(TARGET_TOPIC_PARTITIONS, "0,1");
+        properties.putIfAbsent(TARGET_TOPICS, "testtopic");
 
     }
 
     @Test
-    void testPollWithEmptyIterator() {
+    void testPollWithNoDataReturned() {
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
         when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
         final Iterator<S3SourceRecord> sourceRecordIterator = Collections.emptyIterator();
@@ -202,13 +204,7 @@ final class S3SourceTaskTest {
 
     @Test
     void testPollsWithRecords() {
-        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
-        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
-        final List<S3SourceRecord> lst = new ArrayList<>();
-        lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY,
-                "Hello".getBytes(StandardCharsets.UTF_8), "Hello World".getBytes(StandardCharsets.UTF_8)));
-        lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY + "a",
-                "Goodbye".getBytes(StandardCharsets.UTF_8), "Goodbye cruel World".getBytes(StandardCharsets.UTF_8)));
+        final List<S3SourceRecord> lst = createS3SourceRecords(2);
         final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
 
@@ -224,15 +220,125 @@ final class S3SourceTaskTest {
         assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis());
     }
 
+    private List<S3SourceRecord> createS3SourceRecords(int count) {
+        final List<S3SourceRecord> lst = new ArrayList<>();
+        if (count > 0) {
+            lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY,
+                    "Hello".getBytes(StandardCharsets.UTF_8), "Hello World".getBytes(StandardCharsets.UTF_8)));
+            for (int i = 1; i < count; i++) {
+                lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY + i,
+                        "Goodbye".getBytes(StandardCharsets.UTF_8),
+                        String.format("Goodbye cruel World (%s)", i).getBytes(StandardCharsets.UTF_8)));
+            }
+        }
+        return lst;
+    }
+
+    @Test
+    void testPollWithInterruptedIterator() {
+        List<S3SourceRecord> lst = createS3SourceRecords(3);
+
+        Iterator<S3SourceRecord> inner1 = lst.subList(0, 2).iterator();
+        Iterator<S3SourceRecord> inner2 = lst.subList(2, 3).iterator();
+        Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
+            Iterator<S3SourceRecord> inner = inner1;
+            @Override
+            public boolean hasNext() {
+                if (inner == null) {
+                    inner = inner2;
+                    return false;
+                }
+                return inner.hasNext();
+            }
+
+            @Override
+            public S3SourceRecord next() {
+                S3SourceRecord result = inner.next();
+                if (!inner.hasNext()) {
+                    inner = null;
+                }
+                return result;
+            }
+        };
+
+        final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
+        startSourceTask(s3SourceTask);
+        final StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        List<SourceRecord> results = s3SourceTask.poll();
+        stopWatch.stop();
+
+        assertThat(results).hasSize(2);
+        assertEquals(lst.get(0), results.get(0));
+        assertEquals(lst.get(1), results.get(1));
+
+        results = s3SourceTask.poll();
+        assertThat(results).hasSize(1);
+
+        assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis());
+
+    }
+
+    @Test
+    void testPollWithSlowProducer() {
+        List<S3SourceRecord> lst = createS3SourceRecords(3);
+
+        Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
+            Iterator<S3SourceRecord> inner = lst.iterator();
+            @Override
+            public boolean hasNext() {
+                return inner.hasNext();
+            }
+
+            @Override
+            public S3SourceRecord next() {
+                try {
+                    Thread.sleep(Duration.ofSeconds(5).toMillis());
+                } catch (InterruptedException e) {
+                    // do nothing.
+                }
+                return inner.next();
+            }
+        };
+
+        final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
+        startSourceTask(s3SourceTask);
+        final StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        List<SourceRecord> results = s3SourceTask.poll();
+        assertThat(results).hasSize(1);
+        results = s3SourceTask.poll();
+        assertThat(results).hasSize(1);
+        results = s3SourceTask.poll();
+        assertThat(results).hasSize(1);
+        results = s3SourceTask.poll();
+        assertThat(results).isEmpty();
+    }
+
+    @Test
+    void testPollsWithExcessRecords() {
+        // test that multiple polls to get all records succeeds.
+        properties.put(SourceConfigFragment.MAX_POLL_RECORDS, "2");
+
+        final List<S3SourceRecord> lst = createS3SourceRecords(3);
+
+        final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
+        final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
+
+        startSourceTask(s3SourceTask);
+        final StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        List<SourceRecord> results = s3SourceTask.poll();
+        assertThat(results).hasSize(2);
+        results = s3SourceTask.poll();
+        assertThat(results).hasSize(1);
+        stopWatch.stop();
+        assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis() * 2);
+    }
+
     @Test
     void testPollWhenConnectorStopped() {
-        final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
-        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
-        final List<S3SourceRecord> lst = new ArrayList<>();
-        lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY,
-                "Hello".getBytes(StandardCharsets.UTF_8), "Hello World".getBytes(StandardCharsets.UTF_8)));
-        lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY + "a",
-                "Goodbye".getBytes(StandardCharsets.UTF_8), "Goodbye cruel World".getBytes(StandardCharsets.UTF_8)));
+        final List<S3SourceRecord> lst = createS3SourceRecords(3);
         final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
 
