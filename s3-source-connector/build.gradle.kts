@@ -18,8 +18,8 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-val amazonS3Version by extra("1.12.729")
-val amazonSTSVersion by extra("1.12.729")
+val amazonS3Version by extra("2.29.34")
+val amazonSTSVersion by extra("2.29.34")
 val s3mockVersion by extra("0.2.6")
 val testKafkaVersion by extra("3.7.1")
 
@@ -67,8 +67,8 @@ dependencies {
 
   implementation(project(":commons"))
   implementation(project(":s3-commons"))
-  implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
-  implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
+  implementation("software.amazon.awssdk:s3:$amazonS3Version")
+  implementation("software.amazon.awssdk:sts:$amazonSTSVersion")
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -154,7 +154,6 @@ dependencies {
     exclude(group = "org.apache.commons", module = "commons-math3")
     exclude(group = "org.apache.httpcomponents", module = "httpclient")
     exclude(group = "commons-codec", module = "commons-codec")
-    exclude(group = "commons-io", module = "commons-io")
     exclude(group = "commons-net", module = "commons-net")
     exclude(group = "org.eclipse.jetty")
     exclude(group = "org.eclipse.jetty.websocket")
