@@ -39,7 +39,6 @@ import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkException;
-import software.amazon.awssdk.services.s3.S3Client;
 
 /**
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
@@ -92,8 +91,8 @@ public class S3SourceTask extends AbstractSourceTask {
                 while (stillPolling()) {
                     try {
                         return s3SourceRecordIterator.hasNext();
-                    } catch (AmazonS3Exception exception) {
-                        if (exception.isRetryable()) {
+                    } catch (SdkException exception) {
+                        if (exception.retryable()) {
                             LOGGER.warn("Retryable error encountered during polling. Waiting before retrying...",
                                     exception);
                             try {

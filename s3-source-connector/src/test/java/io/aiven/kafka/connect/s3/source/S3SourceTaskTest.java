@@ -23,7 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -45,9 +46,8 @@ import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-
+import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.ConnectUtils;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 
@@ -58,15 +58,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-
 
 final class S3SourceTaskTest {
 
@@ -80,7 +75,6 @@ final class S3SourceTaskTest {
 
     private static final String TEST_BUCKET = "test-bucket";
 
-
     private static final String TOPIC = "TOPIC1";
 
     private static final int PARTITION = 1;
@@ -89,7 +83,6 @@ final class S3SourceTaskTest {
 
     // TODO S3Mock has not been maintained in 4 years
     // Adobe have an alternative we can move to.
-
     private static S3Mock s3Api;
     private static S3Client s3Client;
 
@@ -120,9 +113,6 @@ final class S3SourceTaskTest {
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
                 .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
                 .build();
-
-        final BucketAccessor testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET);
-        testBucketAccessor.createBucket();
     }
 
     @AfterAll
@@ -134,6 +124,8 @@ final class S3SourceTaskTest {
     public void setUp() {
         properties = new HashMap<>(commonProperties);
         s3Client.createBucket(create -> create.bucket(TEST_BUCKET).build());
+        // mockedSourceTaskContext = mock(SourceTaskContext.class);
+        // mockedOffsetStorageReader = mock(OffsetStorageReader.class);
     }
 
     @AfterEach
