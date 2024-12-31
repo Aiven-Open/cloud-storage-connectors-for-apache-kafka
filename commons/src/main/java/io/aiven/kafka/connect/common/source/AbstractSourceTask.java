@@ -149,6 +149,7 @@ public abstract class AbstractSourceTask extends SourceTask {
             results.add(sourceRecordIterator.next());
             return true;
         }
+        logger.info("No records found in tryAdd call");
         return false;
     }
 
@@ -158,28 +159,35 @@ public abstract class AbstractSourceTask extends SourceTask {
      * @return {@code true} if the connector is not stopped and the timer has not expired.
      */
     protected boolean stillPolling() {
-        return !connectorStopped.get() && !timer.expired();
+        boolean result = !connectorStopped.get() && !timer.expired();
+        logger.info("Still polling: {}", result);
+        return result;
     }
 
     @Override
     public final List<SourceRecord> poll() {
-        logger.debug("Polling");
-        if (connectorStopped.get()) {
-            logger.info("Stopping");
-            closeResources();
-            return Collections.emptyList();
-        } else {
-            timer.start();
-            try {
-                final List<SourceRecord> result = populateList();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Poll() returning {} SourceRecords.", result == null ? null : result.size());
+        try {
+            logger.debug("Polling");
+            if (connectorStopped.get()) {
+                logger.info("Stopping");
+                closeResources();
+                return Collections.emptyList();
+            } else {
+                timer.start();
+                try {
+                    final List<SourceRecord> result = populateList();
+                    if (logger.isInfoEnabled()) { // TODO reset this to debug
+                        logger.info("Poll() returning {} SourceRecords.", result == null ? null : result.size());
+                    }
+                    return result;
+                } finally {
+                    timer.stop();
+                    timer.reset();
                 }
-                return result;
-            } finally {
-                timer.stop();
-                timer.reset();
             }
+        } catch (RuntimeException e) {
+            logger.error("******************** " + e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -195,11 +203,11 @@ public abstract class AbstractSourceTask extends SourceTask {
             while (stillPolling() && results.size() < maxPollRecords) {
                 if (!tryAdd(results, sourceRecordIterator)) {
                     if (!results.isEmpty()) {
-                        logger.debug("tryAdd() did not add to the list, returning current results.");
+                        logger.info("tryAdd() did not add to the list, returning current results.");
                         // if we could not get a record and the results are not empty return them
                         break;
                     }
-                    logger.debug("Attempting {}", backoff);
+                    logger.info("Attempting {}", backoff);
                     backoff.cleanDelay();
                 }
             }

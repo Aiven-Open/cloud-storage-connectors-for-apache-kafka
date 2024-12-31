@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
+import static io.aiven.kafka.connect.s3.source.utils.OffsetManager.SEPARATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -59,13 +61,31 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 public interface IntegrationBase {
     String PLUGINS_S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA = "plugins/s3-source-connector-for-apache-kafka/";
     String S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST = "s3-source-connector-for-apache-kafka-test-";
     ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    String TEST_BUCKET_NAME = "test-bucket0";
+    String S3_ACCESS_KEY_ID = "test-key-id0";
+    String VALUE_CONVERTER_KEY = "value.converter";
+    String S3_SECRET_ACCESS_KEY = "test_secret_key0";
+
+    S3Client getS3Client();
+
+    String getS3Prefix();
+
+    default String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
+        final String objectKey =  org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName + "-" + partitionId + "-"
+                + System.currentTimeMillis() + ".txt";
+        final PutObjectRequest request = PutObjectRequest.builder().bucket(IntegrationTest.TEST_BUCKET_NAME).key(objectKey).build();
+        getS3Client().putObject(request, RequestBody.fromBytes(testDataBytes));
+        return OBJECT_KEY + SEPARATOR + objectKey;
+    }
 
     default AdminClient newAdminClient(final String bootstrapServers) {
         final Properties adminClientConfig = new Properties();

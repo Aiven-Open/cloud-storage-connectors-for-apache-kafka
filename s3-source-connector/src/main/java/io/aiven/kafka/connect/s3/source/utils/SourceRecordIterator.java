@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -207,20 +208,17 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     @Override
     public boolean hasNext() {
-        return recordIterator.hasNext() || objectListIterator.hasNext();
+        if (!recordIterator.hasNext()) {
+            nextS3Object();
+        }
+        return recordIterator.hasNext();
     }
 
     @Override
     public S3SourceRecord next() {
         if (!recordIterator.hasNext()) {
-            nextS3Object();
+            throw new NoSuchElementException();
         }
-
-        if (!recordIterator.hasNext()) {
-            // If there are still no records, return null or throw an exception
-            return null; // Or throw new NoSuchElementException();
-        }
-
         return recordIterator.next();
     }
 

@@ -32,6 +32,9 @@ import static io.aiven.kafka.connect.s3.source.utils.OffsetManager.SEPARATOR;
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -53,6 +56,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import io.aiven.kafka.connect.common.source.input.TransformerFactory;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
+import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
+import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -68,18 +77,18 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.platform.commons.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
@@ -91,13 +100,6 @@ final class IntegrationTest implements IntegrationBase {
     private static final String CONNECTOR_NAME = "aiven-s3-source-connector";
     private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-test-";
     private static final int OFFSET_FLUSH_INTERVAL_MS = 500;
-
-    private static final String S3_ACCESS_KEY_ID = "test-key-id0";
-    private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
-
-    private static final String VALUE_CONVERTER_KEY = "value.converter";
-
-    private static final String TEST_BUCKET_NAME = "test-bucket0";
 
     private static String s3Endpoint;
     private static String s3Prefix;
@@ -111,6 +113,16 @@ final class IntegrationTest implements IntegrationBase {
     private ConnectRunner connectRunner;
 
     private static S3Client s3Client;
+
+    public S3Client getS3Client() {
+        return s3Client;
+    }
+
+    public String getS3Prefix() {
+        return s3Prefix;
+    }
+
+    public
 
     @BeforeAll
     static void setUpAll() throws IOException, InterruptedException {
@@ -159,7 +171,7 @@ final class IntegrationTest implements IntegrationBase {
     @Test
     void bytesTest(final TestInfo testInfo) {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 2);
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1);
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
@@ -253,7 +265,7 @@ final class IntegrationTest implements IntegrationBase {
         final var topicName = IntegrationBase.topicName(testInfo);
 
         final String partition = "00000";
-        final String fileName = addPrefixOrDefault("") + topicName + "-" + partition + "-" + System.currentTimeMillis()
+        final String fileName = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName + "-" + partition + "-" + System.currentTimeMillis()
                 + ".txt";
         final String name = "testuser";
 
@@ -335,18 +347,6 @@ final class IntegrationTest implements IntegrationBase {
             dataFileWriter.flush();
             return outputStream.toByteArray();
         }
-    }
-
-    private static String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
-        final String objectKey = addPrefixOrDefault("") + topicName + "-" + partitionId + "-"
-                + System.currentTimeMillis() + ".txt";
-        final PutObjectRequest request = PutObjectRequest.builder().bucket(TEST_BUCKET_NAME).key(objectKey).build();
-        s3Client.putObject(request, RequestBody.fromBytes(testDataBytes));
-        return OBJECT_KEY + SEPARATOR + objectKey;
-    }
-
-    private static String addPrefixOrDefault(final String defaultValue) {
-        return StringUtils.isNotBlank(s3Prefix) ? s3Prefix : defaultValue;
     }
 
     private Map<String, String> getConfig(final String connectorName, final String topics, final int maxTasks) {

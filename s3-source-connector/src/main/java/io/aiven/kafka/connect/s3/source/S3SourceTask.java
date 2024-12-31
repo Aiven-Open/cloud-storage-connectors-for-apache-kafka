@@ -146,9 +146,10 @@ public class S3SourceTask extends AbstractSourceTask {
     public void commitRecord(final SourceRecord record) {
         if (LOGGER.isInfoEnabled()) {
             final Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
-            LOGGER.info("Committed individual record {} {} {} committed", map.get(BUCKET), map.get(OBJECT_KEY),
-                    offsetManager.recordsProcessedForObjectKey((Map<String, Object>) record.sourcePartition(),
-                            map.get(OBJECT_KEY).toString()));
+//            LOGGER.info("Committed individual record {} {} {} committed", map.get(BUCKET), map.get(OBJECT_KEY),
+//                    offsetManager.recordsProcessedForObjectKey((Map<String, Object>) record.sourcePartition(),
+//                            map.get(OBJECT_KEY).toString()));
+            LOGGER.info("Committed individual record {}  committed", map);
         }
     }
 
