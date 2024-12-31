@@ -35,10 +35,11 @@ import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.S3Client;
 
 /**
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
@@ -61,6 +62,7 @@ public class S3SourceTask extends AbstractSourceTask {
      */
     private Transformer<?> transformer;
     /** The AWS Source client */
+
     private AWSV2SourceClient awsv2SourceClient;
     /** The list of failed object keys */
     private final Set<String> failedObjectKeys = new HashSet<>();
@@ -136,6 +138,7 @@ public class S3SourceTask extends AbstractSourceTask {
     }
 
     @Override
+
     public void commit() {
         LOGGER.info("Committed all records through last poll()");
     }

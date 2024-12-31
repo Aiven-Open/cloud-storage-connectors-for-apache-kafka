@@ -41,11 +41,13 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 /**
  * The configuration fragment that defines the S3 specific characteristics.
  */
-@SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
+@SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports", "PMD.TooManyStaticImports", "PMD.GodClass" })
 public final class S3ConfigFragment extends ConfigFragment {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3ConfigFragment.class);
@@ -345,7 +347,8 @@ public final class S3ConfigFragment extends ConfigFragment {
             }
         } else {
             final BasicAWSCredentials awsCredentials = getAwsCredentials();
-            if (awsCredentials == null) {
+            final AwsBasicCredentials awsCredentialsV2 = getAwsCredentialsV2();
+            if (awsCredentials == null && awsCredentialsV2 == null) {
                 LOGGER.info(
                         "Connector use {} as credential Provider, "
                                 + "when configuration for {{}, {}} OR {{}, {}} are absent",
@@ -410,11 +413,13 @@ public final class S3ConfigFragment extends ConfigFragment {
         return new AwsStsEndpointConfig(cfg.getString(AWS_STS_CONFIG_ENDPOINT), cfg.getString(AWS_S3_REGION_CONFIG));
     }
 
+    @Deprecated
     public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
         final AwsStsEndpointConfig config = getStsEndpointConfig();
         return new AwsClientBuilder.EndpointConfiguration(config.getServiceEndpoint(), config.getSigningRegion());
     }
 
+    @Deprecated
     public BasicAWSCredentials getAwsCredentials() {
         if (Objects.nonNull(cfg.getPassword(AWS_ACCESS_KEY_ID_CONFIG))
                 && Objects.nonNull(cfg.getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
@@ -430,12 +435,26 @@ public final class S3ConfigFragment extends ConfigFragment {
         return null;
     }
 
+    public AwsBasicCredentials getAwsCredentialsV2() {
+        if (Objects.nonNull(cfg.getPassword(AWS_ACCESS_KEY_ID_CONFIG))
+                && Objects.nonNull(cfg.getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
+
+            return AwsBasicCredentials.create(cfg.getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
+                    cfg.getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value());
+        } else if (Objects.nonNull(cfg.getPassword(AWS_ACCESS_KEY_ID))
+                && Objects.nonNull(cfg.getPassword(AWS_SECRET_ACCESS_KEY))) {
+            LOGGER.warn("Config options {} and {} are not supported for this Connector", AWS_ACCESS_KEY_ID,
+                    AWS_SECRET_ACCESS_KEY);
+        }
+        return null;
+    }
+
     public String getAwsS3EndPoint() {
         return Objects.nonNull(cfg.getString(AWS_S3_ENDPOINT_CONFIG))
                 ? cfg.getString(AWS_S3_ENDPOINT_CONFIG)
                 : cfg.getString(AWS_S3_ENDPOINT);
     }
-
+    @Deprecated
     public Region getAwsS3Region() {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
@@ -445,6 +464,18 @@ public final class S3ConfigFragment extends ConfigFragment {
             return RegionUtils.getRegion(cfg.getString(AWS_S3_REGION));
         } else {
             return RegionUtils.getRegion(Regions.US_EAST_1.getName());
+        }
+    }
+
+    public software.amazon.awssdk.regions.Region getAwsS3RegionV2() {
+        // we have priority of properties if old one not set or both old and new one set
+        // the new property value will be selected
+        if (Objects.nonNull(cfg.getString(AWS_S3_REGION_CONFIG))) {
+            return software.amazon.awssdk.regions.Region.of(cfg.getString(AWS_S3_REGION_CONFIG));
+        } else if (Objects.nonNull(cfg.getString(AWS_S3_REGION))) {
+            return software.amazon.awssdk.regions.Region.of(cfg.getString(AWS_S3_REGION));
+        } else {
+            return software.amazon.awssdk.regions.Region.of(Regions.US_EAST_1.getName());
         }
     }
 
@@ -482,6 +513,10 @@ public final class S3ConfigFragment extends ConfigFragment {
 
     public AWSCredentialsProvider getCustomCredentialsProvider() {
         return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
+    }
+
+    public AwsCredentialsProvider getCustomCredentialsProviderV2() {
+        return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AwsCredentialsProvider.class);
     }
 
     public int getFetchPageSize() {
