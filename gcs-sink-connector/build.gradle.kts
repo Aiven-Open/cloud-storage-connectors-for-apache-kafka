@@ -78,7 +78,7 @@ dependencies {
 
   implementation(project(":commons"))
 
-  implementation("com.google.cloud:google-cloud-storage:2.43.1") {
+  implementation("com.google.cloud:google-cloud-storage:2.46.0") {
     exclude(group = "com.google.guava", module = "guava")
   }
   // TODO: document why specific version of guava is required
