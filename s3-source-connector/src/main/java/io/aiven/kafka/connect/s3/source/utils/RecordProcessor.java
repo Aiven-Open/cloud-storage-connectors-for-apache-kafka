@@ -37,9 +37,7 @@ public final class RecordProcessor {
             final S3SourceConfig s3SourceConfig, final AWSV2SourceClient sourceClient,
             final OffsetManager offsetManager) {
         try {
-            offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
-            s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
-            return s3SourceRecord.getSourceRecord();
+            return s3SourceRecord.getSourceRecord(offsetManager);
         } catch (DataException e) {
             if (ErrorsTolerance.NONE.equals(s3SourceConfig.getErrorsTolerance())) {
                 throw new ConnectException("Data Exception caught during S3 record to source record transformation", e);

@@ -25,7 +25,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 
 public class S3SourceRecord {
     private final Map<String, Object> partitionMap;
-    private Map<String, Object> offsetMap;
+    private final long recordNumber;
     private final String topic;
     private final Integer topicPartition;
     private final SchemaAndValue keyData;
@@ -34,11 +34,11 @@ public class S3SourceRecord {
 
     private final String objectKey;
 
-    public S3SourceRecord(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap,
+    public S3SourceRecord(final Map<String, Object> partitionMap, final long recordNumber,
             final String topic, final Integer topicPartition, final String objectKey, final SchemaAndValue keyData,
             final SchemaAndValue valueData) {
         this.partitionMap = new HashMap<>(partitionMap);
-        this.offsetMap = new HashMap<>(offsetMap);
+        this.recordNumber = recordNumber;
         this.topic = topic;
         this.topicPartition = topicPartition;
         this.keyData = keyData;
@@ -50,8 +50,8 @@ public class S3SourceRecord {
         return Collections.unmodifiableMap(partitionMap);
     }
 
-    public Map<String, Object> getOffsetMap() {
-        return Collections.unmodifiableMap(offsetMap);
+    public long getRecordNumber() {
+        return recordNumber;
     }
 
     public String getTopic() {
@@ -74,12 +74,9 @@ public class S3SourceRecord {
         return new SchemaAndValue(valueData.schema(), valueData.value());
     }
 
-    public void setOffsetMap(final Map<String, Object> offsetMap) {
-        this.offsetMap = new HashMap<>(offsetMap);
-    }
-
-    public SourceRecord getSourceRecord() {
-        return new SourceRecord(getPartitionMap(), getOffsetMap(), topic, partition(), keyData.schema(),
+    public SourceRecord getSourceRecord(OffsetManager offsetManager) {
+        Map<String, Object> offsetMap = offsetManager.setCurrentOffsets(getPartitionMap(), getObjectKey(), getRecordNumber());
+        return new SourceRecord(getPartitionMap(), offsetMap, topic, partition(), keyData.schema(),
                 keyData.value(), valueData.schema(), valueData.value());
     }
 }

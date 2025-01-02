@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import org.apache.commons.collections4.IteratorUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.codehaus.plexus.util.StringUtils;
 import org.slf4j.Logger;
@@ -116,7 +117,7 @@ public class AWSV2SourceClient {
         this.taskId = taskId;
     }
 
-    public Iterator<String> getListOfObjectKeys(final String startToken) {
+    public Stream<S3Object> getS3ObjectStream(final String startToken) {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
@@ -124,7 +125,7 @@ public class AWSV2SourceClient {
                 .startAfter(optionalKey(startToken))
                 .build();
 
-        final Stream<String> s3ObjectKeyStream = Stream
+        final Stream<S3Object> s3ObjectKeyStream = Stream
                 .iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
                     // This is called every time next() is called on the iterator.
                     if (response.isTruncated()) {
@@ -141,10 +142,14 @@ public class AWSV2SourceClient {
                         .stream()
                         .filter(filterPredicate)
                         .filter(objectSummary -> assignObjectToTask(objectSummary.key()))
-                        .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.key())))
-                .map(S3Object::key);
-        return s3ObjectKeyStream.iterator();
+                        .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.key())));
+        return s3ObjectKeyStream;
     }
+
+    public Iterator<String> getListOfObjectKeys(final String startToken) {
+        return getS3ObjectStream(startToken).map(S3Object::key).iterator();
+    }
+
     private String optionalKey(final String key) {
         if (StringUtils.isNotBlank(key)) {
             return key;

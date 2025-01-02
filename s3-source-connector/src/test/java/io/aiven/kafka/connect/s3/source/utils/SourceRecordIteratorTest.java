@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.source.input.AvroTransformer;
@@ -73,7 +74,7 @@ final class SourceRecordIteratorTest {
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
             when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.emptyIterator());
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+            Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
                     mockSourceApiClient);
 
             assertThat(iterator.hasNext()).isFalse();
@@ -110,7 +111,7 @@ final class SourceRecordIteratorTest {
             when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
                     .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
 
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+            Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
                     mockSourceApiClient);
             assertThat(iterator.hasNext()).isTrue();
             iterator.next();

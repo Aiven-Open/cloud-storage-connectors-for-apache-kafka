@@ -21,6 +21,7 @@ import static io.aiven.kafka.connect.s3.source.utils.OffsetManager.SEPARATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -38,6 +39,11 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.io.DatumWriter;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -74,6 +80,24 @@ public interface IntegrationBase {
     String S3_ACCESS_KEY_ID = "test-key-id0";
     String VALUE_CONVERTER_KEY = "value.converter";
     String S3_SECRET_ACCESS_KEY = "test_secret_key0";
+
+    static byte[] generateNextAvroMessagesStartingFromId(final int messageId, final int noOfAvroRecs,
+                                                         final Schema schema) throws IOException {
+        final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            dataFileWriter.create(schema, outputStream);
+            for (int i = messageId; i < messageId + noOfAvroRecs; i++) {
+                final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD
+                avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + i);
+                avroRecord.put("id", i);
+                dataFileWriter.append(avroRecord);
+            }
+
+            dataFileWriter.flush();
+            return outputStream.toByteArray();
+        }
+    }
 
     S3Client getS3Client();
 

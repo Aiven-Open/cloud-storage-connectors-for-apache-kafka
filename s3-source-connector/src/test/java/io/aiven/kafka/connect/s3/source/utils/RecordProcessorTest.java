@@ -74,14 +74,12 @@ class RecordProcessorTest {
 
         final SourceRecord mockSourceRecord = mock(SourceRecord.class);
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord()).thenReturn(mockSourceRecord);
+        when(mockRecord.getSourceRecord(any())).thenReturn(mockSourceRecord);
 
         SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
                 offsetManager);
 
         verify(offsetManager, times(1)).updateCurrentOffsets(any(), any());
-        verify(mockRecord, times(1)).setOffsetMap(any());
-        verify(mockRecord, times(1)).getOffsetMap();
         verify(mockRecord, times(2)).getPartitionMap();
         assertThat(result).isEqualTo(mockSourceRecord);
 
@@ -91,7 +89,7 @@ class RecordProcessorTest {
     void testCreateSourceRecordWithDataError() throws ConnectException {
 
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord()).thenThrow(new DataException("Testing exception"));
+        when(mockRecord.getSourceRecord(any())).thenThrow(new DataException("Testing exception"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.NONE);
 
@@ -108,7 +106,7 @@ class RecordProcessorTest {
     @Test
     void testCreateSourceRecords() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord()).thenReturn(mock(SourceRecord.class));
+        when(mockRecord.getSourceRecord(any())).thenReturn(mock(SourceRecord.class));
 
         final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
                 offsetManager);
@@ -119,7 +117,7 @@ class RecordProcessorTest {
     @Test
     void errorToleranceOnNONE() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord()).thenThrow(new DataException("generic issue"));
+        when(mockRecord.getSourceRecord(any())).thenThrow(new DataException("generic issue"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.NONE);
 
@@ -133,7 +131,7 @@ class RecordProcessorTest {
     @Test
     void errorToleranceOnALL() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord()).thenThrow(new DataException("generic issue"));
+        when(mockRecord.getSourceRecord(any())).thenThrow(new DataException("generic issue"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.ALL);
 

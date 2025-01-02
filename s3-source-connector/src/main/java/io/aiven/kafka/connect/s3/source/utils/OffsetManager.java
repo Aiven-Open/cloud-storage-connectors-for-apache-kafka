@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,7 +82,17 @@ public class OffsetManager {
         return startOffset;
     }
 
-    public String getObjectMapKey(final String currentObjectKey) {
+    public Map<String, Object> setCurrentOffsets(final Map<String, Object> partitionMap, final String currentObjectKey,
+                                            final long offset) {
+        Map<String, Object> offsetMap = offsets.compute(partitionMap, (k, v) -> {
+            Map<String, Object> map = v == null ? new Hashtable<>() : v;
+            map.put(getObjectMapKey(currentObjectKey), offset);
+            return map;
+        });
+        return new HashMap<>(offsetMap);
+    }
+
+    public static String getObjectMapKey(final String currentObjectKey) {
         return OBJECT_KEY + SEPARATOR + currentObjectKey;
     }
 
@@ -101,7 +112,6 @@ public class OffsetManager {
     public Map<String, Object> getOffsetValueMap(final String currentObjectKey, final long offsetId) {
         final Map<String, Object> offsetMap = new HashMap<>();
         offsetMap.put(getObjectMapKey(currentObjectKey), offsetId);
-
         return offsetMap;
     }
 

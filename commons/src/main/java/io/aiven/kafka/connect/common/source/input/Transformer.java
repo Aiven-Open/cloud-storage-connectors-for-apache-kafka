@@ -42,6 +42,15 @@ public abstract class Transformer<T> {
         return StreamSupport.stream(spliterator, false).onClose(spliterator::close).skip(skipRecords);
     }
 
+    public final Stream<SchemaAndValue> getValues(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
+                                      final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
+
+        final StreamSpliterator<T> spliterator = createSpliterator(inputStreamIOSupplier, topic, topicPartition,
+                sourceConfig);
+        return StreamSupport.stream(spliterator, false).onClose(spliterator::close).skip(skipRecords)
+                .map(t -> getValueData(t, topic, sourceConfig));
+    }
+
     /**
      * Creates the stream spliterator for this transformer.
      *
@@ -121,6 +130,7 @@ public abstract class Transformer<T> {
             try {
                 if (inputStream != null) {
                     inputStream.close();
+                    inputStream = null;
                     closed = true;
                 }
             } catch (IOException e) {
@@ -146,7 +156,7 @@ public abstract class Transformer<T> {
         public final boolean tryAdvance(final Consumer<? super T> action) {
             boolean result = false;
             if (closed) {
-                logger.error("Attempt to advance after closed");
+                return false;
             }
             try {
                 if (inputStream == null) {

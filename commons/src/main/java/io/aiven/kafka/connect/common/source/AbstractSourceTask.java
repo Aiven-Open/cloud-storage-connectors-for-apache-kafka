@@ -58,7 +58,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * The maximum time to spend polling. This is set to 5 seconds as that is the time that is allotted to a system for
      * shutdown.
      */
-    public static final Duration MAX_POLL_TIME = Duration.ofSeconds(5);
+    public static final Duration MAX_POLL_TIME = Duration.ofMinutes(5); // TODO reset this to 5 seconds
     /**
      * The boolean that indicates the connector is stopped.
      */
@@ -146,7 +146,9 @@ public abstract class AbstractSourceTask extends SourceTask {
     private boolean tryAdd(final List<SourceRecord> results, final Iterator<SourceRecord> sourceRecordIterator) {
         if (sourceRecordIterator.hasNext()) {
             backoff.reset();
-            results.add(sourceRecordIterator.next());
+            SourceRecord sr = sourceRecordIterator.next();
+            logger.info("tryAdd() : read record "+sr.sourceOffset());
+            results.add(sr);
             return true;
         }
         logger.info("No records found in tryAdd call");
@@ -160,7 +162,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      */
     protected boolean stillPolling() {
         boolean result = !connectorStopped.get() && !timer.expired();
-        logger.info("Still polling: {}", result);
+        logger.debug("Still polling: {}", result);
         return result;
     }
 
@@ -177,7 +179,7 @@ public abstract class AbstractSourceTask extends SourceTask {
                 try {
                     final List<SourceRecord> result = populateList();
                     if (logger.isInfoEnabled()) { // TODO reset this to debug
-                        logger.info("Poll() returning {} SourceRecords.", result == null ? null : result.size());
+                        logger.info("********************************** Poll() returning {} SourceRecords.", result == null ? null : result.size());
                     }
                     return result;
                 } finally {
