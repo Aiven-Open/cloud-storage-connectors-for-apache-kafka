@@ -200,9 +200,9 @@ final class S3SourceTaskTest {
         properties.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         properties.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         properties.put("tasks.max", "1");
+        properties.put("task.id", "1");
         properties.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
         properties.put(TARGET_TOPIC_PARTITIONS, "0,1");
         properties.put(TARGET_TOPICS, "testtopic");
-
     }
 }

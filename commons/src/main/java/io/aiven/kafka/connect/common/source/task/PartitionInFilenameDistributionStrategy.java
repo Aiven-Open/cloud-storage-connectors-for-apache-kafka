@@ -47,7 +47,7 @@ public final class PartitionInFilenameDistributionStrategy implements ObjectDist
 
     private int maxTasks;
 
-    PartitionInFilenameDistributionStrategy(final int maxTasks, final String expectedSourceNameFormat) {
+    public PartitionInFilenameDistributionStrategy(final int maxTasks, final String expectedSourceNameFormat) {
         configureDistributionStrategy(maxTasks, expectedSourceNameFormat);
     }
 

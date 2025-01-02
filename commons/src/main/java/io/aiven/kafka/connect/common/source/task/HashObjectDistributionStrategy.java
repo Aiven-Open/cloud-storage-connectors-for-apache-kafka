@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 public final class HashObjectDistributionStrategy implements ObjectDistributionStrategy {
     private final static Logger LOG = LoggerFactory.getLogger(HashObjectDistributionStrategy.class);
     private int maxTasks;
-    HashObjectDistributionStrategy(final int maxTasks) {
+    public HashObjectDistributionStrategy(final int maxTasks) {
         this.maxTasks = maxTasks;
     }
 

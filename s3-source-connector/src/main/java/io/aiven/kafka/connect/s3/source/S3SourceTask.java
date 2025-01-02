@@ -97,6 +97,7 @@ public class S3SourceTask extends SourceTask {
         this.transformer = TransformerFactory.getTransformer(s3SourceConfig);
         offsetManager = new OffsetManager(context, s3SourceConfig);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
+        awsv2SourceClient.initializeObjectDistributionStrategy();
         prepareReaderFromOffsetStorageReader();
         this.taskInitialized = true;
     }

@@ -144,6 +144,7 @@ class AWSV2SourceClientTest {
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
         s3Client = mock(S3Client.class);
         awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
+        awsv2SourceClient.initializeObjectDistributionStrategy();
         requestCaptor = ArgumentCaptor.forClass(ListObjectsV2Request.class);
         final S3Object object1 = createObjectSummary(1, "key1");
         final S3Object object2 = createObjectSummary(1, "key2");
@@ -177,6 +178,7 @@ class AWSV2SourceClientTest {
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
         s3Client = mock(S3Client.class);
         awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
+        awsv2SourceClient.initializeObjectDistributionStrategy();
         requestCaptor = ArgumentCaptor.forClass(ListObjectsV2Request.class);
         final S3Object object1 = createObjectSummary(1, "key1");
         final S3Object object2 = createObjectSummary(1, "key2");
@@ -232,7 +234,7 @@ class AWSV2SourceClientTest {
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
         s3Client = mock(S3Client.class);
         awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
-
+        awsv2SourceClient.initializeObjectDistributionStrategy();
     }
 
     private ListObjectsV2Response getListObjectsV2Response() {

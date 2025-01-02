@@ -47,8 +47,13 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     public static final String PATTERN_TOPIC_KEY = "topicName";
     public static final String PATTERN_PARTITION_KEY = "partitionId";
 
-    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
-            + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
+    // TODO this path/config is yet to be defined.
+    public static final String FILE_PATH_DEFAULT = "/PREFIX/{{partition}}/YYYY/MM/DD/mm/}}";
+
+    public static final String FILE_DEFAULT_PATTERN_STR = "(?<topicName>[^/]+?)-" + "(?<partitionId>\\d{5})-"
+            + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$";
+
+    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile(FILE_DEFAULT_PATTERN_STR); // topic-00001.txt
     public static final long BYTES_TRANSFORMATION_NUM_OF_RECS = 1L;
     private String currentObjectKey;
 

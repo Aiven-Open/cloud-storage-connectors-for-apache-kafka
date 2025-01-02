@@ -48,7 +48,7 @@ public final class PartitionInPathDistributionStrategy implements ObjectDistribu
     private String prefix;
     private int maxTasks;
 
-    PartitionInPathDistributionStrategy(final int maxTasks, final String expectedPathFormat) {
+    public PartitionInPathDistributionStrategy(final int maxTasks, final String expectedPathFormat) {
         configureDistributionStrategy(maxTasks, expectedPathFormat);
     }
 

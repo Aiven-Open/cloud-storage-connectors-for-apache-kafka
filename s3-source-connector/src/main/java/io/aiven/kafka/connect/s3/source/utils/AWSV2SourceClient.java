@@ -16,6 +16,9 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.FILE_DEFAULT_PATTERN_STR;
+import static io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator.FILE_PATH_DEFAULT;
+
 import java.io.InputStream;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -24,6 +27,11 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.connect.common.config.enums.ObjectDistributionStrategies;
+import io.aiven.kafka.connect.common.source.task.HashObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.PartitionInFilenameDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.PartitionInPathDistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -47,8 +55,13 @@ public class AWSV2SourceClient {
     private final S3Client s3Client;
     private final String bucketName;
 
-    private Predicate<S3Object> filterPredicate = s3Object -> s3Object.size() > 0;
+    private final Predicate<S3Object> filterPredicate = s3Object -> s3Object.size() > 0;
     private final Set<String> failedObjectKeys;
+
+    private ObjectDistributionStrategy objectDistributionStrategy;
+
+    private int taskId;
+    private int maxTasks;
 
     /**
      * @param s3SourceConfig
@@ -62,6 +75,12 @@ public class AWSV2SourceClient {
         this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
+    }
+
+    public void initializeObjectDistributionStrategy() {
+        this.maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
+        this.taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
+        this.objectDistributionStrategy = getObjectDistributionStrategy(s3SourceConfig.getObjectDistributionStrategy());
     }
 
     /**
@@ -106,7 +125,7 @@ public class AWSV2SourceClient {
                 .flatMap(response -> response.contents()
                         .stream()
                         .filter(filterPredicate)
-                        .filter(objectSummary -> assignObjectToTask(objectSummary.key()))
+                        .filter(objectSummary -> objectDistributionStrategy.isPartOfTask(taskId, objectSummary.key()))
                         .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.key())))
                 .map(S3Object::key);
         return s3ObjectKeyStream.iterator();
@@ -128,19 +147,33 @@ public class AWSV2SourceClient {
         this.failedObjectKeys.add(objectKey);
     }
 
-    public void setFilterPredicate(final Predicate<S3Object> predicate) {
-        filterPredicate = predicate;
-    }
-
-    private boolean assignObjectToTask(final String objectKey) {
-        final int maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
-        final int taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
-        final int taskAssignment = Math.floorMod(objectKey.hashCode(), maxTasks);
-        return taskAssignment == taskId;
-    }
+    // public void setFilterPredicate(final Predicate<S3Object> predicate) {
+    // filterPredicate = predicate;
+    // }
+    //
+    // private boolean assignObjectToTask(final String objectKey) {
+    // final int maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
+    // final int taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
+    // final int taskAssignment = Math.floorMod(objectKey.hashCode(), maxTasks);
+    // return taskAssignment == taskId;
+    // }
 
     public void shutdown() {
         s3Client.close();
     }
 
+    private ObjectDistributionStrategy getObjectDistributionStrategy(
+            final ObjectDistributionStrategies objectDistributionStrategies) {
+        ObjectDistributionStrategy objectDistributionStrategy;
+        objectDistributionStrategy = new HashObjectDistributionStrategy(maxTasks);
+
+        if (objectDistributionStrategies == ObjectDistributionStrategies.PARTITION_IN_FILENAME) {
+            objectDistributionStrategy = new PartitionInFilenameDistributionStrategy(maxTasks,
+                    FILE_DEFAULT_PATTERN_STR);
+        } else if (objectDistributionStrategies == ObjectDistributionStrategies.PARTITION_IN_FILEPATH) {
+            objectDistributionStrategy = new PartitionInPathDistributionStrategy(maxTasks, FILE_PATH_DEFAULT);
+        }
+
+        return objectDistributionStrategy;
+    }
 }

@@ -16,10 +16,15 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import static io.aiven.kafka.connect.common.config.enums.ObjectDistributionStrategies.OBJECT_HASH;
+import static io.aiven.kafka.connect.common.config.enums.ObjectDistributionStrategies.PARTITION_IN_FILENAME;
+import static io.aiven.kafka.connect.common.config.enums.ObjectDistributionStrategies.PARTITION_IN_FILEPATH;
+
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+import io.aiven.kafka.connect.common.config.enums.ObjectDistributionStrategies;
 
 import org.codehaus.plexus.util.StringUtils;
 
@@ -31,6 +36,8 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static final String TARGET_TOPIC_PARTITIONS = "topic.partitions";
     public static final String TARGET_TOPICS = "topics";
     public static final String ERRORS_TOLERANCE = "errors.tolerance";
+
+    public static final String OBJECT_DISTRIBUTION_STRATEGY = "object.distribution.strategy";
 
     /**
      * Construct the ConfigFragment..
@@ -68,6 +75,12 @@ public final class SourceConfigFragment extends ConfigFragment {
         configDef.define(TARGET_TOPICS, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "eg : connect-storage-offsets", GROUP_OFFSET_TOPIC,
                 offsetStorageGroupCounter++, ConfigDef.Width.NONE, TARGET_TOPICS); // NOPMD
+        configDef.define(OBJECT_DISTRIBUTION_STRATEGY, ConfigDef.Type.STRING, OBJECT_HASH.name(),
+                new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
+                "Based on tasks.max config and this strategy, objects are processed in distributed"
+                        + " way by Kafka connect workers, supported values : " + OBJECT_HASH + ", "
+                        + PARTITION_IN_FILENAME + ", " + PARTITION_IN_FILEPATH,
+                GROUP_OTHER, sourcePollingConfigCounter++, ConfigDef.Width.NONE, OBJECT_DISTRIBUTION_STRATEGY); // NOPMD
 
         return configDef;
     }
@@ -92,6 +105,10 @@ public final class SourceConfigFragment extends ConfigFragment {
         return cfg.getString(ERRORS_TOLERANCE);
     }
 
+    public String getObjectDistributionStrategy() {
+        return cfg.getString(OBJECT_DISTRIBUTION_STRATEGY);
+    }
+
     private static class ErrorsToleranceValidator implements ConfigDef.Validator {
         @Override
         public void ensureValid(final String name, final Object value) {
@@ -99,6 +116,17 @@ public final class SourceConfigFragment extends ConfigFragment {
             if (StringUtils.isNotBlank(errorsTolerance)) {
                 // This will throw an Exception if not a valid value.
                 ErrorsTolerance.forName(errorsTolerance);
+            }
+        }
+    }
+
+    private static class ObjectDistributionStrategyValidator implements ConfigDef.Validator {
+        @Override
+        public void ensureValid(final String name, final Object value) {
+            final String objectDistributionStrategy = (String) value;
+            if (StringUtils.isNotBlank(objectDistributionStrategy)) {
+                // This will throw an Exception if not a valid value.
+                ObjectDistributionStrategies.forName(objectDistributionStrategy);
             }
         }
     }
