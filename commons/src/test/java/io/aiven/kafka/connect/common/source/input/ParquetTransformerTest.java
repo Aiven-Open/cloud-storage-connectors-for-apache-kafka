@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
@@ -33,21 +35,28 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.data.Struct;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import io.confluent.connect.avro.AvroData;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 final class ParquetTransformerTest {
     private ParquetTransformer parquetTransformer;
+
+    @Mock
+    private SourceCommonConfig sourceCommonConfig;
+
 
     @BeforeEach
     public void setUp() {
@@ -59,34 +68,25 @@ final class ParquetTransformerTest {
         final byte[] mockParquetData = new byte[0];
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-        final SourceCommonConfig s3SourceConfig = mock(SourceCommonConfig.class);
 
-        final String topic = "test-topic";
-        final int topicPartition = 0;
-        final Stream<GenericRecord> recs = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
-                s3SourceConfig, 0L);
-
-        assertThat(recs).isEmpty();
+        final Stream<SchemaAndValue> recs = parquetTransformer.getRecords(inputStreamIOSupplier, sourceCommonConfig, "topic", 0, 0);
+         assertThat(recs).isEmpty();
     }
 
+    private String extractName(final SchemaAndValue record) {
+        return ((Struct) record.value()).get("name").toString();
+    }
     @Test
     void testGetRecordsWithValidData() throws Exception {
         final byte[] mockParquetData = generateMockParquetData();
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-        final SourceCommonConfig s3SourceConfig = mock(SourceCommonConfig.class);
 
-        final String topic = "test-topic";
-        final int topicPartition = 0;
-
-        final List<Object> records = parquetTransformer
-                .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig, 0L)
+        final List<SchemaAndValue> records = parquetTransformer
+                .getRecords(inputStreamIOSupplier, sourceCommonConfig, "topic", 0, 0)
                 .collect(Collectors.toList());
-
         assertThat(records).hasSize(100);
-        assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
-                .contains("name1")
-                .contains("name2");
+        assertThat(records).extracting(this::extractName).contains("name1").contains("name2");
     }
 
     @Test
@@ -94,17 +94,12 @@ final class ParquetTransformerTest {
         final byte[] mockParquetData = generateMockParquetData();
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-        final SourceCommonConfig s3SourceConfig = mock(SourceCommonConfig.class);
 
-        final String topic = "test-topic";
-        final int topicPartition = 0;
-
-        final List<Object> records = parquetTransformer
-                .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig, 25L)
+        final List<SchemaAndValue> records = parquetTransformer
+                .getRecords(inputStreamIOSupplier, sourceCommonConfig, "topic", 0, 25L)
                 .collect(Collectors.toList());
-
         assertThat(records).hasSize(75);
-        assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
+        assertThat(records).extracting(this::extractName)
                 .doesNotContain("name1")
                 .doesNotContain("name2")
                 .doesNotContain("name24")
@@ -119,13 +114,7 @@ final class ParquetTransformerTest {
         final InputStream inputStream = new ByteArrayInputStream(invalidData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final SourceCommonConfig s3SourceConfig = mock(SourceCommonConfig.class);
-
-        final String topic = "test-topic";
-        final int topicPartition = 0;
-
-        final Stream<GenericRecord> records = parquetTransformer.getRecords(inputStreamIOSupplier, topic,
-                topicPartition, s3SourceConfig, 0L);
+        final Stream<SchemaAndValue> records = parquetTransformer.getRecords(inputStreamIOSupplier, sourceCommonConfig, "topic", 0, 0);
         assertThat(records).isEmpty();
     }
 
@@ -150,8 +139,8 @@ final class ParquetTransformerTest {
                     .thenThrow(new IOException("Test IOException for temp file"));
 
             final IOSupplier<InputStream> inputStreamSupplier = mock(IOSupplier.class);
-            final Stream<GenericRecord> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
-                    1, null, 0L);
+            final Stream<SchemaAndValue> resultStream = parquetTransformer.getRecords(inputStreamSupplier,
+                    sourceCommonConfig, "topic", 0, 0);
 
             assertThat(resultStream).isEmpty();
         }
@@ -163,8 +152,8 @@ final class ParquetTransformerTest {
             when(inputStreamMock.read(any(byte[].class))).thenThrow(new IOException("Test IOException during copy"));
 
             final IOSupplier<InputStream> inputStreamSupplier = () -> inputStreamMock;
-            final Stream<GenericRecord> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
-                    1, null, 0L);
+            final Stream<SchemaAndValue> resultStream = parquetTransformer.getRecords(inputStreamSupplier,
+                    sourceCommonConfig, "topic", 0, 0);
 
             assertThat(resultStream).isEmpty();
         }

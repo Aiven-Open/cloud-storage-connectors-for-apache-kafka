@@ -160,7 +160,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      */
     protected boolean stillPolling() {
         boolean result = !connectorStopped.get() && !timer.expired();
-        logger.info("Still polling: {}", result);
+        logger.debug("Still polling: {}", result);
         return result;
     }
 

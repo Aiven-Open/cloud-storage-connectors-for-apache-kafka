@@ -37,8 +37,8 @@ public final class RecordProcessor {
             final S3SourceConfig s3SourceConfig, final AWSV2SourceClient sourceClient,
             final OffsetManager offsetManager) {
         try {
-            offsetManager.updateCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getOffsetMap());
-            s3SourceRecord.setOffsetMap(offsetManager.getOffsets().get(s3SourceRecord.getPartitionMap()));
+            offsetManager.updateOffsetMap(s3SourceRecord.getPartitionMap(),
+                    OffsetManager.getOffsetValueMap(s3SourceRecord.getObjectKey(), s3SourceRecord.getRecordNumber()));
             return s3SourceRecord.getSourceRecord();
         } catch (DataException e) {
             if (ErrorsTolerance.NONE.equals(s3SourceConfig.getErrorsTolerance())) {

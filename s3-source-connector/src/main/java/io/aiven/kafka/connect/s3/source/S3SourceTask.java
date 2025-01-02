@@ -59,7 +59,7 @@ public class S3SourceTask extends AbstractSourceTask {
     /**
      * The transformer that we are using TODO move this to AbstractSourceTask
      */
-    private Transformer<?> transformer;
+    private Transformer transformer;
     /** The AWS Source client */
 
     private AWSV2SourceClient awsv2SourceClient;
@@ -115,8 +115,7 @@ public class S3SourceTask extends AbstractSourceTask {
             @Override
             public SourceRecord next() {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
-                offsetManager.incrementAndUpdateOffsetMap(s3SourceRecord.getPartitionMap(),
-                        s3SourceRecord.getObjectKey(), 1L);
+
                 return RecordProcessor.createSourceRecord(s3SourceRecord, s3SourceConfig, awsv2SourceClient,
                         offsetManager);
             }
@@ -175,7 +174,7 @@ public class S3SourceTask extends AbstractSourceTask {
      *
      * @return the transformer that we are using.
      */
-    public Transformer<?> getTransformer() {
+    public Transformer getTransformer() {
         return transformer;
     }
 }

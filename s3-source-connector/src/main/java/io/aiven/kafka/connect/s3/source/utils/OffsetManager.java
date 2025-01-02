@@ -81,7 +81,18 @@ public class OffsetManager {
         return startOffset;
     }
 
-    public String getObjectMapKey(final String currentObjectKey) {
+    public void updateOffsetMap(final Map<String, Object> partitionMap, final Map<String, Object> offsetMap) {
+        offsets.compute(partitionMap, (k, v) -> {
+            if (v == null) {
+                return offsetMap;
+            } else {
+                v.putAll(offsetMap);
+                return v;
+            }
+        });
+    }
+
+    public static String getObjectMapKey(final String currentObjectKey) {
         return OBJECT_KEY + SEPARATOR + currentObjectKey;
     }
 
@@ -98,10 +109,9 @@ public class OffsetManager {
         offsets.put(partitionMap, offsetMap);
     }
 
-    public Map<String, Object> getOffsetValueMap(final String currentObjectKey, final long offsetId) {
+    public static Map<String, Object> getOffsetValueMap(final String currentObjectKey, final long offsetId) {
         final Map<String, Object> offsetMap = new HashMap<>();
         offsetMap.put(getObjectMapKey(currentObjectKey), offsetId);
-
         return offsetMap;
     }
 

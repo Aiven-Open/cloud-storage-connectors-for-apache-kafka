@@ -79,10 +79,8 @@ class RecordProcessorTest {
         SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
                 offsetManager);
 
-        verify(offsetManager, times(1)).updateCurrentOffsets(any(), any());
-        verify(mockRecord, times(1)).setOffsetMap(any());
-        verify(mockRecord, times(1)).getOffsetMap();
-        verify(mockRecord, times(2)).getPartitionMap();
+        verify(offsetManager, times(1)).updateOffsetMap(any(), any());
+        verify(mockRecord, times(1)).getPartitionMap();
         assertThat(result).isEqualTo(mockSourceRecord);
 
     }
