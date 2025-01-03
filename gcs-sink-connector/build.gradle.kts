@@ -78,11 +78,11 @@ dependencies {
 
   implementation(project(":commons"))
 
-  implementation("com.google.cloud:google-cloud-storage:2.43.1") {
+  implementation("com.google.cloud:google-cloud-storage:2.46.0") {
     exclude(group = "com.google.guava", module = "guava")
   }
   // TODO: document why specific version of guava is required
-  implementation("com.google.guava:guava:33.3.1-jre")
+  implementation("com.google.guava:guava:33.4.0-jre")
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -98,7 +98,7 @@ dependencies {
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
-  testImplementation("com.google.cloud:google-cloud-nio:0.127.27")
+  testImplementation("com.google.cloud:google-cloud-nio:0.127.28")
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
