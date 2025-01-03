@@ -230,12 +230,10 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
         // Poll Avro messages from the Kafka topic and deserialize them
+        // Waiting for 25k kafka records in this test so a longer Duration is added.
         final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, numOfRecsFactor * 5,
-                Duration.ofMinutes(3), connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl()); // Ensure
-                                                                                                                    // this
-                                                                                                                    // method
-                                                                                                                    // deserializes
-                                                                                                                    // Avro
+                Duration.ofMinutes(3), connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
+        // Ensure this method deserializes Avro
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).map(record -> entry(record.get("id"), String.valueOf(record.get("message"))))
@@ -272,6 +270,7 @@ final class IntegrationTest implements IntegrationBase {
             Files.delete(path);
         }
 
+        // Waiting for a small number of messages so using a smaller Duration of a minute
         final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 100, Duration.ofSeconds(60),
                 connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
         final List<String> expectedRecordNames = IntStream.range(0, 100)

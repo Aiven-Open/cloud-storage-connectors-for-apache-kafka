@@ -161,20 +161,23 @@ public interface IntegrationBase {
 
             final List<V> recordValues = new ArrayList<>();
             await().atMost(expectedMaxDuration).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-                assertThat(assertAllRecordsConsumed(consumer, recordValues)).hasSize(expectedMessageCount);
+                assertThat(consumeRecordsInProgress(consumer, recordValues)).hasSize(expectedMessageCount);
             });
             return recordValues;
         }
     }
 
-    private static <K, V> List<V> assertAllRecordsConsumed(KafkaConsumer<K, V> consumer, List<V> recordValues) {
-        int recordsRetrieved = 0;
+    private static <K, V> List<V> consumeRecordsInProgress(KafkaConsumer<K, V> consumer, List<V> recordValues) {
+        int recordsRetrieved;
         do {
             final ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(500L));
             recordsRetrieved = records.count();
             for (final ConsumerRecord<K, V> record : records) {
                 recordValues.add(record.value());
             }
+            // Choosing 10 records as it allows for integration tests with a smaller max poll to be added
+            // while maintaining efficiency, a slightly larger number could be added but this is slightly more efficient
+            // than larger numbers.
         } while (recordsRetrieved > 10);
         return recordValues;
     }
