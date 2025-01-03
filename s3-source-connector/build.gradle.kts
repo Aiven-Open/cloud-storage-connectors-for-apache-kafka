@@ -21,7 +21,7 @@ plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 val amazonS3Version by extra("2.29.34")
 val amazonSTSVersion by extra("2.29.34")
 val s3mockVersion by extra("0.2.6")
-val testKafkaVersion by extra("3.7.1")
+val kafkaVersion by extra("3.3.0")
 
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
@@ -62,8 +62,8 @@ idea {
 }
 
 dependencies {
-  compileOnly(apache.kafka.connect.api)
-  compileOnly(apache.kafka.connect.runtime)
+  compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
+  compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
 
   implementation(apache.commons.collection4)
   implementation(project(":commons"))
@@ -81,9 +81,9 @@ dependencies {
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
 
-  testImplementation(apache.kafka.connect.api)
-  testImplementation(apache.kafka.connect.runtime)
-  testImplementation(apache.kafka.connect.json)
+  testImplementation("org.apache.kafka:connect-api:$kafkaVersion")
+  testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
+  testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
 
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
@@ -184,11 +184,11 @@ dependencies {
     exclude(group = "io.netty", module = "netty")
   }
 
-  integrationTestImplementation("org.apache.kafka:connect-runtime:${testKafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:connect-runtime:${testKafkaVersion}")
-  integrationTestImplementation("org.apache.kafka:kafka-clients:${testKafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:kafka_2.13:${testKafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:kafka_2.13:${testKafkaVersion}")
+  integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
+  integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
+  integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
+  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
+  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
 
   // Make test utils from 'test' available in 'integration-test'
   integrationTestImplementation(sourceSets["test"].output)
