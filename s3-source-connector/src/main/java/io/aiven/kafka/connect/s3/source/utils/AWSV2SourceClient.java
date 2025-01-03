@@ -28,7 +28,7 @@ import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.commons.io.function.IOSupplier;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
