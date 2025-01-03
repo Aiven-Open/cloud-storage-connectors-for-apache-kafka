@@ -29,6 +29,8 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.codehaus.plexus.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -42,6 +44,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
  */
 public class AWSV2SourceClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AWSV2SourceClient.class);
     public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
     private final S3Client s3Client;
@@ -50,6 +53,9 @@ public class AWSV2SourceClient {
     private Predicate<S3Object> filterPredicate = s3Object -> s3Object.size() > 0;
     private final Set<String> failedObjectKeys;
 
+    private final int taskId;
+    private final int maxTasks;
+
     /**
      * @param s3SourceConfig
      *            configuration for Source connector
@@ -57,11 +63,7 @@ public class AWSV2SourceClient {
      *            all objectKeys which have already been tried but have been unable to process.
      */
     public AWSV2SourceClient(final S3SourceConfig s3SourceConfig, final Set<String> failedObjectKeys) {
-        this.s3SourceConfig = s3SourceConfig;
-        final S3ClientFactory s3ClientFactory = new S3ClientFactory();
-        this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
-        this.bucketName = s3SourceConfig.getAwsS3BucketName();
-        this.failedObjectKeys = new HashSet<>(failedObjectKeys);
+        this(new S3ClientFactory().createAmazonS3Client(s3SourceConfig), s3SourceConfig, failedObjectKeys);
     }
 
     /**
@@ -80,6 +82,38 @@ public class AWSV2SourceClient {
         this.s3Client = s3Client;
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
+
+        // TODO the code below should be configured in some sort of taks assignement method/process/call.
+        int maxTasks;
+        try {
+            final Object value = s3SourceConfig.originals().get("tasks.max");
+            if (value == null) {
+                LOGGER.info("Setting tasks.max to 1");
+                maxTasks = 1;
+            } else {
+                maxTasks = Integer.parseInt(value.toString());
+            }
+        } catch (NumberFormatException e) { // NOPMD catch null pointer
+            LOGGER.warn("Invalid tasks.max: {}", e.getMessage());
+            LOGGER.info("Setting tasks.max to 1");
+            maxTasks = 1;
+        }
+        this.maxTasks = maxTasks;
+        int taskId;
+        try {
+            final Object value = s3SourceConfig.originals().get("task.id");
+            if (value == null) {
+                LOGGER.info("Setting task.id to 0");
+                taskId = 0;
+            } else {
+                taskId = Integer.parseInt(value.toString()) % maxTasks;
+            }
+        } catch (NumberFormatException e) { // NOPMD catch null pointer
+            LOGGER.warn("Invalid task.id: {}", e.getMessage());
+            LOGGER.info("Setting task.id to 0");
+            taskId = 0;
+        }
+        this.taskId = taskId;
     }
 
     public Iterator<String> getListOfObjectKeys(final String startToken) {
@@ -133,8 +167,6 @@ public class AWSV2SourceClient {
     }
 
     private boolean assignObjectToTask(final String objectKey) {
-        final int maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
-        final int taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
         final int taskAssignment = Math.floorMod(objectKey.hashCode(), maxTasks);
         return taskAssignment == taskId;
     }

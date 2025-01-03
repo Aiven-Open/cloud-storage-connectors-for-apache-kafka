@@ -28,7 +28,7 @@ final public class ConnectUtils {
     private ConnectUtils() {
         // hidden
     }
-    static Map<String, Object> getPartitionMap(final String topicName, final Integer defaultPartitionId,
+    public static Map<String, Object> getPartitionMap(final String topicName, final Integer defaultPartitionId,
             final String bucketName) {
         final Map<String, Object> partitionMap = new HashMap<>();
         partitionMap.put(BUCKET, bucketName);

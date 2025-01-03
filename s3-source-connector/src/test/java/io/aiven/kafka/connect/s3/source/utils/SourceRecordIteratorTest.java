@@ -39,6 +39,7 @@ import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -67,8 +68,8 @@ final class SourceRecordIteratorTest {
         try (InputStream mockInputStream = new ByteArrayInputStream(new byte[] {})) {
             when(mockSourceApiClient.getObject(anyString())).thenReturn(() -> mockInputStream);
 
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-                    .thenReturn(Stream.of(new Object()));
+            when(mockTransformer.getRecords(any(), any(), anyString(), anyInt(), anyLong()))
+                    .thenReturn(Stream.of(SchemaAndValue.NULL));
 
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
@@ -77,7 +78,6 @@ final class SourceRecordIteratorTest {
                     mockSourceApiClient);
 
             assertThat(iterator.hasNext()).isFalse();
-            assertThat(iterator.next()).isNull();
 
             when(mockSourceApiClient.getListOfObjectKeys(any()))
                     .thenReturn(Collections.singletonList(key).listIterator());
@@ -100,8 +100,8 @@ final class SourceRecordIteratorTest {
 
             // With ByteArrayTransformer
             mockTransformer = mock(ByteArrayTransformer.class);
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-                    .thenReturn(Stream.of(new Object()));
+            when(mockTransformer.getRecords(any(), any(), anyString(), anyInt(), anyLong()))
+                    .thenReturn(Stream.of(SchemaAndValue.NULL));
 
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
@@ -112,9 +112,9 @@ final class SourceRecordIteratorTest {
 
             SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
                     mockSourceApiClient);
-            assertThat(iterator.hasNext()).isTrue();
-            iterator.next();
-            verify(mockTransformer, never()).getRecords(any(), anyString(), anyInt(), any(), anyLong());
+            assertThat(iterator.hasNext()).isFalse();
+            verify(mockTransformer, never()).getRecords(any(), any(), anyString(), anyInt(), anyLong());
+
 
             // With AvroTransformer
             mockTransformer = mock(AvroTransformer.class);
@@ -124,10 +124,9 @@ final class SourceRecordIteratorTest {
                     .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
 
             iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
-            assertThat(iterator.hasNext()).isTrue();
-            iterator.next();
+            assertThat(iterator.hasNext()).isFalse();
 
-            verify(mockTransformer, times(1)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
+            verify(mockTransformer, times(1)).getRecords(any(), any(), anyString(), anyInt(), anyLong());
         }
     }
 }

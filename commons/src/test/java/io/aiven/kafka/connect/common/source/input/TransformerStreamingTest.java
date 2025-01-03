@@ -25,18 +25,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
-import io.aiven.kafka.connect.common.config.CommonConfig;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
-import io.confluent.connect.avro.AvroData;
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -49,20 +45,20 @@ class TransformerStreamingTest {
 
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyExceptionDuringIOOpen(final Transformer<?> transformer, final byte[] testData,
-            final AbstractConfig config, final int expectedCount) throws IOException {
+    void verifyExceptionDuringIOOpen(final Transformer transformer, final byte[] testData,
+            final SourceCommonConfig config, final int expectedCount) throws IOException {
         final IOSupplier<InputStream> ioSupplier = mock(IOSupplier.class);
         when(ioSupplier.get()).thenThrow(new IOException("Test IOException during initialization"));
-        final Stream<?> objStream = transformer.getRecords(ioSupplier, "topic", 1, config, 0);
+        final Stream<SchemaAndValue> objStream = transformer.getRecords(ioSupplier, config, "topic", 0, 0L);
         assertThat(objStream).isEmpty();
     }
 
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyCloseCalledAtEnd(final Transformer<?> transformer, final byte[] testData, final AbstractConfig config,
-            final int expectedCount) throws IOException {
+    void verifyCloseCalledAtEnd(final Transformer transformer, final byte[] testData, final SourceCommonConfig config,
+            final int expectedCount) {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
-        final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+        final Stream<?> objStream = transformer.getRecords(() -> stream, config, "topic", 0, 0L);
         final long count = objStream.count();
         assertThat(count).isEqualTo(expectedCount);
         assertThat(stream.closeCount).isGreaterThan(0);
@@ -70,11 +66,11 @@ class TransformerStreamingTest {
 
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyCloseCalledAtIteratorEnd(final Transformer<?> transformer, final byte[] testData,
-            final AbstractConfig config, final int expectedCount) throws IOException {
+    void verifyCloseCalledAtIteratorEnd(final Transformer transformer, final byte[] testData,
+            final SourceCommonConfig config, final int expectedCount) {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
-        final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
-        final Iterator<?> iter = objStream.iterator();
+        final Stream<SchemaAndValue> objStream = transformer.getRecords(() -> stream, config, "topic", 0, 0L);
+        final Iterator<SchemaAndValue> iter = objStream.iterator();
         long count = 0L;
         while (iter.hasNext()) {
             count += 1;
@@ -82,24 +78,21 @@ class TransformerStreamingTest {
         }
         assertThat(count).isEqualTo(expectedCount);
         assertThat(stream.closeCount).isGreaterThan(0);
+
+        assertThat(iter).as("Calling hasNext() after last item should return false").isExhausted();
     }
 
     static Stream<Arguments> testData() throws IOException {
         final List<Arguments> lst = new ArrayList<>();
-        final AvroData avroData = new AvroData(100);
-        lst.add(Arguments.of(new AvroTransformer(avroData), AvroTransformerTest.generateMockAvroData(100).toByteArray(),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
-                }, 100));
-        lst.add(Arguments.of(new ByteArrayTransformer(), "Hello World".getBytes(StandardCharsets.UTF_8),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
-                }, 1));
-        lst.add(Arguments.of(new JsonTransformer(new JsonConverter()),
-                JsonTransformerTest.getJsonRecs(100).getBytes(StandardCharsets.UTF_8),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
-                }, 100));
-        lst.add(Arguments.of(new ParquetTransformer(avroData), ParquetTransformerTest.generateMockParquetData(),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
-                }, 100));
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.AVRO),
+                AvroTransformerTest.generateMockAvroData(100).toByteArray(), mock(SourceCommonConfig.class), 100));
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.BYTES),
+                "Hello World".getBytes(StandardCharsets.UTF_8), mock(SourceCommonConfig.class), 1));
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.JSONL),
+                JsonTransformerTest.getJsonRecs(100).getBytes(StandardCharsets.UTF_8), mock(SourceCommonConfig.class),
+                100));
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.PARQUET),
+                ParquetTransformerTest.generateMockParquetData(), mock(SourceCommonConfig.class), 100));
         return lst.stream();
     }
 
