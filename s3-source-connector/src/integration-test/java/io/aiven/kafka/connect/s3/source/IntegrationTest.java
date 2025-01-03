@@ -231,8 +231,11 @@ final class IntegrationTest implements IntegrationBase {
 
         // Poll Avro messages from the Kafka topic and deserialize them
         final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, numOfRecsFactor * 5,
-                connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl()); // Ensure this method
-                                                                                             // deserializes Avro
+                Duration.ofMinutes(3), connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl()); // Ensure
+                                                                                                                    // this
+                                                                                                                    // method
+                                                                                                                    // deserializes
+                                                                                                                    // Avro
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).map(record -> entry(record.get("id"), String.valueOf(record.get("message"))))
@@ -269,7 +272,7 @@ final class IntegrationTest implements IntegrationBase {
             Files.delete(path);
         }
 
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 100,
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 100, Duration.ofSeconds(60),
                 connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
         final List<String> expectedRecordNames = IntStream.range(0, 100)
                 .mapToObj(i -> name + i)
