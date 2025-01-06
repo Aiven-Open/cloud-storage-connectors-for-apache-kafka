@@ -39,11 +39,6 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import org.apache.avro.Schema;
-import org.apache.avro.file.DataFileWriter;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumWriter;
-import org.apache.avro.io.DatumWriter;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -60,7 +55,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumWriter;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -82,10 +82,10 @@ public interface IntegrationBase {
     String S3_SECRET_ACCESS_KEY = "test_secret_key0";
 
     static byte[] generateNextAvroMessagesStartingFromId(final int messageId, final int noOfAvroRecs,
-                                                         final Schema schema) throws IOException {
+            final Schema schema) throws IOException {
         final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
-             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             dataFileWriter.create(schema, outputStream);
             for (int i = messageId; i < messageId + noOfAvroRecs; i++) {
                 final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD
@@ -104,9 +104,12 @@ public interface IntegrationBase {
     String getS3Prefix();
 
     default String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
-        final String objectKey =  org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName + "-" + partitionId + "-"
-                + System.currentTimeMillis() + ".txt";
-        final PutObjectRequest request = PutObjectRequest.builder().bucket(IntegrationTest.TEST_BUCKET_NAME).key(objectKey).build();
+        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName
+                + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
+        final PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(IntegrationTest.TEST_BUCKET_NAME)
+                .key(objectKey)
+                .build();
         getS3Client().putObject(request, RequestBody.fromBytes(testDataBytes));
         return OBJECT_KEY + SEPARATOR + objectKey;
     }

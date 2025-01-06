@@ -58,7 +58,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * The maximum time to spend polling. This is set to 5 seconds as that is the time that is allotted to a system for
      * shutdown.
      */
-    public static final Duration MAX_POLL_TIME = Duration.ofMinutes(5); // TODO reset this to 5 seconds
+    public static final Duration MAX_POLL_TIME = Duration.ofSeconds(5);
     /**
      * The boolean that indicates the connector is stopped.
      */
@@ -146,9 +146,11 @@ public abstract class AbstractSourceTask extends SourceTask {
     private boolean tryAdd(final List<SourceRecord> results, final Iterator<SourceRecord> sourceRecordIterator) {
         if (sourceRecordIterator.hasNext()) {
             backoff.reset();
-            SourceRecord sr = sourceRecordIterator.next();
-            logger.info("tryAdd() : read record "+sr.sourceOffset());
-            results.add(sr);
+            final SourceRecord sourceRecord = sourceRecordIterator.next();
+            if (logger.isDebugEnabled()) {
+                logger.debug("tryAdd() : read record " + sourceRecord.sourceOffset());
+            }
+            results.add(sourceRecord);
             return true;
         }
         logger.info("No records found in tryAdd call");
@@ -161,35 +163,30 @@ public abstract class AbstractSourceTask extends SourceTask {
      * @return {@code true} if the connector is not stopped and the timer has not expired.
      */
     protected boolean stillPolling() {
-        boolean result = !connectorStopped.get() && !timer.expired();
+        final boolean result = !connectorStopped.get() && !timer.expired();
         logger.debug("Still polling: {}", result);
         return result;
     }
 
     @Override
     public final List<SourceRecord> poll() {
-        try {
-            logger.debug("Polling");
-            if (connectorStopped.get()) {
-                logger.info("Stopping");
-                closeResources();
-                return Collections.emptyList();
-            } else {
-                timer.start();
-                try {
-                    final List<SourceRecord> result = populateList();
-                    if (logger.isInfoEnabled()) { // TODO reset this to debug
-                        logger.info("********************************** Poll() returning {} SourceRecords.", result == null ? null : result.size());
-                    }
-                    return result;
-                } finally {
-                    timer.stop();
-                    timer.reset();
+        logger.debug("Polling");
+        if (connectorStopped.get()) {
+            logger.info("Stopping");
+            closeResources();
+            return Collections.emptyList();
+        } else {
+            timer.start();
+            try {
+                final List<SourceRecord> result = populateList();
+                if (logger.isInfoEnabled()) { // TODO reset this to debug
+                    logger.info("Poll() returning {} SourceRecords.", result == null ? null : result.size());
                 }
+                return result;
+            } finally {
+                timer.stop();
+                timer.reset();
             }
-        } catch (RuntimeException e) {
-            logger.error("******************** " + e.getMessage(), e);
-            throw e;
         }
     }
 

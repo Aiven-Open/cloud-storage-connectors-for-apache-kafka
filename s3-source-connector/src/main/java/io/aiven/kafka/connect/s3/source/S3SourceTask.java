@@ -59,7 +59,7 @@ public class S3SourceTask extends AbstractSourceTask {
     /**
      * The transformer that we are using TODO move this to AbstractSourceTask
      */
-    private Transformer<?> transformer;
+    private Transformer transformer;
     /** The AWS Source client */
 
     private AWSV2SourceClient awsv2SourceClient;
@@ -115,8 +115,8 @@ public class S3SourceTask extends AbstractSourceTask {
             @Override
             public SourceRecord next() {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
-                offsetManager.setCurrentOffsets(s3SourceRecord.getPartitionMap(),
-                        s3SourceRecord.getObjectKey(), s3SourceRecord.getRecordNumber());
+                offsetManager.setCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getObjectKey(),
+                        s3SourceRecord.getRecordNumber());
                 return RecordProcessor.createSourceRecord(s3SourceRecord, s3SourceConfig, awsv2SourceClient,
                         offsetManager);
             }
@@ -146,9 +146,9 @@ public class S3SourceTask extends AbstractSourceTask {
     public void commitRecord(final SourceRecord record) {
         if (LOGGER.isInfoEnabled()) {
             final Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
-//            LOGGER.info("Committed individual record {} {} {} committed", map.get(BUCKET), map.get(OBJECT_KEY),
-//                    offsetManager.recordsProcessedForObjectKey((Map<String, Object>) record.sourcePartition(),
-//                            map.get(OBJECT_KEY).toString()));
+            // LOGGER.info("Committed individual record {} {} {} committed", map.get(BUCKET), map.get(OBJECT_KEY),
+            // offsetManager.recordsProcessedForObjectKey((Map<String, Object>) record.sourcePartition(),
+            // map.get(OBJECT_KEY).toString()));
             LOGGER.info("Committed individual record {}  committed", map);
         }
     }
@@ -175,7 +175,7 @@ public class S3SourceTask extends AbstractSourceTask {
      *
      * @return the transformer that we are using.
      */
-    public Transformer<?> getTransformer() {
+    public Transformer getTransformer() {
         return transformer;
     }
 }

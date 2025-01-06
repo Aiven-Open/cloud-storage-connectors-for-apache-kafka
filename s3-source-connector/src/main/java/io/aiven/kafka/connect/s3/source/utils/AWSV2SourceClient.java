@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import org.apache.commons.collections4.IteratorUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.codehaus.plexus.util.StringUtils;
 import org.slf4j.Logger;

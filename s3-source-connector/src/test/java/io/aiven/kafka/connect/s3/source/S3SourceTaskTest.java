@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -50,6 +49,7 @@ import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.ConnectUtils;
+import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 
 import io.findify.s3mock.S3Mock;
@@ -155,9 +155,8 @@ final class S3SourceTaskTest {
 
     private static S3SourceRecord createS3SourceRecord(final String topicName, final Integer defaultPartitionId,
             final String bucketName, final String objectKey, final byte[] key, final byte[] value) {
-        return new S3SourceRecord(ConnectUtils.getPartitionMap(topicName, defaultPartitionId, bucketName),
-                0L, topicName, defaultPartitionId, objectKey,
-                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, key),
+        return new S3SourceRecord(ConnectUtils.getPartitionMap(topicName, defaultPartitionId, bucketName), 0L,
+                topicName, defaultPartitionId, objectKey, new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, key),
                 new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, value));
     }
 
@@ -204,7 +203,8 @@ final class S3SourceTaskTest {
         assertThat(sourceRecord.sourcePartition()).isEqualTo(s3Record.getPartitionMap());
         Map<String, Object> map = (Map<String, Object>) sourceRecord.sourceOffset();
 
-        assertThat(map.get(OffsetManager.getObjectMapKey(s3Record.getObjectKey()))).isEqualTo(s3Record.getRecordNumber());
+        assertThat(map.get(OffsetManager.getObjectMapKey(s3Record.getObjectKey())))
+                .isEqualTo(s3Record.getRecordNumber());
         assertThat(sourceRecord.key()).isEqualTo(s3Record.getKey().value());
         assertThat(sourceRecord.value()).isEqualTo(s3Record.getValue().value());
     }

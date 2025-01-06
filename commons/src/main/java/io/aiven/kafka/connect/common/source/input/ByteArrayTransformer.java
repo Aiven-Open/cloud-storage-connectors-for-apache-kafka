@@ -31,7 +31,7 @@ import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ByteArrayTransformer extends Transformer<byte[]> {
+public class ByteArrayTransformer extends Transformer {
     private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayTransformer.class);
 
     private static final int MAX_BUFFER_SIZE = 4096;
@@ -42,9 +42,9 @@ public class ByteArrayTransformer extends Transformer<byte[]> {
     }
 
     @Override
-    public StreamSpliterator<byte[]> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
-        return new StreamSpliterator<byte[]>(LOGGER, inputStreamIOSupplier) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
+            final int topicPartition, final AbstractConfig sourceConfig) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
             @Override
             protected InputStream inputOpened(final InputStream input) {
                 return input;
@@ -56,7 +56,7 @@ public class ByteArrayTransformer extends Transformer<byte[]> {
             }
 
             @Override
-            protected boolean doAdvance(final Consumer<? super byte[]> action) {
+            protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
                 final byte[] buffer = new byte[MAX_BUFFER_SIZE];
                 try {
                     final int bytesRead = IOUtils.read(inputStream, buffer);
@@ -64,9 +64,9 @@ public class ByteArrayTransformer extends Transformer<byte[]> {
                         return false;
                     }
                     if (bytesRead < MAX_BUFFER_SIZE) {
-                        action.accept(Arrays.copyOf(buffer, bytesRead));
+                        action.accept(new SchemaAndValue(null, Arrays.copyOf(buffer, bytesRead)));
                     } else {
-                        action.accept(buffer);
+                        action.accept(new SchemaAndValue(null, buffer));
                     }
                     return true;
                 } catch (IOException e) {
@@ -75,11 +75,6 @@ public class ByteArrayTransformer extends Transformer<byte[]> {
                 }
             }
         };
-    }
-
-    @Override
-    public SchemaAndValue getValueData(final byte[] record, final String topic, final AbstractConfig sourceConfig) {
-        return new SchemaAndValue(null, record);
     }
 
     @Override

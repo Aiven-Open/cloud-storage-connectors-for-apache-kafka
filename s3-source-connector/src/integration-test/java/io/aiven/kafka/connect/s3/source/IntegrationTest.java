@@ -30,8 +30,6 @@ import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_SECRET_ACCES
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -108,8 +106,7 @@ final class IntegrationTest implements IntegrationBase {
 
     public
 
-    @BeforeAll
-    static void setUpAll() throws IOException, InterruptedException {
+    @BeforeAll static void setUpAll() throws IOException, InterruptedException {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
         s3Client = IntegrationBase.createS3Client(LOCALSTACK);
@@ -185,7 +182,7 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, Object> expectedOffsetRecords = offsetKeys.subList(0, offsetKeys.size() - 1)
                 .stream()
                 .collect(Collectors.toMap(Function.identity(), s -> 1));
-        //verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
+        // verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
     }
 
     @Test
@@ -205,14 +202,14 @@ final class IntegrationTest implements IntegrationBase {
         final int numOfRecsFactor = 5000;
 
         final byte[] outputStream1 = IntegrationBase.generateNextAvroMessagesStartingFromId(1, numOfRecsFactor, schema);
-        final byte[] outputStream2 = IntegrationBase.generateNextAvroMessagesStartingFromId(numOfRecsFactor + 1, numOfRecsFactor,
-                schema);
-        final byte[] outputStream3 = IntegrationBase.generateNextAvroMessagesStartingFromId(2 * numOfRecsFactor + 1, numOfRecsFactor,
-                schema);
-        final byte[] outputStream4 = IntegrationBase.generateNextAvroMessagesStartingFromId(3 * numOfRecsFactor + 1, numOfRecsFactor,
-                schema);
-        final byte[] outputStream5 = IntegrationBase.generateNextAvroMessagesStartingFromId(4 * numOfRecsFactor + 1, numOfRecsFactor,
-                schema);
+        final byte[] outputStream2 = IntegrationBase.generateNextAvroMessagesStartingFromId(numOfRecsFactor + 1,
+                numOfRecsFactor, schema);
+        final byte[] outputStream3 = IntegrationBase.generateNextAvroMessagesStartingFromId(2 * numOfRecsFactor + 1,
+                numOfRecsFactor, schema);
+        final byte[] outputStream4 = IntegrationBase.generateNextAvroMessagesStartingFromId(3 * numOfRecsFactor + 1,
+                numOfRecsFactor, schema);
+        final byte[] outputStream5 = IntegrationBase.generateNextAvroMessagesStartingFromId(4 * numOfRecsFactor + 1,
+                numOfRecsFactor, schema);
 
         final Set<String> offsetKeys = new HashSet<>();
 
@@ -224,7 +221,6 @@ final class IntegrationTest implements IntegrationBase {
         offsetKeys.add(writeToS3(topicName, outputStream5, "00002"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
-
 
         // Poll Avro messages from the Kafka topic and deserialize them
         final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, numOfRecsFactor * 5,
@@ -241,8 +237,9 @@ final class IntegrationTest implements IntegrationBase {
                         entry(4 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (4 * numOfRecsFactor)),
                         entry(5 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (5 * numOfRecsFactor)));
 
-   //     verifyOffsetPositions(offsetKeys.stream().collect(Collectors.toMap(Function.identity(), s -> numOfRecsFactor)),
-    //            connectRunner.getBootstrapServers());
+        // verifyOffsetPositions(offsetKeys.stream().collect(Collectors.toMap(Function.identity(), s ->
+        // numOfRecsFactor)),
+        // connectRunner.getBootstrapServers());
     }
 
     @Test
@@ -250,8 +247,8 @@ final class IntegrationTest implements IntegrationBase {
         final var topicName = IntegrationBase.topicName(testInfo);
 
         final String partition = "00000";
-        final String fileName = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName + "-" + partition + "-" + System.currentTimeMillis()
-                + ".txt";
+        final String fileName = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName + "-"
+                + partition + "-" + System.currentTimeMillis() + ".txt";
         final String name = "testuser";
 
         final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.PARQUET);

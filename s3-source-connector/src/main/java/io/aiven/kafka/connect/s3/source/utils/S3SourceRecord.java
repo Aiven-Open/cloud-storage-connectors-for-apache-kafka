@@ -34,8 +34,8 @@ public class S3SourceRecord {
 
     private final String objectKey;
 
-    public S3SourceRecord(final Map<String, Object> partitionMap, final long recordNumber,
-            final String topic, final Integer topicPartition, final String objectKey, final SchemaAndValue keyData,
+    public S3SourceRecord(final Map<String, Object> partitionMap, final long recordNumber, final String topic,
+            final Integer topicPartition, final String objectKey, final SchemaAndValue keyData,
             final SchemaAndValue valueData) {
         this.partitionMap = new HashMap<>(partitionMap);
         this.recordNumber = recordNumber;
@@ -75,8 +75,9 @@ public class S3SourceRecord {
     }
 
     public SourceRecord getSourceRecord(OffsetManager offsetManager) {
-        Map<String, Object> offsetMap = offsetManager.setCurrentOffsets(getPartitionMap(), getObjectKey(), getRecordNumber());
-        return new SourceRecord(getPartitionMap(), offsetMap, topic, partition(), keyData.schema(),
-                keyData.value(), valueData.schema(), valueData.value());
+        Map<String, Object> offsetMap = offsetManager.setCurrentOffsets(getPartitionMap(), getObjectKey(),
+                getRecordNumber());
+        return new SourceRecord(getPartitionMap(), offsetMap, topic, partition(), keyData.schema(), keyData.value(),
+                valueData.schema(), valueData.value());
     }
 }

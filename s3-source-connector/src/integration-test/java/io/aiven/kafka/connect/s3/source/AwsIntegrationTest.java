@@ -1,37 +1,20 @@
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.connect.s3.source;
-
-import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.input.TransformerFactory;
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
-import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
-import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
-import org.apache.avro.Schema;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import software.amazon.awssdk.services.s3.S3Client;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.AVRO_VALUE_SERIALIZER;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
@@ -49,6 +32,41 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.input.TransformerFactory;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
+import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
+import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
+
+import org.apache.avro.Schema;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import software.amazon.awssdk.services.s3.S3Client;
+
 @Testcontainers
 public class AwsIntegrationTest implements IntegrationBase {
 
@@ -64,7 +82,6 @@ public class AwsIntegrationTest implements IntegrationBase {
 
     private BucketAccessor testBucketAccessor;
 
-
     @Override
     public String getS3Prefix() {
         return s3Prefix;
@@ -76,7 +93,7 @@ public class AwsIntegrationTest implements IntegrationBase {
     }
 
     @BeforeAll
-    static void setUpAll()  {
+    static void setUpAll() {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
     }
 
@@ -111,7 +128,9 @@ public class AwsIntegrationTest implements IntegrationBase {
 
     /**
      * Test the integration with the Amazon connector
-     * @param testInfo The testing configuration.
+     *
+     * @param testInfo
+     *            The testing configuration.
      */
     @Test
     void sourceRecordIteratorBytesTest(final TestInfo testInfo) {
@@ -147,7 +166,7 @@ public class AwsIntegrationTest implements IntegrationBase {
 
         AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
 
-        Iterator<S3SourceRecord> sourceRecordIterator = new  SourceRecordIterator(s3SourceConfig, offsetManager,
+        Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
                 TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient);
 
         HashSet<String> seenKeys = new HashSet<>();
@@ -180,14 +199,14 @@ public class AwsIntegrationTest implements IntegrationBase {
         final int numOfRecsFactor = 5000;
 
         final byte[] outputStream1 = IntegrationBase.generateNextAvroMessagesStartingFromId(1, numOfRecsFactor, schema);
-        final byte[] outputStream2 = IntegrationBase.generateNextAvroMessagesStartingFromId(numOfRecsFactor + 1, numOfRecsFactor,
-                schema);
-        final byte[] outputStream3 = IntegrationBase.generateNextAvroMessagesStartingFromId(2 * numOfRecsFactor + 1, numOfRecsFactor,
-                schema);
-        final byte[] outputStream4 = IntegrationBase.generateNextAvroMessagesStartingFromId(3 * numOfRecsFactor + 1, numOfRecsFactor,
-                schema);
-        final byte[] outputStream5 = IntegrationBase.generateNextAvroMessagesStartingFromId(4 * numOfRecsFactor + 1, numOfRecsFactor,
-                schema);
+        final byte[] outputStream2 = IntegrationBase.generateNextAvroMessagesStartingFromId(numOfRecsFactor + 1,
+                numOfRecsFactor, schema);
+        final byte[] outputStream3 = IntegrationBase.generateNextAvroMessagesStartingFromId(2 * numOfRecsFactor + 1,
+                numOfRecsFactor, schema);
+        final byte[] outputStream4 = IntegrationBase.generateNextAvroMessagesStartingFromId(3 * numOfRecsFactor + 1,
+                numOfRecsFactor, schema);
+        final byte[] outputStream5 = IntegrationBase.generateNextAvroMessagesStartingFromId(4 * numOfRecsFactor + 1,
+                numOfRecsFactor, schema);
 
         final Set<String> offsetKeys = new HashSet<>();
 
@@ -214,7 +233,7 @@ public class AwsIntegrationTest implements IntegrationBase {
                 TransformerFactory.getTransformer(InputFormat.AVRO), sourceClient);
 
         HashSet<String> seenKeys = new HashSet<>();
-        Map<String,List<Long>> seenRecords = new HashMap<>();
+        Map<String, List<Long>> seenRecords = new HashMap<>();
         while (sourceRecordIterator.hasNext()) {
             S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
             String key = OBJECT_KEY + SEPARATOR + s3SourceRecord.getObjectKey();
@@ -229,12 +248,12 @@ public class AwsIntegrationTest implements IntegrationBase {
         assertThat(seenKeys).containsAll(offsetKeys);
         assertThat(seenRecords).hasSize(5);
         List<Long> expected = new ArrayList<>();
-        for (long l=0; l < numOfRecsFactor; l++) {
-           expected.add(l+1);
+        for (long l = 0; l < numOfRecsFactor; l++) {
+            expected.add(l + 1);
         }
         for (String key : offsetKeys) {
             List<Long> seen = seenRecords.get(key);
-            assertThat(seen).as("Count for "+key).containsExactlyInAnyOrderElementsOf(expected);
+            assertThat(seen).as("Count for " + key).containsExactlyInAnyOrderElementsOf(expected);
         }
     }
 }

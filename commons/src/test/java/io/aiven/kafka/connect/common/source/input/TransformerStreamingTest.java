@@ -17,6 +17,8 @@
 package io.aiven.kafka.connect.common.source.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,11 +34,10 @@ import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.config.CommonConfig;
 
-import io.confluent.connect.avro.AvroData;
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -49,8 +50,8 @@ class TransformerStreamingTest {
 
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyExceptionDuringIOOpen(final Transformer<?> transformer, final byte[] testData,
-            final AbstractConfig config, final int expectedCount) throws IOException {
+    void verifyExceptionDuringIOOpen(final Transformer transformer, final byte[] testData, final AbstractConfig config,
+            final int expectedCount) throws IOException {
         final IOSupplier<InputStream> ioSupplier = mock(IOSupplier.class);
         when(ioSupplier.get()).thenThrow(new IOException("Test IOException during initialization"));
         final Stream<?> objStream = transformer.getRecords(ioSupplier, "topic", 1, config, 0);
@@ -59,7 +60,25 @@ class TransformerStreamingTest {
 
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyCloseCalledAtEnd(final Transformer<?> transformer, final byte[] testData, final AbstractConfig config,
+    void verifyExceptionDuringRead(final Transformer transformer, final byte[] testData, final AbstractConfig config,
+            final int expectedCount) throws IOException {
+        final InputStream inputStream = mock(InputStream.class);
+        when(inputStream.read()).thenThrow(new IOException("Test IOException during read"));
+        when(inputStream.read(any())).thenThrow(new IOException("Test IOException during read"));
+        when(inputStream.read(any(), anyInt(), anyInt())).thenThrow(new IOException("Test IOException during read"));
+        when(inputStream.readNBytes(any(), anyInt(), anyInt()))
+                .thenThrow(new IOException("Test IOException during read"));
+        when(inputStream.readNBytes(anyInt())).thenThrow(new IOException("Test IOException during read"));
+        when(inputStream.readAllBytes()).thenThrow(new IOException("Test IOException during read"));
+        final CloseTrackingStream stream = new CloseTrackingStream(inputStream);
+        final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+        assertThat(objStream).isEmpty();
+        assertThat(stream.closeCount).isGreaterThan(0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("testData")
+    void verifyCloseCalledAtEnd(final Transformer transformer, final byte[] testData, final AbstractConfig config,
             final int expectedCount) throws IOException {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
         final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
@@ -70,11 +89,11 @@ class TransformerStreamingTest {
 
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyCloseCalledAtIteratorEnd(final Transformer<?> transformer, final byte[] testData,
+    void verifyCloseCalledAtIteratorEnd(final Transformer transformer, final byte[] testData,
             final AbstractConfig config, final int expectedCount) throws IOException {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
-        final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
-        final Iterator<?> iter = objStream.iterator();
+        final Stream<SchemaAndValue> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+        final Iterator<SchemaAndValue> iter = objStream.iterator();
         long count = 0L;
         while (iter.hasNext()) {
             count += 1;
@@ -86,19 +105,19 @@ class TransformerStreamingTest {
 
     static Stream<Arguments> testData() throws IOException {
         final List<Arguments> lst = new ArrayList<>();
-        final AvroData avroData = new AvroData(100);
-        lst.add(Arguments.of(new AvroTransformer(avroData), AvroTransformerTest.generateMockAvroData(100).toByteArray(),
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.AVRO),
+                AvroTransformerTest.generateMockAvroData(100).toByteArray(),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
-        lst.add(Arguments.of(new ByteArrayTransformer(), "Hello World".getBytes(StandardCharsets.UTF_8),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.BYTES),
+                "Hello World".getBytes(StandardCharsets.UTF_8), new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 1));
-        lst.add(Arguments.of(new JsonTransformer(new JsonConverter()),
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.JSONL),
                 JsonTransformerTest.getJsonRecs(100).getBytes(StandardCharsets.UTF_8),
                 new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
-        lst.add(Arguments.of(new ParquetTransformer(avroData), ParquetTransformerTest.generateMockParquetData(),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
+        lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.PARQUET),
+                ParquetTransformerTest.generateMockParquetData(), new CommonConfig(new ConfigDef(), new HashMap<>()) {
                 }, 100));
         return lst.stream();
     }

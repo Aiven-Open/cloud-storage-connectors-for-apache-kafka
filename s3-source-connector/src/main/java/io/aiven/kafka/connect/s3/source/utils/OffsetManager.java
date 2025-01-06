@@ -83,7 +83,7 @@ public class OffsetManager {
     }
 
     public Map<String, Object> setCurrentOffsets(final Map<String, Object> partitionMap, final String currentObjectKey,
-                                            final long offset) {
+            final long offset) {
         Map<String, Object> offsetMap = offsets.compute(partitionMap, (k, v) -> {
             Map<String, Object> map = v == null ? new Hashtable<>() : v;
             map.put(getObjectMapKey(currentObjectKey), offset);

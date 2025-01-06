@@ -19,11 +19,11 @@ package io.aiven.kafka.connect.s3.source.utils;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Implements a ObjectSummaryIterator on an S3 bucket. Implementation reads summaries in blocks and iterates over each

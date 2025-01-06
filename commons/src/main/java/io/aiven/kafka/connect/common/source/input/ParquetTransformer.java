@@ -43,7 +43,7 @@ import org.apache.parquet.hadoop.ParquetReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ParquetTransformer extends Transformer<GenericRecord> {
+public class ParquetTransformer extends Transformer {
 
     private final AvroData avroData;
 
@@ -60,22 +60,16 @@ public class ParquetTransformer extends Transformer<GenericRecord> {
     }
 
     @Override
-    public SchemaAndValue getValueData(final GenericRecord record, final String topic,
-            final AbstractConfig sourceConfig) {
-        return avroData.toConnectData(record.getSchema(), record);
-    }
-
-    @Override
     public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
             final AbstractConfig sourceConfig) {
         return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
-    public StreamSpliterator<GenericRecord> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
+            final int topicPartition, final AbstractConfig sourceConfig) {
 
-        final StreamSpliterator<GenericRecord> spliterator = new StreamSpliterator<>(LOGGER, inputStreamIOSupplier) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
 
             private ParquetReader<GenericRecord> reader;
             private File parquetFile;
@@ -114,11 +108,11 @@ public class ParquetTransformer extends Transformer<GenericRecord> {
             }
 
             @Override
-            protected boolean doAdvance(final Consumer<? super GenericRecord> action) {
+            protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
                 try {
                     final GenericRecord record = reader.read();
                     if (record != null) {
-                        action.accept(record); // Pass record to the stream
+                        action.accept(avroData.toConnectData(record.getSchema(), record)); // Pass record to the stream
                         return true;
                     }
                 } catch (IOException e) {
@@ -127,7 +121,6 @@ public class ParquetTransformer extends Transformer<GenericRecord> {
                 return false;
             }
         };
-        return spliterator;
     }
 
     static void deleteTmpFile(final Path parquetFile) {

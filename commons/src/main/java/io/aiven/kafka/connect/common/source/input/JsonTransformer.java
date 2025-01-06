@@ -34,7 +34,7 @@ import org.codehaus.plexus.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JsonTransformer extends Transformer<byte[]> {
+public class JsonTransformer extends Transformer {
 
     private final JsonConverter jsonConverter;
 
@@ -52,9 +52,9 @@ public class JsonTransformer extends Transformer<byte[]> {
     }
 
     @Override
-    public StreamSpliterator<byte[]> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
-        final StreamSpliterator<byte[]> spliterator = new StreamSpliterator<>(LOGGER, inputStreamIOSupplier) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
+            final int topicPartition, final AbstractConfig sourceConfig) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
             BufferedReader reader;
 
             @Override
@@ -75,7 +75,7 @@ public class JsonTransformer extends Transformer<byte[]> {
             }
 
             @Override
-            public boolean doAdvance(final Consumer<? super byte[]> action) {
+            public boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
                 String line = null;
                 try {
                     // remove blank and empty lines.
@@ -87,7 +87,7 @@ public class JsonTransformer extends Transformer<byte[]> {
                         }
                     }
                     line = line.trim();
-                    action.accept(line.getBytes(StandardCharsets.UTF_8));
+                    action.accept(jsonConverter.toConnectData(topic, line.getBytes(StandardCharsets.UTF_8)));
                     return true;
                 } catch (IOException e) {
                     LOGGER.error("Error reading input stream: {}", e.getMessage(), e);
@@ -95,13 +95,6 @@ public class JsonTransformer extends Transformer<byte[]> {
                 }
             }
         };
-
-        return spliterator;
-    }
-
-    @Override
-    public SchemaAndValue getValueData(final byte[] record, final String topic, final AbstractConfig sourceConfig) {
-        return jsonConverter.toConnectData(topic, record);
     }
 
     @Override
