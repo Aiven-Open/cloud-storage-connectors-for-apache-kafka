@@ -102,7 +102,7 @@ public class OffsetManager {
         }
         return 0L;
     }
-    
+
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {
         final String partitionString = s3SourceConfig.getTargetTopicPartitions();
         return Arrays.stream(partitionString.split(",")).map(Integer::parseInt).collect(Collectors.toSet());

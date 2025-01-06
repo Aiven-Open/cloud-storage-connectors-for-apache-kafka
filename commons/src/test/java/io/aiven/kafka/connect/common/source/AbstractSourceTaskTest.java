@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,7 @@ class AbstractSourceTaskTest {
         final AbstractSourceTask.Timer timer = new AbstractSourceTask.Timer(Duration.ofSeconds(1));
         assertThat(timer.millisecondsRemaining()).isEqualTo(Duration.ofSeconds(1).toMillis());
         timer.start();
-        await().atMost(Duration.ofSeconds(2)).until(timer::expired);
+        await().atMost(Duration.ofSeconds(2)).until(timer::isExpired);
         assertThat(timer.millisecondsRemaining()).isLessThan(0);
         timer.stop();
         assertThat(timer.millisecondsRemaining()).isEqualTo(Duration.ofSeconds(1).toMillis());
@@ -43,14 +44,14 @@ class AbstractSourceTaskTest {
         final AbstractSourceTask.Timer timer = new AbstractSourceTask.Timer(Duration.ofSeconds(1));
         // stopped state does not allow stop
         assertThatExceptionOfType(IllegalStateException.class).as("stop while not running")
-                .isThrownBy(() -> timer.stop())
+                .isThrownBy(timer::stop)
                 .withMessageStartingWith("Timer: ");
         timer.reset(); // verify that an exception is not thrown.
 
         // started state does not allow start
         timer.start();
         assertThatExceptionOfType(IllegalStateException.class).as("start while running")
-                .isThrownBy(() -> timer.start())
+                .isThrownBy(timer::start)
                 .withMessageStartingWith("Timer: ");
         timer.reset();
         timer.start(); // restart the timer.
@@ -58,30 +59,30 @@ class AbstractSourceTaskTest {
 
         // stopped state does not allow stop or start
         assertThatExceptionOfType(IllegalStateException.class).as("stop after stop")
-                .isThrownBy(() -> timer.stop())
+                .isThrownBy(timer::stop)
                 .withMessageStartingWith("Timer: ");
         assertThatExceptionOfType(IllegalStateException.class).as("start after stop")
-                .isThrownBy(() -> timer.start())
+                .isThrownBy(timer::start)
                 .withMessageStartingWith("Timer: ");
         timer.reset();
 
         // stopped + reset does not allow stop.
         assertThatExceptionOfType(IllegalStateException.class).as("stop after reset (1)")
-                .isThrownBy(() -> timer.stop())
+                .isThrownBy(timer::stop)
                 .withMessageStartingWith("Timer: ");
         timer.start();
         timer.reset();
 
         // started + reset does not allow stop;
         assertThatExceptionOfType(IllegalStateException.class).as("stop after reset (2)")
-                .isThrownBy(() -> timer.stop())
+                .isThrownBy(timer::stop)
                 .withMessageStartingWith("Timer: ");
     }
 
     @Test
     void backoffTest() throws InterruptedException {
         final AbstractSourceTask.Timer timer = new AbstractSourceTask.Timer(Duration.ofSeconds(1));
-        final AbstractSourceTask.Backoff backoff = new AbstractSourceTask.Backoff(timer::millisecondsRemaining);
+        final AbstractSourceTask.Backoff backoff = new AbstractSourceTask.Backoff(timer.getBackoffConfig());
         final long estimatedDelay = backoff.estimatedDelay();
         assertThat(estimatedDelay).isLessThan(500);
 
@@ -94,14 +95,14 @@ class AbstractSourceTaskTest {
                 .isBetween(estimatedDelay - backoff.getMaxJitter(), estimatedDelay + backoff.getMaxJitter());
 
         timer.start();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 9; i++) {
             stopWatch.reset();
             timer.reset();
             timer.start();
             stopWatch.start();
             await().atMost(Duration.ofSeconds(2)).until(() -> {
                 backoff.delay();
-                return backoff.estimatedDelay() == 0;
+                return backoff.estimatedDelay() == 0 || timer.isExpired();
             });
             stopWatch.stop();
             timer.stop();
@@ -114,9 +115,22 @@ class AbstractSourceTaskTest {
 
     @Test
     void backoffIncrementalTimeTest() throws InterruptedException {
+        AtomicBoolean abortTrigger = new AtomicBoolean();
         // delay increases in powers of 2.
         final long maxDelay = 1000; // not a power of 2
-        final AbstractSourceTask.Backoff backoff = new AbstractSourceTask.Backoff(() -> maxDelay);
+        AbstractSourceTask.BackoffConfig config = new AbstractSourceTask.BackoffConfig() {
+            @Override
+            public AbstractSourceTask.SupplierOfLong getSupplierOfTimeRemaining() {
+                return () -> maxDelay;
+            }
+
+            @Override
+            public AbstractSourceTask.AbortTrigger getAbortTrigger() {
+                return () -> abortTrigger.set(true);
+            }
+        };
+
+        final AbstractSourceTask.Backoff backoff = new AbstractSourceTask.Backoff(config);
         long expected = 2;
         while (backoff.estimatedDelay() < maxDelay) {
             assertThat(backoff.estimatedDelay()).isEqualTo(expected);
@@ -124,5 +138,6 @@ class AbstractSourceTaskTest {
             expected *= 2;
         }
         assertThat(backoff.estimatedDelay()).isEqualTo(maxDelay);
+        assertThat(abortTrigger).isFalse();B
     }
 }

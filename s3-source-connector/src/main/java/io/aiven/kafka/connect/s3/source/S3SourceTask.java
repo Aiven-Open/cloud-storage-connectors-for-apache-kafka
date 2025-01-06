@@ -79,12 +79,12 @@ public class S3SourceTask extends AbstractSourceTask {
     }
 
     @Override
-    protected Iterator<SourceRecord> getIterator(SupplierOfLong timer) { // NOPMD cognatavie complexity
+    protected Iterator<SourceRecord> getIterator(BackoffConfig config) { // NOPMD cognatavie complexity
         Iterator<SourceRecord> inner = new Iterator<>() {
             /**
              * The backoff for Amazon retryable exceptions
              */
-            final Backoff backoff = new Backoff(timer);
+            final Backoff backoff = new Backoff(config);
 
             @Override
             public boolean hasNext() {

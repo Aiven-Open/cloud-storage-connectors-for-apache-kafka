@@ -99,7 +99,7 @@ public abstract class AbstractSourceTask extends SourceTask {
         this.logger = logger;
         connectorStopped = new AtomicBoolean();
         timer = new Timer(MAX_POLL_TIME);
-        backoff = new Backoff(timer::millisecondsRemaining);
+        backoff = new Backoff(timer.getBackoffConfig());
     }
 
     /**
@@ -112,11 +112,11 @@ public abstract class AbstractSourceTask extends SourceTask {
      * this iterator executes may cause the task to abort.
      * </p>
      *
-     * @param timer
-     *            a SupplierOfLong that provides the amount of time remaining before the polling expires.
+     * @param config
+     *            the configuraiton for the Backoff.
      * @return The iterator of SourceRecords.
      */
-    abstract protected Iterator<SourceRecord> getIterator(SupplierOfLong timer);
+    abstract protected Iterator<SourceRecord> getIterator(BackoffConfig config);
 
     /**
      * Called by {@link #start} to allows the concrete implementation to configure itself based on properties.
@@ -131,7 +131,7 @@ public abstract class AbstractSourceTask extends SourceTask {
         logger.debug("Starting");
         config = configure(props);
         maxPollRecords = config.getMaxPollRecords();
-        sourceRecordIterator = getIterator(timer::millisecondsRemaining);
+        sourceRecordIterator = getIterator(timer.getBackoffConfig());
     }
 
     /**
@@ -163,7 +163,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * @return {@code true} if the connector is not stopped and the timer has not expired.
      */
     protected boolean stillPolling() {
-        final boolean result = !connectorStopped.get() && !timer.expired();
+        final boolean result = !connectorStopped.get() && !timer.isExpired();
         logger.debug("Still polling: {}", result);
         return result;
     }
@@ -250,6 +250,8 @@ public abstract class AbstractSourceTask extends SourceTask {
          */
         private final long duration;
 
+        private boolean hasAborted;
+
         /**
          * Constructor.
          *
@@ -275,13 +277,18 @@ public abstract class AbstractSourceTask extends SourceTask {
          *
          * @return {@code true} if the timer has expired.
          */
-        public boolean expired() {
-            return super.getTime() >= duration;
+        public boolean isExpired() {
+            return hasAborted || super.getTime() >= duration;
+        }
+
+        public void abort() {
+            hasAborted = true;
         }
 
         @Override
         public void start() {
             try {
+                hasAborted = false;
                 super.start();
             } catch (IllegalStateException e) {
                 throw new IllegalStateException("Timer: " + e.getMessage());
@@ -300,10 +307,30 @@ public abstract class AbstractSourceTask extends SourceTask {
         @Override
         public void reset() {
             try {
+                hasAborted = false;
                 super.reset();
             } catch (IllegalStateException e) {
                 throw new IllegalStateException("Timer: " + e.getMessage());
             }
+        }
+
+        /**
+         * Gets a Backoff Config for this timer.
+         * @return a backoff Configuration.
+         */
+        public BackoffConfig getBackoffConfig() {
+            return new BackoffConfig() {
+
+                @Override
+                public SupplierOfLong getSupplierOfTimeRemaining() {
+                    return Timer.this::millisecondsRemaining;
+                }
+
+                @Override
+                public AbortTrigger getAbortTrigger() {
+                    return Timer.this::abort;
+                }
+            };
         }
     }
 
@@ -325,6 +352,8 @@ public abstract class AbstractSourceTask extends SourceTask {
          */
         private final SupplierOfLong timeRemaining;
 
+        final AbortTrigger abortTrigger;
+
         /**
          * The maximum number of times {@link #delay()} will be called before maxWait is reached.
          */
@@ -342,11 +371,12 @@ public abstract class AbstractSourceTask extends SourceTask {
         /**
          * Constructor.
          *
-         * @param timeRemaining
-         *            A supplier of long as milliseconds remaining before time expires.
+         * @param config
+         *            The configuration for the backoff.
          */
-        public Backoff(final SupplierOfLong timeRemaining) {
-            this.timeRemaining = timeRemaining;
+        public Backoff(final BackoffConfig config) {
+            this.timeRemaining = config.getSupplierOfTimeRemaining();
+            this.abortTrigger = config.getAbortTrigger();
             reset();
         }
 
@@ -400,11 +430,15 @@ public abstract class AbstractSourceTask extends SourceTask {
             if (sleepTime > 0) {
                 if (waitCount < maxCount) {
                     waitCount++;
-                    sleepTime = Math.min(sleepTime, timeWithJitter());
-                }
-                // don't sleep negative time. Jitter can introduce negative tme.
-                if (sleepTime > 0) {
-                    Thread.sleep(sleepTime);
+                    long nextSleep = timeWithJitter();
+                    // don't sleep negative time. Jitter can introduce negative tme.
+                    if (nextSleep > 0) {
+                        if (nextSleep >= sleepTime) {
+                            abortTrigger.apply();
+                        } else {
+                            Thread.sleep(nextSleep);
+                        }
+                    }
                 }
             }
         }
@@ -432,5 +466,15 @@ public abstract class AbstractSourceTask extends SourceTask {
     @FunctionalInterface
     public interface SupplierOfLong {
         long get();
+    }
+
+    @FunctionalInterface
+    public interface AbortTrigger {
+        void apply();
+    }
+
+    public interface BackoffConfig {
+        SupplierOfLong getSupplierOfTimeRemaining();
+        AbortTrigger getAbortTrigger();
     }
 }
