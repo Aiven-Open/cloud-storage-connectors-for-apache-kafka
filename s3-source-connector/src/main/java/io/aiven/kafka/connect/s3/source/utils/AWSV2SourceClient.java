@@ -28,7 +28,7 @@ import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.commons.io.function.IOSupplier;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseBytes;
@@ -116,12 +116,19 @@ public class AWSV2SourceClient {
         this.taskId = taskId;
     }
 
+    /**
+     * Creates a stream from which we will create an iterator.
+     *
+     * @param startToken
+     *            the beginning key, or {@code null} to start at the beginning.
+     * @return a Stream of S3Objects for the current state of the S3 storage.
+     */
     private Stream<S3Object> getS3ObjectStream(final String startToken) {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
-                .prefix(optionalKey(s3SourceConfig.getAwsS3Prefix()))
-                .startAfter(optionalKey(startToken))
+                .prefix(StringUtils.defaultIfBlank(s3SourceConfig.getAwsS3Prefix(), null))
+                .startAfter(StringUtils.defaultIfBlank(startToken, null))
                 .build();
 
         return Stream.iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
@@ -143,19 +150,28 @@ public class AWSV2SourceClient {
                         .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.key())));
     }
 
+    /**
+     * Creates an S3Object iterator that will return the objects from the current objects in S3 storage and then try to
+     * refresh on every {@code hasNext()} that returns false. This should pick up new files as they are dropped on the
+     * file system.
+     *
+     * @param startToken
+     *            the beginning key, or {@code null} to start at the beginning.
+     * @return an Iterator on the S3Objects.
+     */
     public Iterator<S3Object> getS3ObjectIterator(final String startToken) {
         return new S3ObjectIterator(startToken);
     }
 
+    /**
+     * Gets an iterator of keys from the current S3 storage.
+     *
+     * @param startToken
+     *            the beginning key, or {@code null} to start at the beginning.
+     * @return an Iterator on the keys of the current S3Objects.
+     */
     public Iterator<String> getListOfObjectKeys(final String startToken) {
         return getS3ObjectStream(startToken).map(S3Object::key).iterator();
-    }
-
-    private String optionalKey(final String key) {
-        if (StringUtils.isNotBlank(key)) {
-            return key;
-        }
-        return null;
     }
 
     public IOSupplier<InputStream> getObject(final String objectKey) {
