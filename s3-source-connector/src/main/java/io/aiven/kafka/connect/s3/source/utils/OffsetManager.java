@@ -102,29 +102,7 @@ public class OffsetManager {
         }
         return 0L;
     }
-
-    public void createNewOffsetMap(final Map<String, Object> partitionMap, final String objectKey,
-            final long offsetId) {
-        final Map<String, Object> offsetMap = getOffsetValueMap(objectKey, offsetId);
-        offsets.put(partitionMap, offsetMap);
-    }
-
-    public Map<String, Object> getOffsetValueMap(final String currentObjectKey, final long offsetId) {
-        final Map<String, Object> offsetMap = new HashMap<>();
-        offsetMap.put(getObjectMapKey(currentObjectKey), offsetId);
-        return offsetMap;
-    }
-
-    void updateCurrentOffsets(final Map<String, Object> partitionMap, final Map<String, Object> offsetValueMap) {
-        if (offsets.containsKey(partitionMap)) {
-            final Map<String, Object> offsetMap = new HashMap<>(offsets.get(partitionMap));
-            offsetMap.putAll(offsetValueMap);
-            offsets.put(partitionMap, offsetMap);
-        } else {
-            offsets.put(partitionMap, offsetValueMap);
-        }
-    }
-
+    
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {
         final String partitionString = s3SourceConfig.getTargetTopicPartitions();
         return Arrays.stream(partitionString.split(",")).map(Integer::parseInt).collect(Collectors.toSet());
