@@ -182,39 +182,51 @@ public interface IntegrationBase {
             String bootstrapServers) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, ByteArrayDeserializer.class,
                 ByteArrayDeserializer.class);
-        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, consumerProperties);
+        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, Duration.ofSeconds(60),
+                consumerProperties);
         return objects.stream().map(String::new).collect(Collectors.toList());
     }
 
     static List<GenericRecord> consumeAvroMessages(final String topic, final int expectedMessageCount,
-            final String bootstrapServers, final String schemaRegistryUrl) {
+            final Duration expectedMaxDuration, final String bootstrapServers, final String schemaRegistryUrl) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, StringDeserializer.class,
                 KafkaAvroDeserializer.class, schemaRegistryUrl);
-        return consumeMessages(topic, expectedMessageCount, consumerProperties);
+        return consumeMessages(topic, expectedMessageCount, expectedMaxDuration, consumerProperties);
     }
 
     static List<JsonNode> consumeJsonMessages(final String topic, final int expectedMessageCount,
             final String bootstrapServers) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, StringDeserializer.class,
                 JsonDeserializer.class);
-        return consumeMessages(topic, expectedMessageCount, consumerProperties);
+        return consumeMessages(topic, expectedMessageCount, Duration.ofSeconds(60), consumerProperties);
     }
 
     static <K, V> List<V> consumeMessages(final String topic, final int expectedMessageCount,
-            final Properties consumerProperties) {
+            final Duration expectedMaxDuration, final Properties consumerProperties) {
         try (KafkaConsumer<K, V> consumer = new KafkaConsumer<>(consumerProperties)) {
             consumer.subscribe(Collections.singletonList(topic));
 
             final List<V> recordValues = new ArrayList<>();
-            await().atMost(Duration.ofMinutes(1)).pollInterval(Duration.ofSeconds(5)).untilAsserted(() -> {
-                final ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(500L));
-                for (final ConsumerRecord<K, V> record : records) {
-                    recordValues.add(record.value());
-                }
-                assertThat(recordValues).hasSize(expectedMessageCount);
+            await().atMost(expectedMaxDuration).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+                assertThat(consumeRecordsInProgress(consumer, recordValues)).hasSize(expectedMessageCount);
             });
             return recordValues;
         }
+    }
+
+    private static <K, V> List<V> consumeRecordsInProgress(KafkaConsumer<K, V> consumer, List<V> recordValues) {
+        int recordsRetrieved;
+        do {
+            final ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(500L));
+            recordsRetrieved = records.count();
+            for (final ConsumerRecord<K, V> record : records) {
+                recordValues.add(record.value());
+            }
+            // Choosing 10 records as it allows for integration tests with a smaller max poll to be added
+            // while maintaining efficiency, a slightly larger number could be added but this is slightly more efficient
+            // than larger numbers.
+        } while (recordsRetrieved > 10);
+        return recordValues;
     }
 
     static Map<String, Object> consumeOffsetMessages(KafkaConsumer<byte[], byte[]> consumer) throws IOException {
