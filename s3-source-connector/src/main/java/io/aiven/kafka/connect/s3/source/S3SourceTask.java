@@ -80,7 +80,7 @@ public class S3SourceTask extends AbstractSourceTask {
 
     @Override
     protected Iterator<SourceRecord> getIterator(BackoffConfig config) { // NOPMD cognatavie complexity
-        Iterator<SourceRecord> inner = new Iterator<>() {
+        final Iterator<SourceRecord> inner = new Iterator<>() {
             /**
              * The backoff for Amazon retryable exceptions
              */
@@ -115,7 +115,7 @@ public class S3SourceTask extends AbstractSourceTask {
             @Override
             public SourceRecord next() {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
-                offsetManager.setCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getObjectKey(),
+                offsetManager.updateAndReturnCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getObjectKey(),
                         s3SourceRecord.getRecordNumber());
                 return RecordProcessor.createSourceRecord(s3SourceRecord, s3SourceConfig, awsv2SourceClient,
                         offsetManager);
@@ -145,11 +145,11 @@ public class S3SourceTask extends AbstractSourceTask {
     @Override
     public void commitRecord(final SourceRecord record) {
         if (LOGGER.isInfoEnabled()) {
-            final Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
+            //final Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
             // LOGGER.info("Committed individual record {} {} {} committed", map.get(BUCKET), map.get(OBJECT_KEY),
             // offsetManager.recordsProcessedForObjectKey((Map<String, Object>) record.sourcePartition(),
             // map.get(OBJECT_KEY).toString()));
-            LOGGER.info("Committed individual record {}  committed", map);
+            LOGGER.info("Committed individual record {}  committed", (Map<String, Object>) record.sourceOffset());
         }
     }
 

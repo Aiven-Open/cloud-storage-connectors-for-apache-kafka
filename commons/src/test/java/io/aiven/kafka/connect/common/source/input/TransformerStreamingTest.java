@@ -62,18 +62,20 @@ class TransformerStreamingTest {
     @MethodSource("testData")
     void verifyExceptionDuringRead(final Transformer transformer, final byte[] testData, final AbstractConfig config,
             final int expectedCount) throws IOException {
-        final InputStream inputStream = mock(InputStream.class);
-        when(inputStream.read()).thenThrow(new IOException("Test IOException during read"));
-        when(inputStream.read(any())).thenThrow(new IOException("Test IOException during read"));
-        when(inputStream.read(any(), anyInt(), anyInt())).thenThrow(new IOException("Test IOException during read"));
-        when(inputStream.readNBytes(any(), anyInt(), anyInt()))
-                .thenThrow(new IOException("Test IOException during read"));
-        when(inputStream.readNBytes(anyInt())).thenThrow(new IOException("Test IOException during read"));
-        when(inputStream.readAllBytes()).thenThrow(new IOException("Test IOException during read"));
-        final CloseTrackingStream stream = new CloseTrackingStream(inputStream);
-        final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
-        assertThat(objStream).isEmpty();
-        assertThat(stream.closeCount).isGreaterThan(0);
+        try (InputStream inputStream = mock(InputStream.class)) {
+            when(inputStream.read()).thenThrow(new IOException("Test IOException during read"));
+            when(inputStream.read(any())).thenThrow(new IOException("Test IOException during read"));
+            when(inputStream.read(any(), anyInt(), anyInt())).thenThrow(new IOException("Test IOException during read"));
+            when(inputStream.readNBytes(any(), anyInt(), anyInt()))
+                    .thenThrow(new IOException("Test IOException during read"));
+            when(inputStream.readNBytes(anyInt())).thenThrow(new IOException("Test IOException during read"));
+            when(inputStream.readAllBytes()).thenThrow(new IOException("Test IOException during read"));
+            try (CloseTrackingStream stream = new CloseTrackingStream(inputStream)) {
+                final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+                assertThat(objStream).isEmpty();
+                assertThat(stream.closeCount).isGreaterThan(0);
+            }
+        }
     }
 
     @ParameterizedTest

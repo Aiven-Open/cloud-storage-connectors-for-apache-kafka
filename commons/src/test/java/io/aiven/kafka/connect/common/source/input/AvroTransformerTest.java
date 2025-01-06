@@ -90,7 +90,7 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(25);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        List<String> expected = new ArrayList<>();
+        final List<String> expected = new ArrayList<>();
         for (int i = 0; i < 25; i++) {
             expected.add("Hello, Kafka Connect S3 Source! object " + i);
         }
@@ -108,7 +108,7 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(20);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        List<String> expected = new ArrayList<>();
+        final List<String> expected = new ArrayList<>();
         for (int i = 5; i < 20; i++) {
             expected.add("Hello, Kafka Connect S3 Source! object " + i);
         }

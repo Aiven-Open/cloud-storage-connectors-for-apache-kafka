@@ -85,9 +85,9 @@ final class SourceRecordIteratorTest {
 
             assertThat(iterator.hasNext()).isFalse();
 
-            S3Object obj = S3Object.builder().key(key).build();
+            final S3Object obj = S3Object.builder().key(key).build();
 
-            ByteArrayInputStream bais = new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8));
+            final ByteArrayInputStream bais = new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8));
             when(mockSourceApiClient.getS3ObjectStream(any())).thenReturn(Arrays.asList(obj).stream());
             when(mockSourceApiClient.getObject(any())).thenReturn(() -> bais);
             iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
@@ -122,7 +122,7 @@ final class SourceRecordIteratorTest {
                     .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
 
             // should skip if any records were produced by source record iterator.
-            Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+            final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
                     mockSourceApiClient);
             assertThat(iterator.hasNext()).isFalse();
             verify(mockSourceApiClient, never()).getObject(any());
@@ -144,7 +144,7 @@ final class SourceRecordIteratorTest {
             when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
                     .thenReturn(Arrays.asList(SchemaAndValue.NULL).stream());
 
-            Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+            final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
                     mockSourceApiClient);
             assertThat(iterator.hasNext()).isTrue();
             iterator.next();

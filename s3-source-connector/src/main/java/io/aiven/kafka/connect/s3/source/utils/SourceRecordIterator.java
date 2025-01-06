@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Function;
@@ -33,8 +32,6 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.commons.collections4.IteratorUtils;
 import org.apache.commons.collections4.iterators.LazyIteratorChain;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
@@ -42,16 +39,12 @@ import software.amazon.awssdk.services.s3.model.S3Object;
  * Parquet).
  */
 public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord> implements Iterator<S3SourceRecord> {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
     public static final String PATTERN_TOPIC_KEY = "topicName";
     public static final String PATTERN_PARTITION_KEY = "partitionId";
 
     public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
             + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
     public static final long BYTES_TRANSFORMATION_NUM_OF_RECS = 1L;
-
-    private Iterator<S3SourceRecord> recordIterator = Collections.emptyIterator();
 
     private final OffsetManager offsetManager;
 
@@ -83,6 +76,7 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
             final Transformer transformer, final AWSV2SourceClient sourceClient) {
+        super();
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
 
@@ -107,15 +101,15 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
 
     private Stream<S3SourceRecord> convert(final S3Object s3Object) {
 
-        Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topic, partitionId, bucketName);
-        long recordCount = offsetManager.recordsProcessedForObjectKey(partitionMap, s3Object.key());
+        final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topic, partitionId, bucketName);
+        final long recordCount = offsetManager.recordsProcessedForObjectKey(partitionMap, s3Object.key());
 
         // Optimizing without reading stream again.
         if (transformer instanceof ByteArrayTransformer && recordCount > 0) {
             return Stream.empty();
         }
 
-        SchemaAndValue keyData = transformer.getKeyData(s3Object.key(), topic, s3SourceConfig);
+        final SchemaAndValue keyData = transformer.getKeyData(s3Object.key(), topic, s3SourceConfig);
 
         return transformer
                 .getRecords(sourceClient.getObject(s3Object.key()), topic, partitionId, s3SourceConfig, recordCount)
@@ -129,7 +123,7 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
 
         private final String objectKey;
 
-        public Mapper(Map<String, Object> partitionMap, long recordCount, SchemaAndValue keyData, String objectKey) {
+        public Mapper(final Map<String, Object> partitionMap, final long recordCount, final SchemaAndValue keyData, final String objectKey) {
             this.partitionMap = partitionMap;
             this.recordCount = recordCount;
             this.keyData = keyData;
@@ -137,7 +131,7 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
         }
 
         @Override
-        public S3SourceRecord apply(SchemaAndValue value) {
+        public S3SourceRecord apply(final SchemaAndValue value) {
             recordCount++;
             return new S3SourceRecord(partitionMap, recordCount, topic, partitionId, objectKey, keyData, value);
         }

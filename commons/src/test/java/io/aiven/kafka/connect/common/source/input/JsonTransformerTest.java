@@ -78,7 +78,7 @@ final class JsonTransformerTest {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
 
-        List<String> expected = new ArrayList<>();
+        final List<String> expected = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             expected.add("value" + i);
         }
@@ -88,7 +88,7 @@ final class JsonTransformerTest {
 
         assertThat(records).extracting(SchemaAndValue::value)
                 .extracting(sv -> ((Map) sv).get("key"))
-                .containsExactlyElementsOf(expected);;
+                .containsExactlyElementsOf(expected);
     }
 
     @Test
@@ -96,7 +96,7 @@ final class JsonTransformerTest {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
 
-        List<String> expected = new ArrayList<>();
+        final List<String> expected = new ArrayList<>();
         for (int i = 25; i < 100; i++) {
             expected.add("value" + i);
         }

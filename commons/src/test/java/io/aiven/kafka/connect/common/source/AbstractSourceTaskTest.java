@@ -115,10 +115,10 @@ class AbstractSourceTaskTest {
 
     @Test
     void backoffIncrementalTimeTest() throws InterruptedException {
-        AtomicBoolean abortTrigger = new AtomicBoolean();
+        final AtomicBoolean abortTrigger = new AtomicBoolean();
         // delay increases in powers of 2.
         final long maxDelay = 1000; // not a power of 2
-        AbstractSourceTask.BackoffConfig config = new AbstractSourceTask.BackoffConfig() {
+        final AbstractSourceTask.BackoffConfig config = new AbstractSourceTask.BackoffConfig() {
             @Override
             public AbstractSourceTask.SupplierOfLong getSupplierOfTimeRemaining() {
                 return () -> maxDelay;

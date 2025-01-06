@@ -201,7 +201,7 @@ final class S3SourceTaskTest {
     private void assertEquals(final S3SourceRecord s3Record, final SourceRecord sourceRecord) {
         assertThat(sourceRecord).isNotNull();
         assertThat(sourceRecord.sourcePartition()).isEqualTo(s3Record.getPartitionMap());
-        Map<String, Object> map = (Map<String, Object>) sourceRecord.sourceOffset();
+        final Map<String, Object> map = (Map<String, Object>) sourceRecord.sourceOffset();
 
         assertThat(map.get(OffsetManager.getObjectMapKey(s3Record.getObjectKey())))
                 .isEqualTo(s3Record.getRecordNumber());
@@ -227,7 +227,7 @@ final class S3SourceTaskTest {
         assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis());
     }
 
-    private List<S3SourceRecord> createS3SourceRecords(int count) {
+    private List<S3SourceRecord> createS3SourceRecords(final int count) {
         final List<S3SourceRecord> lst = new ArrayList<>();
         if (count > 0) {
             lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY,
@@ -243,11 +243,11 @@ final class S3SourceTaskTest {
 
     @Test
     void testPollWithInterruptedIterator() {
-        List<S3SourceRecord> lst = createS3SourceRecords(3);
+        final List<S3SourceRecord> lst = createS3SourceRecords(3);
 
-        Iterator<S3SourceRecord> inner1 = lst.subList(0, 2).iterator();
-        Iterator<S3SourceRecord> inner2 = lst.subList(2, 3).iterator();
-        Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
+        final Iterator<S3SourceRecord> inner1 = lst.subList(0, 2).iterator();
+        final Iterator<S3SourceRecord> inner2 = lst.subList(2, 3).iterator();
+        final Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
             Iterator<S3SourceRecord> inner = inner1;
             @Override
             public boolean hasNext() {
@@ -260,9 +260,9 @@ final class S3SourceTaskTest {
 
             @Override
             public S3SourceRecord next() {
-                S3SourceRecord result = inner.next();
+                final S3SourceRecord result = inner.next();
                 if (!inner.hasNext()) {
-                    inner = null;
+                    inner = null;  //NOPMD null assignment
                 }
                 return result;
             }
@@ -288,9 +288,9 @@ final class S3SourceTaskTest {
 
     @Test
     void testPollWithSlowProducer() {
-        List<S3SourceRecord> lst = createS3SourceRecords(3);
+        final List<S3SourceRecord> lst = createS3SourceRecords(3);
 
-        Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
+        final Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
             Iterator<S3SourceRecord> inner = lst.iterator();
             @Override
             public boolean hasNext() {

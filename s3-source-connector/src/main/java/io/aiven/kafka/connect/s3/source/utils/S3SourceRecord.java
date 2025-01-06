@@ -74,8 +74,8 @@ public class S3SourceRecord {
         return new SchemaAndValue(valueData.schema(), valueData.value());
     }
 
-    public SourceRecord getSourceRecord(OffsetManager offsetManager) {
-        Map<String, Object> offsetMap = offsetManager.setCurrentOffsets(getPartitionMap(), getObjectKey(),
+    public SourceRecord getSourceRecord(final OffsetManager offsetManager) {
+        final Map<String, Object> offsetMap = offsetManager.updateAndReturnCurrentOffsets(getPartitionMap(), getObjectKey(),
                 getRecordNumber());
         return new SourceRecord(getPartitionMap(), offsetMap, topic, partition(), keyData.schema(), keyData.value(),
                 valueData.schema(), valueData.value());

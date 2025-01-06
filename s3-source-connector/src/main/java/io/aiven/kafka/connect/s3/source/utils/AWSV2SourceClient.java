@@ -124,8 +124,7 @@ public class AWSV2SourceClient {
                 .startAfter(optionalKey(startToken))
                 .build();
 
-        final Stream<S3Object> s3ObjectKeyStream = Stream
-                .iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
+        return Stream.iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
                     // This is called every time next() is called on the iterator.
                     if (response.isTruncated()) {
                         return s3Client.listObjectsV2(ListObjectsV2Request.builder()
@@ -142,7 +141,6 @@ public class AWSV2SourceClient {
                         .filter(filterPredicate)
                         .filter(objectSummary -> assignObjectToTask(objectSummary.key()))
                         .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.key())));
-        return s3ObjectKeyStream;
     }
 
     public Iterator<String> getListOfObjectKeys(final String startToken) {

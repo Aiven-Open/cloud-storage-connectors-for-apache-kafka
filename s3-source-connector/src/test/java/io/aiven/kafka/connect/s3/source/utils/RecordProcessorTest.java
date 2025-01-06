@@ -25,7 +25,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-import java.util.Iterator;
 import java.util.function.Supplier;
 
 import org.apache.kafka.connect.errors.ConnectException;
@@ -37,7 +36,6 @@ import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -62,21 +60,15 @@ class RecordProcessorTest {
 
     private static final Supplier<Boolean> TRUE = () -> true;
     private static final Supplier<Boolean> FALSE = () -> false;
-    private Iterator<S3SourceRecord> sourceRecordIterator;
-
-    @BeforeEach
-    void setUp() {
-        sourceRecordIterator = mock(Iterator.class);
-    }
 
     @Test
-    void testCreateSourceRecord() throws ConnectException {
+    void testCreateSourceRecord() {
 
         final SourceRecord mockSourceRecord = mock(SourceRecord.class);
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
         when(mockRecord.getSourceRecord(any())).thenReturn(mockSourceRecord);
 
-        SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+        final SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
                 offsetManager);
 
         verify(mockRecord, times(1)).getSourceRecord(any());
@@ -85,7 +77,7 @@ class RecordProcessorTest {
     }
 
     @Test
-    void testCreateSourceRecordWithDataError() throws ConnectException {
+    void testCreateSourceRecordWithDataError() {
 
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
         when(mockRecord.getSourceRecord(any())).thenThrow(new DataException("Testing exception"));
@@ -97,7 +89,7 @@ class RecordProcessorTest {
                         offsetManager));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.ALL);
-        SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+        final SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
                 offsetManager);
         assertThat(result).isNull();
     }
@@ -122,7 +114,7 @@ class RecordProcessorTest {
 
         assertThatThrownBy(
                 () -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient, offsetManager))
-                .isInstanceOf(org.apache.kafka.connect.errors.ConnectException.class)
+                .isInstanceOf(ConnectException.class)
                 .hasMessage("Data Exception caught during S3 record to source record transformation");
 
     }

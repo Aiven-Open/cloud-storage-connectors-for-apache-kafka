@@ -435,18 +435,16 @@ public abstract class AbstractSourceTask extends SourceTask {
          *             If any thread interrupts this thread.
          */
         public void delay() throws InterruptedException {
-            long sleepTime = timeRemaining.get();
-            if (sleepTime > 0) {
-                if (waitCount < maxCount) {
-                    waitCount++;
-                    long nextSleep = timeWithJitter();
-                    // don't sleep negative time. Jitter can introduce negative tme.
-                    if (nextSleep > 0) {
-                        if (nextSleep >= sleepTime) {
-                            abortTrigger.apply();
-                        } else {
-                            Thread.sleep(nextSleep);
-                        }
+            final long sleepTime = timeRemaining.get();
+            if (sleepTime > 0 && waitCount < maxCount) {
+                waitCount++;
+                final long nextSleep = timeWithJitter();
+                // don't sleep negative time. Jitter can introduce negative tme.
+                if (nextSleep > 0) {
+                    if (nextSleep >= sleepTime) {
+                        abortTrigger.apply();
+                    } else {
+                        Thread.sleep(nextSleep);
                     }
                 }
             }
