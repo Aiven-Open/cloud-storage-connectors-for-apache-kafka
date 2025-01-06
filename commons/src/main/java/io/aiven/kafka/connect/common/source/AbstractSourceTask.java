@@ -250,6 +250,9 @@ public abstract class AbstractSourceTask extends SourceTask {
          */
         private final long duration;
 
+        /**
+         * The flag that indicates the timer has been aborted.
+         */
         private boolean hasAborted;
 
         /**
@@ -281,6 +284,9 @@ public abstract class AbstractSourceTask extends SourceTask {
             return hasAborted || super.getTime() >= duration;
         }
 
+        /**
+         * Aborts the timer.  Timer will report that it has expired until reset is called.
+         */
         public void abort() {
             hasAborted = true;
         }
@@ -352,7 +358,10 @@ public abstract class AbstractSourceTask extends SourceTask {
          */
         private final SupplierOfLong timeRemaining;
 
-        final AbortTrigger abortTrigger;
+        /**
+         * A function to call to abort the timer.
+         */
+        private final AbortTrigger abortTrigger;
 
         /**
          * The maximum number of times {@link #delay()} will be called before maxWait is reached.
@@ -468,11 +477,18 @@ public abstract class AbstractSourceTask extends SourceTask {
         long get();
     }
 
+    /**
+     * A functional interface that will abort the timer.  After being called timer will indicate that it is expired, until
+     * it is reset.
+     */
     @FunctionalInterface
     public interface AbortTrigger {
         void apply();
     }
 
+    /**
+     * An interface to define the Backoff configuration.  Used for convenience with Timer.
+     */
     public interface BackoffConfig {
         SupplierOfLong getSupplierOfTimeRemaining();
         AbortTrigger getAbortTrigger();

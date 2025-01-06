@@ -138,6 +138,6 @@ class AbstractSourceTaskTest {
             expected *= 2;
         }
         assertThat(backoff.estimatedDelay()).isEqualTo(maxDelay);
-        assertThat(abortTrigger).isFalse();B
+        assertThat(abortTrigger).isFalse();
     }
 }
