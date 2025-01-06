@@ -262,7 +262,7 @@ final class S3SourceTaskTest {
             public S3SourceRecord next() {
                 final S3SourceRecord result = inner.next();
                 if (!inner.hasNext()) {
-                    inner = null;  //NOPMD null assignment
+                    inner = null; // NOPMD null assignment
                 }
                 return result;
             }

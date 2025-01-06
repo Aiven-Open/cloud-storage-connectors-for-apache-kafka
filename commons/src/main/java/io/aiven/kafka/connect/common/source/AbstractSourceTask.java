@@ -285,7 +285,7 @@ public abstract class AbstractSourceTask extends SourceTask {
         }
 
         /**
-         * Aborts the timer.  Timer will report that it has expired until reset is called.
+         * Aborts the timer. Timer will report that it has expired until reset is called.
          */
         public void abort() {
             hasAborted = true;
@@ -322,6 +322,7 @@ public abstract class AbstractSourceTask extends SourceTask {
 
         /**
          * Gets a Backoff Config for this timer.
+         *
          * @return a backoff Configuration.
          */
         public BackoffConfig getBackoffConfig() {
@@ -476,8 +477,8 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     /**
-     * A functional interface that will abort the timer.  After being called timer will indicate that it is expired, until
-     * it is reset.
+     * A functional interface that will abort the timer. After being called timer will indicate that it is expired,
+     * until it is reset.
      */
     @FunctionalInterface
     public interface AbortTrigger {
@@ -485,7 +486,7 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     /**
-     * An interface to define the Backoff configuration.  Used for convenience with Timer.
+     * An interface to define the Backoff configuration. Used for convenience with Timer.
      */
     public interface BackoffConfig {
         SupplierOfLong getSupplierOfTimeRemaining();

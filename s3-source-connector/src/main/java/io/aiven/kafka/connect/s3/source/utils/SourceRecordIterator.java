@@ -84,13 +84,17 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
         this.transformer = transformer;
         this.sourceClient = sourceClient;
 
-        inner = IteratorUtils.filteredIterator(sourceClient.getS3ObjectStream(null).iterator(),
+        inner = IteratorUtils.filteredIterator(sourceClient.getS3ObjectIterator(null),
                 s3Object -> this.fileNamePredicate.test(s3Object)); // call filter out bad file names and extract
-                                                                    // topic/partition
+        // topic/partition
     }
 
     @Override
     protected Iterator<? extends S3SourceRecord> nextIterator(final int count) {
+        /*
+         * This code has to get the next iterator from the inner iterator if it exists, otherwise we need to restart
+         * with the last seen key.
+         */
         return inner.hasNext() ? convert(inner.next()).iterator() : null;
     }
 
@@ -99,6 +103,13 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
         throw new UnsupportedOperationException("This iterator is unmodifiable");
     }
 
+    /**
+     * Converts the S3Object into stream of S3SourceRecords.
+     *
+     * @param s3Object
+     *            the S3Object to read data from.
+     * @return a stream of S3SourceRecords created from the input stream of the S3Object.
+     */
     private Stream<S3SourceRecord> convert(final S3Object s3Object) {
 
         final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(topic, partitionId, bucketName);
@@ -116,14 +127,29 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
                 .map(new Mapper(partitionMap, recordCount, keyData, s3Object.key()));
     }
 
+    /**
+     * maps the data from the @{link Transformer} stream to an S3SourceRecord given all the additional data required.
+     */
     class Mapper implements Function<SchemaAndValue, S3SourceRecord> {
+        /**
+         * The partition map
+         */
         private final Map<String, Object> partitionMap;
+        /**
+         * The record number for the record being created.
+         */
         private long recordCount;
+        /**
+         * The schema and value for the key
+         */
         private final SchemaAndValue keyData;
-
+        /**
+         * The object key from S3
+         */
         private final String objectKey;
 
-        public Mapper(final Map<String, Object> partitionMap, final long recordCount, final SchemaAndValue keyData, final String objectKey) {
+        public Mapper(final Map<String, Object> partitionMap, final long recordCount, final SchemaAndValue keyData,
+                final String objectKey) {
             this.partitionMap = partitionMap;
             this.recordCount = recordCount;
             this.keyData = keyData;
@@ -136,5 +162,4 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
             return new S3SourceRecord(partitionMap, recordCount, topic, partitionId, objectKey, keyData, value);
         }
     }
-
 }

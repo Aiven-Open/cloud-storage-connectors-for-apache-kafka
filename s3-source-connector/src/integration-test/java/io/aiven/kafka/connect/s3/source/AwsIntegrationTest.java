@@ -68,7 +68,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.services.s3.S3Client;
 
 @Testcontainers
-public class AwsIntegrationTest implements IntegrationBase {
+class AwsIntegrationTest implements IntegrationBase {
 
     private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-AWS-test-";
 
@@ -156,23 +156,23 @@ public class AwsIntegrationTest implements IntegrationBase {
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
-        S3SourceConfig s3SourceConfig = new S3SourceConfig(configData);
-        SourceTaskContext context = mock(SourceTaskContext.class);
-        OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
+        final S3SourceConfig s3SourceConfig = new S3SourceConfig(configData);
+        final SourceTaskContext context = mock(SourceTaskContext.class);
+        final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
         when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
         when(offsetStorageReader.offsets(any())).thenReturn(new HashMap<>());
 
-        OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
+        final OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
 
-        AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
+        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
 
-        Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
+        final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
                 TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient);
 
-        HashSet<String> seenKeys = new HashSet<>();
+        final HashSet<String> seenKeys = new HashSet<>();
         while (sourceRecordIterator.hasNext()) {
-            S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
-            String key = OBJECT_KEY + SEPARATOR + s3SourceRecord.getObjectKey();
+            final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
+            final String key = OBJECT_KEY + SEPARATOR + s3SourceRecord.getObjectKey();
             assertThat(offsetKeys).contains(key);
             seenKeys.add(key);
         }
@@ -219,26 +219,26 @@ public class AwsIntegrationTest implements IntegrationBase {
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
-        S3SourceConfig s3SourceConfig = new S3SourceConfig(configData);
-        SourceTaskContext context = mock(SourceTaskContext.class);
-        OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
+        final S3SourceConfig s3SourceConfig = new S3SourceConfig(configData);
+        final SourceTaskContext context = mock(SourceTaskContext.class);
+        final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
         when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
         when(offsetStorageReader.offsets(any())).thenReturn(new HashMap<>());
 
-        OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
+        final OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
 
-        AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
+        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
 
-        Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
+        final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
                 TransformerFactory.getTransformer(InputFormat.AVRO), sourceClient);
 
-        HashSet<String> seenKeys = new HashSet<>();
-        Map<String, List<Long>> seenRecords = new HashMap<>();
+        final HashSet<String> seenKeys = new HashSet<>();
+        final Map<String, List<Long>> seenRecords = new HashMap<>();
         while (sourceRecordIterator.hasNext()) {
-            S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
-            String key = OBJECT_KEY + SEPARATOR + s3SourceRecord.getObjectKey();
+            final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
+            final String key = OBJECT_KEY + SEPARATOR + s3SourceRecord.getObjectKey();
             seenRecords.compute(key, (k, v) -> {
-                List<Long> lst = v == null ? new ArrayList<>() : v;
+                final List<Long> lst = v == null ? new ArrayList<>() : v; // NOPMD new object inside loop
                 lst.add(s3SourceRecord.getRecordNumber());
                 return lst;
             });
@@ -247,12 +247,12 @@ public class AwsIntegrationTest implements IntegrationBase {
         }
         assertThat(seenKeys).containsAll(offsetKeys);
         assertThat(seenRecords).hasSize(5);
-        List<Long> expected = new ArrayList<>();
+        final List<Long> expected = new ArrayList<>();
         for (long l = 0; l < numOfRecsFactor; l++) {
             expected.add(l + 1);
         }
-        for (String key : offsetKeys) {
-            List<Long> seen = seenRecords.get(key);
+        for (final String key : offsetKeys) {
+            final List<Long> seen = seenRecords.get(key);
             assertThat(seen).as("Count for " + key).containsExactlyInAnyOrderElementsOf(expected);
         }
     }

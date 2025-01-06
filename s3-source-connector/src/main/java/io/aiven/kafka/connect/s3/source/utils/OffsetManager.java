@@ -82,8 +82,8 @@ public class OffsetManager {
         return startOffset;
     }
 
-    public Map<String, Object> updateAndReturnCurrentOffsets(final Map<String, Object> partitionMap, final String currentObjectKey,
-                                                             final long offset) {
+    public Map<String, Object> updateAndReturnCurrentOffsets(final Map<String, Object> partitionMap,
+            final String currentObjectKey, final long offset) {
         final Map<String, Object> offsetMap = offsets.compute(partitionMap, (k, v) -> {
             final Map<String, Object> map = v == null ? new Hashtable<>() : v;
             map.put(getObjectMapKey(currentObjectKey), offset);

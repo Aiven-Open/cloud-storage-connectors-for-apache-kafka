@@ -116,7 +116,7 @@ public class AWSV2SourceClient {
         this.taskId = taskId;
     }
 
-    public Stream<S3Object> getS3ObjectStream(final String startToken) {
+    private Stream<S3Object> getS3ObjectStream(final String startToken) {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
@@ -125,22 +125,26 @@ public class AWSV2SourceClient {
                 .build();
 
         return Stream.iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
-                    // This is called every time next() is called on the iterator.
-                    if (response.isTruncated()) {
-                        return s3Client.listObjectsV2(ListObjectsV2Request.builder()
-                                .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
-                                .continuationToken(response.nextContinuationToken())
-                                .build());
-                    } else {
-                        return null;
-                    }
+            // This is called every time next() is called on the iterator.
+            if (response.isTruncated()) {
+                return s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                        .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
+                        .continuationToken(response.nextContinuationToken())
+                        .build());
+            } else {
+                return null;
+            }
 
-                })
+        })
                 .flatMap(response -> response.contents()
                         .stream()
                         .filter(filterPredicate)
                         .filter(objectSummary -> assignObjectToTask(objectSummary.key()))
                         .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.key())));
+    }
+
+    public Iterator<S3Object> getS3ObjectIterator(final String startToken) {
+        return new S3ObjectIterator(startToken);
     }
 
     public Iterator<String> getListOfObjectKeys(final String startToken) {
@@ -175,6 +179,41 @@ public class AWSV2SourceClient {
 
     public void shutdown() {
         s3Client.close();
+    }
+
+    /**
+     * An iterator that reads from
+     */
+    public class S3ObjectIterator implements Iterator<S3Object> {
+
+        /** The current iterator. */
+        private Iterator<S3Object> inner;
+        /** The last object key that was seen. */
+        private String lastSeenObjectKey;
+
+        private S3ObjectIterator(final String initialKey) {
+            lastSeenObjectKey = initialKey;
+            inner = getS3ObjectStream(lastSeenObjectKey).iterator();
+        }
+        @Override
+        public boolean hasNext() {
+            if (!inner.hasNext()) {
+                inner = getS3ObjectStream(lastSeenObjectKey).iterator();
+            }
+            return inner.hasNext();
+        }
+
+        @Override
+        public S3Object next() {
+            final S3Object result = inner.next();
+            lastSeenObjectKey = result.key();
+            return result;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
     }
 
 }

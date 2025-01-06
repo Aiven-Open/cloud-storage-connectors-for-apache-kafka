@@ -115,8 +115,8 @@ public class S3SourceTask extends AbstractSourceTask {
             @Override
             public SourceRecord next() {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
-                offsetManager.updateAndReturnCurrentOffsets(s3SourceRecord.getPartitionMap(), s3SourceRecord.getObjectKey(),
-                        s3SourceRecord.getRecordNumber());
+                offsetManager.updateAndReturnCurrentOffsets(s3SourceRecord.getPartitionMap(),
+                        s3SourceRecord.getObjectKey(), s3SourceRecord.getRecordNumber());
                 return RecordProcessor.createSourceRecord(s3SourceRecord, s3SourceConfig, awsv2SourceClient,
                         offsetManager);
             }
@@ -145,7 +145,7 @@ public class S3SourceTask extends AbstractSourceTask {
     @Override
     public void commitRecord(final SourceRecord record) {
         if (LOGGER.isInfoEnabled()) {
-            //final Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
+            // final Map<String, Object> map = (Map<String, Object>) record.sourceOffset();
             // LOGGER.info("Committed individual record {} {} {} committed", map.get(BUCKET), map.get(OBJECT_KEY),
             // offsetManager.recordsProcessedForObjectKey((Map<String, Object>) record.sourcePartition(),
             // map.get(OBJECT_KEY).toString()));

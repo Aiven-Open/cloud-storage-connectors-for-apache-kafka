@@ -65,7 +65,8 @@ class TransformerStreamingTest {
         try (InputStream inputStream = mock(InputStream.class)) {
             when(inputStream.read()).thenThrow(new IOException("Test IOException during read"));
             when(inputStream.read(any())).thenThrow(new IOException("Test IOException during read"));
-            when(inputStream.read(any(), anyInt(), anyInt())).thenThrow(new IOException("Test IOException during read"));
+            when(inputStream.read(any(), anyInt(), anyInt()))
+                    .thenThrow(new IOException("Test IOException during read"));
             when(inputStream.readNBytes(any(), anyInt(), anyInt()))
                     .thenThrow(new IOException("Test IOException during read"));
             when(inputStream.readNBytes(anyInt())).thenThrow(new IOException("Test IOException during read"));

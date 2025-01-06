@@ -96,10 +96,12 @@ final class IntegrationTest implements IntegrationBase {
 
     private static S3Client s3Client;
 
+    @Override
     public S3Client getS3Client() {
         return s3Client;
     }
 
+    @Override
     public String getS3Prefix() {
         return s3Prefix;
     }
@@ -182,7 +184,7 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, Object> expectedOffsetRecords = offsetKeys.subList(0, offsetKeys.size() - 1)
                 .stream()
                 .collect(Collectors.toMap(Function.identity(), s -> 1));
-        // verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
+        verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
     }
 
     @Test
@@ -238,9 +240,8 @@ final class IntegrationTest implements IntegrationBase {
                         entry(4 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (4 * numOfRecsFactor)),
                         entry(5 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (5 * numOfRecsFactor)));
 
-        // verifyOffsetPositions(offsetKeys.stream().collect(Collectors.toMap(Function.identity(), s ->
-        // numOfRecsFactor)),
-        // connectRunner.getBootstrapServers());
+        verifyOffsetPositions(offsetKeys.stream().collect(Collectors.toMap(Function.identity(), s -> numOfRecsFactor)),
+                connectRunner.getBootstrapServers());
     }
 
     @Test
