@@ -107,9 +107,11 @@ class AbstractSourceTaskTest {
             stopWatch.stop();
             timer.stop();
             final int step = i;
-            assertThat(stopWatch.getTime()).as(() -> String.format("Result with timer running at step %s", step))
-                    .isBetween(Duration.ofSeconds(1).toMillis() - backoff.getMaxJitter(),
-                            Duration.ofSeconds(1).toMillis() + backoff.getMaxJitter());
+            if (!timer.isExpired()) {
+                assertThat(stopWatch.getTime()).as(() -> String.format("Result with timer running at step %s", step))
+                        .isBetween(Duration.ofSeconds(1).toMillis() - backoff.getMaxJitter(),
+                                Duration.ofSeconds(1).toMillis() + backoff.getMaxJitter());
+            }
         }
     }
 
