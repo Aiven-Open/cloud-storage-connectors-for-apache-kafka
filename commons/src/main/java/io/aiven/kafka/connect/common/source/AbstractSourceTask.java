@@ -202,11 +202,11 @@ public abstract class AbstractSourceTask extends SourceTask {
             while (stillPolling() && results.size() < maxPollRecords) {
                 if (!tryAdd(results, sourceRecordIterator)) {
                     if (!results.isEmpty()) {
-                        logger.info("tryAdd() did not add to the list, returning current results.");
+                        logger.debug("tryAdd() did not add to the list, returning current results.");
                         // if we could not get a record and the results are not empty return them
                         break;
                     }
-                    logger.info("Attempting {}", backoff);
+                    logger.debug("Attempting {}", backoff);
                     backoff.cleanDelay();
                 }
             }
@@ -403,6 +403,18 @@ public abstract class AbstractSourceTask extends SourceTask {
         }
 
         /**
+         * Handle adjustment when maxCount could not be set.
+         *
+         * @return the corrected maxCount
+         */
+        private int getMaxCount() {
+            if (maxCount == 0) {
+                reset();
+            }
+            return maxCount;
+        }
+
+        /**
          * Calculates the delay wihtout jitter.
          *
          * @return the number of milliseconds the delay will be.
@@ -429,6 +441,7 @@ public abstract class AbstractSourceTask extends SourceTask {
             final int jitter = random.nextInt(MAX_JITTER) - JITTER_SUBTRAHEND;
             return (long) Math.pow(2, waitCount) + jitter;
         }
+
         /**
          * Delay execution based on the number of times this method has been called.
          *
@@ -437,14 +450,16 @@ public abstract class AbstractSourceTask extends SourceTask {
          */
         public void delay() throws InterruptedException {
             final long sleepTime = timeRemaining.get();
-            if (sleepTime > 0 && waitCount < maxCount) {
+            if (sleepTime > 0 && waitCount < (maxCount == 0 ? getMaxCount() : maxCount)) {
                 waitCount++;
                 final long nextSleep = timeWithJitter();
                 // don't sleep negative time. Jitter can introduce negative tme.
                 if (nextSleep > 0) {
                     if (nextSleep >= sleepTime) {
+                        LOGGER.debug("Backoff aborting timer");
                         abortTrigger.apply();
                     } else {
+                        LOGGER.debug("Backoff sleepiing {}", nextSleep);
                         Thread.sleep(nextSleep);
                     }
                 }

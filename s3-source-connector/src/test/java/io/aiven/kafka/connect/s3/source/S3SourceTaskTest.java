@@ -300,7 +300,7 @@ final class S3SourceTaskTest {
             @Override
             public S3SourceRecord next() {
                 try {
-                    Thread.sleep(Duration.ofSeconds(5).toMillis());
+                    Thread.sleep(Duration.ofSeconds(6).toMillis());
                 } catch (InterruptedException e) {
                     // do nothing.
                 }
@@ -321,15 +321,25 @@ final class S3SourceTaskTest {
         stopWatch.start();
         // poll 1
         results.addAll(s3SourceTask.poll());
+        stopWatch.stop();
         assertThat(results).hasSizeLessThanOrEqualTo(1);
         // poll 2
+        stopWatch.reset();
+        stopWatch.start();
         results.addAll(s3SourceTask.poll());
         assertThat(results).hasSizeLessThanOrEqualTo(2);
+        stopWatch.stop();
         // poll 3
+        stopWatch.reset();
+        stopWatch.start();
         results.addAll(s3SourceTask.poll());
         assertThat(results).hasSizeLessThanOrEqualTo(3);
+        stopWatch.stop();
         // poll 4
+        stopWatch.reset();
+        stopWatch.start();
         results.addAll(s3SourceTask.poll());
+        stopWatch.stop();
         assertThat(results).hasSize(3);
     }
 
