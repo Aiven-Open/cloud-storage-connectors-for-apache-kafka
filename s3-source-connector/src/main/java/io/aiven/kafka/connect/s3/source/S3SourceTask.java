@@ -143,8 +143,8 @@ public class S3SourceTask extends AbstractSourceTask {
 
     @Override
     public void commitRecord(final SourceRecord record) {
-        if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("Committed individual record {}  committed", (Map<String, Object>) record.sourceOffset());
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Committed individual record {}  committed", (Map<String, Object>) record.sourceOffset());
         }
     }
 

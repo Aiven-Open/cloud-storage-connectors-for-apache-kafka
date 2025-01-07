@@ -125,8 +125,6 @@ final class S3SourceTaskTest {
     public void setUp() {
         properties = new HashMap<>(commonProperties);
         s3Client.createBucket(create -> create.bucket(TEST_BUCKET).build());
-        // mockedSourceTaskContext = mock(SourceTaskContext.class);
-        // mockedOffsetStorageReader = mock(OffsetStorageReader.class);
     }
 
     @AfterEach
