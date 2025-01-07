@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Aiven Oy
+ * Copyright 2024-2025 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -179,8 +179,8 @@ public abstract class AbstractSourceTask extends SourceTask {
             timer.start();
             try {
                 final List<SourceRecord> result = populateList();
-                if (logger.isInfoEnabled()) { // TODO reset this to debug
-                    logger.info("Poll() returning {} SourceRecords.", result == null ? null : result.size());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Poll() returning {} SourceRecords.", result == null ? null : result.size());
                 }
                 return result;
             } finally {

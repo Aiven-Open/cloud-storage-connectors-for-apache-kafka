@@ -66,6 +66,7 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 @Testcontainers
 class AwsIntegrationTest implements IntegrationBase {
@@ -255,5 +256,55 @@ class AwsIntegrationTest implements IntegrationBase {
             final List<Long> seen = seenRecords.get(key);
             assertThat(seen).as("Count for " + key).containsExactlyInAnyOrderElementsOf(expected);
         }
+    }
+
+    @Test
+    void verifyIteratorRehydration(final TestInfo testInfo) {
+        // create 2 files.
+        final var topicName = IntegrationBase.topicName(testInfo);
+        final Map<String, String> configData = getConfig(topicName, 1);
+
+        configData.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
+
+        final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
+        final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
+        final String testData3 = "Hello, Kafka Connect S3 Source! object 3";
+
+        final List<String> expectedKeys = new ArrayList<>();
+
+        final List<String> actualKeys = new ArrayList<>();
+
+        // write 2 objects to s3
+        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000")
+                .substring((OBJECT_KEY + SEPARATOR).length()));
+        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000")
+                .substring((OBJECT_KEY + SEPARATOR).length()));
+
+        assertThat(testBucketAccessor.listObjects()).hasSize(2);
+
+        final S3SourceConfig s3SourceConfig = new S3SourceConfig(configData);
+        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
+        final Iterator<S3Object> iter = sourceClient.getS3ObjectIterator(null);
+
+        assertThat(iter).hasNext();
+        S3Object object = iter.next();
+        actualKeys.add(object.key());
+        assertThat(iter).hasNext();
+        object = iter.next();
+        actualKeys.add(object.key());
+        assertThat(iter).isExhausted();
+        assertThat(actualKeys).containsAll(expectedKeys);
+
+        // write 3rd object to s3
+        expectedKeys.add(writeToS3(topicName, testData3.getBytes(StandardCharsets.UTF_8), "00000")
+                .substring((OBJECT_KEY + SEPARATOR).length()));
+        assertThat(testBucketAccessor.listObjects()).hasSize(3);
+
+        assertThat(iter).hasNext();
+        object = iter.next();
+        actualKeys.add(object.key());
+        assertThat(iter).isExhausted();
+        assertThat(actualKeys).containsAll(expectedKeys);
+
     }
 }

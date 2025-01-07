@@ -104,14 +104,39 @@ public interface IntegrationBase {
 
     String getS3Prefix();
 
-    default String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
-        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName
-                + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
+    /**
+     * Write file to s3 with the specified key and data.
+     *
+     * @param objectKey
+     *            the key.
+     * @param testDataBytes
+     *            the data.
+     */
+    default void writeToS3WithKey(final String objectKey, final byte[] testDataBytes) {
         final PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(IntegrationTest.TEST_BUCKET_NAME)
                 .key(objectKey)
                 .build();
         getS3Client().putObject(request, RequestBody.fromBytes(testDataBytes));
+
+    }
+
+    /**
+     * Writes to S3 using a key of the form {@code [prefix]topicName-partitionId-systemTime.txt}.
+     *
+     * @param topicName
+     *            the topic name to use
+     * @param testDataBytes
+     *            the data.
+     * @param partitionId
+     *            the partition id.
+     * @return the key prefixed by {@link S3SourceTask#OBJECT_KEY} and
+     *         {@link io.aiven.kafka.connect.s3.source.utils.OffsetManager#SEPARATOR}
+     */
+    default String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
+        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName
+                + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
+        writeToS3WithKey(objectKey, testDataBytes);
         return OBJECT_KEY + SEPARATOR + objectKey;
     }
 

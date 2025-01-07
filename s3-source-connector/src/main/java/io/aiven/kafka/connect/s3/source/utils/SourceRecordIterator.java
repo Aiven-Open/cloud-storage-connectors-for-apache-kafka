@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Function;
@@ -31,14 +32,13 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.commons.collections4.IteratorUtils;
-import org.apache.commons.collections4.iterators.LazyIteratorChain;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
  * Parquet).
  */
-public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord> implements Iterator<S3SourceRecord> {
+public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     public static final String PATTERN_TOPIC_KEY = "topicName";
     public static final String PATTERN_PARTITION_KEY = "partitionId";
 
@@ -60,6 +60,8 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
     private int partitionId;
 
     private final Iterator<S3Object> inner;
+
+    private Iterator<S3SourceRecord> outer;
 
     private final Predicate<S3Object> fileNamePredicate = s3Object -> {
 
@@ -84,18 +86,23 @@ public final class SourceRecordIterator extends LazyIteratorChain<S3SourceRecord
         this.transformer = transformer;
         this.sourceClient = sourceClient;
 
+        // call filters out bad file names and extracts topic/partition
         inner = IteratorUtils.filteredIterator(sourceClient.getS3ObjectIterator(null),
-                s3Object -> this.fileNamePredicate.test(s3Object)); // call filter out bad file names and extract
-        // topic/partition
+                s3Object -> this.fileNamePredicate.test(s3Object));
+        outer = Collections.emptyIterator();
     }
 
     @Override
-    protected Iterator<? extends S3SourceRecord> nextIterator(final int count) {
-        /*
-         * This code has to get the next iterator from the inner iterator if it exists, otherwise we need to restart
-         * with the last seen key.
-         */
-        return inner.hasNext() ? convert(inner.next()).iterator() : null;
+    public boolean hasNext() {
+        while (!outer.hasNext() && inner.hasNext()) {
+            outer = convert(inner.next()).iterator();
+        }
+        return outer.hasNext();
+    }
+
+    @Override
+    public S3SourceRecord next() {
+        return outer.next();
     }
 
     @Override
