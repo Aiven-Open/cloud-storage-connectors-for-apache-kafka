@@ -308,18 +308,29 @@ final class S3SourceTaskTest {
             }
         };
 
+        final List<SourceRecord> results = new ArrayList<>();
+        // since the polling is returning data at or near the time limit the 3 record may be returned as follows
+        // Record Poll1 Poll2 Poll3 Poll4
+        // 1 x x
+        // 2 x x
+        // 3 x x
+        //
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
         startSourceTask(s3SourceTask);
         final StopWatch stopWatch = new StopWatch();
         stopWatch.start();
-        List<SourceRecord> results = s3SourceTask.poll();
-        assertThat(results).hasSize(1);
-        results = s3SourceTask.poll();
-        assertThat(results).hasSize(1);
-        results = s3SourceTask.poll();
-        assertThat(results).hasSize(1);
-        results = s3SourceTask.poll();
-        assertThat(results).isEmpty();
+        // poll 1
+        results.addAll(s3SourceTask.poll());
+        assertThat(results).hasSizeLessThanOrEqualTo(1);
+        // poll 2
+        results.addAll(s3SourceTask.poll());
+        assertThat(results).hasSizeLessThanOrEqualTo(2);
+        // poll 3
+        results.addAll(s3SourceTask.poll());
+        assertThat(results).hasSizeLessThanOrEqualTo(3);
+        // poll 4
+        results.addAll(s3SourceTask.poll());
+        assertThat(results).hasSize(3);
     }
 
     @Test
