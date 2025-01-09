@@ -24,13 +24,14 @@ import java.util.Set;
 
 import org.apache.kafka.connect.source.SourceRecord;
 
+import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
 import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
@@ -48,12 +49,6 @@ public class S3SourceTask extends AbstractSourceTask {
     /** The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
 
-    public static final String BUCKET = "bucket";
-    public static final String TOPIC = "topic";
-
-    public static final String OBJECT_KEY = "object_key";
-    public static final String PARTITION = "topicPartition";
-
     /** An iterator or S3SourceRecords */
     private Iterator<S3SourceRecord> s3SourceRecordIterator;
     /**
@@ -66,7 +61,7 @@ public class S3SourceTask extends AbstractSourceTask {
     /** The list of failed object keys */
     private final Set<String> failedObjectKeys = new HashSet<>();
     /** The offset manager this task uses */
-    private OffsetManager offsetManager;
+    private OffsetManager<S3OffsetManagerEntry> offsetManager;
     private S3SourceConfig s3SourceConfig;
 
     public S3SourceTask() {
@@ -115,10 +110,9 @@ public class S3SourceTask extends AbstractSourceTask {
             @Override
             public SourceRecord next() {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
-                offsetManager.updateAndReturnCurrentOffsets(s3SourceRecord.getPartitionMap(),
-                        s3SourceRecord.getObjectKey(), s3SourceRecord.getRecordNumber());
-                return RecordProcessor.createSourceRecord(s3SourceRecord, s3SourceConfig, awsv2SourceClient,
-                        offsetManager);
+                final S3OffsetManagerEntry entry = s3SourceRecord.getOffsetManagerEntry();
+                offsetManager.updateCurrentOffsets(entry);
+                return RecordProcessor.createSourceRecord(s3SourceRecord, s3SourceConfig, awsv2SourceClient, entry);
             }
         };
         return IteratorUtils.filteredIterator(inner, Objects::nonNull);
@@ -129,7 +123,7 @@ public class S3SourceTask extends AbstractSourceTask {
         LOGGER.info("S3 Source task started.");
         this.s3SourceConfig = new S3SourceConfig(props);
         this.transformer = s3SourceConfig.getTransformer();
-        offsetManager = new OffsetManager(context, s3SourceConfig);
+        offsetManager = new OffsetManager<>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
         setS3SourceRecordIterator(
                 new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, awsv2SourceClient));

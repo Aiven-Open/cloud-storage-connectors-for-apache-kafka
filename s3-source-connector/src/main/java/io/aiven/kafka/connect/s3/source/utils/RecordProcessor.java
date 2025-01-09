@@ -35,9 +35,9 @@ public final class RecordProcessor {
 
     public static SourceRecord createSourceRecord(final S3SourceRecord s3SourceRecord,
             final S3SourceConfig s3SourceConfig, final AWSV2SourceClient sourceClient,
-            final OffsetManager offsetManager) {
+            final S3OffsetManagerEntry s3OffsetManagerEntry) {
         try {
-            return s3SourceRecord.getSourceRecord(offsetManager);
+            return s3SourceRecord.getSourceRecord(s3OffsetManagerEntry);
         } catch (DataException e) {
             if (ErrorsTolerance.NONE.equals(s3SourceConfig.getErrorsTolerance())) {
                 throw new ConnectException("Data Exception caught during S3 record to source record transformation", e);

@@ -16,54 +16,25 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
 
 public class S3SourceRecord {
-    private final Map<String, Object> partitionMap;
-    private final long recordNumber;
-    private final String topic;
-    private final Integer topicPartition;
+
     private final SchemaAndValue keyData;
-
     private final SchemaAndValue valueData;
+    /** The S3OffsetManagerEntry for this source record */
+    private final S3OffsetManagerEntry offsetManagerEntry;
 
-    private final String objectKey;
-
-    public S3SourceRecord(final Map<String, Object> partitionMap, final long recordNumber, final String topic,
-            final Integer topicPartition, final String objectKey, final SchemaAndValue keyData,
+    public S3SourceRecord(final S3OffsetManagerEntry offsetManagerEntry, final SchemaAndValue keyData,
             final SchemaAndValue valueData) {
-        this.partitionMap = new HashMap<>(partitionMap);
-        this.recordNumber = recordNumber;
-        this.topic = topic;
-        this.topicPartition = topicPartition;
+        this.offsetManagerEntry = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
         this.keyData = keyData;
         this.valueData = valueData;
-        this.objectKey = objectKey;
-    }
-
-    public Map<String, Object> getPartitionMap() {
-        return Collections.unmodifiableMap(partitionMap);
-    }
-
-    public long getRecordNumber() {
-        return recordNumber;
-    }
-
-    public String getTopic() {
-        return topic;
-    }
-
-    public Integer partition() {
-        return topicPartition;
     }
 
     public String getObjectKey() {
-        return objectKey;
+        return offsetManagerEntry.getKey();
     }
 
     public SchemaAndValue getKey() {
@@ -74,10 +45,13 @@ public class S3SourceRecord {
         return new SchemaAndValue(valueData.schema(), valueData.value());
     }
 
-    public SourceRecord getSourceRecord(final OffsetManager offsetManager) {
-        final Map<String, Object> offsetMap = offsetManager.updateAndReturnCurrentOffsets(getPartitionMap(),
-                getObjectKey(), getRecordNumber());
-        return new SourceRecord(getPartitionMap(), offsetMap, topic, partition(), keyData.schema(), keyData.value(),
-                valueData.schema(), valueData.value());
+    public S3OffsetManagerEntry getOffsetManagerEntry() {
+        return offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties()); // return a defensive copy
+    }
+
+    public SourceRecord getSourceRecord(final S3OffsetManagerEntry offsetManager) {
+        return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(),
+                offsetManagerEntry.getProperties(), offsetManagerEntry.getTopic(), offsetManagerEntry.getPartition(),
+                keyData.schema(), keyData.value(), valueData.schema(), valueData.value());
     }
 }
