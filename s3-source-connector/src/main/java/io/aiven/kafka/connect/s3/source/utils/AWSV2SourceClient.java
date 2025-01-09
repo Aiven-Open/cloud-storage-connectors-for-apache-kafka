@@ -28,7 +28,9 @@ import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.commons.io.function.IOSupplier;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -42,6 +44,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
  */
 public class AWSV2SourceClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AWSV2SourceClient.class);
     public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
     private final S3Client s3Client;
@@ -50,6 +53,9 @@ public class AWSV2SourceClient {
     private Predicate<S3Object> filterPredicate = s3Object -> s3Object.size() > 0;
     private final Set<String> failedObjectKeys;
 
+    private final int taskId;
+    private final int maxTasks;
+
     /**
      * @param s3SourceConfig
      *            configuration for Source connector
@@ -57,11 +63,7 @@ public class AWSV2SourceClient {
      *            all objectKeys which have already been tried but have been unable to process.
      */
     public AWSV2SourceClient(final S3SourceConfig s3SourceConfig, final Set<String> failedObjectKeys) {
-        this.s3SourceConfig = s3SourceConfig;
-        final S3ClientFactory s3ClientFactory = new S3ClientFactory();
-        this.s3Client = s3ClientFactory.createAmazonS3Client(s3SourceConfig);
-        this.bucketName = s3SourceConfig.getAwsS3BucketName();
-        this.failedObjectKeys = new HashSet<>(failedObjectKeys);
+        this(new S3ClientFactory().createAmazonS3Client(s3SourceConfig), s3SourceConfig, failedObjectKeys);
     }
 
     /**
@@ -80,42 +82,96 @@ public class AWSV2SourceClient {
         this.s3Client = s3Client;
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.failedObjectKeys = new HashSet<>(failedObjectKeys);
+
+        // TODO the code below should be configured in some sort of taks assignement method/process/call.
+        int maxTasks;
+        try {
+            final Object value = s3SourceConfig.originals().get("tasks.max");
+            if (value == null) {
+                LOGGER.info("Setting tasks.max to 1");
+                maxTasks = 1;
+            } else {
+                maxTasks = Integer.parseInt(value.toString());
+            }
+        } catch (NumberFormatException e) { // NOPMD catch null pointer
+            LOGGER.warn("Invalid tasks.max: {}", e.getMessage());
+            LOGGER.info("Setting tasks.max to 1");
+            maxTasks = 1;
+        }
+        this.maxTasks = maxTasks;
+        int taskId;
+        try {
+            final Object value = s3SourceConfig.originals().get("task.id");
+            if (value == null) {
+                LOGGER.info("Setting task.id to 0");
+                taskId = 0;
+            } else {
+                taskId = Integer.parseInt(value.toString()) % maxTasks;
+            }
+        } catch (NumberFormatException e) { // NOPMD catch null pointer
+            LOGGER.warn("Invalid task.id: {}", e.getMessage());
+            LOGGER.info("Setting task.id to 0");
+            taskId = 0;
+        }
+        this.taskId = taskId;
     }
 
-    public Iterator<String> getListOfObjectKeys(final String startToken) {
+    /**
+     * Creates a stream from which we will create an iterator.
+     *
+     * @param startToken
+     *            the beginning key, or {@code null} to start at the beginning.
+     * @return a Stream of S3Objects for the current state of the S3 storage.
+     */
+    private Stream<S3Object> getS3ObjectStream(final String startToken) {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
-                .prefix(optionalKey(s3SourceConfig.getAwsS3Prefix()))
-                .startAfter(optionalKey(startToken))
+                .prefix(StringUtils.defaultIfBlank(s3SourceConfig.getAwsS3Prefix(), null))
+                .startAfter(StringUtils.defaultIfBlank(startToken, null))
                 .build();
 
-        final Stream<String> s3ObjectKeyStream = Stream
-                .iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
-                    // This is called every time next() is called on the iterator.
-                    if (response.isTruncated()) {
-                        return s3Client.listObjectsV2(ListObjectsV2Request.builder()
-                                .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
-                                .continuationToken(response.nextContinuationToken())
-                                .build());
-                    } else {
-                        return null;
-                    }
+        return Stream.iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
+            // This is called every time next() is called on the iterator.
+            if (response.isTruncated()) {
+                return s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                        .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
+                        .continuationToken(response.nextContinuationToken())
+                        .build());
+            } else {
+                return null;
+            }
 
-                })
+        })
                 .flatMap(response -> response.contents()
                         .stream()
                         .filter(filterPredicate)
                         .filter(objectSummary -> assignObjectToTask(objectSummary.key()))
-                        .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.key())))
-                .map(S3Object::key);
-        return s3ObjectKeyStream.iterator();
+                        .filter(objectSummary -> !failedObjectKeys.contains(objectSummary.key())));
     }
-    private String optionalKey(final String key) {
-        if (StringUtils.isNotBlank(key)) {
-            return key;
-        }
-        return null;
+
+    /**
+     * Creates an S3Object iterator that will return the objects from the current objects in S3 storage and then try to
+     * refresh on every {@code hasNext()} that returns false. This should pick up new files as they are dropped on the
+     * file system.
+     *
+     * @param startToken
+     *            the beginning key, or {@code null} to start at the beginning.
+     * @return an Iterator on the S3Objects.
+     */
+    public Iterator<S3Object> getS3ObjectIterator(final String startToken) {
+        return new S3ObjectIterator(startToken);
+    }
+
+    /**
+     * Gets an iterator of keys from the current S3 storage.
+     *
+     * @param startToken
+     *            the beginning key, or {@code null} to start at the beginning.
+     * @return an Iterator on the keys of the current S3Objects.
+     */
+    public Iterator<String> getListOfObjectKeys(final String startToken) {
+        return getS3ObjectStream(startToken).map(S3Object::key).iterator();
     }
 
     public IOSupplier<InputStream> getObject(final String objectKey) {
@@ -133,14 +189,47 @@ public class AWSV2SourceClient {
     }
 
     private boolean assignObjectToTask(final String objectKey) {
-        final int maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
-        final int taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
         final int taskAssignment = Math.floorMod(objectKey.hashCode(), maxTasks);
         return taskAssignment == taskId;
     }
 
     public void shutdown() {
         s3Client.close();
+    }
+
+    /**
+     * An iterator that reads from
+     */
+    public class S3ObjectIterator implements Iterator<S3Object> {
+
+        /** The current iterator. */
+        private Iterator<S3Object> inner;
+        /** The last object key that was seen. */
+        private String lastSeenObjectKey;
+
+        private S3ObjectIterator(final String initialKey) {
+            lastSeenObjectKey = initialKey;
+            inner = getS3ObjectStream(lastSeenObjectKey).iterator();
+        }
+        @Override
+        public boolean hasNext() {
+            if (!inner.hasNext()) {
+                inner = getS3ObjectStream(lastSeenObjectKey).iterator();
+            }
+            return inner.hasNext();
+        }
+
+        @Override
+        public S3Object next() {
+            final S3Object result = inner.next();
+            lastSeenObjectKey = result.key();
+            return result;
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
     }
 
 }

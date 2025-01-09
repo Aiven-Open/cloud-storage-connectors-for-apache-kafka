@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.data.SchemaAndValue;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.commons.io.function.IOSupplier;
@@ -53,12 +55,12 @@ final class ByteArrayTransformerTest {
         final InputStream inputStream = new ByteArrayInputStream(data);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<byte[]> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
                 sourceCommonConfig, 0);
 
-        final List<Object> recs = records.collect(Collectors.toList());
+        final List<SchemaAndValue> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(1);
-        assertThat((byte[]) recs.get(0)).isEqualTo(data);
+        assertThat(recs.get(0).value()).isEqualTo(data);
     }
 
     @Test
@@ -67,18 +69,9 @@ final class ByteArrayTransformerTest {
 
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<byte[]> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
                 sourceCommonConfig, 0);
 
         assertThat(records).hasSize(0);
-    }
-
-    @Test
-    void testGetValueBytes() {
-        final byte[] record = { 1, 2, 3 };
-        final byte[] result = (byte[]) byteArrayTransformer.getValueData(record, TEST_TOPIC, sourceCommonConfig)
-                .value();
-
-        assertThat(result).containsExactlyInAnyOrder(record);
     }
 }

@@ -32,6 +32,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.data.Struct;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import io.confluent.connect.avro.AvroData;
@@ -75,7 +78,7 @@ final class AvroTransformerTest {
     void testReadAvroRecordsInvalidData() {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
 
-        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
                 0);
 
         final List<Object> recs = records.collect(Collectors.toList());
@@ -87,11 +90,17 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(25);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
+        final List<String> expected = new ArrayList<>();
+        for (int i = 0; i < 25; i++) {
+            expected.add("Hello, Kafka Connect S3 Source! object " + i);
+        }
+
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
                 0);
 
-        final List<Object> recs = records.collect(Collectors.toList());
-        assertThat(recs).hasSize(25);
+        assertThat(records).extracting(SchemaAndValue::value)
+                .extracting(sv -> ((Struct) sv).getString("message"))
+                .containsExactlyElementsOf(expected);
     }
 
     @Test
@@ -99,14 +108,16 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(20);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
+        final List<String> expected = new ArrayList<>();
+        for (int i = 5; i < 20; i++) {
+            expected.add("Hello, Kafka Connect S3 Source! object " + i);
+        }
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
                 5);
 
-        final List<Object> recs = records.collect(Collectors.toList());
-        assertThat(recs).hasSize(15);
-        // get first rec
-        assertThat(((GenericRecord) recs.get(0)).get("message").toString())
-                .isEqualTo("Hello, Kafka Connect S3 Source! object 5");
+        assertThat(records).extracting(SchemaAndValue::value)
+                .extracting(sv -> ((Struct) sv).getString("message"))
+                .containsExactlyElementsOf(expected);
     }
 
     @Test
@@ -114,11 +125,10 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(20);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<GenericRecord> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
                 25);
 
-        final List<Object> recs = records.collect(Collectors.toList());
-        assertThat(recs).hasSize(0);
+        assertThat(records).isEmpty();
     }
 
     static ByteArrayOutputStream generateMockAvroData(final int numRecs) throws IOException {

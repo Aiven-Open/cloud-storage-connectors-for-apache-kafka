@@ -87,6 +87,7 @@ dependencies {
   testImplementation(jackson.databind)
   testImplementation(testinglibs.mockito.core)
   testImplementation(testinglibs.assertj.core)
+  testImplementation(testinglibs.awaitility)
   testImplementation(testFixtures(project(":commons")))
   testImplementation(testinglibs.woodstox.stax2.api)
   testImplementation(apache.hadoop.mapreduce.client.core)

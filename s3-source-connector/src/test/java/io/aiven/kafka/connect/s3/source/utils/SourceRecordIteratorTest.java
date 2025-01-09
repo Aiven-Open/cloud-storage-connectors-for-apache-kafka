@@ -31,16 +31,24 @@ import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.stream.Stream;
+
+import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.source.input.AvroTransformer;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 final class SourceRecordIteratorTest {
 
@@ -67,25 +75,26 @@ final class SourceRecordIteratorTest {
         try (InputStream mockInputStream = new ByteArrayInputStream(new byte[] {})) {
             when(mockSourceApiClient.getObject(anyString())).thenReturn(() -> mockInputStream);
 
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-                    .thenReturn(Stream.of(new Object()));
+            mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
 
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
-            when(mockSourceApiClient.getListOfObjectKeys(any())).thenReturn(Collections.emptyIterator());
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+            when(mockSourceApiClient.getS3ObjectIterator(any())).thenReturn(Collections.emptyIterator());
+            Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
                     mockSourceApiClient);
 
             assertThat(iterator.hasNext()).isFalse();
-            assertThat(iterator.next()).isNull();
 
-            when(mockSourceApiClient.getListOfObjectKeys(any()))
-                    .thenReturn(Collections.singletonList(key).listIterator());
+            final S3Object obj = S3Object.builder().key(key).build();
 
+            final ByteArrayInputStream bais = new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8));
+            when(mockSourceApiClient.getS3ObjectIterator(any())).thenReturn(Arrays.asList(obj).iterator());
+            when(mockSourceApiClient.getObject(any())).thenReturn(() -> bais);
             iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
 
-            assertThat(iterator.hasNext()).isTrue();
+            assertThat(iterator).hasNext();
             assertThat(iterator.next()).isNotNull();
+            assertThat(iterator).isExhausted();
         }
     }
 
@@ -93,15 +102,17 @@ final class SourceRecordIteratorTest {
     void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws Exception {
 
         final String key = "topic-00001-abc123.txt";
+        final S3Object s3Object = S3Object.builder().key(key).build();
 
-        // Mock InputStream
-        try (InputStream mockInputStream = new ByteArrayInputStream(new byte[] {})) {
-            when(mockSourceApiClient.getObject(anyString())).thenReturn(() -> mockInputStream);
+        // With ByteArrayTransformer
+        try (InputStream inputStream = new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8))) {
+            when(mockSourceApiClient.getObject(key)).thenReturn(() -> inputStream);
 
-            // With ByteArrayTransformer
+            when(mockSourceApiClient.getS3ObjectIterator(any())).thenReturn(Arrays.asList(s3Object).iterator());
+
             mockTransformer = mock(ByteArrayTransformer.class);
             when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-                    .thenReturn(Stream.of(new Object()));
+                    .thenReturn(Stream.of(SchemaAndValue.NULL));
 
             when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
@@ -110,24 +121,36 @@ final class SourceRecordIteratorTest {
             when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
                     .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
 
-            SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
-                    mockSourceApiClient);
-            assertThat(iterator.hasNext()).isTrue();
-            iterator.next();
+            // should skip if any records were produced by source record iterator.
+            final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
+                    mockTransformer, mockSourceApiClient);
+            assertThat(iterator.hasNext()).isFalse();
+            verify(mockSourceApiClient, never()).getObject(any());
             verify(mockTransformer, never()).getRecords(any(), anyString(), anyInt(), any(), anyLong());
+        }
 
-            // With AvroTransformer
+        // With AvroTransformer
+        try (InputStream inputStream = new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8))) {
+            when(mockSourceApiClient.getObject(key)).thenReturn(() -> inputStream);
+            when(mockSourceApiClient.getS3ObjectIterator(any())).thenReturn(Arrays.asList(s3Object).iterator());
             mockTransformer = mock(AvroTransformer.class);
             when(mockSourceApiClient.getListOfObjectKeys(any()))
                     .thenReturn(Collections.singletonList(key).listIterator());
+
             when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
                     .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
 
-            iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer, mockSourceApiClient);
+            when(mockTransformer.getKeyData(anyString(), anyString(), any())).thenReturn(SchemaAndValue.NULL);
+            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
+                    .thenReturn(Arrays.asList(SchemaAndValue.NULL).stream());
+
+            final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
+                    mockTransformer, mockSourceApiClient);
             assertThat(iterator.hasNext()).isTrue();
             iterator.next();
 
             verify(mockTransformer, times(1)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
         }
     }
+
 }

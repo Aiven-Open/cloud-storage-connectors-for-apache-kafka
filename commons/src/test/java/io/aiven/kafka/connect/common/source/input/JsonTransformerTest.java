@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.common.source.input;
 
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,13 +25,13 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.json.JsonConverter;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
@@ -77,31 +76,38 @@ final class JsonTransformerTest {
     @Test
     void testHandleValueDataWithValidJson() {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
-                "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
-        final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+                getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
+
+        final List<String> expected = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            expected.add("value" + i);
+        }
+
+        final Stream<SchemaAndValue> records = jsonTransformer.getRecords(() -> validJsonInputStream, TESTTOPIC, 1,
                 sourceCommonConfig, 0);
 
-        assertThat(jsonNodes).hasSize(1);
+        assertThat(records).extracting(SchemaAndValue::value)
+                .extracting(sv -> ((Map) sv).get("key"))
+                .containsExactlyElementsOf(expected);
     }
 
     @Test
     void testHandleValueDataWithValidJsonSkipFew() {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
-        final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+
+        final List<String> expected = new ArrayList<>();
+        for (int i = 25; i < 100; i++) {
+            expected.add("value" + i);
+        }
+
+        final Stream<SchemaAndValue> records = jsonTransformer.getRecords(() -> validJsonInputStream, TESTTOPIC, 1,
                 sourceCommonConfig, 25L);
 
-        final List<byte[]> recs = jsonNodes.collect(Collectors.toList());
-        assertThat(recs).hasSize(75);
-        assertThat(recs).extracting(record -> ((Map) jsonTransformer.getValueData(record, "", null).value()).get("key"))
-                .doesNotContain("value1")
-                .doesNotContain("value2")
-                .doesNotContain("value25")
-                .contains("value26")
-                .contains("value27")
-                .contains("value100");
+        assertThat(records).extracting(SchemaAndValue::value)
+                .extracting(sv -> ((Map) sv).get("key"))
+                .containsExactlyElementsOf(expected);
+
     }
 
     @Test
@@ -110,35 +116,17 @@ final class JsonTransformerTest {
                 "invalid-json".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
 
-        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
+        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
                 sourceCommonConfig, 0);
 
-        assertThatThrownBy(() -> jsonTransformer.getValueData(jsonNodes.findAny().get(), "", null))
-                .isInstanceOf(DataException.class)
-                .hasMessage("Converting byte[] to Kafka Connect data failed due to serialization error: ");
-    }
+        assertThat(jsonNodes).isEmpty();
 
-    @Test
-    void testSerializeJsonDataValid() throws IOException {
-        final InputStream validJsonInputStream = new ByteArrayInputStream(
-                "{\"key\":\"value\"}".getBytes(StandardCharsets.UTF_8));
-        final IOSupplier<InputStream> inputStreamIOSupplier = () -> validJsonInputStream;
-        final Stream<byte[]> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig, 0);
-        final Object serializedData = jsonTransformer
-                .getValueData(
-                        jsonNodes.findFirst().orElseThrow(() -> new AssertionError("No records found in stream!")),
-                        TESTTOPIC, sourceCommonConfig)
-                .value();
-
-        // Assert: Verify the serialized data
-        assertThat(serializedData).isInstanceOf(Map.class).extracting("key").isEqualTo("value");
     }
 
     @Test
     void testGetRecordsWithIOException() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException"));
-        final Stream<byte[]> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
+        final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
 
         assertThat(resultStream).isEmpty();
     }
@@ -146,14 +134,14 @@ final class JsonTransformerTest {
     @Test
     void testCustomSpliteratorWithIOExceptionDuringInitialization() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException during initialization"));
-        final Stream<byte[]> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
+        final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
 
         assertThat(resultStream).isEmpty();
     }
 
     static String getJsonRecs(final int recordCount) {
         final StringBuilder jsonRecords = new StringBuilder();
-        for (int i = 1; i <= recordCount; i++) {
+        for (int i = 0; i < recordCount; i++) {
             jsonRecords.append(String.format("{\"key\":\"value%d\"}", i));
             if (i < recordCount) {
                 jsonRecords.append("\n"); // NOPMD AppendCharacterWithChar
