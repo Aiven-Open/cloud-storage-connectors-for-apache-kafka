@@ -149,7 +149,7 @@ public class S3SourceTask extends AbstractSourceTask {
     }
 
     /**
-     * Set the S3 source record iterator that this task is using. protected to be overridden in testing impl.
+     * Set the S3 source record iterator that this task is using. Protected to be overridden in testing implementation.
      *
      * @param iterator
      *            The S3SourceRecord iterator to use.
