@@ -17,19 +17,17 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-import java.net.ConnectException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.storage.Converter;
@@ -38,7 +36,6 @@ import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -61,75 +58,46 @@ class RecordProcessorTest {
     @Mock
     private AWSV2SourceClient sourceClient;
 
-    private AtomicBoolean connectorStopped;
-    private Iterator<S3SourceRecord> sourceRecordIterator;
+    private static final Supplier<Boolean> TRUE = () -> true;
+    private static final Supplier<Boolean> FALSE = () -> false;
 
-    @BeforeEach
-    void setUp() {
-        connectorStopped = new AtomicBoolean(false);
-        sourceRecordIterator = mock(Iterator.class);
+    @Test
+    void testCreateSourceRecord() {
+
+        final SourceRecord mockSourceRecord = mock(SourceRecord.class);
+        final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
+        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenReturn(mockSourceRecord);
+
+        final SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+                offsetManager);
+
+        verify(mockRecord, times(1)).getSourceRecord(any());
+        assertThat(result).isEqualTo(mockSourceRecord);
+
     }
 
     @Test
-    void testProcessRecordsNoRecords() {
-        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
-        when(sourceRecordIterator.hasNext()).thenReturn(false);
-
-        final List<SourceRecord> results = new ArrayList<>();
-        final List<SourceRecord> processedRecords = RecordProcessor.processRecords(
-            sourceRecordIterator,
-            results,
-            s3SourceConfig,
-            connectorStopped,
-            sourceClient, offsetManager
-        );
-
-        assertThat(processedRecords).as("Processed records should be empty when there are no records.").isEmpty();
-    }
-
-    @Test
-    void testProcessRecordsWithRecords() throws ConnectException {
-        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
-        when(sourceRecordIterator.hasNext()).thenReturn(true, false); // One iteration with records
+    void testCreateSourceRecordWithDataError() {
 
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(sourceRecordIterator.next()).thenReturn(mockRecord);
+        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenThrow(new DataException("Testing exception"));
 
-        final List<SourceRecord> results = new ArrayList<>();
-        RecordProcessor.processRecords(
-            sourceRecordIterator,
-            results,
-            s3SourceConfig,
-            connectorStopped,
-            sourceClient, offsetManager
-        );
+        when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.NONE);
 
-        assertThat(results).hasSize(1);
-        verify(sourceRecordIterator, times(1)).next();
-    }
+        assertThatExceptionOfType(ConnectException.class).as("Errors tolerance: NONE")
+                .isThrownBy(() -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+                        offsetManager));
 
-    @Test
-    void testProcessRecordsConnectorStopped() {
-        when(s3SourceConfig.getMaxPollRecords()).thenReturn(5);
-        connectorStopped.set(true); // Simulate connector stopped
-
-        final List<SourceRecord> results = new ArrayList<>();
-        final List<SourceRecord> processedRecords = RecordProcessor.processRecords(
-            sourceRecordIterator,
-            results,
-            s3SourceConfig,
-            connectorStopped,
-            sourceClient, offsetManager
-        );
-
-        assertThat(processedRecords).as("Processed records should be empty when connector is stopped.").isEmpty();
-        verify(sourceRecordIterator, never()).next();
+        when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.ALL);
+        final SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+                offsetManager);
+        assertThat(result).isNull();
     }
 
     @Test
     void testCreateSourceRecords() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord()).thenReturn(mock(SourceRecord.class));
+        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenReturn(mock(SourceRecord.class));
 
         final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
                 offsetManager);
@@ -140,13 +108,13 @@ class RecordProcessorTest {
     @Test
     void errorToleranceOnNONE() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord()).thenThrow(new DataException("generic issue"));
+        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenThrow(new DataException("generic issue"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.NONE);
 
         assertThatThrownBy(
                 () -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient, offsetManager))
-                .isInstanceOf(org.apache.kafka.connect.errors.ConnectException.class)
+                .isInstanceOf(ConnectException.class)
                 .hasMessage("Data Exception caught during S3 record to source record transformation");
 
     }
@@ -154,7 +122,7 @@ class RecordProcessorTest {
     @Test
     void errorToleranceOnALL() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord()).thenThrow(new DataException("generic issue"));
+        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenThrow(new DataException("generic issue"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.ALL);
 

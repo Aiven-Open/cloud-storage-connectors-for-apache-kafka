@@ -37,7 +37,7 @@ import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AvroTransformer extends Transformer<GenericRecord> {
+public class AvroTransformer extends Transformer {
 
     private final AvroData avroData;
 
@@ -54,9 +54,9 @@ public class AvroTransformer extends Transformer<GenericRecord> {
     }
 
     @Override
-    public StreamSpliterator<GenericRecord> createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig) {
-        return new StreamSpliterator<>(LOGGER, inputStreamIOSupplier) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
+            final int topicPartition, final AbstractConfig sourceConfig) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
             private DataFileStream<GenericRecord> dataFileStream;
             private final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
 
@@ -78,20 +78,15 @@ public class AvroTransformer extends Transformer<GenericRecord> {
             }
 
             @Override
-            protected boolean doAdvance(final Consumer<? super GenericRecord> action) {
+            protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
                 if (dataFileStream.hasNext()) {
-                    action.accept(dataFileStream.next());
+                    final GenericRecord record = dataFileStream.next();
+                    action.accept(avroData.toConnectData(record.getSchema(), record));
                     return true;
                 }
                 return false;
             }
         };
-    }
-
-    @Override
-    public SchemaAndValue getValueData(final GenericRecord record, final String topic,
-            final AbstractConfig sourceConfig) {
-        return avroData.toConnectData(record.getSchema(), record);
     }
 
     @Override

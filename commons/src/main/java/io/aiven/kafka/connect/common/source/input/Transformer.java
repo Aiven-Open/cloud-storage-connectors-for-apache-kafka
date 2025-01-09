@@ -30,14 +30,14 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 
-public abstract class Transformer<T> {
+public abstract class Transformer {
 
     public abstract void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
 
-    public final Stream<T> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
+    public final Stream<SchemaAndValue> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final String topic, final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
 
-        final StreamSpliterator<T> spliterator = createSpliterator(inputStreamIOSupplier, topic, topicPartition,
+        final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, topic, topicPartition,
                 sourceConfig);
         return StreamSupport.stream(spliterator, false).onClose(spliterator::close).skip(skipRecords);
     }
@@ -55,20 +55,15 @@ public abstract class Transformer<T> {
      *            the source configuraiton.
      * @return a StreamSpliterator instance.
      */
-    protected abstract StreamSpliterator<T> createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier,
-            String topic, int topicPartition, AbstractConfig sourceConfig);
-
-    public abstract SchemaAndValue getValueData(T record, String topic, AbstractConfig sourceConfig);
+    protected abstract StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier, String topic,
+            int topicPartition, AbstractConfig sourceConfig);
 
     public abstract SchemaAndValue getKeyData(Object cloudStorageKey, String topic, AbstractConfig sourceConfig);
 
     /**
      * A Spliterator that performs various checks on the opening/closing of the input stream.
-     *
-     * @param <T>
-     *            the type of item created by this Spliterator.
      */
-    protected abstract static class StreamSpliterator<T> implements Spliterator<T> {
+    protected abstract static class StreamSpliterator implements Spliterator<SchemaAndValue> {
         /**
          * The input stream supplier.
          */
@@ -109,7 +104,7 @@ public abstract class Transformer<T> {
          *            the Consumer to call if record is created.
          * @return {@code true} if a record was processed, {@code false} otherwise.
          */
-        abstract protected boolean doAdvance(Consumer<? super T> action);
+        abstract protected boolean doAdvance(Consumer<? super SchemaAndValue> action);
 
         /**
          * Method to close additional inputs if needed.
@@ -121,6 +116,7 @@ public abstract class Transformer<T> {
             try {
                 if (inputStream != null) {
                     inputStream.close();
+                    inputStream = null; // NOPMD setting null to release resources
                     closed = true;
                 }
             } catch (IOException e) {
@@ -143,15 +139,16 @@ public abstract class Transformer<T> {
         abstract protected InputStream inputOpened(InputStream input) throws IOException;
 
         @Override
-        public final boolean tryAdvance(final Consumer<? super T> action) {
-            boolean result = false;
+        public final boolean tryAdvance(final Consumer<? super SchemaAndValue> action) {
             if (closed) {
-                logger.error("Attempt to advance after closed");
+                return false;
             }
+            boolean result = false;
             try {
                 if (inputStream == null) {
                     try {
-                        inputStream = inputOpened(inputStreamIOSupplier.get());
+                        inputStream = inputStreamIOSupplier.get();
+                        inputOpened(inputStream);
                     } catch (IOException e) {
                         logger.error("Error trying to open inputStream: {}", e.getMessage(), e);
                         close();
@@ -169,7 +166,7 @@ public abstract class Transformer<T> {
         }
 
         @Override
-        public final Spliterator<T> trySplit() { // NOPMD returning null is reqruied by API
+        public final Spliterator<SchemaAndValue> trySplit() { // NOPMD returning null is reqruied by API
             return null;
         }
 

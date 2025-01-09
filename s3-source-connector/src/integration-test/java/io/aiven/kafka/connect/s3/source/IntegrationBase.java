@@ -16,9 +16,12 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
+import static io.aiven.kafka.connect.s3.source.utils.OffsetManager.SEPARATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -52,20 +55,90 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumWriter;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+@SuppressWarnings("PMD.ExcessiveImports")
 public interface IntegrationBase {
     String PLUGINS_S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA = "plugins/s3-source-connector-for-apache-kafka/";
     String S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA_TEST = "s3-source-connector-for-apache-kafka-test-";
     ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    String TEST_BUCKET_NAME = "test-bucket0";
+    String S3_ACCESS_KEY_ID = "test-key-id0";
+    String VALUE_CONVERTER_KEY = "value.converter";
+    String S3_SECRET_ACCESS_KEY = "test_secret_key0";
+
+    static byte[] generateNextAvroMessagesStartingFromId(final int messageId, final int noOfAvroRecs,
+            final Schema schema) throws IOException {
+        final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            dataFileWriter.create(schema, outputStream);
+            for (int i = messageId; i < messageId + noOfAvroRecs; i++) {
+                final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD
+                avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + i);
+                avroRecord.put("id", i);
+                dataFileWriter.append(avroRecord);
+            }
+
+            dataFileWriter.flush();
+            return outputStream.toByteArray();
+        }
+    }
+
+    S3Client getS3Client();
+
+    String getS3Prefix();
+
+    /**
+     * Write file to s3 with the specified key and data.
+     *
+     * @param objectKey
+     *            the key.
+     * @param testDataBytes
+     *            the data.
+     */
+    default void writeToS3WithKey(final String objectKey, final byte[] testDataBytes) {
+        final PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(IntegrationTest.TEST_BUCKET_NAME)
+                .key(objectKey)
+                .build();
+        getS3Client().putObject(request, RequestBody.fromBytes(testDataBytes));
+
+    }
+
+    /**
+     * Writes to S3 using a key of the form {@code [prefix]topicName-partitionId-systemTime.txt}.
+     *
+     * @param topicName
+     *            the topic name to use
+     * @param testDataBytes
+     *            the data.
+     * @param partitionId
+     *            the partition id.
+     * @return the key prefixed by {@link S3SourceTask#OBJECT_KEY} and
+     *         {@link io.aiven.kafka.connect.s3.source.utils.OffsetManager#SEPARATOR}
+     */
+    default String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
+        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName
+                + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
+        writeToS3WithKey(objectKey, testDataBytes);
+        return OBJECT_KEY + SEPARATOR + objectKey;
+    }
 
     default AdminClient newAdminClient(final String bootstrapServers) {
         final Properties adminClientConfig = new Properties();

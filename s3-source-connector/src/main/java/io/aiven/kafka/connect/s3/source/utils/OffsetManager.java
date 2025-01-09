@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,7 +82,17 @@ public class OffsetManager {
         return startOffset;
     }
 
-    public String getObjectMapKey(final String currentObjectKey) {
+    public Map<String, Object> updateAndReturnCurrentOffsets(final Map<String, Object> partitionMap,
+            final String currentObjectKey, final long offset) {
+        final Map<String, Object> offsetMap = offsets.compute(partitionMap, (k, v) -> {
+            final Map<String, Object> map = v == null ? new Hashtable<>() : v;
+            map.put(getObjectMapKey(currentObjectKey), offset);
+            return map;
+        });
+        return new HashMap<>(offsetMap);
+    }
+
+    public static String getObjectMapKey(final String currentObjectKey) {
         return OBJECT_KEY + SEPARATOR + currentObjectKey;
     }
 
@@ -90,29 +101,6 @@ public class OffsetManager {
             return (long) offsets.get(partitionMap).getOrDefault(getObjectMapKey(currentObjectKey), 0L);
         }
         return 0L;
-    }
-
-    public void createNewOffsetMap(final Map<String, Object> partitionMap, final String objectKey,
-            final long offsetId) {
-        final Map<String, Object> offsetMap = getOffsetValueMap(objectKey, offsetId);
-        offsets.put(partitionMap, offsetMap);
-    }
-
-    public Map<String, Object> getOffsetValueMap(final String currentObjectKey, final long offsetId) {
-        final Map<String, Object> offsetMap = new HashMap<>();
-        offsetMap.put(getObjectMapKey(currentObjectKey), offsetId);
-
-        return offsetMap;
-    }
-
-    void updateCurrentOffsets(final Map<String, Object> partitionMap, final Map<String, Object> offsetValueMap) {
-        if (offsets.containsKey(partitionMap)) {
-            final Map<String, Object> offsetMap = new HashMap<>(offsets.get(partitionMap));
-            offsetMap.putAll(offsetValueMap);
-            offsets.put(partitionMap, offsetMap);
-        } else {
-            offsets.put(partitionMap, offsetValueMap);
-        }
     }
 
     private static Set<Integer> parsePartitions(final S3SourceConfig s3SourceConfig) {

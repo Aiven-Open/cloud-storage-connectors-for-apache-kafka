@@ -29,14 +29,17 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.data.Struct;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import io.confluent.connect.avro.AvroData;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,7 +66,7 @@ final class ParquetTransformerTest {
 
         final String topic = "test-topic";
         final int topicPartition = 0;
-        final Stream<GenericRecord> recs = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
+        final Stream<SchemaAndValue> recs = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
                 s3SourceConfig, 0L);
 
         assertThat(recs).isEmpty();
@@ -78,15 +81,17 @@ final class ParquetTransformerTest {
 
         final String topic = "test-topic";
         final int topicPartition = 0;
-
-        final List<Object> records = parquetTransformer
+        final List<String> expected = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            expected.add("name" + i);
+        }
+        final List<SchemaAndValue> records = parquetTransformer
                 .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig, 0L)
                 .collect(Collectors.toList());
 
-        assertThat(records).hasSize(100);
-        assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
-                .contains("name1")
-                .contains("name2");
+        assertThat(records).extracting(SchemaAndValue::value)
+                .extracting(sv -> ((Struct) sv).getString("name"))
+                .containsExactlyElementsOf(expected);
     }
 
     @Test
@@ -99,18 +104,18 @@ final class ParquetTransformerTest {
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final List<Object> records = parquetTransformer
+        final List<String> expected = new ArrayList<>();
+        for (int i = 25; i < 100; i++) {
+            expected.add("name" + i);
+        }
+
+        final List<SchemaAndValue> records = parquetTransformer
                 .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig, 25L)
                 .collect(Collectors.toList());
 
-        assertThat(records).hasSize(75);
-        assertThat(records).extracting(record -> ((GenericRecord) record).get("name").toString())
-                .doesNotContain("name1")
-                .doesNotContain("name2")
-                .doesNotContain("name24")
-                .contains("name25")
-                .contains("name26")
-                .contains("name99");
+        assertThat(records).extracting(SchemaAndValue::value)
+                .extracting(sv -> ((Struct) sv).getString("name"))
+                .containsExactlyElementsOf(expected);
     }
 
     @Test
@@ -124,7 +129,7 @@ final class ParquetTransformerTest {
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final Stream<GenericRecord> records = parquetTransformer.getRecords(inputStreamIOSupplier, topic,
+        final Stream<SchemaAndValue> records = parquetTransformer.getRecords(inputStreamIOSupplier, topic,
                 topicPartition, s3SourceConfig, 0L);
         assertThat(records).isEmpty();
     }
@@ -150,7 +155,7 @@ final class ParquetTransformerTest {
                     .thenThrow(new IOException("Test IOException for temp file"));
 
             final IOSupplier<InputStream> inputStreamSupplier = mock(IOSupplier.class);
-            final Stream<GenericRecord> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
+            final Stream<SchemaAndValue> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
                     1, null, 0L);
 
             assertThat(resultStream).isEmpty();
@@ -163,7 +168,7 @@ final class ParquetTransformerTest {
             when(inputStreamMock.read(any(byte[].class))).thenThrow(new IOException("Test IOException during copy"));
 
             final IOSupplier<InputStream> inputStreamSupplier = () -> inputStreamMock;
-            final Stream<GenericRecord> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
+            final Stream<SchemaAndValue> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
                     1, null, 0L);
 
             assertThat(resultStream).isEmpty();
