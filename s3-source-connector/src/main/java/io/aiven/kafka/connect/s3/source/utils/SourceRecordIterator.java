@@ -166,7 +166,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         @Override
         public S3SourceRecord apply(final SchemaAndValue valueData) {
             recordCount++;
-            return new S3SourceRecord(partitionMap, recordCount, topic, partitionId, objectKey, keyData, value);
+            return new S3SourceRecord(partitionMap, recordCount, topic, partitionId, objectKey, keyData, valueData);
         }
     }
 }
