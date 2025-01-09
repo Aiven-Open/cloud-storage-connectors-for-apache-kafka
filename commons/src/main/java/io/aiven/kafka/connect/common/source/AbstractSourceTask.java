@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.common.source;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +52,8 @@ import org.slf4j.LoggerFactory;
  *
  */
 public abstract class AbstractSourceTask extends SourceTask {
+
+    public static final List<SourceRecord> NULL_RESULT = null;
 
     /**
      * The maximum time to spend polling. This is set to 5 seconds as that is the time that is allotted to a system for
@@ -174,7 +175,7 @@ public abstract class AbstractSourceTask extends SourceTask {
         if (connectorStopped.get()) {
             logger.info("Stopping");
             closeResources();
-            return Collections.emptyList();
+            return NULL_RESULT;
         } else {
             timer.start();
             try {
@@ -215,10 +216,10 @@ public abstract class AbstractSourceTask extends SourceTask {
             logger.error("Error during poll(): {}", e.getMessage(), e);
             if (config.getErrorsTolerance() == ErrorsTolerance.NONE) {
                 logger.error("Stopping Task");
-                return null; // NOPMD must return null in this case.
+                throw e;
             }
         }
-        return results;
+        return results.isEmpty() ? NULL_RESULT : results;
     }
 
     @Override

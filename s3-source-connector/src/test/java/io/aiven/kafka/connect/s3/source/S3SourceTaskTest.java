@@ -192,7 +192,7 @@ final class S3SourceTaskTest {
         stopWatch.start();
         final List<SourceRecord> results = s3SourceTask.poll();
         stopWatch.stop();
-        assertThat(results).isEmpty();
+        assertThat(results).isNull();
         assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis() + TIMING_DELTA);
     }
 
@@ -307,37 +307,53 @@ final class S3SourceTaskTest {
         };
 
         final List<SourceRecord> results = new ArrayList<>();
-        // since the polling is returning data at or near the time limit the 3 record may be returned as follows
+        // spotless:off
+        // since the polling is returning data at or near the time limit the 3 record may be returned as follows //
         // Record Poll1 Poll2 Poll3 Poll4
         // 1 x x
         // 2 x x
         // 3 x x
-        //
+        // spotless:on
+
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
         startSourceTask(s3SourceTask);
         final StopWatch stopWatch = new StopWatch();
         stopWatch.start();
         // poll 1
-        results.addAll(s3SourceTask.poll());
+        List<SourceRecord> pollResult = s3SourceTask.poll();
         stopWatch.stop();
+        if (pollResult != null) {
+            results.addAll(pollResult);
+        }
         assertThat(results).hasSizeLessThanOrEqualTo(1);
         // poll 2
         stopWatch.reset();
         stopWatch.start();
-        results.addAll(s3SourceTask.poll());
-        assertThat(results).hasSizeLessThanOrEqualTo(2);
+        pollResult = s3SourceTask.poll();
         stopWatch.stop();
+        if (pollResult != null) {
+            results.addAll(pollResult);
+        }
+        assertThat(results).hasSizeLessThanOrEqualTo(2);
         // poll 3
         stopWatch.reset();
         stopWatch.start();
-        results.addAll(s3SourceTask.poll());
-        assertThat(results).hasSizeLessThanOrEqualTo(3);
+        pollResult = s3SourceTask.poll();
         stopWatch.stop();
+        if (pollResult != null) {
+            results.addAll(pollResult);
+        }
+        assertThat(results).hasSizeLessThanOrEqualTo(3);
         // poll 4
         stopWatch.reset();
         stopWatch.start();
-        results.addAll(s3SourceTask.poll());
+        pollResult = s3SourceTask.poll();
         stopWatch.stop();
+        if (results.size() == 3) {
+            assertThat(pollResult).isNull();
+        } else {
+            results.addAll(pollResult);
+        }
         assertThat(results).hasSize(3);
     }
 
@@ -374,7 +390,7 @@ final class S3SourceTaskTest {
         stopWatch.start();
         final List<SourceRecord> results = s3SourceTask.poll();
         stopWatch.stop();
-        assertThat(results).isEmpty();
+        assertThat(results).isNull();
         assertThat(stopWatch.getTime()).isLessThan(TIMING_DELTA);
 
     }
