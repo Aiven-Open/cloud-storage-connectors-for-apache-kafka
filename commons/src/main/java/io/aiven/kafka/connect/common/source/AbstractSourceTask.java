@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * This class handles extracting records from an iterator and returning them to Kafka. It uses an exponential backoff
  * with jitter to reduce the number of calls to the backend when there is no data. This solution:
  * <ul>
- * <li>When polled this implementation moves available records from the SsourceRecord iterator to the return array.</li>
+ * <li>When polled this implementation moves available records from the SourceRecord iterator to the return array.</li>
  * <li>if there are no records
  * <ul>
  * <li>{@link #poll()} will return null.</li>
@@ -114,7 +114,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * </p>
      *
      * @param config
-     *            the configuraiton for the Backoff.
+     *            the configuration for the Backoff.
      * @return The iterator of SourceRecords.
      */
     abstract protected Iterator<SourceRecord> getIterator(BackoffConfig config);
@@ -139,7 +139,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * Try to add a SourceRecord to the results.
      *
      * @param results
-     *            the result to add the recrod to.
+     *            the result to add the record to.
      * @param sourceRecordIterator
      *            the source record iterator.
      * @return true if successful, false if the iterator is empty.
@@ -149,7 +149,7 @@ public abstract class AbstractSourceTask extends SourceTask {
             backoff.reset();
             final SourceRecord sourceRecord = sourceRecordIterator.next();
             if (logger.isDebugEnabled()) {
-                logger.debug("tryAdd() : read record " + sourceRecord.sourceOffset());
+                logger.debug("tryAdd() : read record {}", sourceRecord.sourceOffset());
             }
             results.add(sourceRecord);
             return true;
