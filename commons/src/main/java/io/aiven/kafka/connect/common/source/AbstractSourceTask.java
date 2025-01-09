@@ -113,7 +113,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * </p>
      *
      * @param config
-     *            the configuraiton for the Backoff.
+     *            the configuration for the Backoff.
      * @return The iterator of SourceRecords.
      */
     abstract protected Iterator<SourceRecord> getIterator(BackoffConfig config);
