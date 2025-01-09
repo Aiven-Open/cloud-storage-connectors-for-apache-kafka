@@ -289,7 +289,7 @@ final class S3SourceTaskTest {
         final List<S3SourceRecord> lst = createS3SourceRecords(3);
 
         final Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
-            Iterator<S3SourceRecord> inner = lst.iterator();
+            final Iterator<S3SourceRecord> inner = lst.iterator();
             @Override
             public boolean hasNext() {
                 return inner.hasNext();
@@ -346,7 +346,7 @@ final class S3SourceTaskTest {
         stopWatch.start();
         pollResult = s3SourceTask.poll();
         stopWatch.stop();
-        if (results.size() == 3) {
+        if (results.size() == lst.size()) {
             assertThat(pollResult).isNull();
         } else {
             results.addAll(pollResult);
