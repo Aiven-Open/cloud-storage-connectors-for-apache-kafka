@@ -307,13 +307,10 @@ final class S3SourceTaskTest {
         };
 
         final List<SourceRecord> results = new ArrayList<>();
-        // spotless:off
-        // since the polling is returning data at or near the time limit the 3 record may be returned as follows //
-        // Record Poll1 Poll2 Poll3 Poll4
-        // 1 x x
-        // 2 x x
-        // 3 x x
-        // spotless:on
+        // since the polling is returning data at or near the time limit the 3 record may be returned as follows
+        // Record 1 may be returned in Poll1 or Poll2
+        // Record 2 may be returned in Poll2 or Poll2
+        // Record 3 may be returned in Poll3 or Poll4
 
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
         startSourceTask(s3SourceTask);
