@@ -148,7 +148,7 @@ public abstract class AbstractSourceTask extends SourceTask {
             backoff.reset();
             final SourceRecord sourceRecord = sourceRecordIterator.next();
             if (logger.isDebugEnabled()) {
-                logger.debug("tryAdd() : read record " + sourceRecord.sourceOffset());
+                logger.debug("tryAdd() : read record {}", sourceRecord.sourceOffset());
             }
             results.add(sourceRecord);
             return true;
