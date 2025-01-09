@@ -138,7 +138,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * Try to add a SourceRecord to the results.
      *
      * @param results
-     *            the result to add the recrod to.
+     *            the result to add the record to.
      * @param sourceRecordIterator
      *            the source record iterator.
      * @return true if successful, false if the iterator is empty.
