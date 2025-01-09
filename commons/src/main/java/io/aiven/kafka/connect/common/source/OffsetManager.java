@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
+import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 
 import org.slf4j.Logger;
@@ -120,6 +121,18 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     public void remove(final OffsetManagerKey key) {
         LOGGER.info("Removing: {}", key.getPartitionMap());
         offsets.remove(key.getPartitionMap());
+    }
+
+    /**
+     * Removes the specified entry from the in memory table. Does not impact the records stored in the
+     * {@link SourceTaskContext}.
+     *
+     * @param sourceRecord
+     *            the SourceRecord that contains the key to be removed.
+     */
+    public void remove(final SourceRecord sourceRecord) {
+        LOGGER.info("Removing: {}", sourceRecord.sourcePartition());
+        offsets.remove(sourceRecord.sourcePartition());
     }
 
     /**
