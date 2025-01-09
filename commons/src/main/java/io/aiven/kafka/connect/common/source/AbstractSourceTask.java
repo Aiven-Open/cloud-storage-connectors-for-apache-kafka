@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * This class handles extracting records from an iterator and returning them to Kafka. It uses an exponential backoff
  * with jitter to reduce the number of calls to the backend when there is no data. This solution:
  * <ul>
- * <li>When polled this implementation moves available records from the SsourceRecord iterator to the return array.</li>
+ * <li>When polled this implementation moves available records from the SourceRecord iterator to the return array.</li>
  * <li>if there are no records
  * <ul>
  * <li>{@link #poll()} will return null.</li>
