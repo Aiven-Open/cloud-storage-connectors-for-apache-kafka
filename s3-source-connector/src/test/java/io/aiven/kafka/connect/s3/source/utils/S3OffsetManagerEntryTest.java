@@ -30,7 +30,7 @@ import java.util.Optional;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
-import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.source.OffsetManager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

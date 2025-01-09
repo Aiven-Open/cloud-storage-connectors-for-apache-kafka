@@ -24,9 +24,9 @@ import java.util.Set;
 
 import org.apache.kafka.connect.source.SourceRecord;
 
-import io.aiven.kafka.connect.common.OffsetManager;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
+import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;

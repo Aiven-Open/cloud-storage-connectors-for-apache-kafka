@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common;
+package io.aiven.kafka.connect.common.source;
 
 import java.util.HashMap;
 import java.util.Map;

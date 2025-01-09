@@ -51,6 +51,8 @@ import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.connect.json.JsonDeserializer;
 
+import io.aiven.kafka.connect.common.source.OffsetManager;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -131,7 +133,7 @@ public interface IntegrationBase {
      * @param partitionId
      *            the partition id.
      * @return the key prefixed by {@link io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry#OBJECT_KEY} and
-     *         {@link io.aiven.kafka.connect.common.OffsetManager}
+     *         {@link OffsetManager}
      */
     default String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
         final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName

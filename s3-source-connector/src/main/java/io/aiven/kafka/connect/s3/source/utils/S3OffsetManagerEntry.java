@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.source.OffsetManager;
 
 import com.google.common.base.Objects;
 
@@ -32,16 +32,21 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     public static final String OBJECT_KEY = "objectKey";
     public static final String TOPIC = "topic";
     public static final String PARTITION = "partition";
-    static final String RECORD_COUNT = "recordCount";
+    public static final String RECORD_COUNT = "recordCount";
 
     /**
      * THe list of Keys that may not be set via {@link #setProperty(String, Object)}.
      */
-    static final List<String> RESTRICTED_KEYS = List.of(BUCKET, OBJECT_KEY, TOPIC, PARTITION, RECORD_COUNT);
+    static final List<String> RESTRICTED_KEYS = List.of(RECORD_COUNT);
     /** The data map that stores all the values */
     private final Map<String, Object> data;
     /** THe record count for the data map. Extracted here because it is used/updated frequently during processing */
     private long recordCount;
+
+    private final String bucket;
+    private final String objectKey;
+    private final String topic;
+    private final Integer partition;
 
     /**
      * Construct the S3OffsetManagerEntry.
@@ -57,35 +62,11 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      */
     public S3OffsetManagerEntry(final String bucket, final String s3ObjectKey, final String topic,
             final Integer partition) {
+        this.bucket = bucket;
+        this.objectKey = s3ObjectKey;
+        this.topic = topic;
+        this.partition = partition;
         data = new HashMap<>();
-        data.put(BUCKET, bucket);
-        data.put(OBJECT_KEY, s3ObjectKey);
-        data.put(TOPIC, topic);
-        data.put(PARTITION, partition);
-    }
-
-    /**
-     * Wraps an existing property map as an S3OffsetManagerEntry. Creates a copy of the map for its internal use.
-     *
-     * @param properties
-     *            the map of properties to wrap.
-     * @return an S3OffsetManagerEntry.
-     * @throws IllegalArgumentException
-     *             if all the required fields are not present.
-     */
-    public static S3OffsetManagerEntry wrap(final Map<String, Object> properties) {
-        if (properties == null) {
-            return null;
-        }
-        final Map<String, Object> ourProperties = new HashMap<>(properties);
-        long recordCount = 0;
-        final Object recordCountProperty = ourProperties.computeIfAbsent(RECORD_COUNT, s -> 0L);
-        if (recordCountProperty instanceof Number) {
-            recordCount = ((Number) recordCountProperty).longValue();
-        }
-        final S3OffsetManagerEntry result = new S3OffsetManagerEntry(ourProperties);
-        result.recordCount = recordCount;
-        return result;
     }
 
     /**
@@ -95,12 +76,13 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      * @param properties
      *            the property map.
      */
-    private S3OffsetManagerEntry(final Map<String, Object> properties) {
-        data = new HashMap<>(properties);
-        for (final String field : RESTRICTED_KEYS) {
-            if (data.get(field) == null) {
-                throw new IllegalArgumentException("Missing '" + field + "' property");
-            }
+    private S3OffsetManagerEntry(final String bucket, final String s3ObjectKey, final String topic,
+            final Integer partition, final Map<String, Object> properties) {
+        this(bucket, s3ObjectKey, topic, partition);
+        data.putAll(properties);
+        final Object recordCountProperty = data.computeIfAbsent(RECORD_COUNT, s -> 0L);
+        if (recordCountProperty instanceof Number) {
+            recordCount = ((Number) recordCountProperty).longValue();
         }
     }
 
@@ -115,7 +97,10 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      */
     @Override
     public S3OffsetManagerEntry fromProperties(final Map<String, Object> properties) {
-        return wrap(properties);
+        if (properties == null) {
+            return null;
+        }
+        return new S3OffsetManagerEntry(bucket, objectKey, topic, partition, properties);
     }
 
     @Override
@@ -155,17 +140,17 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      * @return the S3ObjectKey.
      */
     public String getKey() {
-        return (String) data.get(OBJECT_KEY);
+        return objectKey;
     }
 
     @Override
     public int getPartition() {
-        return getInt(PARTITION);
+        return partition;
     }
 
     @Override
     public String getTopic() {
-        return getString(TOPIC);
+        return topic;
     }
 
     /**
@@ -174,7 +159,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      * @return the S3 Bucket for the current object.
      */
     public String getBucket() {
-        return getString(BUCKET);
+        return bucket;
     }
     /**
      * Creates a new offset map. No defensive copy is necessary.
@@ -194,7 +179,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      */
     @Override
     public OffsetManager.OffsetManagerKey getManagerKey() {
-        return () -> Map.of(BUCKET, data.get(BUCKET), OBJECT_KEY, data.get(OBJECT_KEY));
+        return () -> Map.of(BUCKET, bucket, OBJECT_KEY, objectKey);
     }
 
     @Override

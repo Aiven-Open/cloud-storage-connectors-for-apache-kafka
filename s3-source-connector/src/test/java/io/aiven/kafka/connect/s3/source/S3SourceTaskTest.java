@@ -352,7 +352,7 @@ final class S3SourceTaskTest {
         stopWatch.start();
         pollResult = s3SourceTask.poll();
         stopWatch.stop();
-        if (results.size() == 3) {
+        if (results.size() == lst.size()) {
             assertThat(pollResult).isNull();
         } else {
             results.addAll(pollResult);

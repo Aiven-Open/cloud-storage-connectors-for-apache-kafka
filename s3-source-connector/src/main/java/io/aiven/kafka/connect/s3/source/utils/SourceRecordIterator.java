@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 
-import io.aiven.kafka.connect.common.OffsetManager;
+import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -51,21 +51,18 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     /** The offset manager Entry we are working with */
     private S3OffsetManagerEntry offsetManagerEntry;
 
+    /** The configuration for this S3 source */
     private final S3SourceConfig s3SourceConfig;
-
+    /** The transformer for the data conversions */
     private final Transformer transformer;
-    // Once we decouple the S3Object from the Source Iterator we can change this to be the SourceApiClient
-    // At which point it will work for al our integrations.
+    /** The AWS client that provides the S3Objects */
     private final AWSV2SourceClient sourceClient;
-
-    private String topic;
-    private int partitionId;
+    /** The S3 bucket we are processing */
     private final String bucketName;
+    /** The inner iterator to provides S3Object that have been filtered potentially had data extracted */
     private final Iterator<S3Object> inner;
-
+    /** The outer iterator that provides S3SourceRecords */
     private Iterator<S3SourceRecord> outer;
-
-    private final Predicate<S3Object> fileNamePredicate;
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig,
             final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer,
@@ -74,18 +71,21 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
-        this.fileNamePredicate = buildPredicate();
-
         this.transformer = transformer;
         this.sourceClient = sourceClient;
+        final Predicate<S3Object> fileNamePredicate = buildFileNamePredicate();
 
-        // call filters out bad file names and extracts topic/partition
-        inner = IteratorUtils.filteredIterator(sourceClient.getS3ObjectIterator(null),
-                s3Object -> this.fileNamePredicate.test(s3Object));
+        // call filters out bad file names and creates the offsetManagerEntry.
+        inner = IteratorUtils.filteredIterator(sourceClient.getS3ObjectIterator(null), fileNamePredicate::test);
         outer = Collections.emptyIterator();
     }
 
-    private Predicate<S3Object> buildPredicate() {
+    /**
+     * creates the file name predicate that matches file names and extracts the offsetManagerEntry data.
+     *
+     * @return a predicate to filter S3Objects.
+     */
+    private Predicate<S3Object> buildFileNamePredicate() {
         return s3Object -> {
 
             final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(s3Object.key());
@@ -93,8 +93,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             if (fileMatcher.find()) {
                 // TODO move this from the SourceRecordIterator so that we can decouple it from S3 and make it API
                 // agnostic
-                topic = fileMatcher.group(PATTERN_TOPIC_KEY);
-                partitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
                 final S3OffsetManagerEntry keyEntry = new S3OffsetManagerEntry(bucketName, s3Object.key(),
                         fileMatcher.group(PATTERN_TOPIC_KEY),
                         Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY)));
@@ -140,10 +138,12 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             return Stream.empty();
         }
 
-        final SchemaAndValue keyData = transformer.getKeyData(s3Object.key(), topic, s3SourceConfig);
+        final SchemaAndValue keyData = transformer.getKeyData(s3Object.key(), offsetManagerEntry.getTopic(),
+                s3SourceConfig);
 
         return transformer
-                .getRecords(sourceClient.getObject(s3Object.key()), topic, partitionId, s3SourceConfig, recordCount)
+                .getRecords(sourceClient.getObject(s3Object.key()), offsetManagerEntry.getTopic(),
+                        offsetManagerEntry.getPartition(), s3SourceConfig, recordCount)
                 .map(new Mapper(offsetManagerEntry, keyData));
     }
 
@@ -161,6 +161,9 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         private final SchemaAndValue keyData;
 
         public Mapper(final S3OffsetManagerEntry entry, final SchemaAndValue keyData) {
+            // TODO this is the point where the global S3OffsetManagerEntry becomes local and we can do a lookahead type
+            // operation within the Transformer
+            // to see if there are more records.
             this.entry = entry;
             this.keyData = keyData;
         }
