@@ -24,18 +24,20 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.SchemaAndValue;
+
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 
 public abstract class Transformer {
 
-    public abstract void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
+    public abstract void configureValueConverter(Map<String, String> config, SourceCommonConfig sourceConfig);
 
     public final Stream<SchemaAndValue> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
+            final String topic, final int topicPartition, final SourceCommonConfig sourceConfig,
+            final long skipRecords) {
 
         final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, topic, topicPartition,
                 sourceConfig);
@@ -56,9 +58,9 @@ public abstract class Transformer {
      * @return a StreamSpliterator instance.
      */
     protected abstract StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier, String topic,
-            int topicPartition, AbstractConfig sourceConfig);
+            int topicPartition, SourceCommonConfig sourceConfig);
 
-    public abstract SchemaAndValue getKeyData(Object cloudStorageKey, String topic, AbstractConfig sourceConfig);
+    public abstract SchemaAndValue getKeyData(Object cloudStorageKey, String topic, SourceCommonConfig sourceConfig);
 
     /**
      * A Spliterator that performs various checks on the opening/closing of the input stream.

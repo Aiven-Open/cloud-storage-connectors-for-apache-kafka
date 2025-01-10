@@ -20,6 +20,7 @@ import java.util.Locale;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 
@@ -30,6 +31,8 @@ public final class SchemaRegistryFragment extends ConfigFragment {
     public static final String AVRO_VALUE_SERIALIZER = "value.serializer";
     public static final String INPUT_FORMAT_KEY = "input.format";
     public static final String SCHEMAS_ENABLE = "schemas.enable";
+    public static final String BYTE_ARRAY_TRANSFORMER_MAX_BUFFER_SIZE = "byte.array.transformer.max.buffer.size";
+    private static final int MAX_BUFFER_SIZE = 4096;
 
     /**
      * Construct the ConfigFragment..
@@ -53,6 +56,10 @@ public final class SchemaRegistryFragment extends ConfigFragment {
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM,
                 "Input format of messages read from source avro/json/parquet/bytes", SCHEMAREGISTRY_GROUP, srCounter++, // NOPMD
                 ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
+        configDef.define(BYTE_ARRAY_TRANSFORMER_MAX_BUFFER_SIZE, ConfigDef.Type.INT, MAX_BUFFER_SIZE,
+                new ByteArrayTransformerMaxBufferSizeValidator(), ConfigDef.Importance.MEDIUM,
+                "Max Size of the byte buffer when using the BYTE Transformer", SCHEMAREGISTRY_GROUP, srCounter++, // NOPMD
+                ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
 
         configDef.define(AVRO_VALUE_SERIALIZER, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM,
                 "Avro value serializer", SCHEMAREGISTRY_GROUP, srCounter++, // NOPMD
@@ -71,6 +78,22 @@ public final class SchemaRegistryFragment extends ConfigFragment {
 
     public Class<?> getAvroValueSerializer() {
         return cfg.getClass(AVRO_VALUE_SERIALIZER);
+    }
+
+    public int getByteArrayTransformerMaxBufferSize() {
+        return cfg.getInt(BYTE_ARRAY_TRANSFORMER_MAX_BUFFER_SIZE);
+    }
+
+    private static class ByteArrayTransformerMaxBufferSizeValidator implements ConfigDef.Validator {
+        @Override
+        public void ensureValid(final String name, final Object value) {
+
+            final int size = (int) value;
+            if (size <= 0) {
+                throw new ConfigException(String.format("%s must be larger then 0", name));
+            }
+
+        }
     }
 
 }

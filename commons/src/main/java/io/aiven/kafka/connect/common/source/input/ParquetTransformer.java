@@ -29,9 +29,9 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.parquet.LocalInputFile;
 
 import io.confluent.connect.avro.AvroData;
@@ -55,19 +55,19 @@ public class ParquetTransformer extends Transformer {
     }
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
+    public void configureValueConverter(final Map<String, String> config, final SourceCommonConfig sourceConfig) {
         config.put(SCHEMA_REGISTRY_URL, sourceConfig.getString(SCHEMA_REGISTRY_URL));
     }
 
     @Override
     public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
-            final AbstractConfig sourceConfig) {
+            final SourceCommonConfig sourceConfig) {
         return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
     public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig) {
+            final int topicPartition, final SourceCommonConfig sourceConfig) {
 
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
 

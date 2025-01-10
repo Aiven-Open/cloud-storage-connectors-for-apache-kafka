@@ -82,4 +82,8 @@ public class SourceCommonConfig extends CommonConfig {
         return TransformerFactory.getTransformer(schemaRegistryFragment.getInputFormat());
     }
 
+    public int getByteArrayTransformerMaxBufferSize() {
+        return schemaRegistryFragment.getByteArrayTransformerMaxBufferSize();
+    }
+
 }

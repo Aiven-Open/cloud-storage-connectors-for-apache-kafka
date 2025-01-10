@@ -117,6 +117,9 @@ final class SourceRecordIteratorTest {
 
         when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
+        mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        when(mockConfig.getByteArrayTransformerMaxBufferSize()).thenReturn(4096);
+
         mockSourceConfig(mockConfig, filePattern, 0, 1, null);
 
         final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
