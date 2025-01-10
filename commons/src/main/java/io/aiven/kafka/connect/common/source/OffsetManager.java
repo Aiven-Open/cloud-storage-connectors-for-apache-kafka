@@ -79,14 +79,14 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      * @return the entry.
      */
     public Optional<E> getEntry(final OffsetManagerKey key, final Function<Map<String, Object>, E> creator) {
-        LOGGER.info("getEntry: {}", key.getPartitionMap());
+        LOGGER.debug("getEntry: {}", key.getPartitionMap());
         final Map<String, Object> data = offsets.compute(key.getPartitionMap(), (k, v) -> {
             if (v == null) {
                 final Map<String, Object> kafkaData = context.offsetStorageReader().offset(key.getPartitionMap());
-                LOGGER.info("Context stored offset map {}", kafkaData);
+                LOGGER.debug("Context stored offset map {}", kafkaData);
                 return kafkaData == null || kafkaData.isEmpty() ? null : kafkaData;
             } else {
-                LOGGER.info("Previously stored offset map {}", v);
+                LOGGER.debug("Previously stored offset map {}", v);
                 return v;
             }
         });
@@ -119,7 +119,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      *            the key for the entry to remove.
      */
     public void remove(final OffsetManagerKey key) {
-        LOGGER.info("Removing: {}", key.getPartitionMap());
+        LOGGER.debug("Removing: {}", key.getPartitionMap());
         offsets.remove(key.getPartitionMap());
     }
 
@@ -131,7 +131,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      *            the SourceRecord that contains the key to be removed.
      */
     public void remove(final SourceRecord sourceRecord) {
-        LOGGER.info("Removing: {}", sourceRecord.sourcePartition());
+        LOGGER.debug("Removing: {}", sourceRecord.sourcePartition());
         offsets.remove(sourceRecord.sourcePartition());
     }
 

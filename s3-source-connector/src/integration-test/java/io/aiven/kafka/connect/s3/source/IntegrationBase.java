@@ -263,10 +263,14 @@ public interface IntegrationBase {
         final Map<String, Object> messages = new HashMap<>();
         final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(1));
         for (final ConsumerRecord<byte[], byte[]> record : records) {
-            Map<String, Object> offsetRec = OBJECT_MAPPER.readValue(record.value(), new TypeReference<>() { // NOPMD
+            final Map<String, Object> offsetRec = OBJECT_MAPPER.readValue(record.value(), new TypeReference<>() { // NOPMD
             });
-            messages.put((String) offsetRec.get(OBJECT_KEY), offsetRec.get(RECORD_COUNT));
+            final List<Object> key = OBJECT_MAPPER.readValue(record.key(), new TypeReference<>() { // NOPMD
+            });
+            final Map<String, Object> keyDetails = (Map<String, Object>) key.get(1);
+            messages.put((String) keyDetails.get(OBJECT_KEY), offsetRec.get(RECORD_COUNT));
         }
+
         return messages;
     }
 
