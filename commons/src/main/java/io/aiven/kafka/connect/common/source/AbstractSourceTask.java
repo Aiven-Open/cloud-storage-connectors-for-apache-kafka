@@ -163,7 +163,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      *
      * @return {@code true} if the connector is not stopped and the timer has not expired.
      */
-    protected boolean stillPolling() {
+    protected final boolean stillPolling() {
         final boolean result = !connectorStopped.get() && !timer.isExpired();
         logger.debug("Still polling: {}", result);
         return result;

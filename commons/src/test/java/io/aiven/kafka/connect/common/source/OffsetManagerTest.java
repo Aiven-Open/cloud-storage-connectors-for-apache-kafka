@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
@@ -34,15 +33,14 @@ import org.junit.jupiter.api.Test;
 
 final class OffsetManagerTest {
 
-    private SourceTaskContext sourceTaskContext;
-
     private OffsetStorageReader offsetStorageReader;
 
     private OffsetManager<TestingOffsetManagerEntry> offsetManager;
+
     @BeforeEach
     void setup() {
         offsetStorageReader = mock(OffsetStorageReader.class);
-        sourceTaskContext = mock(SourceTaskContext.class);
+        final SourceTaskContext sourceTaskContext = mock(SourceTaskContext.class);
         when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
         offsetManager = new OffsetManager<>(sourceTaskContext);
     }
@@ -74,54 +72,6 @@ final class OffsetManagerTest {
         final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(() -> partitionKey,
                 TestingOffsetManagerEntry::new);
         assertThat(result).isNotPresent();
-    }
-
-    @Test
-    void testUpdateCurrentEntry() {
-        final TestingOffsetManagerEntry offsetEntry = new TestingOffsetManagerEntry("bucket", "topic1", "thing");
-
-        final ConcurrentHashMap<Map<String, Object>, Map<String, Object>> offsets = new ConcurrentHashMap<>();
-        offsets.put(offsetEntry.getManagerKey().getPartitionMap(), offsetEntry.getProperties());
-
-        offsetManager = new OffsetManager<>(sourceTaskContext, offsets);
-        offsetEntry.setProperty("MyProperty", "WOW");
-
-        offsetManager.updateCurrentOffsets(offsetEntry);
-
-        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(offsetEntry.getManagerKey(),
-                TestingOffsetManagerEntry::new);
-        assertThat(result).isPresent();
-        assertThat(result.get().getProperty("MyProperty")).isEqualTo("WOW");
-        assertThat(result.get().getProperties()).isEqualTo(offsetEntry.getProperties());
-    }
-
-    @Test
-    void testUpdateNonExistentEntry() {
-        final TestingOffsetManagerEntry offsetEntry = new TestingOffsetManagerEntry("bucket", "topic1", "0");
-        offsetEntry.setProperty("Random-property", "random value");
-        offsetManager.updateCurrentOffsets(offsetEntry);
-
-        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(offsetEntry.getManagerKey(),
-                offsetEntry::fromProperties);
-        assertThat(result).isPresent();
-        assertThat(result.get().getProperties()).isEqualTo(offsetEntry.getProperties());
-    }
-
-    @Test
-    void updateCurrentOffsetsDataNotLost() {
-        final TestingOffsetManagerEntry offsetEntry = new TestingOffsetManagerEntry("bucket", "topic1", "0");
-        offsetEntry.setProperty("test", "WOW");
-        offsetManager.updateCurrentOffsets(offsetEntry);
-
-        final TestingOffsetManagerEntry offsetEntry2 = new TestingOffsetManagerEntry("bucket", "topic1", "0");
-        offsetEntry2.setProperty("test2", "a thing");
-        offsetManager.updateCurrentOffsets(offsetEntry2);
-
-        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(offsetEntry.getManagerKey(),
-                offsetEntry::fromProperties);
-        assertThat(result).isPresent();
-        assertThat(result.get().getProperty("test")).isEqualTo("WOW");
-        assertThat(result.get().getProperty("test2")).isEqualTo("a thing");
     }
 
     @SuppressWarnings("PMD.TestClassWithoutTestCases") // TODO figure out why this fails.

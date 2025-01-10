@@ -267,6 +267,7 @@ public interface IntegrationBase {
             });
             final List<Object> key = OBJECT_MAPPER.readValue(record.key(), new TypeReference<>() { // NOPMD
             });
+            // key.get(0) will return the name of the connector the commit is from.
             final Map<String, Object> keyDetails = (Map<String, Object>) key.get(1);
             messages.put((String) keyDetails.get(OBJECT_KEY), offsetRec.get(RECORD_COUNT));
         }

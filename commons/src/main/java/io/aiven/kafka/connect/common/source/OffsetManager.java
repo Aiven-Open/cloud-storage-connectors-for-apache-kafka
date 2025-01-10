@@ -243,16 +243,6 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
         int getPartition();
 
         /**
-         * Gets the number of records to skip to get to this record. This is the same as the zero-based index of this
-         * record if all records were in an array.
-         *
-         * @return The number of records to skip to get to this record.
-         */
-        default long skipRecords() {
-            return 0;
-        }
-
-        /**
          * Increments the record count.
          */
         void incrementRecordCount();

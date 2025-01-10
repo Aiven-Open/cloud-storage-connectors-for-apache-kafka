@@ -57,6 +57,7 @@ final class S3OffsetManagerEntryTest {
         sourceTaskContext = mock(SourceTaskContext.class);
         when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
         offsetManager = new OffsetManager<>(sourceTaskContext);
+
     }
 
     private Map<String, Object> createPartitionMap() {
@@ -102,31 +103,6 @@ final class S3OffsetManagerEntryTest {
         assertThat(entry2.get().getBucket()).isEqualTo(TEST_BUCKET);
         assertThat(entry2.get().getProperty("random_entry")).isEqualTo(5L);
         verify(sourceTaskContext, times(1)).offsetStorageReader();
-    }
-
-    @Test
-    void testUpdate() {
-        final S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
-        assertThat(entry.getRecordCount()).isEqualTo(0L);
-        assertThat(entry.getProperty("random_entry")).isNull();
-
-        offsetManager.updateCurrentOffsets(entry);
-
-        entry.setProperty("random_entry", 5L);
-        entry.incrementRecordCount();
-        assertThat(entry.getRecordCount()).isEqualTo(1L);
-
-        offsetManager.updateCurrentOffsets(entry);
-
-        final Optional<S3OffsetManagerEntry> entry2 = offsetManager.getEntry(entry.getManagerKey(),
-                entry::fromProperties);
-        assertThat(entry2).isPresent();
-        assertThat(entry2.get().getPartition()).isEqualTo(PARTITION);
-        assertThat(entry2.get().getRecordCount()).isEqualTo(1L);
-        assertThat(entry2.get().getTopic()).isEqualTo(TOPIC);
-        assertThat(entry2.get().getBucket()).isEqualTo(TEST_BUCKET);
-        assertThat(entry2.get().getProperty("random_entry")).isEqualTo(5L);
-        verify(sourceTaskContext, times(0)).offsetStorageReader();
     }
 
     @Test

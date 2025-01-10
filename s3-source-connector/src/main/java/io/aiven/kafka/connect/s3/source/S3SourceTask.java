@@ -111,7 +111,6 @@ public class S3SourceTask extends AbstractSourceTask {
             public SourceRecord next() {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
                 final S3OffsetManagerEntry entry = s3SourceRecord.getOffsetManagerEntry();
-                offsetManager.updateCurrentOffsets(entry);
                 return RecordProcessor.createSourceRecord(s3SourceRecord, s3SourceConfig, awsv2SourceClient, entry);
             }
         };
