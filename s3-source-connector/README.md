@@ -201,6 +201,10 @@ List of new configuration parameters:
 - `aws.sts.role.session.name` - AWS session name for cross-account access role
 - `aws.sts.role.session.duration` - Session duration for cross-account access role in Seconds. Minimum value - 900.
 - `aws.sts.config.endpoint` - AWS STS endpoint for cross-account access role.
+- `transformer.max.buffer.size` - [Optional] When using the ByteArrayTransformer you can alter the buffer size from 1 up to 2147483647 default is 4096
+- `input.format` - Specify the format of the files being read from S3 supported values are avro, parquet, jsonl, and bytes, bytes is also the default
+- `schema.registry.url` [Optional] The url of the schema registry you want to use
+- ``
 
 ## Configuration
 

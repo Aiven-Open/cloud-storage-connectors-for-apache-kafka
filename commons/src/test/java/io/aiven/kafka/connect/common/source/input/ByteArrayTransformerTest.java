@@ -60,9 +60,9 @@ final class ByteArrayTransformerTest {
         final byte[] data = { 1, 2, 3, 4, 5 };
         final InputStream inputStream = new ByteArrayInputStream(data);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-        when(sourceCommonConfig.getByteArrayTransformerMaxBufferSize()).thenReturn(4096);
-        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
-                sourceCommonConfig, 0);
+        when(sourceCommonConfig.getTransformerMaxBufferSize()).thenReturn(4096);
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier,
+                (long) data.length, TEST_TOPIC, 0, sourceCommonConfig, 0);
 
         final List<SchemaAndValue> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(1);
@@ -75,7 +75,7 @@ final class ByteArrayTransformerTest {
 
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, 0, TEST_TOPIC, 0,
                 sourceCommonConfig, 0);
 
         assertThat(records).hasSize(0);
@@ -93,10 +93,10 @@ final class ByteArrayTransformerTest {
         final byte[] data = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
         final InputStream inputStream = new ByteArrayInputStream(data);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-        when(sourceCommonConfig.getByteArrayTransformerMaxBufferSize()).thenReturn(maxBufferSize);
+        when(sourceCommonConfig.getTransformerMaxBufferSize()).thenReturn(maxBufferSize);
 
-        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
-                sourceCommonConfig, 0);
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier,
+                (long) data.length, TEST_TOPIC, 0, sourceCommonConfig, 0);
 
         final List<SchemaAndValue> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(numberOfExpectedRecords);
@@ -108,6 +108,6 @@ final class ByteArrayTransformerTest {
         });
         assertThat(processedData.buffer()).isEqualTo(data);
         // Should only get called once per splitIterator
-        verify(sourceCommonConfig, times(1)).getByteArrayTransformerMaxBufferSize();
+        verify(sourceCommonConfig, times(1)).getTransformerMaxBufferSize();
     }
 }

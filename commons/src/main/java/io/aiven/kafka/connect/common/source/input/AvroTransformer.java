@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,8 +55,9 @@ public class AvroTransformer extends Transformer {
     }
 
     @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final SourceCommonConfig sourceConfig) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final long streamLength, final String topic, final int topicPartition,
+            final SourceCommonConfig sourceConfig) {
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
             private DataFileStream<GenericRecord> dataFileStream;
             private final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();

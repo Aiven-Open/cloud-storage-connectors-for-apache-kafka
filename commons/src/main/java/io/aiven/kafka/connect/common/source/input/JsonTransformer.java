@@ -53,8 +53,9 @@ public class JsonTransformer extends Transformer {
     }
 
     @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final SourceCommonConfig sourceConfig) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final long streamLength, final String topic, final int topicPartition,
+            final SourceCommonConfig sourceConfig) {
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
             BufferedReader reader;
 

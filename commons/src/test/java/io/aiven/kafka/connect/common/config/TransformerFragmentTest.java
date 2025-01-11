@@ -28,27 +28,34 @@ import org.apache.kafka.common.config.ConfigException;
 
 import org.junit.jupiter.api.Test;
 
-public class SchemaRegistryFragmentTest {// NOPMD
+class TransformerFragmentTest {
 
     @Test
     void validateCorrectBufferSizeIsAccepted() {
         final int bufferSize = 50;
-        final ConfigDef configDef = SchemaRegistryFragment.update(new ConfigDef());
+        final ConfigDef configDef = TransformerFragment.update(new ConfigDef());
         final Map<String, Object> props = new HashMap<>();
-        props.put(SchemaRegistryFragment.BYTE_ARRAY_TRANSFORMER_MAX_BUFFER_SIZE, bufferSize);
+        props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, bufferSize);
 
-        final SchemaRegistryFragment schemaReg = new SchemaRegistryFragment(new AbstractConfig(configDef, props));
-        assertThat(schemaReg.getByteArrayTransformerMaxBufferSize()).isEqualTo(bufferSize);
+        final TransformerFragment schemaReg = new TransformerFragment(new AbstractConfig(configDef, props));
+        assertThat(schemaReg.getTransformerMaxBufferSize()).isEqualTo(bufferSize);
     }
 
     @Test
     void validateInvalidBufferSizeThrowsConfigException() {
-        final ConfigDef configDef = SchemaRegistryFragment.update(new ConfigDef());
+        final ConfigDef configDef = TransformerFragment.update(new ConfigDef());
         final Map<String, Object> props = new HashMap<>();
-        props.put(SchemaRegistryFragment.BYTE_ARRAY_TRANSFORMER_MAX_BUFFER_SIZE, 0);
+        // Too small
+        props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, 0);
 
-        assertThatThrownBy(() -> new SchemaRegistryFragment(new AbstractConfig(configDef, props)))
+        assertThatThrownBy(() -> new TransformerFragment(new AbstractConfig(configDef, props)))
                 .isInstanceOf(ConfigException.class);
+        // Too large
+        props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, Integer.MAX_VALUE + "1");
+        assertThatThrownBy(() -> new TransformerFragment(new AbstractConfig(configDef, props)))
+                .isInstanceOf(ConfigException.class)
+                .hasMessage(
+                        "Invalid value 21474836471 for configuration transformer.max.buffer.size: Not a number of type INT");
     }
 
 }

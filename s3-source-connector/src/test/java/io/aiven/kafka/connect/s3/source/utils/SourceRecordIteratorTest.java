@@ -118,7 +118,10 @@ final class SourceRecordIteratorTest {
         when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
         mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
-        when(mockConfig.getByteArrayTransformerMaxBufferSize()).thenReturn(4096);
+        when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
+
+        mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
 
         mockSourceConfig(mockConfig, filePattern, 0, 1, null);
 
@@ -169,6 +172,7 @@ final class SourceRecordIteratorTest {
     @Test
     void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws Exception {
         final String key = "topic-00001-abc123.txt";
+
         final String filePattern = "{{topic}}-{{partition}}";
 
         final S3SourceConfig config = getConfig(Collections.emptyMap());
@@ -182,14 +186,16 @@ final class SourceRecordIteratorTest {
         when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
 
         mockSourceConfig(mockConfig, filePattern, 0, 1, null);
-
         // With ByteArrayTransformer
 
         mockTransformer = mock(ByteArrayTransformer.class);
-        when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
+        when(mockTransformer.getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong()))
                 .thenReturn(Stream.of(SchemaAndValue.NULL));
 
         when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
+        mockTransformer = mock(ByteArrayTransformer.class);
+        when(mockTransformer.getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong()))
+                .thenReturn(Stream.of(SchemaAndValue.NULL));
 
         when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
                 .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
@@ -200,7 +206,7 @@ final class SourceRecordIteratorTest {
 
         assertThat(byteArrayIterator).isExhausted();
 
-        verify(mockTransformer, never()).getRecords(any(), anyString(), anyInt(), any(), anyLong());
+        verify(mockTransformer, never()).getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong());
 
         // With AvroTransformer
 
@@ -208,17 +214,21 @@ final class SourceRecordIteratorTest {
 
         when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
                 .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
+        when(mockTransformer.getKeyData(anyString(), anyString(), any())).thenReturn(SchemaAndValue.NULL);
+        when(mockTransformer.getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong()))
+                .thenReturn(Arrays.asList(SchemaAndValue.NULL).stream());
 
         when(mockTransformer.getKeyData(anyString(), anyString(), any())).thenReturn(SchemaAndValue.NULL);
-        when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
+        when(mockTransformer.getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong()))
                 .thenReturn(Arrays.asList(SchemaAndValue.NULL).stream());
 
         final Iterator<S3SourceRecord> avroIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
                 mockTransformer, sourceApiClient);
         assertThat(avroIterator).isExhausted();
 
-        verify(mockTransformer, times(0)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
+        verify(mockTransformer, times(0)).getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong());
 
+        verify(mockTransformer, times(0)).getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong());
     }
 
     @ParameterizedTest

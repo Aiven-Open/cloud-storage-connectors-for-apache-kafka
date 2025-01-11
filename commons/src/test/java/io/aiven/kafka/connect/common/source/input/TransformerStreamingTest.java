@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.source.input;
 
 import static io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG;
+import static io.aiven.kafka.connect.common.source.input.Transformer.UNKNOWN_STREAM_LENGTH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -37,8 +38,8 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
-import io.aiven.kafka.connect.common.config.SchemaRegistryFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.config.TransformerFragment;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -56,7 +57,7 @@ class TransformerStreamingTest {
             final SourceCommonConfig config, final int expectedCount) throws IOException {
         final IOSupplier<InputStream> ioSupplier = mock(IOSupplier.class);
         when(ioSupplier.get()).thenThrow(new IOException("Test IOException during initialization"));
-        final Stream<?> objStream = transformer.getRecords(ioSupplier, "topic", 1, config, 0);
+        final Stream<?> objStream = transformer.getRecords(ioSupplier, UNKNOWN_STREAM_LENGTH, "topic", 1, config, 0);
         assertThat(objStream).isEmpty();
     }
 
@@ -74,7 +75,8 @@ class TransformerStreamingTest {
             when(inputStream.readNBytes(anyInt())).thenThrow(new IOException("Test IOException during read"));
             when(inputStream.readAllBytes()).thenThrow(new IOException("Test IOException during read"));
             try (CloseTrackingStream stream = new CloseTrackingStream(inputStream)) {
-                final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+                final Stream<?> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, "topic", 1,
+                        config, 0);
                 assertThat(objStream).isEmpty();
                 assertThat(stream.closeCount).isGreaterThan(0);
             }
@@ -86,7 +88,7 @@ class TransformerStreamingTest {
     void verifyCloseCalledAtEnd(final Transformer transformer, final byte[] testData, final SourceCommonConfig config,
             final int expectedCount) throws IOException {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
-        final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+        final Stream<?> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, "topic", 1, config, 0);
         final long count = objStream.count();
         assertThat(count).isEqualTo(expectedCount);
         assertThat(stream.closeCount).isGreaterThan(0);
@@ -97,7 +99,8 @@ class TransformerStreamingTest {
     void verifyCloseCalledAtIteratorEnd(final Transformer transformer, final byte[] testData,
             final SourceCommonConfig config, final int expectedCount) throws IOException {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
-        final Stream<SchemaAndValue> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+        final Stream<SchemaAndValue> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, "topic", 1,
+                config, 0);
         final Iterator<SchemaAndValue> iter = objStream.iterator();
         long count = 0L;
         while (iter.hasNext()) {
@@ -118,7 +121,7 @@ class TransformerStreamingTest {
                 }, 100));
         lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.BYTES),
                 "Hello World".getBytes(StandardCharsets.UTF_8), new SourceCommonConfig(
-                        SchemaRegistryFragment.update(OutputFormatFragment.update(new ConfigDef(), null)), props) {
+                        TransformerFragment.update(OutputFormatFragment.update(new ConfigDef(), null)), props) {
                 }, 1));
         lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.JSONL),
                 JsonTransformerTest.getJsonRecs(100).getBytes(StandardCharsets.UTF_8),

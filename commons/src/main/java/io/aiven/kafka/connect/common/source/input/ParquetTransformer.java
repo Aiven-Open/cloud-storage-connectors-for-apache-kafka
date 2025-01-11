@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,8 +66,9 @@ public class ParquetTransformer extends Transformer {
     }
 
     @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final SourceCommonConfig sourceConfig) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final long streamLength, final String topic, final int topicPartition,
+            final SourceCommonConfig sourceConfig) {
 
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
 

@@ -19,13 +19,13 @@ package io.aiven.kafka.connect.s3.source;
 import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG;
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.AVRO_VALUE_SERIALIZER;
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.DISTRIBUTION_TYPE;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.AVRO_VALUE_SERIALIZER;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG;
@@ -43,6 +43,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -203,6 +204,50 @@ final class IntegrationTest implements IntegrationBase {
 
         // Verify offset positions
         final Map<String, Object> expectedOffsetRecords = offsetKeys.subList(0, offsetKeys.size() - 1)
+                .stream()
+                .collect(Collectors.toMap(Function.identity(), s -> 1));
+        verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
+    }
+
+    @Test
+    void bytesDefaultBufferTest() {
+        final int maxBufferSize = 4096;
+        final var topicName = IntegrationBase.topicName(testInfo);
+        final DistributionType distributionType;
+        final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
+        distributionType = DistributionType.PARTITION;
+
+        final String fileNamePatternSeparator = "_";
+
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1, distributionType, false,
+                null, prefixPattern, fileNamePatternSeparator);
+
+        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
+        connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
+
+        final int byteArraySize = 6000;
+        final byte[] testData1 = new byte[byteArraySize];
+        for (int i = 0; i < byteArraySize; i++) {
+            testData1[i] = ((Integer) i).byteValue();
+        }
+        final List<String> offsetKeys = new ArrayList<>();
+
+        offsetKeys.add(writeToS3(topicName, testData1, "0", s3Prefix, fileNamePatternSeparator));
+
+        assertThat(testBucketAccessor.listObjects()).hasSize(1);
+
+        // Poll messages from the Kafka topic and verify the consumed data
+        final List<byte[]> records = IntegrationBase.consumeRawByteMessages(topicName, 2,
+                connectRunner.getBootstrapServers());
+
+        assertThat(records.get(0)).hasSize(maxBufferSize);
+        assertThat(records.get(1)).hasSize(byteArraySize - maxBufferSize);
+
+        assertThat(records.get(0)).isEqualTo(Arrays.copyOfRange(testData1, 0, maxBufferSize));
+        assertThat(records.get(1)).isEqualTo(Arrays.copyOfRange(testData1, maxBufferSize, testData1.length));
+
+        // Verify offset positions
+        final Map<String, Object> expectedOffsetRecords = offsetKeys.subList(0, 0)
                 .stream()
                 .collect(Collectors.toMap(Function.identity(), s -> 1));
         verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());

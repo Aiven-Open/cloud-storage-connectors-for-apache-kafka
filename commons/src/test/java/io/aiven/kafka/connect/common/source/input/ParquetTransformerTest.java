@@ -58,7 +58,7 @@ final class ParquetTransformerTest {
     }
 
     @Test
-    void testHandleValueDataWithZeroBytes() {
+    void testHandleValueDataWithZeroBytes() throws IOException {
         final byte[] mockParquetData = new byte[0];
         final InputStream inputStream = new ByteArrayInputStream(mockParquetData);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
@@ -66,8 +66,8 @@ final class ParquetTransformerTest {
 
         final String topic = "test-topic";
         final int topicPartition = 0;
-        final Stream<SchemaAndValue> recs = parquetTransformer.getRecords(inputStreamIOSupplier, topic, topicPartition,
-                s3SourceConfig, 0L);
+        final Stream<SchemaAndValue> recs = parquetTransformer.getRecords(inputStreamIOSupplier, mockParquetData.length,
+                topic, topicPartition, s3SourceConfig, 0L);
 
         assertThat(recs).isEmpty();
     }
@@ -86,7 +86,7 @@ final class ParquetTransformerTest {
             expected.add("name" + i);
         }
         final List<SchemaAndValue> records = parquetTransformer
-                .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig, 0L)
+                .getRecords(inputStreamIOSupplier, mockParquetData.length, topic, topicPartition, s3SourceConfig, 0L)
                 .collect(Collectors.toList());
 
         assertThat(records).extracting(SchemaAndValue::value)
@@ -110,7 +110,7 @@ final class ParquetTransformerTest {
         }
 
         final List<SchemaAndValue> records = parquetTransformer
-                .getRecords(inputStreamIOSupplier, topic, topicPartition, s3SourceConfig, 25L)
+                .getRecords(inputStreamIOSupplier, mockParquetData.length, topic, topicPartition, s3SourceConfig, 25L)
                 .collect(Collectors.toList());
 
         assertThat(records).extracting(SchemaAndValue::value)
@@ -129,8 +129,8 @@ final class ParquetTransformerTest {
         final String topic = "test-topic";
         final int topicPartition = 0;
 
-        final Stream<SchemaAndValue> records = parquetTransformer.getRecords(inputStreamIOSupplier, topic,
-                topicPartition, s3SourceConfig, 0L);
+        final Stream<SchemaAndValue> records = parquetTransformer.getRecords(inputStreamIOSupplier, invalidData.length,
+                topic, topicPartition, s3SourceConfig, 0L);
         assertThat(records).isEmpty();
     }
 
@@ -155,8 +155,8 @@ final class ParquetTransformerTest {
                     .thenThrow(new IOException("Test IOException for temp file"));
 
             final IOSupplier<InputStream> inputStreamSupplier = mock(IOSupplier.class);
-            final Stream<SchemaAndValue> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
-                    1, null, 0L);
+            final Stream<SchemaAndValue> resultStream = parquetTransformer.getRecords(inputStreamSupplier, 0L,
+                    "test-topic", 1, null, 0L);
 
             assertThat(resultStream).isEmpty();
         }
@@ -168,8 +168,8 @@ final class ParquetTransformerTest {
             when(inputStreamMock.read(any(byte[].class))).thenThrow(new IOException("Test IOException during copy"));
 
             final IOSupplier<InputStream> inputStreamSupplier = () -> inputStreamMock;
-            final Stream<SchemaAndValue> resultStream = parquetTransformer.getRecords(inputStreamSupplier, "test-topic",
-                    1, null, 0L);
+            final Stream<SchemaAndValue> resultStream = parquetTransformer.getRecords(inputStreamSupplier, 0L,
+                    "test-topic", 1, null, 0L);
 
             assertThat(resultStream).isEmpty();
         }

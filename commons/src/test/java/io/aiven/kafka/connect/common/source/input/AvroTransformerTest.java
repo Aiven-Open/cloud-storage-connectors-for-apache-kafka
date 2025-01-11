@@ -16,7 +16,8 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.source.input.Transformer.UNKNOWN_STREAM_LENGTH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -78,8 +79,8 @@ final class AvroTransformerTest {
     void testReadAvroRecordsInvalidData() {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
 
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                0);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, UNKNOWN_STREAM_LENGTH, "",
+                0, sourceCommonConfig, 0);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).isEmpty();
@@ -95,8 +96,8 @@ final class AvroTransformerTest {
             expected.add("Hello, Kafka Connect S3 Source! object " + i);
         }
 
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                0);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, avroData.size(), "", 0,
+                sourceCommonConfig, 0);
 
         assertThat(records).extracting(SchemaAndValue::value)
                 .extracting(sv -> ((Struct) sv).getString("message"))
@@ -112,8 +113,8 @@ final class AvroTransformerTest {
         for (int i = 5; i < 20; i++) {
             expected.add("Hello, Kafka Connect S3 Source! object " + i);
         }
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                5);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, avroData.size(), "", 0,
+                sourceCommonConfig, 5);
 
         assertThat(records).extracting(SchemaAndValue::value)
                 .extracting(sv -> ((Struct) sv).getString("message"))
@@ -125,8 +126,8 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(20);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                25);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, avroData.size(), "", 0,
+                sourceCommonConfig, 25);
 
         assertThat(records).isEmpty();
     }

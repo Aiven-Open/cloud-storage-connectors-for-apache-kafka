@@ -18,9 +18,9 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
