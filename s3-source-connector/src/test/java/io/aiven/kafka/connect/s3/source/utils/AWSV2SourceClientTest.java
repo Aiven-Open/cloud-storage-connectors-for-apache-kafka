@@ -35,8 +35,6 @@ import java.util.Map;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -53,19 +51,16 @@ class AWSV2SourceClientTest {
     @Captor
     ArgumentCaptor<ListObjectsV2Request> requestCaptor;
 
-    private static Map<String, String> getConfigMap(final int maxTasks, final int taskId) {
+    private static Map<String, String> getConfigMap() {
         final Map<String, String> configMap = new HashMap<>();
-        configMap.put("tasks.max", String.valueOf(maxTasks));
-        configMap.put("task.id", String.valueOf(taskId));
 
         configMap.put(AWS_S3_BUCKET_NAME_CONFIG, "test-bucket");
         return configMap;
     }
 
-    @ParameterizedTest
-    @CsvSource({ "3, 1" })
-    void testFetchObjectSummariesWithNoObjects(final int maxTasks, final int taskId) {
-        initializeWithTaskConfigs(maxTasks, taskId);
+    @Test
+    void testFetchObjectSummariesWithNoObjects() {
+        initializeWithTaskConfigs();
         final ListObjectsV2Response listObjectsV2Response = createListObjectsV2Response(Collections.emptyList(), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Response);
 
@@ -73,54 +68,31 @@ class AWSV2SourceClientTest {
         assertThat(summaries).isExhausted();
     }
 
-    @ParameterizedTest
-    @CsvSource({ "1, 0" })
-    void testFetchObjectSummariesWithOneObjectWithBasicConfig(final int maxTasks, final int taskId) {
+    @Test
+    void testFetchObjectSummariesWithOneObjectWithBasicConfig() {
         final String objectKey = "any-key";
 
-        initializeWithTaskConfigs(maxTasks, taskId);
+        initializeWithTaskConfigs();
         final Iterator<String> summaries = getS3ObjectKeysIterator(objectKey);
         assertThat(summaries).hasNext();
     }
 
-    @ParameterizedTest
-    @CsvSource({ "4, 2, key1", "4, 3, key2", "4, 0, key3", "4, 1, key4" })
-    void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdAssigned(final int maxTasks, final int taskId,
-            final String objectKey) {
-        initializeWithTaskConfigs(maxTasks, taskId);
-        final Iterator<String> summaries = getS3ObjectKeysIterator(objectKey);
-        assertThat(summaries).hasNext();
-    }
-
-    @ParameterizedTest
-    @CsvSource({ "4, 1, key1", "4, 3, key1", "4, 0, key1", "4, 1, key2", "4, 2, key2", "4, 0, key2", "4, 1, key3",
-            "4, 2, key3", "4, 3, key3", "4, 0, key4", "4, 2, key4", "4, 3, key4" })
-    void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdUnassigned(final int maxTasks, final int taskId,
-            final String objectKey) {
-        initializeWithTaskConfigs(maxTasks, taskId);
-        final Iterator<String> summaries = getS3ObjectKeysIterator(objectKey);
-
-        assertThat(summaries).isExhausted();
-    }
-
-    @ParameterizedTest
-    @CsvSource({ "4, 3", "4, 0" })
-    void testFetchObjectSummariesWithZeroByteObject(final int maxTasks, final int taskId) {
-        initializeWithTaskConfigs(maxTasks, taskId);
+    @Test
+    void testFetchObjectSummariesWithZeroByteObject() {
+        initializeWithTaskConfigs();
         final ListObjectsV2Response listObjectsV2Response = getListObjectsV2Response();
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Response);
 
         final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
 
-        // assigned 1 object to taskid
-        assertThat(summaries).hasNext();
+        assertThat(summaries.next()).isNotBlank();
         assertThat(summaries.next()).isNotBlank();
         assertThat(summaries).isExhausted();
     }
 
     @Test
     void testFetchObjectSummariesWithPagination() throws IOException {
-        initializeWithTaskConfigs(4, 3);
+        initializeWithTaskConfigs();
         final S3Object object1 = createObjectSummary(1, "key1");
         final S3Object object2 = createObjectSummary(2, "key2");
         final List<S3Object> firstBatch = List.of(object1);
@@ -134,19 +106,19 @@ class AWSV2SourceClientTest {
         final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
         assertThat(summaries.next()).isNotNull();
-        assertThat(summaries).isExhausted();
+        assertThat(summaries.next()).isNotNull();
     }
 
     @Test
     void testFetchObjectWithPrefix() {
-        final Map<String, String> configMap = getConfigMap(1, 0);
+        final Map<String, String> configMap = getConfigMap();
         configMap.put(AWS_S3_PREFIX_CONFIG, "test/");
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
         s3Client = mock(S3Client.class);
-        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
+        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig);
         requestCaptor = ArgumentCaptor.forClass(ListObjectsV2Request.class);
-        final S3Object object1 = createObjectSummary(1, "key1");
-        final S3Object object2 = createObjectSummary(1, "key2");
+        final S3Object object1 = createObjectSummary(1, "topics/key1/1/key1.txt");
+        final S3Object object2 = createObjectSummary(1, "topics/key2/2/key2.txt");
 
         final ListObjectsV2Response firstResult = createListObjectsV2Response(List.of(object1), "nextToken");
         final ListObjectsV2Response secondResult = createListObjectsV2Response(List.of(object2), null);
@@ -167,19 +139,18 @@ class AWSV2SourceClientTest {
         // Not required with continuation token
         assertThat(allRequests.get(1).prefix()).isNull();
         assertThat(allRequests.get(1).continuationToken()).isEqualTo("nextToken");
-
     }
 
     @Test
     void testFetchObjectWithInitialStartAfter() {
-        final Map<String, String> configMap = getConfigMap(1, 0);
+        final Map<String, String> configMap = getConfigMap();
         final String startAfter = "file-option-1-12000.txt";
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
         s3Client = mock(S3Client.class);
-        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
+        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig);
         requestCaptor = ArgumentCaptor.forClass(ListObjectsV2Request.class);
-        final S3Object object1 = createObjectSummary(1, "key1");
-        final S3Object object2 = createObjectSummary(1, "key2");
+        final S3Object object1 = createObjectSummary(1, "key1-1-10000");
+        final S3Object object2 = createObjectSummary(1, "key2-2-20000");
 
         final ListObjectsV2Response firstResult = createListObjectsV2Response(List.of(object1), "nextToken");
         final ListObjectsV2Response secondResult = createListObjectsV2Response(List.of(object2), null);
@@ -227,12 +198,11 @@ class AWSV2SourceClientTest {
         return awsv2SourceClient.getListOfObjectKeys(null);
     }
 
-    public void initializeWithTaskConfigs(final int maxTasks, final int taskId) {
-        final Map<String, String> configMap = getConfigMap(maxTasks, taskId);
+    private void initializeWithTaskConfigs() {
+        final Map<String, String> configMap = getConfigMap();
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
         s3Client = mock(S3Client.class);
-        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig, Collections.emptySet());
-
+        awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig);
     }
 
     private ListObjectsV2Response getListObjectsV2Response() {

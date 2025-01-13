@@ -16,17 +16,21 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.kafka.connect.source.SourceRecord;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.HashDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.PartitionDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
 import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
@@ -63,11 +67,12 @@ public class S3SourceTask extends AbstractSourceTask {
     /** The AWS Source client */
 
     private AWSV2SourceClient awsv2SourceClient;
-    /** The list of failed object keys */
-    private final Set<String> failedObjectKeys = new HashSet<>();
     /** The offset manager this task uses */
     private OffsetManager offsetManager;
     private S3SourceConfig s3SourceConfig;
+
+    private int taskId;
+    private Pattern filePattern;
 
     public S3SourceTask() {
         super(LOGGER);
@@ -130,9 +135,9 @@ public class S3SourceTask extends AbstractSourceTask {
         this.s3SourceConfig = new S3SourceConfig(props);
         this.transformer = s3SourceConfig.getTransformer();
         offsetManager = new OffsetManager(context, s3SourceConfig);
-        awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig, failedObjectKeys);
-        setS3SourceRecordIterator(
-                new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, awsv2SourceClient));
+        awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig);
+        setS3SourceRecordIterator(new SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer,
+                awsv2SourceClient, initializeObjectDistributionStrategy(), filePattern, taskId));
         return s3SourceConfig;
     }
 
@@ -172,5 +177,24 @@ public class S3SourceTask extends AbstractSourceTask {
      */
     public Transformer getTransformer() {
         return transformer;
+    }
+
+    private DistributionStrategy initializeObjectDistributionStrategy() {
+        final ObjectDistributionStrategy objectDistributionStrategy = s3SourceConfig.getObjectDistributionStrategy();
+        final int maxTasks = Integer.parseInt(s3SourceConfig.originals().get("tasks.max").toString());
+        this.taskId = Integer.parseInt(s3SourceConfig.originals().get("task.id").toString()) % maxTasks;
+        DistributionStrategy distributionStrategy;
+
+        if (objectDistributionStrategy == ObjectDistributionStrategy.PARTITION_IN_FILENAME) {
+            this.filePattern = FilePatternUtils
+                    .configurePattern(s3SourceConfig.getS3FileNameFragment().getFilenameTemplate().toString());
+            distributionStrategy = new PartitionDistributionStrategy(maxTasks);
+        } else {
+            this.filePattern = FilePatternUtils
+                    .configurePattern(s3SourceConfig.getS3FileNameFragment().getFilenameTemplate().toString());
+            distributionStrategy = new HashDistributionStrategy(maxTasks);
+        }
+
+        return distributionStrategy;
     }
 }
