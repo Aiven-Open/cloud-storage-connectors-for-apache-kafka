@@ -105,8 +105,8 @@ public final class SourceConfigFragment extends ConfigFragment {
         return ErrorsTolerance.forName(cfg.getString(ERRORS_TOLERANCE));
     }
 
-    public String getObjectDistributionStrategy() {
-        return cfg.getString(OBJECT_DISTRIBUTION_STRATEGY);
+    public ObjectDistributionStrategy getObjectDistributionStrategy() {
+        return ObjectDistributionStrategy.forName(cfg.getString(OBJECT_DISTRIBUTION_STRATEGY));
     }
 
     private static class ErrorsToleranceValidator implements ConfigDef.Validator {

@@ -71,7 +71,7 @@ public class SourceCommonConfig extends CommonConfig {
     }
 
     public ObjectDistributionStrategy getObjectDistributionStrategy() {
-        return ObjectDistributionStrategy.forName(sourceConfigFragment.getObjectDistributionStrategy());
+        return sourceConfigFragment.getObjectDistributionStrategy();
     }
 
     public int getMaxPollRecords() {
