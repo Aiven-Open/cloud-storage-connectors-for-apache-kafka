@@ -161,10 +161,9 @@ final class SourceRecordIteratorTest {
 
             final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
                     mockTransformer, mockSourceApiClient, new HashDistributionStrategy(1), filePattern, 0);
-            assertThat(iterator.hasNext()).isTrue();
-            iterator.next();
+            assertThat(iterator.hasNext()).isFalse();
 
-            verify(mockTransformer, times(1)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
+            verify(mockTransformer, times(0)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
         }
     }
 

@@ -45,7 +45,7 @@ public class AWSV2SourceClient {
     private final S3Client s3Client;
     private final String bucketName;
 
-    private final Predicate<S3Object> filterPredicate = s3Object -> s3Object.size() > 0;
+    private Predicate<S3Object> filterPredicate = s3Object -> s3Object.size() > 0;
 
     /**
      * @param s3SourceConfig
@@ -130,6 +130,10 @@ public class AWSV2SourceClient {
 
     public void shutdown() {
         s3Client.close();
+    }
+
+    public void addPredicate(final Predicate<S3Object> objectPredicate) {
+        this.filterPredicate = this.filterPredicate.and(objectPredicate);
     }
 
     /**

@@ -21,7 +21,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -33,7 +32,6 @@ import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
 import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import org.apache.commons.collections4.IteratorUtils;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
@@ -64,8 +62,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private Iterator<S3SourceRecord> outer;
     private final Pattern filePattern;
 
-    private final Predicate<S3Object> fileMatchingPatternPredicate;
-    private final Predicate<S3Object> fileAssignedToTaskPredicate;
+    // private final Predicate<S3Object> fileMatchingPatternPredicate;
+    // private final Predicate<S3Object> fileAssignedToTaskPredicate;
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
             final Transformer transformer, final AWSV2SourceClient sourceClient,
@@ -82,13 +80,11 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.taskId = taskId;
 
         // Initialize predicates
-        this.fileMatchingPatternPredicate = this::isFileMatchingPattern;
-        this.fileAssignedToTaskPredicate = this::isFileAssignedToTask;
+        sourceClient.addPredicate(this::isFileMatchingPattern);
+        sourceClient.addPredicate(this::isFileAssignedToTask);
 
         // call filters out bad file names and extracts topic/partition
-        inner = IteratorUtils.filteredIterator(sourceClient.getS3ObjectIterator(null),
-                s3Object -> this.fileMatchingPatternPredicate.test(s3Object)
-                        && this.fileAssignedToTaskPredicate.test(s3Object));
+        inner = sourceClient.getS3ObjectIterator(null);
         outer = Collections.emptyIterator();
     }
 
