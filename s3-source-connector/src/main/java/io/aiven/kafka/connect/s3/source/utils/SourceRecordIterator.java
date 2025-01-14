@@ -19,9 +19,8 @@ package io.aiven.kafka.connect.s3.source.utils;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -29,9 +28,10 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import org.apache.commons.collections4.IteratorUtils;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
@@ -39,11 +39,6 @@ import software.amazon.awssdk.services.s3.model.S3Object;
  * Parquet).
  */
 public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
-    public static final String PATTERN_TOPIC_KEY = "topicName";
-    public static final String PATTERN_PARTITION_KEY = "partitionId";
-
-    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
-            + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
     public static final long BYTES_TRANSFORMATION_NUM_OF_RECS = 1L;
 
     private final OffsetManager offsetManager;
@@ -59,25 +54,17 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private String topic;
     private int partitionId;
 
+    private final DistributionStrategy distributionStrategy;
+    private final int taskId;
+
     private final Iterator<S3Object> inner;
 
     private Iterator<S3SourceRecord> outer;
-
-    private final Predicate<S3Object> fileNamePredicate = s3Object -> {
-
-        final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(s3Object.key());
-
-        if (fileMatcher.find()) {
-            // TODO move this from the SourceRecordIterator so that we can decouple it from S3 and make it API agnostic
-            topic = fileMatcher.group(PATTERN_TOPIC_KEY);
-            partitionId = Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY));
-            return true;
-        }
-        return false;
-    };
+    private final Pattern filePattern;
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
-            final Transformer transformer, final AWSV2SourceClient sourceClient) {
+            final Transformer transformer, final AWSV2SourceClient sourceClient,
+            final DistributionStrategy distributionStrategy, final Pattern filePattern, final int taskId) {
         super();
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
@@ -85,11 +72,33 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
         this.sourceClient = sourceClient;
+        this.filePattern = filePattern;
+        this.distributionStrategy = distributionStrategy;
+        this.taskId = taskId;
+
+        // Initialize predicates
+        sourceClient.addPredicate(this::isFileMatchingPattern);
+        sourceClient.addPredicate(this::isFileAssignedToTask);
 
         // call filters out bad file names and extracts topic/partition
-        inner = IteratorUtils.filteredIterator(sourceClient.getS3ObjectIterator(null),
-                s3Object -> this.fileNamePredicate.test(s3Object));
+        inner = sourceClient.getS3ObjectIterator(null);
         outer = Collections.emptyIterator();
+    }
+
+    public boolean isFileMatchingPattern(final S3Object s3Object) {
+        final Optional<String> optionalTopic = FilePatternUtils.getTopic(filePattern, s3Object.key());
+        final Optional<Integer> optionalPartitionId = FilePatternUtils.getPartitionId(filePattern, s3Object.key());
+
+        if (optionalTopic.isPresent() && optionalPartitionId.isPresent()) {
+            topic = optionalTopic.get();
+            partitionId = optionalPartitionId.get();
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isFileAssignedToTask(final S3Object s3Object) {
+        return distributionStrategy.isPartOfTask(taskId, s3Object.key(), filePattern);
     }
 
     @Override

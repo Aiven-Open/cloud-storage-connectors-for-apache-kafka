@@ -42,9 +42,11 @@ final public class S3SourceConfig extends SourceCommonConfig {
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConfig.class);
 
     private final S3ConfigFragment s3ConfigFragment;
+    private final FileNameFragment s3FileNameFragment;
     public S3SourceConfig(final Map<String, String> properties) {
         super(configDef(), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
+        s3FileNameFragment = new FileNameFragment(this);
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
     }
 
@@ -127,6 +129,10 @@ final public class S3SourceConfig extends SourceCommonConfig {
 
     public S3ConfigFragment getS3ConfigFragment() {
         return s3ConfigFragment;
+    }
+
+    public FileNameFragment getS3FileNameFragment() {
+        return s3FileNameFragment;
     }
 
 }

@@ -23,7 +23,6 @@ import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_T
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG;
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static io.aiven.kafka.connect.s3.source.S3SourceTask.OBJECT_KEY;
 import static io.aiven.kafka.connect.s3.source.utils.OffsetManager.SEPARATOR;
@@ -34,8 +33,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,6 +46,8 @@ import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
+import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.HashDistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
@@ -58,7 +57,6 @@ import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
 import org.apache.avro.Schema;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -76,26 +74,14 @@ class AwsIntegrationTest implements IntegrationBase {
     @Container
     public static final LocalStackContainer LOCALSTACK = IntegrationBase.createS3Container();
 
-    private static String s3Prefix;
-
     private S3Client s3Client;
     private String s3Endpoint;
 
     private BucketAccessor testBucketAccessor;
 
     @Override
-    public String getS3Prefix() {
-        return s3Prefix;
-    }
-
-    @Override
     public S3Client getS3Client() {
         return s3Client;
-    }
-
-    @BeforeAll
-    static void setUpAll() {
-        s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
     }
 
     @BeforeEach
@@ -118,7 +104,6 @@ class AwsIntegrationTest implements IntegrationBase {
         config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
         config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);
         config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
-        config.put(AWS_S3_PREFIX_CONFIG, getS3Prefix());
         config.put(TARGET_TOPIC_PARTITIONS, "0,1");
         config.put(TARGET_TOPICS, topics);
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
@@ -146,14 +131,14 @@ class AwsIntegrationTest implements IntegrationBase {
         final List<String> offsetKeys = new ArrayList<>();
         final List<String> expectedKeys = new ArrayList<>();
         // write 2 objects to s3
-        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
-        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
-        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
-        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
+        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "0"));
+        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "0"));
+        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "1"));
+        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "1"));
 
         // we don't expext the empty one.
         offsetKeys.addAll(expectedKeys);
-        offsetKeys.add(writeToS3(topicName, new byte[0], "00003"));
+        offsetKeys.add(writeToS3(topicName, new byte[0], "3"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
@@ -165,10 +150,11 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
 
-        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
+        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
 
         final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
-                TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient);
+                TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient, new HashDistributionStrategy(1),
+                FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}"), 0);
 
         final HashSet<String> seenKeys = new HashSet<>();
         while (sourceRecordIterator.hasNext()) {
@@ -183,8 +169,10 @@ class AwsIntegrationTest implements IntegrationBase {
     @Test
     void sourceRecordIteratorAvroTest(final TestInfo testInfo) throws IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
+        final int maxTasks = 1;
+        final int taskId = 0;
 
-        final Map<String, String> configData = getConfig(topicName, 1);
+        final Map<String, String> configData = getConfig(topicName, maxTasks);
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
         configData.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
@@ -211,12 +199,12 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final Set<String> offsetKeys = new HashSet<>();
 
-        offsetKeys.add(writeToS3(topicName, outputStream1, "00001"));
-        offsetKeys.add(writeToS3(topicName, outputStream2, "00001"));
+        offsetKeys.add(writeToS3(topicName, outputStream1, "1"));
+        offsetKeys.add(writeToS3(topicName, outputStream2, "1"));
 
-        offsetKeys.add(writeToS3(topicName, outputStream3, "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream4, "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream5, "00002"));
+        offsetKeys.add(writeToS3(topicName, outputStream3, "2"));
+        offsetKeys.add(writeToS3(topicName, outputStream4, "2"));
+        offsetKeys.add(writeToS3(topicName, outputStream5, "2"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
@@ -228,10 +216,12 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final OffsetManager offsetManager = new OffsetManager(context, s3SourceConfig);
 
-        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
+        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
 
         final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
-                TransformerFactory.getTransformer(InputFormat.AVRO), sourceClient);
+                TransformerFactory.getTransformer(InputFormat.AVRO), sourceClient,
+                new HashDistributionStrategy(maxTasks),
+                FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}"), taskId);
 
         final HashSet<String> seenKeys = new HashSet<>();
         final Map<String, List<Long>> seenRecords = new HashMap<>();
@@ -275,15 +265,15 @@ class AwsIntegrationTest implements IntegrationBase {
         final List<String> actualKeys = new ArrayList<>();
 
         // write 2 objects to s3
-        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000")
+        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "0")
                 .substring((OBJECT_KEY + SEPARATOR).length()));
-        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000")
+        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "0")
                 .substring((OBJECT_KEY + SEPARATOR).length()));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(2);
 
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configData);
-        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
+        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
         final Iterator<S3Object> iter = sourceClient.getS3ObjectIterator(null);
 
         assertThat(iter).hasNext();
@@ -296,7 +286,7 @@ class AwsIntegrationTest implements IntegrationBase {
         assertThat(actualKeys).containsAll(expectedKeys);
 
         // write 3rd object to s3
-        expectedKeys.add(writeToS3(topicName, testData3.getBytes(StandardCharsets.UTF_8), "00000")
+        expectedKeys.add(writeToS3(topicName, testData3.getBytes(StandardCharsets.UTF_8), "0")
                 .substring((OBJECT_KEY + SEPARATOR).length()));
         assertThat(testBucketAccessor.listObjects()).hasSize(3);
 

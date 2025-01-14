@@ -43,8 +43,11 @@ public final class FileNameFragment extends ConfigFragment {
     static final String FILE_MAX_RECORDS = "file.max.records";
     static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
-    static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
+    public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
+
+    public static final String FILE_PATH_PREFIX_TEMPLATE_CONFIG = "file.prefix.template";
+    static final String DEFAULT_FILE_PATH_PREFIX_TEMPLATE = "topics/{{topic}}/partition={{partition}}/";
 
     public FileNameFragment(final AbstractConfig cfg) {
         super(cfg);
@@ -109,8 +112,17 @@ public final class FileNameFragment extends ConfigFragment {
         configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
                 new TimestampSourceValidator(), ConfigDef.Importance.LOW,
                 "Specifies the the timestamp variable source. Default is wall-clock.", GROUP_FILE, fileGroupCounter++, // NOPMD
-                // UnusedAssignment
                 ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_SOURCE);
+
+        configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, DEFAULT_FILE_PATH_PREFIX_TEMPLATE,
+                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM,
+                "The template for file prefix on S3. "
+                        + "Supports `{{ variable }}` placeholders for substituting variables. "
+                        + "Currently supported variables are `topic` and `partition` "
+                        + "and are mandatory to have these in the directory structure."
+                        + "Example prefix : topics/{{topic}}/partition/{{partition}}/",
+                GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment
+                ConfigDef.Width.LONG, FILE_PATH_PREFIX_TEMPLATE_CONFIG);
 
         return configDef;
     }
@@ -183,6 +195,10 @@ public final class FileNameFragment extends ConfigFragment {
      */
     public int getMaxRecordsPerFile() {
         return cfg.getInt(FILE_MAX_RECORDS);
+    }
+
+    public String getFilePathPrefixTemplateConfig() {
+        return cfg.getString(FILE_PATH_PREFIX_TEMPLATE_CONFIG);
     }
 
 }
