@@ -62,9 +62,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private Iterator<S3SourceRecord> outer;
     private final Pattern filePattern;
 
-    // private final Predicate<S3Object> fileMatchingPatternPredicate;
-    // private final Predicate<S3Object> fileAssignedToTaskPredicate;
-
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
             final Transformer transformer, final AWSV2SourceClient sourceClient,
             final DistributionStrategy distributionStrategy, final Pattern filePattern, final int taskId) {
