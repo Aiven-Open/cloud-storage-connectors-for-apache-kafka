@@ -153,9 +153,9 @@ final class S3SourceTaskTest {
         assertThat(s3SourceTask.isRunning()).isFalse();
     }
 
-    private static S3SourceRecord createS3SourceRecord(final String topicName, final Integer defaultPartitionId,
-            final String bucketName, final String objectKey, final byte[] key, final byte[] value) {
-        return new S3SourceRecord(new S3OffsetManagerEntry(bucketName, objectKey, topicName, defaultPartitionId),
+    private static S3SourceRecord createS3SourceRecord(final String topic, final Integer defaultPartitionId,
+            final String bucket, final String objectKey, final byte[] key, final byte[] value) {
+        return new S3SourceRecord(new S3OffsetManagerEntry(bucket, objectKey, topic, defaultPartitionId),
                 new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, key),
                 new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, value));
     }

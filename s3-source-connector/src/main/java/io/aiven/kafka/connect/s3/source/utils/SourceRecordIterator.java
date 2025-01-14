@@ -58,7 +58,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     /** The AWS client that provides the S3Objects */
     private final AWSV2SourceClient sourceClient;
     /** The S3 bucket we are processing */
-    private final String bucketName;
+    private final String bucket;
     /** The inner iterator to provides S3Object that have been filtered potentially had data extracted */
     private final Iterator<S3Object> inner;
     /** The outer iterator that provides S3SourceRecords */
@@ -70,7 +70,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         super();
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
-        this.bucketName = s3SourceConfig.getAwsS3BucketName();
+        this.bucket = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
         this.sourceClient = sourceClient;
         final Predicate<S3Object> fileNamePredicate = buildFileNamePredicate();
@@ -93,7 +93,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             if (fileMatcher.find()) {
                 // TODO move this from the SourceRecordIterator so that we can decouple it from S3 and make it API
                 // agnostic
-                final S3OffsetManagerEntry keyEntry = new S3OffsetManagerEntry(bucketName, s3Object.key(),
+                final S3OffsetManagerEntry keyEntry = new S3OffsetManagerEntry(bucket, s3Object.key(),
                         fileMatcher.group(PATTERN_TOPIC_KEY),
                         Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY)));
                 offsetManagerEntry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties)

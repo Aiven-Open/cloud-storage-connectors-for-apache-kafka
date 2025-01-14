@@ -134,8 +134,8 @@ class AwsIntegrationTest implements IntegrationBase {
      */
     @Test
     void sourceRecordIteratorBytesTest(final TestInfo testInfo) {
-        final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> configData = getConfig(topicName, 1);
+        final var topic = IntegrationBase.getTopic(testInfo);
+        final Map<String, String> configData = getConfig(topic, 1);
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
 
@@ -145,14 +145,14 @@ class AwsIntegrationTest implements IntegrationBase {
         final List<String> offsetKeys = new ArrayList<>();
         final List<String> expectedKeys = new ArrayList<>();
         // write 2 objects to s3
-        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
-        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
-        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
-        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
+        expectedKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
+        expectedKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
+        expectedKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
+        expectedKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
 
         // we don't expext the empty one.
         offsetKeys.addAll(expectedKeys);
-        offsetKeys.add(writeToS3(topicName, new byte[0], "00003"));
+        offsetKeys.add(writeToS3(topic, new byte[0], "00003"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
@@ -181,9 +181,9 @@ class AwsIntegrationTest implements IntegrationBase {
 
     @Test
     void sourceRecordIteratorAvroTest(final TestInfo testInfo) throws IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topic = IntegrationBase.getTopic(testInfo);
 
-        final Map<String, String> configData = getConfig(topicName, 1);
+        final Map<String, String> configData = getConfig(topic, 1);
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
         configData.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
@@ -210,12 +210,12 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final Set<String> offsetKeys = new HashSet<>();
 
-        offsetKeys.add(writeToS3(topicName, outputStream1, "00001"));
-        offsetKeys.add(writeToS3(topicName, outputStream2, "00001"));
+        offsetKeys.add(writeToS3(topic, outputStream1, "00001"));
+        offsetKeys.add(writeToS3(topic, outputStream2, "00001"));
 
-        offsetKeys.add(writeToS3(topicName, outputStream3, "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream4, "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream5, "00002"));
+        offsetKeys.add(writeToS3(topic, outputStream3, "00002"));
+        offsetKeys.add(writeToS3(topic, outputStream4, "00002"));
+        offsetKeys.add(writeToS3(topic, outputStream5, "00002"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
@@ -260,8 +260,8 @@ class AwsIntegrationTest implements IntegrationBase {
     @Test
     void verifyIteratorRehydration(final TestInfo testInfo) {
         // create 2 files.
-        final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> configData = getConfig(topicName, 1);
+        final var topic = IntegrationBase.getTopic(testInfo);
+        final Map<String, String> configData = getConfig(topic, 1);
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
 
@@ -274,8 +274,8 @@ class AwsIntegrationTest implements IntegrationBase {
         final List<String> actualKeys = new ArrayList<>();
 
         // write 2 objects to s3
-        expectedKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
-        expectedKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
+        expectedKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
+        expectedKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(2);
 
@@ -293,7 +293,7 @@ class AwsIntegrationTest implements IntegrationBase {
         assertThat(actualKeys).containsAll(expectedKeys);
 
         // write 3rd object to s3
-        expectedKeys.add(writeToS3(topicName, testData3.getBytes(StandardCharsets.UTF_8), "00000"));
+        expectedKeys.add(writeToS3(topic, testData3.getBytes(StandardCharsets.UTF_8), "00000"));
         assertThat(testBucketAccessor.listObjects()).hasSize(3);
 
         assertThat(iter).hasNext();

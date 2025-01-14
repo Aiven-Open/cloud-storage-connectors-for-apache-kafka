@@ -130,7 +130,7 @@ final class IntegrationTest implements IntegrationBase {
         connectRunner.startConnectCluster(CONNECTOR_NAME, localListenerPort, containerListenerPort);
 
         adminClient = newAdminClient(connectRunner.getBootstrapServers());
-        final String topicName = IntegrationBase.topicName(testInfo);
+        final String topicName = IntegrationBase.getTopic(testInfo);
         final var topics = List.of(topicName);
         IntegrationBase.createTopics(adminClient, topics);
 
@@ -153,7 +153,7 @@ final class IntegrationTest implements IntegrationBase {
 
     @Test
     void bytesTest(final TestInfo testInfo) {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = IntegrationBase.getTopic(testInfo);
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1);
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
@@ -189,7 +189,7 @@ final class IntegrationTest implements IntegrationBase {
 
     @Test
     void avroTest(final TestInfo testInfo) throws IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = IntegrationBase.getTopic(testInfo);
         final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.AVRO);
 
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
@@ -246,7 +246,7 @@ final class IntegrationTest implements IntegrationBase {
 
     @Test
     void parquetTest(final TestInfo testInfo) throws IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = IntegrationBase.getTopic(testInfo);
 
         final String partition = "00000";
         final String fileName = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName + "-"
@@ -287,7 +287,7 @@ final class IntegrationTest implements IntegrationBase {
 
     @Test
     void jsonTest(final TestInfo testInfo) {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = IntegrationBase.getTopic(testInfo);
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1);
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.JSONL.getValue());
         connectorConfig.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.json.JsonConverter");

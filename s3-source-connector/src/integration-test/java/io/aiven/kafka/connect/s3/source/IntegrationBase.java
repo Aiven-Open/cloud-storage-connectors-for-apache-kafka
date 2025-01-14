@@ -124,9 +124,9 @@ public interface IntegrationBase {
     }
 
     /**
-     * Writes to S3 using a key of the form {@code [prefix]topicName-partitionId-systemTime.txt}.
+     * Writes to S3 using a key of the form {@code [prefix]topic-partitionId-systemTime.txt}.
      *
-     * @param topicName
+     * @param topic
      *            the topic name to use
      * @param testDataBytes
      *            the data.
@@ -135,8 +135,8 @@ public interface IntegrationBase {
      * @return the key prefixed by {@link io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry#OBJECT_KEY} and
      *         {@link OffsetManager}
      */
-    default String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
-        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName
+    default String writeToS3(final String topic, final byte[] testDataBytes, final String partitionId) {
+        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topic
                 + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
         writeToS3WithKey(objectKey, testDataBytes);
         return objectKey;
@@ -163,13 +163,13 @@ public interface IntegrationBase {
         return Files.createDirectories(testDir.resolve(PLUGINS_S3_SOURCE_CONNECTOR_FOR_APACHE_KAFKA));
     }
 
-    static String topicName(final TestInfo testInfo) {
+    static String getTopic(final TestInfo testInfo) {
         return testInfo.getTestMethod().get().getName();
     }
 
-    static void createTopics(final AdminClient adminClient, final List<String> topicNames)
+    static void createTopics(final AdminClient adminClient, final List<String> topics)
             throws ExecutionException, InterruptedException {
-        final var newTopics = topicNames.stream().map(s -> new NewTopic(s, 4, (short) 1)).collect(Collectors.toList());
+        final var newTopics = topics.stream().map(s -> new NewTopic(s, 4, (short) 1)).collect(Collectors.toList());
         adminClient.createTopics(newTopics).all().get();
     }
 
