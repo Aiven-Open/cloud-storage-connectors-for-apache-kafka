@@ -136,8 +136,8 @@ public interface IntegrationBase {
      *         {@link OffsetManager}
      */
     default String writeToS3(final String topic, final byte[] testDataBytes, final String partitionId) {
-        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topic
-                + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
+        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topic + "-"
+                + partitionId + "-" + System.currentTimeMillis() + ".txt";
         writeToS3WithKey(objectKey, testDataBytes);
         return objectKey;
 
