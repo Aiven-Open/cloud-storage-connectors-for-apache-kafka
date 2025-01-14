@@ -16,25 +16,27 @@
 
 package io.aiven.kafka.connect.common.source.task;
 
+import java.util.regex.Pattern;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link HashObjectDistributionStrategy} evenly distributes cloud storage objects between tasks using the hashcode of
- * the object's filename, which is uniformly distributed and deterministic across workers.
+ * {@link HashDistributionStrategy} evenly distributes cloud storage objects between tasks using the hashcode of the
+ * object's filename, which is uniformly distributed and deterministic across workers.
  * <p>
  * This is well-suited to use cases where the order of events between records from objects is not important, especially
  * when ingesting files into Kafka that were not previously created by a supported cloud storage Sink.
  */
-public final class HashObjectDistributionStrategy implements ObjectDistributionStrategy {
-    private final static Logger LOG = LoggerFactory.getLogger(HashObjectDistributionStrategy.class);
+public final class HashDistributionStrategy implements DistributionStrategy {
+    private final static Logger LOG = LoggerFactory.getLogger(HashDistributionStrategy.class);
     private int maxTasks;
-    HashObjectDistributionStrategy(final int maxTasks) {
-        this.maxTasks = maxTasks;
+    public HashDistributionStrategy(final int maxTasks) {
+        configureDistributionStrategy(maxTasks);
     }
 
     @Override
-    public boolean isPartOfTask(final int taskId, final String filenameToBeEvaluated) {
+    public boolean isPartOfTask(final int taskId, final String filenameToBeEvaluated, final Pattern filePattern) {
         if (filenameToBeEvaluated == null) {
             LOG.warn("Ignoring as it is not passing a correct filename to be evaluated.");
             return false;
@@ -46,8 +48,8 @@ public final class HashObjectDistributionStrategy implements ObjectDistributionS
     }
 
     @Override
-    public void reconfigureDistributionStrategy(final int maxTasks, final String expectedFormat) {
-        setMaxTasks(maxTasks);
+    public void configureDistributionStrategy(final int maxTasks) {
+        this.maxTasks = maxTasks;
     }
 
     public void setMaxTasks(final int maxTasks) {

@@ -42,7 +42,6 @@ public final class RecordProcessor {
             if (ErrorsTolerance.NONE.equals(s3SourceConfig.getErrorsTolerance())) {
                 throw new ConnectException("Data Exception caught during S3 record to source record transformation", e);
             } else {
-                sourceClient.addFailedObjectKeys(s3SourceRecord.getObjectKey());
                 LOGGER.warn(
                         "Data Exception caught during S3 record to source record transformation {} . errors.tolerance set to 'all', logging warning and continuing to process.",
                         e.getMessage(), e);

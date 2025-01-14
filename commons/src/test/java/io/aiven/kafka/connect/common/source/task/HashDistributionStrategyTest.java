@@ -21,10 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-final class HashObjectDistributionStrategyTest {
+final class HashDistributionStrategyTest {
 
     @ParameterizedTest
     @CsvSource({ "logs-0-0002.txt", "logs-1-0002.txt", "logs-2-0002.txt", "logs-3-0002.txt", "logs-4-0002.txt",
@@ -34,10 +36,11 @@ final class HashObjectDistributionStrategyTest {
             "reallylongfilenamecreatedonS3tohisdesomedata and alsohassome spaces.txt" })
     void hashDistributionExactlyOnce(final String path) {
         final int maxTaskId = 10;
-        final ObjectDistributionStrategy taskDistribution = new HashObjectDistributionStrategy(maxTaskId);
+        final DistributionStrategy taskDistribution = new HashDistributionStrategy(maxTaskId);
         final List<Boolean> results = new ArrayList<>();
         for (int taskId = 0; taskId < maxTaskId; taskId++) {
-            results.add(taskDistribution.isPartOfTask(taskId, path));
+            results.add(taskDistribution.isPartOfTask(taskId, path,
+                    FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}")));
         }
         assertThat(results).containsExactlyInAnyOrder(Boolean.TRUE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE,
                 Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE);
@@ -51,18 +54,20 @@ final class HashObjectDistributionStrategyTest {
             "reallylongfilenamecreatedonS3tohisdesomedata and alsohassome spaces.txt" })
     void hashDistributionExactlyOnceWithReconfigureEvent(final String path) {
         int maxTasks = 10;
-        final ObjectDistributionStrategy taskDistribution = new HashObjectDistributionStrategy(maxTasks);
+        final DistributionStrategy taskDistribution = new HashDistributionStrategy(maxTasks);
         final List<Boolean> results = new ArrayList<>();
         for (int taskId = 0; taskId < maxTasks; taskId++) {
-            results.add(taskDistribution.isPartOfTask(taskId, path));
+            results.add(taskDistribution.isPartOfTask(taskId, path,
+                    FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}")));
         }
         assertThat(results).containsExactlyInAnyOrder(Boolean.TRUE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE,
                 Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE);
         results.clear();
         maxTasks = 5;
-        taskDistribution.reconfigureDistributionStrategy(maxTasks, null);
+        taskDistribution.configureDistributionStrategy(maxTasks);
         for (int taskId = 0; taskId < maxTasks; taskId++) {
-            results.add(taskDistribution.isPartOfTask(taskId, path));
+            results.add(taskDistribution.isPartOfTask(taskId, path,
+                    FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}")));
         }
         assertThat(results).containsExactlyInAnyOrder(Boolean.TRUE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE,
                 Boolean.FALSE);

@@ -102,8 +102,6 @@ public interface IntegrationBase {
 
     S3Client getS3Client();
 
-    String getS3Prefix();
-
     /**
      * Write file to s3 with the specified key and data.
      *
@@ -134,8 +132,7 @@ public interface IntegrationBase {
      *         {@link io.aiven.kafka.connect.s3.source.utils.OffsetManager#SEPARATOR}
      */
     default String writeToS3(final String topicName, final byte[] testDataBytes, final String partitionId) {
-        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName
-                + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
+        final String objectKey = topicName + "-" + partitionId + "-" + System.currentTimeMillis() + ".txt";
         writeToS3WithKey(objectKey, testDataBytes);
         return OBJECT_KEY + SEPARATOR + objectKey;
     }
