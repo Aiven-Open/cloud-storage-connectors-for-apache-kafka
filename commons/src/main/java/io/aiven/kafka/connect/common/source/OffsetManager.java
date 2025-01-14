@@ -118,7 +118,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      * @param key
      *            the key for the entry to remove.
      */
-    public void remove(final OffsetManagerKey key) {
+    public void removeEntry(final OffsetManagerKey key) {
         LOGGER.debug("Removing: {}", key.getPartitionMap());
         offsets.remove(key.getPartitionMap());
     }
@@ -130,7 +130,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      * @param sourceRecord
      *            the SourceRecord that contains the key to be removed.
      */
-    public void remove(final SourceRecord sourceRecord) {
+    public void removeEntry(final SourceRecord sourceRecord) {
         LOGGER.debug("Removing: {}", sourceRecord.sourcePartition());
         offsets.remove(sourceRecord.sourcePartition());
     }

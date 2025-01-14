@@ -139,7 +139,7 @@ public class S3SourceTask extends AbstractSourceTask {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Committed individual record {}  committed", (Map<String, Object>) record.sourceOffset());
         }
-        offsetManager.remove(record);
+        offsetManager.removeEntry(record);
     }
 
     /**
