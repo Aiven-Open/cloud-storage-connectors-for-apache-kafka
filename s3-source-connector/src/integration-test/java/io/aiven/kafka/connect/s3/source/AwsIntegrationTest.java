@@ -48,6 +48,8 @@ import org.apache.kafka.connect.storage.OffsetStorageReader;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
+import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.HashDistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
@@ -164,10 +166,11 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final OffsetManager<S3OffsetManagerEntry> offsetManager = new OffsetManager<>(context);
 
-        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
+        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
 
         final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
-                TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient);
+                TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient, new HashDistributionStrategy(1),
+                "{{topic}}-{{partition}}-{{start_offset}}", 0);
 
         final HashSet<String> seenKeys = new HashSet<>();
         while (sourceRecordIterator.hasNext()) {
@@ -182,8 +185,10 @@ class AwsIntegrationTest implements IntegrationBase {
     @Test
     void sourceRecordIteratorAvroTest(final TestInfo testInfo) throws IOException {
         final var topic = IntegrationBase.getTopic(testInfo);
+        final int maxTasks = 1;
+        final int taskId = 0;
 
-        final Map<String, String> configData = getConfig(topic, 1);
+        final Map<String, String> configData = getConfig(topic, maxTasks);
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
         configData.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
@@ -227,10 +232,12 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final OffsetManager<S3OffsetManagerEntry> offsetManager = new OffsetManager(context);
 
-        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
+        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
 
         final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
-                TransformerFactory.getTransformer(InputFormat.AVRO), sourceClient);
+                TransformerFactory.getTransformer(InputFormat.AVRO), sourceClient,
+                new HashDistributionStrategy(maxTasks),
+                "{{topic}}-{{partition}}-{{start_offset}}", taskId);
 
         final HashSet<String> seenKeys = new HashSet<>();
         final Map<String, List<Long>> seenRecords = new HashMap<>();
@@ -280,7 +287,7 @@ class AwsIntegrationTest implements IntegrationBase {
         assertThat(testBucketAccessor.listObjects()).hasSize(2);
 
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configData);
-        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig, new HashSet<>());
+        final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
         final Iterator<S3Object> iter = sourceClient.getS3ObjectIterator(null);
 
         assertThat(iter).hasNext();

@@ -30,7 +30,7 @@ import org.apache.kafka.connect.json.JsonConverter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

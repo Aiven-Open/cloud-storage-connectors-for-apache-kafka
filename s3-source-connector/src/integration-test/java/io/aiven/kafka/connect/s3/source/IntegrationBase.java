@@ -271,7 +271,6 @@ public interface IntegrationBase {
             final Map<String, Object> keyDetails = (Map<String, Object>) key.get(1);
             messages.put((String) keyDetails.get(OBJECT_KEY), offsetRec.get(RECORD_COUNT));
         }
-
         return messages;
     }
 

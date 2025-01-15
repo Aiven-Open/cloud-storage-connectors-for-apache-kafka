@@ -18,9 +18,10 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -29,9 +30,10 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
-import org.apache.commons.collections4.IteratorUtils;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
@@ -39,11 +41,6 @@ import software.amazon.awssdk.services.s3.model.S3Object;
  * Parquet).
  */
 public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
-    public static final String PATTERN_TOPIC_KEY = "topicName";
-    public static final String PATTERN_PARTITION_KEY = "partitionId";
-
-    public static final Pattern FILE_DEFAULT_PATTERN = Pattern.compile("(?<topicName>[^/]+?)-"
-            + "(?<partitionId>\\d{5})-" + "(?<uniqueId>[a-zA-Z0-9]+)" + "\\.(?<fileExtension>[^.]+)$"); // topic-00001.txt
     public static final long BYTES_TRANSFORMATION_NUM_OF_RECS = 1L;
 
     /** The OffsetManager that we are using */
@@ -59,50 +56,40 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private final AWSV2SourceClient sourceClient;
     /** The S3 bucket we are processing */
     private final String bucket;
+    /** The distrivbution strategy we will use */
+    private final DistributionStrategy distributionStrategy;
+    /** The task ID associated with this iterator */
+    private final int taskId;
+
     /** The inner iterator to provides S3Object that have been filtered potentially had data extracted */
     private final Iterator<S3Object> inner;
     /** The outer iterator that provides S3SourceRecords */
     private Iterator<S3SourceRecord> outer;
 
-    public SourceRecordIterator(final S3SourceConfig s3SourceConfig,
-            final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer,
-            final AWSV2SourceClient sourceClient) {
+    final FileMatching fileMatching;
+
+    public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
+            final Transformer transformer, final AWSV2SourceClient sourceClient,
+            final DistributionStrategy distributionStrategy, final String filePattern, final int taskId) {
         super();
         this.s3SourceConfig = s3SourceConfig;
         this.offsetManager = offsetManager;
         this.bucket = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
         this.sourceClient = sourceClient;
-        final Predicate<S3Object> fileNamePredicate = buildFileNamePredicate();
+        this.distributionStrategy = distributionStrategy;
+        this.taskId = taskId;
 
-        // call filters out bad file names and creates the offsetManagerEntry.
-        inner = IteratorUtils.filteredIterator(sourceClient.getS3ObjectIterator(null), fileNamePredicate::test);
+        fileMatching = new FileMatching(filePattern);
+        // Initialize predicates
+        sourceClient.addPredicate(fileMatching);
+        sourceClient.addPredicate(s3Object -> distributionStrategy.isPartOfTask(taskId, s3Object.key(), fileMatching.pattern));
+
+        // call filters out bad file names and extracts topic/partition
+        inner = sourceClient.getS3ObjectIterator(null);
         outer = Collections.emptyIterator();
     }
 
-    /**
-     * creates the file name predicate that matches file names and extracts the offsetManagerEntry data.
-     *
-     * @return a predicate to filter S3Objects.
-     */
-    private Predicate<S3Object> buildFileNamePredicate() {
-        return s3Object -> {
-
-            final Matcher fileMatcher = FILE_DEFAULT_PATTERN.matcher(s3Object.key());
-
-            if (fileMatcher.find()) {
-                // TODO move this from the SourceRecordIterator so that we can decouple it from S3 and make it API
-                // agnostic
-                final S3OffsetManagerEntry keyEntry = new S3OffsetManagerEntry(bucket, s3Object.key(),
-                        fileMatcher.group(PATTERN_TOPIC_KEY),
-                        Integer.parseInt(fileMatcher.group(PATTERN_PARTITION_KEY)));
-                offsetManagerEntry = offsetManager.getEntry(keyEntry.getManagerKey(), keyEntry::fromProperties)
-                        .orElse(keyEntry);
-                return true;
-            }
-            return false;
-        };
-    }
 
     @Override
     public boolean hasNext() {
@@ -172,6 +159,25 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         public S3SourceRecord apply(final SchemaAndValue valueData) {
             entry.incrementRecordCount();
             return new S3SourceRecord(entry, keyData, valueData);
+        }
+    }
+
+    class FileMatching implements Predicate<S3Object> {
+
+        Pattern pattern;
+        FileMatching(String filePattern) {
+            pattern = FilePatternUtils.configurePattern(filePattern);
+        }
+
+        @Override
+        public boolean test(S3Object s3Object) {
+            Optional<String> topic = FilePatternUtils.getTopic(pattern, s3Object.key());
+            OptionalInt partition = FilePatternUtils.getPartitionId(pattern, s3Object.key());
+            if (topic.isPresent() && partition.isPresent()) {
+                offsetManagerEntry = new S3OffsetManagerEntry(bucket, s3Object.key(), topic.get(), partition.getAsInt());
+                return true;
+            }
+            return false;
         }
     }
 }

@@ -16,10 +16,13 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
+import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.AVRO_VALUE_SERIALIZER;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.OBJECT_DISTRIBUTION_STRATEGY;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
@@ -55,17 +58,21 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -95,6 +102,7 @@ final class IntegrationTest implements IntegrationBase {
     private ConnectRunner connectRunner;
 
     private static S3Client s3Client;
+    private TestInfo testInfo;
 
     @Override
     public S3Client getS3Client() {
@@ -106,9 +114,8 @@ final class IntegrationTest implements IntegrationBase {
         return s3Prefix;
     }
 
-    public
-
-    @BeforeAll static void setUpAll() throws IOException, InterruptedException {
+    @BeforeAll
+    public static void setUpAll() throws IOException, InterruptedException {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
         s3Client = IntegrationBase.createS3Client(LOCALSTACK);
@@ -122,6 +129,7 @@ final class IntegrationTest implements IntegrationBase {
     @BeforeEach
     void setUp(final TestInfo testInfo) throws Exception {
         testBucketAccessor.createBucket();
+        this.testInfo = testInfo;
 
         connectRunner = new ConnectRunner(OFFSET_FLUSH_INTERVAL_MS);
         final List<Integer> ports = IntegrationBase.getKafkaListenerPorts();
@@ -130,8 +138,8 @@ final class IntegrationTest implements IntegrationBase {
         connectRunner.startConnectCluster(CONNECTOR_NAME, localListenerPort, containerListenerPort);
 
         adminClient = newAdminClient(connectRunner.getBootstrapServers());
-        final String topicName = IntegrationBase.getTopic(testInfo);
-        final var topics = List.of(topicName);
+        final String topic = IntegrationBase.getTopic(testInfo);
+        final var topics = List.of(topic);
         IntegrationBase.createTopics(adminClient, topics);
 
         // This should be done after the process listening the port is already started by host but
@@ -151,10 +159,28 @@ final class IntegrationTest implements IntegrationBase {
         testBucketAccessor.removeBucket();
     }
 
-    @Test
-    void bytesTest(final TestInfo testInfo) {
-        final var topicName = IntegrationBase.getTopic(testInfo);
-        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1);
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void bytesTest(final boolean addPrefix) {
+        final var topic = IntegrationBase.getTopic(testInfo);
+        final ObjectDistributionStrategy objectDistributionStrategy;
+        final int partitionId = 0;
+        final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
+        objectDistributionStrategy = ObjectDistributionStrategy.PARTITION_IN_FILENAME;
+        if (addPrefix) {
+            s3Prefix = "topics/" + topic + "/partition=" + partitionId + "/";
+        }
+
+        final String fileNamePatternSeparator = "_";
+
+        /*
+                final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 1);
+
+        connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
+         */
+
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 1, objectDistributionStrategy,
+                addPrefix, s3Prefix, prefixPattern, fileNamePatternSeparator);
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
@@ -165,16 +191,16 @@ final class IntegrationTest implements IntegrationBase {
         final List<String> offsetKeys = new ArrayList<>();
 
         // write 2 objects to s3
-        offsetKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
-        offsetKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
-        offsetKeys.add(writeToS3(topicName, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
-        offsetKeys.add(writeToS3(topicName, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
-        offsetKeys.add(writeToS3(topicName, new byte[0], "00003"));
+        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
+        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
+        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
+        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
+        offsetKeys.add(writeToS3(topic, new byte[0], "00003"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
         // Poll messages from the Kafka topic and verify the consumed data
-        final List<String> records = IntegrationBase.consumeByteMessages(topicName, 4,
+        final List<String> records = IntegrationBase.consumeByteMessages(topic, 4,
                 connectRunner.getBootstrapServers());
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
@@ -189,8 +215,12 @@ final class IntegrationTest implements IntegrationBase {
 
     @Test
     void avroTest(final TestInfo testInfo) throws IOException {
-        final var topicName = IntegrationBase.getTopic(testInfo);
-        final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.AVRO);
+        final var topic = IntegrationBase.getTopic(testInfo);
+        final boolean addPrefix = false;
+        s3Prefix = "";
+        //final Map<String, String> connectorConfig = getAvroConfig(topic, InputFormat.AVRO);
+        final Map<String, String> connectorConfig = getAvroConfig(topic, InputFormat.AVRO, addPrefix, "", "",
+                ObjectDistributionStrategy.OBJECT_HASH);
 
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
 
@@ -215,18 +245,18 @@ final class IntegrationTest implements IntegrationBase {
 
         final Set<String> offsetKeys = new HashSet<>();
 
-        offsetKeys.add(writeToS3(topicName, outputStream1, "00001"));
-        offsetKeys.add(writeToS3(topicName, outputStream2, "00001"));
+        offsetKeys.add(writeToS3(topic, outputStream1, "00001"));
+        offsetKeys.add(writeToS3(topic, outputStream2, "00001"));
 
-        offsetKeys.add(writeToS3(topicName, outputStream3, "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream4, "00002"));
-        offsetKeys.add(writeToS3(topicName, outputStream5, "00002"));
+        offsetKeys.add(writeToS3(topic, outputStream3, "00002"));
+        offsetKeys.add(writeToS3(topic, outputStream4, "00002"));
+        offsetKeys.add(writeToS3(topic, outputStream5, "00002"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
         // Poll Avro messages from the Kafka topic and deserialize them
         // Waiting for 25k kafka records in this test so a longer Duration is added.
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, numOfRecsFactor * 5,
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topic, numOfRecsFactor * 5,
                 Duration.ofMinutes(3), connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
         // Ensure this method deserializes Avro
 
@@ -244,16 +274,23 @@ final class IntegrationTest implements IntegrationBase {
                 connectRunner.getBootstrapServers());
     }
 
-    @Test
-    void parquetTest(final TestInfo testInfo) throws IOException {
-        final var topicName = IntegrationBase.getTopic(testInfo);
-
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void parquetTest(final boolean addPrefix) throws IOException {
+        final var topic = IntegrationBase.getTopic(testInfo);
+        final ObjectDistributionStrategy objectDistributionStrategy;
+        final String prefixPattern = "bucket/topics/{{topic}}/partition/{{partition}}/";
         final String partition = "00000";
-        final String fileName = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topicName + "-"
+        s3Prefix = addPrefix ?  "bucket/topics/" + topic + "/partition/" + partition + "/" : "";
+        objectDistributionStrategy = ObjectDistributionStrategy.PARTITION_IN_FILENAME;
+
+        final String fileName = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topic + "-"
                 + partition + "-" + System.currentTimeMillis() + ".txt";
         final String name = "testuser";
 
-        final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.PARQUET);
+        //final Map<String, String> connectorConfig = getAvroConfig(topic, InputFormat.PARQUET);
+        final Map<String, String> connectorConfig = getAvroConfig(topic, InputFormat.PARQUET, addPrefix, s3Prefix,
+                prefixPattern, objectDistributionStrategy);
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
         final Path path = ContentUtils.getTmpFilePath(name);
 
@@ -266,7 +303,7 @@ final class IntegrationTest implements IntegrationBase {
         }
 
         // Waiting for a small number of messages so using a smaller Duration of a minute
-        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topicName, 100, Duration.ofSeconds(60),
+        final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topic, 100, Duration.ofSeconds(60),
                 connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
         final List<String> expectedRecordNames = IntStream.range(0, 100)
                 .mapToObj(i -> name + i)
@@ -275,8 +312,12 @@ final class IntegrationTest implements IntegrationBase {
                 .containsExactlyInAnyOrderElementsOf(expectedRecordNames);
     }
 
-    private Map<String, String> getAvroConfig(final String topicName, final InputFormat inputFormat) {
-        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 4);
+    private Map<String, String> getAvroConfig(final String topic, final InputFormat inputFormat,
+            final boolean addPrefix, final String s3Prefix, final String prefixPattern,
+            final ObjectDistributionStrategy objectDistributionStrategy) {
+        //        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 4);
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 4, objectDistributionStrategy,
+                addPrefix, s3Prefix, prefixPattern, "-");
         connectorConfig.put(INPUT_FORMAT_KEY, inputFormat.getValue());
         connectorConfig.put(SCHEMA_REGISTRY_URL, schemaRegistry.getSchemaRegistryUrl());
         connectorConfig.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
@@ -287,8 +328,9 @@ final class IntegrationTest implements IntegrationBase {
 
     @Test
     void jsonTest(final TestInfo testInfo) {
-        final var topicName = IntegrationBase.getTopic(testInfo);
-        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1);
+        final var topic = IntegrationBase.getTopic(testInfo);
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 1,
+                ObjectDistributionStrategy.PARTITION_IN_FILENAME, false, "", "", "-");
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.JSONL.getValue());
         connectorConfig.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.json.JsonConverter");
 
@@ -301,10 +343,10 @@ final class IntegrationTest implements IntegrationBase {
         }
         final byte[] jsonBytes = jsonBuilder.toString().getBytes(StandardCharsets.UTF_8);
 
-        final String offsetKey = writeToS3(topicName, jsonBytes, "00001");
+        final String offsetKey = writeToS3(topic, jsonBytes, "00001");
 
         // Poll Json messages from the Kafka topic and deserialize them
-        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topicName, 500,
+        final List<JsonNode> records = IntegrationBase.consumeJsonMessages(topic, 500,
                 connectRunner.getBootstrapServers());
 
         assertThat(records).map(jsonNode -> jsonNode.get("payload")).anySatisfy(jsonNode -> {
@@ -316,24 +358,34 @@ final class IntegrationTest implements IntegrationBase {
         verifyOffsetPositions(Map.of(offsetKey, 500), connectRunner.getBootstrapServers());
     }
 
-    private Map<String, String> getConfig(final String connectorName, final String topics, final int maxTasks) {
-        final Map<String, String> config = new HashMap<>(basicS3ConnectorConfig());
+    private Map<String, String> getConfig(final String connectorName, final String topics, final int maxTasks,
+            final ObjectDistributionStrategy taskDistributionConfig, final boolean addPrefix, final String s3Prefix,
+            final String prefixPattern, final String fileNameSeparator) {
+        final Map<String, String> config = new HashMap<>(basicS3ConnectorConfig(addPrefix, s3Prefix));
         config.put("name", connectorName);
         config.put(TARGET_TOPICS, topics);
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put("tasks.max", String.valueOf(maxTasks));
+        config.put(OBJECT_DISTRIBUTION_STRATEGY, taskDistributionConfig.value());
+        config.put(FILE_NAME_TEMPLATE_CONFIG,
+                "{{topic}}" + fileNameSeparator + "{{partition}}" + fileNameSeparator + "{{start_offset}}");
+        if (addPrefix) {
+            config.put(FILE_PATH_PREFIX_TEMPLATE_CONFIG, prefixPattern);
+        }
         return config;
     }
 
-    private static Map<String, String> basicS3ConnectorConfig() {
+    private static Map<String, String> basicS3ConnectorConfig(final boolean addPrefix, final String s3Prefix) {
         final Map<String, String> config = new HashMap<>();
         config.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
         config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
         config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
         config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);
         config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
-        config.put(AWS_S3_PREFIX_CONFIG, s3Prefix);
+        if (addPrefix) {
+            config.put(AWS_S3_PREFIX_CONFIG, s3Prefix);
+        }
         config.put(TARGET_TOPIC_PARTITIONS, "0,1");
         return config;
     }
