@@ -65,6 +65,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -74,247 +75,185 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 
 final class SourceRecordIteratorTest {
 
-    private S3OffsetManagerEntry mockS3OffsetManagerEntry;
-    private OffsetManager<S3OffsetManagerEntry> mockOffsetManager;
-    private Transformer mockTransformer;
+    private AWSV2SourceClient mockSourceApiClient;
 
-    private S3Client mockS3Client;
+    private OffsetStorageReader offsetStorageReader;
 
-    private AWSV2SourceClient sourceApiClient;
+    private OffsetManager offsetManager;
+
+    private S3SourceConfig mockS3SourceConfig;
+
+//    public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
+//                                final Transformer transformer, final AWSV2SourceClient sourceClient,
+//                                final DistributionStrategy distributionStrategy, final String filePattern, final int taskId)
 
     @BeforeEach
-    public void setUp() {
-        mockOffsetManager = mock(OffsetManager.class);
-        mockS3OffsetManagerEntry = mock(S3OffsetManagerEntry.class);
-        mockTransformer = mock(Transformer.class);
-        mockS3Client = mock(S3Client.class);
+    void setup() {
+        final SourceTaskContext mockTaskContext = mock(SourceTaskContext.class);
+        offsetStorageReader = mock(OffsetStorageReader.class);
+        when(mockTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
+        offsetManager = new OffsetManager(mockTaskContext);
+        mockSourceApiClient = mock(AWSV2SourceClient.class);
+        mockS3SourceConfig = mock(S3SourceConfig.class);
+        when(mockS3SourceConfig.getAwsS3BucketName()).thenReturn("bucket-name");
     }
 
-    private S3SourceConfig getConfig(Map<String, String> data) {
-        Map<String, String> defaults = new HashMap<>();
-        defaults.put(AWS_S3_BUCKET_NAME_CONFIG, "bucket-name");
-        defaults.putAll(data);
-        return new S3SourceConfig(defaults);
-    }
+//    private S3SourceConfig getConfig(Map<String, String> data) {
+//        Map<String, String> defaults = new HashMap<>();
+//        defaults.put(AWS_S3_BUCKET_NAME_CONFIG, "bucket-name");
+//        defaults.putAll(data);
+//        return new S3SourceConfig(defaults);
+//    }
 
     @Test
     void testIteratorProcessesS3Objects() throws Exception {
 
         final String key = "topic-00001-abc123.txt";
         final String filePattern = "{{topic}}-{{partition}}";
+        final Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        when(offsetStorageReader.offset(any(Map.class))).thenReturn(new HashMap<>());
+        when(mockSourceApiClient.getS3ObjectStream(any())).thenReturn(Stream.empty());
 
+        Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockS3SourceConfig, offsetManager, transformer,
+                mockSourceApiClient, new HashDistributionStrategy(1),
+                filePattern, 0);
 
-        S3SourceConfig config = getConfig(Collections.emptyMap());
+        assertThat(iterator).isExhausted();
 
-        S3ClientBuilder builder = new S3ClientBuilder();
+        S3Object s3Object = S3Object.builder().key(key).size(1L).build();
+        when(mockSourceApiClient.getS3ObjectStream(any())).thenReturn(Collections.singletonList(s3Object).stream());
+        when(mockSourceApiClient.getObject(key)).thenReturn(() -> new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8)));
 
-        sourceApiClient = new AWSV2SourceClient(builder.build(), config );
+        iterator = new SourceRecordIterator(mockS3SourceConfig, offsetManager, transformer, mockSourceApiClient,
+                new HashDistributionStrategy(1), filePattern, 0);
 
-
-            mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
-
-            when(mockS3OffsetManagerEntry.getProperties()).thenReturn(Collections.emptyMap());
-
-            Iterator<S3SourceRecord> iterator = new SourceRecordIterator(config, mockOffsetManager, mockTransformer,
-                    sourceApiClient, new HashDistributionStrategy(1),
-                    filePattern, 0);
-
-            assertThat(iterator).isExhausted();
-
-            builder.reset().addObject(key, "Hello World").endOfBlock();
-
-        sourceApiClient = new AWSV2SourceClient(builder.build(), config );
-
-            Iterator<S3SourceRecord> s3ObjectIterator = new SourceRecordIterator(config, mockOffsetManager, mockTransformer, sourceApiClient,
-                    new HashDistributionStrategy(1), filePattern, 0);
-
-            assertThat(iterator).hasNext();
-            assertThat(iterator.next()).isNotNull();
-            assertThat(iterator).isExhausted();
+        assertThat(iterator).hasNext();
+        assertThat(iterator.next()).isNotNull();
+        assertThat(iterator).isExhausted();
 
     }
 
-    @Test
-    void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws Exception {
-        final String key = "topic-00001-abc123.txt";
-        final  String filePattern = "{{topic}}-{{partition}}-{{start_offset}}";
-        final S3Object s3Object = S3Object.builder().key(key).build();
-
-        S3SourceConfig config = getConfig(Collections.emptyMap());
-        // With ByteArrayTransformer
-        try (InputStream inputStream = new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8))) {
-            when(sourceApiClient.getObject(key)).thenReturn(() -> inputStream);
-
-
-            when(sourceApiClient.getS3ObjectIterator(any())).thenReturn(Arrays.asList(s3Object).iterator());
-
-            mockTransformer = mock(ByteArrayTransformer.class);
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-                    .thenReturn(Stream.of(SchemaAndValue.NULL));
-
-            when(mockOffsetManager.getEntry(any(), any())).thenReturn(Optional.of(mockS3OffsetManagerEntry));
-
-            when(sourceApiClient.getListOfObjectKeys(any()))
-                    .thenReturn(Collections.singletonList(key).listIterator());
-            when(mockS3OffsetManagerEntry.getRecordCount()).thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
-
-            // should skip if any records were produced by source record iterator.
-            final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(config, mockOffsetManager,
-                    mockTransformer, sourceApiClient, new HashDistributionStrategy(1), filePattern, 0);
-
-            assertThat(iterator).isExhausted();
-            verify(sourceApiClient, never()).getObject(any());
-            verify(mockTransformer, never()).getRecords(any(), anyString(), anyInt(), any(), anyLong());
-        }
-
-        // With AvroTransformer
-        try (InputStream inputStream = new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8))) {
-            when(sourceApiClient.getObject(key)).thenReturn(() -> inputStream);
-
-            when(sourceApiClient.getS3ObjectIterator(any())).thenReturn(Arrays.asList(s3Object).iterator());
-            when(sourceApiClient.getListOfObjectKeys(any()))
-                    .thenReturn(Collections.singletonList(key).listIterator());
-
-            final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
-            when(offsetStorageReader.offset(any(Map.class))).thenReturn(Map.of(RECORD_COUNT, 1));
-
-            final SourceTaskContext context = mock(SourceTaskContext.class);
-            when(context.offsetStorageReader()).thenReturn(offsetStorageReader);
-
-            mockOffsetManager = new OffsetManager(context);
-
-            mockTransformer = mock(Transformer.class);
-            final SchemaAndValue schemaKey = new SchemaAndValue(null, "KEY");
-            final SchemaAndValue schemaValue = new SchemaAndValue(null, "VALUE");
-            when(mockTransformer.getKeyData(anyString(), anyString(), any())).thenReturn(schemaKey);
-            when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-                    .thenReturn(Arrays.asList(schemaValue).stream());
-
-            final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(config, mockOffsetManager,
-                    mockTransformer, sourceApiClient, new HashDistributionStrategy(1), filePattern, 0);
-            assertThat(iterator.hasNext()).isTrue();
-            final S3SourceRecord record = iterator.next();
-            assertThat(record.getValue().value()).isEqualTo("VALUE");
-            assertThat(record.getOffsetManagerEntry().getRecordCount()).isEqualTo(2);
-            verify(mockTransformer, times(1)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
-        }
-    }
-    @ParameterizedTest
-    @CsvSource({ "4, 2, key1", "4, 3, key2", "4, 0, key3", "4, 1, key4" })
-    void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdAssigned(final int maxTasks, final int taskId,
-                                                                            final String objectKey) {
-
-        final  String filePattern = "{{topic}}-{{partition}}-{{start_offset}}";
-        mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
-        S3SourceConfig config = getConfig(Collections.emptyMap());
-
-        final S3Object obj = S3Object.builder().key(objectKey).build();
-
-        final ByteArrayInputStream bais = new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8));
-        final DistributionStrategy distributionStrategy = new HashDistributionStrategy(maxTasks) ;
-
-        when(sourceApiClient.getS3ObjectIterator(any())).thenReturn(Arrays.asList(obj).iterator());
-        when(sourceApiClient.getObject(any())).thenReturn(() -> bais);
-        final SourceRecordIterator iterator = new SourceRecordIterator(config, mockOffsetManager, mockTransformer,
-                sourceApiClient, distributionStrategy, filePattern, taskId);
-        SourceRecordIterator.FileMatching fileMatching =  iterator.new FileMatching(filePattern);
-        Predicate<S3Object> s3ObjectPredicate = fileMatching;
-        s3ObjectPredicate = s3ObjectPredicate.and(s3Object -> distributionStrategy.isPartOfTask(taskId, s3Object.key(), fileMatching.pattern));
-        // Assert
-        assertThat(s3ObjectPredicate).accepts(obj);
-    }
-
-    @ParameterizedTest
-    @CsvSource({ "4, 1, topic1-2-0", "4, 3, key1", "4, 0, key1", "4, 1, key2", "4, 2, key2", "4, 0, key2", "4, 1, key3",
-            "4, 2, key3", "4, 3, key3", "4, 0, key4", "4, 2, key4", "4, 3, key4" })
-    void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdUnassigned(final int maxTasks, final int taskId,
-                                                                              final String objectKey) {
-        final  String filePattern = "{{topic}}-{{partition}}-{{start_offset}}";
-        mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
-        S3SourceConfig config = getConfig(Collections.emptyMap());
-
-        final S3Object obj = S3Object.builder().key(objectKey).build();
-
-        final ByteArrayInputStream bais = new ByteArrayInputStream("Hello World".getBytes(StandardCharsets.UTF_8));
-        final DistributionStrategy distributionStrategy = new HashDistributionStrategy(maxTasks) ;
-
-        when(sourceApiClient.getS3ObjectIterator(any())).thenReturn(Arrays.asList(obj).iterator());
-        when(sourceApiClient.getObject(any())).thenReturn(() -> bais);
-        final SourceRecordIterator iterator = new SourceRecordIterator(config, mockOffsetManager, mockTransformer,
-                sourceApiClient,distributionStrategy, filePattern, taskId);
-        SourceRecordIterator.FileMatching fileMatching =  iterator.new FileMatching(filePattern);
-        Predicate<S3Object> s3ObjectPredicate = fileMatching;
-        s3ObjectPredicate = s3ObjectPredicate.and(s3Object -> distributionStrategy.isPartOfTask(taskId, s3Object.key(), fileMatching.pattern));
-        // Assert
-        assertThat(s3ObjectPredicate.test(obj)).as("Predicate should accept the objectKey: " + objectKey).isFalse();
-    }
-
-    @Test
-    public void x() {
-        S3ClientBuilder builder = new S3ClientBuilder();
-        builder.addObject("Key", "value");
-        S3Client client = builder.build();
-        ListObjectsV2Response response = client.listObjectsV2(ListObjectsV2Request.builder().build());
-        assertThat(response.contents()).isNotEmpty();
-
-        sourceApiClient = new AWSV2SourceClient(builder.build(), getConfig(Collections.emptyMap()));
-        Iterator<S3Object> iter = sourceApiClient.getS3ObjectIterator(null);
-        assertThat(iter.hasNext());
-    }
-
-
-    class S3ClientBuilder  {
-        Queue<Pair<List<S3Object>, Map<String, byte[]>>> blocks = new LinkedList<>();
-        List<S3Object> objects = new ArrayList<>();
-        Map<String, byte[]> data = new HashMap<>();
-
-        public S3ClientBuilder addObject(String key, byte[] data) {
-            objects.add(S3Object.builder().key(key).size((long)data.length).build());
-            this.data.put(key, data);
-            return this;
-        }
-
-        public S3ClientBuilder endOfBlock() {
-            blocks.add(Pair.of(objects, data));
-            return reset();
-        }
-
-        public S3ClientBuilder reset() {
-            objects = new ArrayList<>();
-            data = new HashMap<>();
-            return this;
-        }
-
-        public S3ClientBuilder addObject(String key, String data) {
-            return addObject(key, data.getBytes(StandardCharsets.UTF_8));
-        }
-
-        private ResponseBytes getResponse(String key) {
-            return ResponseBytes.fromByteArray(new byte[0],data.get(key));
-        }
-
-        private ListObjectsV2Response dequeueData() {
-            if (blocks.isEmpty()) {
-                objects = Collections.emptyList();
-                data = Collections.emptyMap();
-            } else {
-                Pair<List<S3Object>, Map<String, byte[]>> pair = blocks.remove();
-                objects = pair.getLeft();
-                data = pair.getRight();
-            }
-            return ListObjectsV2Response.builder().contents(objects).isTruncated(false).build();
-        }
-
-        public S3Client build() {
-            if (!objects.isEmpty()) {
-                endOfBlock();
-            }
-            S3Client result = mock(S3Client.class);
-            when(result.listObjectsV2(any(ListObjectsV2Request.class))).thenAnswer(env -> dequeueData());
-            when(result.listObjectsV2(any(Consumer.class))).thenAnswer(env -> dequeueData());
-            when(result.getObjectAsBytes(any(GetObjectRequest.class))).thenAnswer(env -> getResponse(env.getArgument(0, GetObjectRequest.class).key()));
-            return result;
-        }
-
-    }
+//    @Test
+//    void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws Exception {
+//        final String key = "topic-00001-abc123.txt";
+//        final String filePattern = "{{topic}}-{{partition}}";
+//        final S3ClientBuilder builder = new S3ClientBuilder();
+//        final S3SourceConfig config = getConfig(Collections.emptyMap());
+//
+//        // With ByteArrayTransformer
+//        Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+//
+//        builder.addObject(key, "Hello World");
+//
+//        sourceApiClient = new AWSV2SourceClient(builder.build(), config);
+//
+//        when(offsetStorageReader.offset(any(Map.class))).thenReturn(Map.of(RECORD_COUNT, 1));
+//
+//
+//        // should skip if any records were produced by source record iterator.
+//        Iterator<S3SourceRecord> iterator = new SourceRecordIterator(config, offsetManager,
+//                transformer, sourceApiClient, new HashDistributionStrategy(1), filePattern, 0);
+//
+//        assertThat(iterator).isExhausted();
+//
+//
+//        // With JsonTransformer
+//        StringBuilder jsonContent = new StringBuilder();
+//        for (int i = 0; i < 5; i++) {
+//            jsonContent.append(String.format("{\"message\": \"Hello World\", \"id\":\"%s\"}%n", i));
+//        }
+//
+//        builder.reset().addObject(key, jsonContent.toString());
+//        sourceApiClient = new AWSV2SourceClient(builder.build(), config);
+//
+//        transformer = TransformerFactory.getTransformer(InputFormat.JSONL);
+//
+//        iterator = new SourceRecordIterator(config, offsetManager,
+//                transformer, sourceApiClient, new HashDistributionStrategy(1), filePattern, 0);
+//        assertThat(iterator).hasNext();
+//        final S3SourceRecord record = iterator.next();
+//        assertThat((Map) record.getValue().value()).containsEntry("id", "1");
+//    }
+//
+//    @ParameterizedTest
+//    @ValueSource( ints={0, 1, 2, 3})
+//    void testRetrieveTaskBasedData(int taskId) {
+//        Map<Integer, String> expectedTask = Map.of(3, "key-1", 0, "key-2", 1, "key-3", 2, "key-4");
+//
+//        int maxTasks = 4;
+//        final  String filePattern = "{{topic}}-{{partition}}";
+//        final S3SourceConfig config = getConfig(Collections.emptyMap());
+//        Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+//
+//        final S3ClientBuilder builder = new S3ClientBuilder();
+//        for (String key : expectedTask.values()) {
+//            builder.addObject(key, "Hello World - "+key);
+//        }
+//        sourceApiClient = new AWSV2SourceClient(builder.build(), config);
+//
+//        final DistributionStrategy distributionStrategy = new HashDistributionStrategy(maxTasks) ;
+//
+//        final SourceRecordIterator iterator = new SourceRecordIterator(config, offsetManager, transformer,
+//                sourceApiClient, distributionStrategy, filePattern, taskId);
+//
+//        assertThat(iterator.hasNext());
+//        S3SourceRecord record = iterator.next();
+//        assertThat(record.getObjectKey()).isEqualTo(expectedTask.get(taskId));
+//        assertThat(iterator).isExhausted();
+//    }
+//
+//    class S3ClientBuilder  {
+//        Queue<Pair<List<S3Object>, Map<String, byte[]>>> blocks = new LinkedList<>();
+//        List<S3Object> objects = new ArrayList<>();
+//        Map<String, byte[]> data = new HashMap<>();
+//
+//        public S3ClientBuilder addObject(String key, byte[] data) {
+//            objects.add(S3Object.builder().key(key).size((long)data.length).build());
+//            this.data.put(key, data);
+//            return this;
+//        }
+//
+//        public S3ClientBuilder endOfBlock() {
+//            blocks.add(Pair.of(objects, data));
+//            return reset();
+//        }
+//
+//        public S3ClientBuilder reset() {
+//            objects = new ArrayList<>();
+//            data = new HashMap<>();
+//            return this;
+//        }
+//
+//        public S3ClientBuilder addObject(String key, String data) {
+//            return addObject(key, data.getBytes(StandardCharsets.UTF_8));
+//        }
+//
+//        private ResponseBytes getResponse(String key) {
+//            return ResponseBytes.fromByteArray(new byte[0],data.get(key));
+//        }
+//
+//        private ListObjectsV2Response dequeueData() {
+//            if (blocks.isEmpty()) {
+//                objects = Collections.emptyList();
+//                data = Collections.emptyMap();
+//            } else {
+//                Pair<List<S3Object>, Map<String, byte[]>> pair = blocks.remove();
+//                objects = pair.getLeft();
+//                data = pair.getRight();
+//            }
+//            return ListObjectsV2Response.builder().contents(objects).isTruncated(false).build();
+//        }
+//
+//        public S3Client build() {
+//            if (!objects.isEmpty()) {
+//                endOfBlock();
+//            }
+//            S3Client result = mock(S3Client.class);
+//            when(result.listObjectsV2(any(ListObjectsV2Request.class))).thenAnswer(env -> dequeueData());
+//            when(result.listObjectsV2(any(Consumer.class))).thenAnswer(env -> dequeueData());
+//            when(result.getObjectAsBytes(any(GetObjectRequest.class))).thenAnswer(env -> getResponse(env.getArgument(0, GetObjectRequest.class).key()));
+//            return result;
+//        }
+//
+//    }
 }

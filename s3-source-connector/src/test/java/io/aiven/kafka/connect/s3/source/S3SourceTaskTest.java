@@ -65,6 +65,7 @@ import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 final class S3SourceTaskTest {
 
@@ -155,9 +156,12 @@ final class S3SourceTaskTest {
 
     private static S3SourceRecord createS3SourceRecord(final String topic, final Integer defaultPartitionId,
             final String bucket, final String objectKey, final byte[] key, final byte[] value) {
-        return new S3SourceRecord(new S3OffsetManagerEntry(bucket, objectKey, topic, defaultPartitionId),
-                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, key),
-                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, value));
+
+        S3SourceRecord result = new S3SourceRecord(S3Object.builder().key(objectKey).size((long)value.length).build());
+        result.setOffsetManagerEntry(new S3OffsetManagerEntry(bucket, objectKey, topic, defaultPartitionId));
+        result.setKeyData(new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, key));
+        result.setValueData(new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, value));
+        return result;
     }
 
     private void startSourceTask(final S3SourceTask s3SourceTask) {

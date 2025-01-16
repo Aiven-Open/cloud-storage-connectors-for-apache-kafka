@@ -57,7 +57,6 @@ final class S3OffsetManagerEntryTest {
         sourceTaskContext = mock(SourceTaskContext.class);
         when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
         offsetManager = new OffsetManager<>(sourceTaskContext);
-
     }
 
     private Map<String, Object> createPartitionMap() {

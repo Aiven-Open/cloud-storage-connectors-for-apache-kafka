@@ -18,23 +18,69 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.source.SourceRecord;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 public class S3SourceRecord {
 
-    private final SchemaAndValue keyData;
-    private final SchemaAndValue valueData;
-    /** The S3OffsetManagerEntry for this source record */
-    private final S3OffsetManagerEntry offsetManagerEntry;
 
-    public S3SourceRecord(final S3OffsetManagerEntry offsetManagerEntry, final SchemaAndValue keyData,
-            final SchemaAndValue valueData) {
-        this.offsetManagerEntry = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
+    private SchemaAndValue keyData;
+    private SchemaAndValue valueData;
+    /** The S3OffsetManagerEntry for this source record */
+    private S3OffsetManagerEntry offsetManagerEntry;
+
+
+    private final S3Object s3Object;
+
+
+    public S3SourceRecord(S3Object s3Object) {
+        this.s3Object = s3Object;
+    }
+
+    public S3SourceRecord clone() {
+        S3SourceRecord result = new S3SourceRecord(s3Object);
+        result.setOffsetManagerEntry(offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties()));
+        result.keyData = keyData;
+        result.valueData = valueData;
+        return result;
+    }
+
+    public void setOffsetManagerEntry(S3OffsetManagerEntry offsetManagerEntry) {
+        this.offsetManagerEntry = offsetManagerEntry;
+    }
+
+    public long getRecordCount() {
+        return offsetManagerEntry == null ? 0 : offsetManagerEntry.getRecordCount();
+    }
+
+    public void setKeyData(SchemaAndValue keyData) {
         this.keyData = keyData;
+    }
+
+    public void incrementRecordCount() {
+        this.offsetManagerEntry.incrementRecordCount();
+    }
+
+    public void setValueData(SchemaAndValue valueData) {
         this.valueData = valueData;
     }
 
+    public String getTopic() {
+        return offsetManagerEntry.getTopic();
+    }
+
+    public int getPartition() {
+        return offsetManagerEntry.getPartition();
+    }
+
+//    public S3SourceRecord(final S3OffsetManagerEntry offsetManagerEntry, final SchemaAndValue keyData,
+//            final SchemaAndValue valueData) {
+//        this.offsetManagerEntry = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
+//        this.keyData = keyData;
+//        this.valueData = valueData;
+//    }
+
     public String getObjectKey() {
-        return offsetManagerEntry.getKey();
+        return s3Object.key();
     }
 
     public SchemaAndValue getKey() {
