@@ -22,10 +22,11 @@ import java.util.regex.Pattern;
 
 import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.kafka.connect.common.source.task.Context;
+
 import org.apache.commons.lang3.StringUtils;
 
-public final class FilePatternUtils {
-
+public final class FilePatternUtils<K> {
     public static final String PATTERN_PARTITION_KEY = "partition";
     public static final String PATTERN_TOPIC_KEY = "topic";
     public static final String START_OFFSET_PATTERN = "{{start_offset}}";
@@ -39,14 +40,25 @@ public final class FilePatternUtils {
     public static final String NUMBER_REGEX_PATTERN = "(?:\\d+)";
     public static final String TOPIC_NAMED_GROUP_REGEX_PATTERN = "(?<" + PATTERN_TOPIC_KEY + ">[a-zA-Z0-9\\-_.]+)";
 
-    private FilePatternUtils() {
-        // hidden
+    final Pattern pattern;
+    final Optional<String> targetTopic;
+
+    public FilePatternUtils(final String pattern, final String targetTopic) {
+        this.pattern = configurePattern(pattern);
+        this.targetTopic = Optional.ofNullable(targetTopic);
     }
-    public static Pattern configurePattern(final String expectedSourceNameFormat) {
-        if (expectedSourceNameFormat == null || !expectedSourceNameFormat.contains(PARTITION_PATTERN)) {
-            throw new ConfigException(String.format(
-                    "Source name format %s missing partition pattern {{partition}} please configure the expected source to include the partition pattern.",
-                    expectedSourceNameFormat));
+
+    /**
+     *
+     * @param expectedSourceNameFormat
+     *            This is a string in the expected compatible format which will allow object name or keys to have unique
+     *            information such as partition number, topic name, offset and timestamp information.
+     * @return A pattern which is configured to allow extraction of the key information from object names and keys.
+     */
+    private Pattern configurePattern(final String expectedSourceNameFormat) {
+        if (expectedSourceNameFormat == null) {
+            throw new ConfigException(
+                    "Source name format is missing please configure the expected source to include the partition pattern.");
         }
         // Build REGEX Matcher
         String regexString = StringUtils.replace(expectedSourceNameFormat, START_OFFSET_PATTERN, NUMBER_REGEX_PATTERN);
@@ -62,26 +74,70 @@ public final class FilePatternUtils {
         }
     }
 
-    public static Optional<String> getTopic(final Pattern filePattern, final String sourceName) {
-        return matchPattern(filePattern, sourceName).map(matcher -> matcher.group(PATTERN_TOPIC_KEY));
+    public Optional<Context<K>> process(final K sourceName) {
+        if (fileMatches(sourceName.toString())) {
+            final Optional<String> topic = getTopic(sourceName.toString());
+            final Optional<Integer> partition = getPartitionId(sourceName.toString());
+            final Optional<Integer> offset = getOffset(sourceName.toString());
+            return Optional
+                    .of(new Context<K>(topic.orElse(null), offset.orElse(null), partition.orElse(null), sourceName));
+        }
+        return Optional.empty();
+
     }
 
-    public static Optional<Integer> getPartitionId(final Pattern filePattern, final String sourceName) {
-        return matchPattern(filePattern, sourceName).flatMap(matcher -> {
+    private boolean fileMatches(final String sourceName) {
+        return matchPattern(sourceName).isPresent();
+    }
+
+    private Optional<String> getTopic(final String sourceName) {
+        if (targetTopic.isPresent()) {
+            return targetTopic;
+        }
+
+        return matchPattern(sourceName).flatMap(matcher -> {
             try {
-                return Optional.of(Integer.parseInt(matcher.group(PATTERN_PARTITION_KEY)));
-            } catch (NumberFormatException e) {
+                // TODO check why this worked before without the try catch
+                return Optional.of(matcher.group(PATTERN_TOPIC_KEY));
+            } catch (IllegalArgumentException ex) {
+                // It is possible that when checking for the group it does not match and returns an
+                // illegalArgumentException
                 return Optional.empty();
             }
         });
     }
 
-    private static Optional<Matcher> matchPattern(final Pattern filePattern, final String sourceName) {
-        if (filePattern == null || sourceName == null) {
+    private Optional<Integer> getPartitionId(final String sourceName) {
+        return matchPattern(sourceName).flatMap(matcher -> {
+            try {
+                return Optional.of(Integer.parseInt(matcher.group(PATTERN_PARTITION_KEY)));
+            } catch (IllegalArgumentException e) {
+                // It is possible that when checking for the group it does not match and returns an
+                // illegalStateException, Number format exception is also covered by this in this case.
+                return Optional.empty();
+            }
+        });
+
+    }
+
+    private Optional<Integer> getOffset(final String sourceName) {
+        return matchPattern(sourceName).flatMap(matcher -> {
+            try {
+                return Optional.of(Integer.parseInt(matcher.group(START_OFFSET_PATTERN)));
+            } catch (IllegalArgumentException e) {
+                // It is possible that when checking for the group it does not match and returns an
+                // illegalStateException, Number format exception is also covered by this in this case.
+                return Optional.empty();
+            }
+        });
+
+    }
+
+    private Optional<Matcher> matchPattern(final String sourceName) {
+        if (sourceName == null) {
             throw new IllegalArgumentException("filePattern and sourceName must not be null");
         }
-
-        final Matcher matcher = filePattern.matcher(sourceName);
+        final Matcher matcher = pattern.matcher(sourceName);
         return matcher.find() ? Optional.of(matcher) : Optional.empty();
     }
 

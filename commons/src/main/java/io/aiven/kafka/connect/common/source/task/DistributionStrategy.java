@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.common.source.task;
 
-import java.util.regex.Pattern;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * An {@link DistributionStrategy} provides a mechanism to share the work of processing records from objects (or files)
@@ -27,18 +27,30 @@ import java.util.regex.Pattern;
  * sequentially by the same worker, which can be useful for maintaining order between objects. There are usually fewer
  * workers than tasks, and they will be assigned the remaining tasks as work completes.
  */
-public interface DistributionStrategy {
+public abstract class DistributionStrategy {
+    protected int maxTasks;
+    protected final static int UNDEFINED = -1;
+    @SuppressFBWarnings(value = "CT_CONSTRUCTOR_THROW", justification = "constructor throws if max tasks is less then 0")
+    public DistributionStrategy(final int maxTasks) {
+        isValidMaxTask(maxTasks);
+        this.maxTasks = maxTasks;
+    }
+
+    private static void isValidMaxTask(final int maxTasks) {
+        if (maxTasks <= 0) {
+            throw new IllegalArgumentException("tasks.max must be set to a positive number and at least 1.");
+        }
+    }
+
     /**
      * Check if the object should be processed by the task with the given {@code taskId}. Any single object should be
      * assigned deterministically to a single taskId.
      *
-     * @param taskId
-     *            a task ID, usually for the currently running task
-     * @param valueToBeEvaluated
-     *            The value to be evaluated to determine if it should be processed by the task.
-     * @return true if the task should process the object, false if it should not.
+     * @param ctx
+     *            This is the context which contains optional values for the partition, topic and storage key name
+     * @return the taskId which this particular task should be assigned to.
      */
-    boolean isPartOfTask(int taskId, String valueToBeEvaluated, Pattern filePattern);
+    public abstract int getTaskFor(Context<?> ctx);
 
     /**
      * When a connector receives a reconfigure event this method should be called to ensure that the distribution
@@ -47,5 +59,8 @@ public interface DistributionStrategy {
      * @param maxTasks
      *            The maximum number of tasks created for the Connector
      */
-    void configureDistributionStrategy(int maxTasks);
+    public void configureDistributionStrategy(final int maxTasks) {
+        isValidMaxTask(maxTasks);
+        this.maxTasks = maxTasks;
+    }
 }

@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.AVRO_VALUE_SERIALIZER;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
@@ -46,8 +47,6 @@ import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
-import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
-import io.aiven.kafka.connect.common.source.task.HashDistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
@@ -121,10 +120,14 @@ class AwsIntegrationTest implements IntegrationBase {
     @Test
     void sourceRecordIteratorBytesTest(final TestInfo testInfo) {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> configData = getConfig(topicName, 1);
+        final int maxTasks = 1;
+        final int taskId = 0;
+        final Map<String, String> configData = getConfig(topicName, maxTasks);
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
-
+        configData.put(FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
+        configData.put("task.id", String.valueOf(taskId));
+        configData.put("tasks.max", String.valueOf(maxTasks));
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
@@ -153,8 +156,7 @@ class AwsIntegrationTest implements IntegrationBase {
         final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
 
         final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
-                TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient, new HashDistributionStrategy(1),
-                FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}"), 0);
+                TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient);
 
         final HashSet<String> seenKeys = new HashSet<>();
         while (sourceRecordIterator.hasNext()) {
@@ -177,6 +179,9 @@ class AwsIntegrationTest implements IntegrationBase {
         configData.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
         configData.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
         configData.put(AVRO_VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
+        configData.put(FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
+        configData.put("task.id", String.valueOf(taskId));
+        configData.put("tasks.max", String.valueOf(maxTasks));
 
         // Define Avro schema
         final String schemaJson = "{\n" + "  \"type\": \"record\",\n" + "  \"name\": \"TestRecord\",\n"
@@ -219,9 +224,7 @@ class AwsIntegrationTest implements IntegrationBase {
         final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
 
         final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
-                TransformerFactory.getTransformer(InputFormat.AVRO), sourceClient,
-                new HashDistributionStrategy(maxTasks),
-                FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}"), taskId);
+                TransformerFactory.getTransformer(InputFormat.AVRO), sourceClient);
 
         final HashSet<String> seenKeys = new HashSet<>();
         final Map<String, List<Long>> seenRecords = new HashMap<>();

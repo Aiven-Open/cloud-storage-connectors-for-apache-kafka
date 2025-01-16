@@ -27,6 +27,8 @@ import org.apache.kafka.common.config.ConfigDef;
 public class CommonConfig extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";
     protected static final String GROUP_FORMAT = "Format";
+    public static final String TASK_ID = "task.id";
+    public static final String MAX_TASKS = "tasks.max";
 
     /**
      * @deprecated No longer needed.
@@ -56,6 +58,26 @@ public class CommonConfig extends AbstractConfig {
      */
     public Long getKafkaRetryBackoffMs() {
         return new BackoffPolicyConfig(this).getKafkaRetryBackoffMs();
+    }
+
+    /**
+     *
+     * Get the maximum number of tasks that should be run by this connector configuration
+     *  Max Tasks is set within the Kafka Connect framework and so is retrieved slightly differently in ConnectorConfig.java
+     *
+     * @return The maximum number of tasks that should be run by this connector configuration
+     */
+    public int getMaxTasks() {
+//        TODO when Connect framework is upgraded it will be possible to retrieve this information from the configDef as tasksMax
+        return Integer.parseInt(this.originalsStrings().get(MAX_TASKS));
+    }
+    /**
+     * Get the task id for this configuration
+     *
+     * @return The task id for this configuration
+     */
+    public int getTaskId() {
+        return Integer.parseInt(this.originalsStrings().get(TASK_ID));
     }
 
 }

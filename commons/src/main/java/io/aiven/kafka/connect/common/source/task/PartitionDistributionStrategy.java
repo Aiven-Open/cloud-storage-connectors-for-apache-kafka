@@ -17,9 +17,6 @@
 package io.aiven.kafka.connect.common.source.task;
 
 import java.util.Optional;
-import java.util.regex.Pattern;
-
-import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,53 +29,26 @@ import org.slf4j.LoggerFactory;
  * {@code topicname-{{partition}}-{{start_offset}}}, and we want all objects with the same partition to be processed
  * within a single task.
  */
-public final class PartitionDistributionStrategy implements DistributionStrategy {
+public final class PartitionDistributionStrategy extends DistributionStrategy {
     private final static Logger LOG = LoggerFactory.getLogger(PartitionDistributionStrategy.class);
-    private int maxTasks;
 
     public PartitionDistributionStrategy(final int maxTasks) {
-        this.maxTasks = maxTasks;
+        super(maxTasks);
     }
 
     /**
      *
-     * @param sourceNameToBeEvaluated
-     *            is the filename/table name of the source for the connector.
-     * @return Predicate to confirm if the given source name matches
+     * @param ctx
+     *            is the Context which contains the storage key and optional values for the patition and topic
+     * @return the task id this context should be assigned to or -1 if it is indeterminable
      */
     @Override
-    public boolean isPartOfTask(final int taskId, final String sourceNameToBeEvaluated, final Pattern filePattern) {
-        if (sourceNameToBeEvaluated == null) {
-            LOG.warn("Ignoring as it is not passing a correct filename to be evaluated.");
-            return false;
+    public int getTaskFor(final Context<?> ctx) {
+        final Optional<Integer> partitionId = ctx.getPartition();
+        if (partitionId.isPresent()) {
+            return partitionId.get() % maxTasks;
         }
-        final Optional<Integer> optionalPartitionId = FilePatternUtils.getPartitionId(filePattern,
-                sourceNameToBeEvaluated);
-
-        if (optionalPartitionId.isPresent()) {
-            return optionalPartitionId.get() < maxTasks
-                    ? taskMatchesPartition(taskId, optionalPartitionId.get())
-                    : taskMatchesPartition(taskId, optionalPartitionId.get() % maxTasks);
-        }
-        LOG.warn("Unable to find the partition from this file name {}", sourceNameToBeEvaluated);
-        return false;
-    }
-
-    boolean taskMatchesPartition(final int taskId, final int partitionId) {
-        // The partition id and task id are both expected to start at 0 but if the task id is changed to start at 1 this
-        // will break.
-        return taskId == partitionId;
-    }
-
-    /**
-     * When a connector reconfiguration event is received this method should be called to ensure the correct strategy is
-     * being implemented by the connector.
-     *
-     * @param maxTasks
-     *            maximum number of configured tasks for this connector
-     */
-    @Override
-    public void configureDistributionStrategy(final int maxTasks) {
-        this.maxTasks = maxTasks;
+        LOG.warn("Unable to find the partition from this file name {}", ctx.getStorageKey());
+        return UNDEFINED;
     }
 }
