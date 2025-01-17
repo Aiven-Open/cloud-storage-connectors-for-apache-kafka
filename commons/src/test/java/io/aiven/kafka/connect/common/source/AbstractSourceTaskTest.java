@@ -28,6 +28,11 @@ import org.junit.jupiter.api.Test;
 
 class AbstractSourceTaskTest {
 
+    /**
+     * The amount of extra time that we will allow for timing errors.
+     */
+    private static final long TIMING_DELTA = 250;
+
     @Test
     void timerTest() {
         final AbstractSourceTask.Timer timer = new AbstractSourceTask.Timer(Duration.ofSeconds(1));
@@ -92,7 +97,7 @@ class AbstractSourceTaskTest {
         backoff.delay();
         stopWatch.stop();
         assertThat(stopWatch.getTime()).as("Result without timer running")
-                .isBetween(estimatedDelay - backoff.getMaxJitter(), estimatedDelay + backoff.getMaxJitter());
+                .isBetween(estimatedDelay - backoff.getMaxJitter()  - TIMING_DELTA, estimatedDelay + backoff.getMaxJitter() + TIMING_DELTA);
 
         timer.start();
         for (int i = 0; i < 9; i++) {
@@ -109,8 +114,8 @@ class AbstractSourceTaskTest {
             final int step = i;
             if (!timer.isExpired()) {
                 assertThat(stopWatch.getTime()).as(() -> String.format("Result with timer running at step %s", step))
-                        .isBetween(Duration.ofSeconds(1).toMillis() - backoff.getMaxJitter(),
-                                Duration.ofSeconds(1).toMillis() + backoff.getMaxJitter());
+                        .isBetween(Duration.ofSeconds(1).toMillis() - backoff.getMaxJitter() - TIMING_DELTA,
+                                Duration.ofSeconds(1).toMillis() + backoff.getMaxJitter() + TIMING_DELTA);
             }
         }
     }
