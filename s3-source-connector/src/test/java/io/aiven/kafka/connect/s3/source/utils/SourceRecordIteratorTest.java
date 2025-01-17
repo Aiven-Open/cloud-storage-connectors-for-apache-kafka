@@ -98,7 +98,7 @@ final class SourceRecordIteratorTest {
     }
 
     private void mockSourceConfig(final S3SourceConfig s3SourceConfig, final String filePattern, final int taskId, final int maxTasks,final String targetTopic ){
-        when(s3SourceConfig.getObjectDistributionStrategy()).thenReturn(DistributionType.OBJECT_HASH);
+        when(s3SourceConfig.getDistributionType()).thenReturn(DistributionType.OBJECT_HASH);
         when(s3SourceConfig.getTaskId()).thenReturn(taskId);
         when(s3SourceConfig.getMaxTasks()).thenReturn(maxTasks);
         when(s3SourceConfig.getS3FileNameFragment()).thenReturn(mockFileNameFrag);
@@ -231,7 +231,7 @@ final class SourceRecordIteratorTest {
         final String key = "topic-00001-abc123.txt";
         final String filePattern = "{{partition}}";
         final String topic = "topic";
-        final FilePatternUtils<S3Key> filePatternUtils = new FilePatternUtils<>(filePattern, topic);
+        final FilePatternUtils filePatternUtils = new FilePatternUtils(filePattern, topic);
         final S3SourceConfig config = getConfig(Collections.emptyMap());
         final S3ClientBuilder builder = new S3ClientBuilder();
         mockSourceConfig(mockConfig, filePattern, taskId, maxTasks, topic);
@@ -243,8 +243,8 @@ final class SourceRecordIteratorTest {
 
         final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
                 sourceApiClient);
-        final Predicate<S3Object> s3ObjectPredicate = s3Object -> iterator.isFileMatchingPattern(s3Object) && iterator
-                .isFileAssignedToTask(filePatternUtils.process(new S3Key(s3Object.key())).orElseThrow(), taskId);
+        final Predicate<S3Object> s3ObjectPredicate = s3Object -> iterator.isFileMatchingPattern(s3Object)
+                && iterator.isFileAssignedToTask(filePatternUtils.process(s3Object.key()).orElseThrow(), taskId);
         // Assert
         assertThat(s3ObjectPredicate).accepts(obj);
     }
@@ -261,7 +261,7 @@ final class SourceRecordIteratorTest {
         mockSourceConfig(mockConfig, filePattern, taskId, maxTasks, topic);
         final S3ClientBuilder builder = new S3ClientBuilder();
         final S3SourceConfig config = getConfig(Collections.emptyMap());
-        final FilePatternUtils<S3Key> filePatternUtils = new FilePatternUtils<>(filePattern, topic);
+        final FilePatternUtils filePatternUtils = new FilePatternUtils(filePattern, topic);
 
         final S3Object obj = S3Object.builder().key(objectKey).build();
 
@@ -271,8 +271,8 @@ final class SourceRecordIteratorTest {
         final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
                 sourceApiClient);
 
-        final Predicate<S3Object> stringPredicate = s3Object -> iterator.isFileMatchingPattern(s3Object) && iterator
-                .isFileAssignedToTask(filePatternUtils.process(new S3Key(s3Object.key())).orElseThrow(), taskId);
+        final Predicate<S3Object> stringPredicate = s3Object -> iterator.isFileMatchingPattern(s3Object)
+                && iterator.isFileAssignedToTask(filePatternUtils.process(s3Object.key()).orElseThrow(), taskId);
         // Assert
         assertThat(stringPredicate.test(obj)).as("Predicate should accept the objectKey: " + objectKey).isFalse();
     }

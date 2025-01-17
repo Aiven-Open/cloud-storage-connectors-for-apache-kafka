@@ -70,8 +70,8 @@ public class SourceCommonConfig extends CommonConfig {
         return sourceConfigFragment.getErrorsTolerance();
     }
 
-    public DistributionType getObjectDistributionStrategy() {
-        return sourceConfigFragment.getObjectDistributionStrategy();
+    public DistributionType getDistributionType() {
+        return sourceConfigFragment.getDistributionType();
     }
 
     public int getMaxPollRecords() {

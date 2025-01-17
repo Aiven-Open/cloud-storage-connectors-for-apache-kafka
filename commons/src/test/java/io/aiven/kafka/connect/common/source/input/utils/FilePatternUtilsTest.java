@@ -34,11 +34,32 @@ class FilePatternUtilsTest {
     void checkTopicDistribution(final String expectedSourceFormat, final String configuredTopic,
             final String sourceName, final String expectedTopic) {
 
-        final FilePatternUtils<String> utils = new FilePatternUtils<>(expectedSourceFormat, configuredTopic);
+        final FilePatternUtils utils = new FilePatternUtils(expectedSourceFormat, configuredTopic);
         final Optional<Context<String>> ctx = utils.process(sourceName);
         assertThat(ctx.isPresent()).isTrue();
         assertThat(ctx.get().getTopic().isPresent()).isTrue();
         assertThat(ctx.get().getTopic().get()).isEqualTo(expectedTopic);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "{{topic}}-{{partition}}-{{start_offset}}.txt,, logs2-1-0001.txt, logs2,1,0001",
+            "{{topic}}-{{start_offset}}-{{partition}}.txt,, logs2-0001-1.txt, logs2,0001,1",
+            "{{topic}}-{{start_offset}}-{{partition}}.txt,, logs2-99999-1.txt, logs2,1,99999",
+            "{{partition}}-{{start_offset}}-{{topic}}.txt,, logs2-1-logs2.txt, logs2,2,0001",
+            "{{partition}}-{{start_offset}}-{{topic}}.txt,secondaryTopic, logs2-1-logs2.txt, secondaryTopic,2,0001", })
+    void checkTopicDistribution(final String expectedSourceFormat, final String configuredTopic,
+            final String sourceName, final String expectedTopic, final int expectedPartition,
+            final int expectedOffset) {
+
+        final FilePatternUtils utils = new FilePatternUtils(expectedSourceFormat, configuredTopic);
+        final Optional<Context<String>> ctx = utils.process(sourceName);
+        assertThat(ctx.isPresent()).isTrue();
+        assertThat(ctx.get().getTopic().isPresent()).isTrue();
+        assertThat(ctx.get().getTopic().get()).isEqualTo(expectedTopic);
+        assertThat(ctx.get().getPartition().isPresent()).isTrue();
+        assertThat(ctx.get().getPartition().get()).isEqualTo(expectedPartition);
+        assertThat(ctx.get().getOffset().isPresent()).isTrue();
+        assertThat(ctx.get().getOffset().get()).isEqualTo(expectedOffset);
     }
 
 }

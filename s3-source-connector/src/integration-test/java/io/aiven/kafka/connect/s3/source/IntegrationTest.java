@@ -22,7 +22,7 @@ import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.AVRO_V
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.OBJECT_DISTRIBUTION_STRATEGY;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.DISTRIBUTION_TYPE;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
@@ -363,7 +363,7 @@ final class IntegrationTest implements IntegrationBase {
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put("tasks.max", String.valueOf(maxTasks));
-        config.put(OBJECT_DISTRIBUTION_STRATEGY, taskDistributionConfig.value());
+        config.put(DISTRIBUTION_TYPE, taskDistributionConfig.value());
         config.put(FILE_NAME_TEMPLATE_CONFIG,
                 "{{topic}}" + fileNameSeparator + "{{partition}}" + fileNameSeparator + "{{start_offset}}");
         if (addPrefix) {

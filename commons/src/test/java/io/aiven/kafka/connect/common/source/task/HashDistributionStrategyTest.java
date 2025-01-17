@@ -90,12 +90,52 @@ final class HashDistributionStrategyTest {
         assertThat(results).allMatch(i -> i == taskDistribution.getTaskFor(ctx));
     }
 
+    @ParameterizedTest
+    @CsvSource({ "-0", "-1", "-999", "-01", "-2002020" })
+    void hashDistributionWithNegativeValues(final int hashCode) {
+        final int maxTasks = 10;
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
+        final FilePatternUtils utils = new FilePatternUtils(".*", "targetTopic");
+        final Optional<Context<HashCodeKey>> ctx = utils.process(new HashCodeKey(hashCode));
+
+        assertThat(ctx).isPresent();
+        final int result = taskDistribution.getTaskFor(ctx.get());
+
+        assertThat(result).isLessThan(maxTasks);
+        assertThat(result).isGreaterThanOrEqualTo(0);
+
+    }
+
     private Context<String> getContext(final String expectedSourceName, final String filename,
             final String targetTopic) {
-        final FilePatternUtils<String> utils = new FilePatternUtils<>(expectedSourceName, targetTopic);
+        final FilePatternUtils utils = new FilePatternUtils(expectedSourceName, targetTopic);
         final Optional<Context<String>> ctx = utils.process(filename);
         assertThat(ctx.isPresent()).isTrue();
         // Hash distribution can have an empty context can have an empty context
         return ctx.get();
+    }
+
+    static class HashCodeKey {
+        private final int hashCodeValue;
+        public HashCodeKey(final int hashCodeValue) {
+            this.hashCodeValue = hashCodeValue;
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (other == null || getClass() != other.getClass()) {
+                return false;
+            }
+            final HashCodeKey that = (HashCodeKey) other;
+            return hashCodeValue == that.hashCodeValue;
+        }
+
+        @Override
+        public int hashCode() {
+            return hashCodeValue;
+        }
     }
 }

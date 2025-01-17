@@ -17,7 +17,9 @@
 package io.aiven.kafka.connect.common.config;
 
 import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
-import static io.aiven.kafka.connect.common.source.task.DistributionType.PARTITION;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -36,7 +38,7 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static final String TARGET_TOPICS = "topics";
     public static final String ERRORS_TOLERANCE = "errors.tolerance";
 
-    public static final String OBJECT_DISTRIBUTION_STRATEGY = "object.distribution.strategy";
+    public static final String DISTRIBUTION_TYPE = "object.distribution.strategy";
 
     /**
      * Construct the ConfigFragment..
@@ -74,12 +76,15 @@ public final class SourceConfigFragment extends ConfigFragment {
         configDef.define(TARGET_TOPICS, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "eg : connect-storage-offsets", GROUP_OFFSET_TOPIC,
                 offsetStorageGroupCounter++, ConfigDef.Width.NONE, TARGET_TOPICS);
-        configDef.define(OBJECT_DISTRIBUTION_STRATEGY, ConfigDef.Type.STRING, OBJECT_HASH.name(),
+        configDef.define(DISTRIBUTION_TYPE, ConfigDef.Type.STRING, OBJECT_HASH.name(),
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
-                "Based on tasks.max config and this strategy, objects are processed in distributed"
-                        + " way by Kafka connect workers, supported values : " + OBJECT_HASH + ", " + PARTITION,
-                GROUP_OTHER, offsetStorageGroupCounter++, ConfigDef.Width.NONE, OBJECT_DISTRIBUTION_STRATEGY); // NOPMD
-                                                                                                               // UnusedAssignment
+                "Based on tasks.max config and the type of strategy selected, objects are processed in distributed"
+                        + " way by Kafka connect workers, supported values : "
+                        + Arrays.stream(DistributionType.values())
+                                .map(DistributionType::value)
+                                .collect(Collectors.joining(", ")),
+                GROUP_OTHER, offsetStorageGroupCounter++, ConfigDef.Width.NONE, DISTRIBUTION_TYPE); // NOPMD
+                                                                                                    // UnusedAssignment
 
         return configDef;
     }
@@ -104,8 +109,8 @@ public final class SourceConfigFragment extends ConfigFragment {
         return ErrorsTolerance.forName(cfg.getString(ERRORS_TOLERANCE));
     }
 
-    public DistributionType getObjectDistributionStrategy() {
-        return DistributionType.forName(cfg.getString(OBJECT_DISTRIBUTION_STRATEGY));
+    public DistributionType getDistributionType() {
+        return DistributionType.forName(cfg.getString(DISTRIBUTION_TYPE));
     }
 
     private static class ErrorsToleranceValidator implements ConfigDef.Validator {

@@ -23,7 +23,7 @@ import java.util.Optional;
  * onto Kafka
  *
  * @param <K>
- *            is a key unique to the object the context is being created about
+ *            is is the type/class of the key unique to the object the context is being created about
  */
 public class Context<K> {
 
