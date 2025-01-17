@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Optional;
 
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
-import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

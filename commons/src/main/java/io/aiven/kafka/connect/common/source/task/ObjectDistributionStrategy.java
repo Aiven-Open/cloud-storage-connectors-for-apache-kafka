@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.source.task.enums;
+package io.aiven.kafka.connect.common.source.task;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -22,9 +22,6 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import org.apache.kafka.common.config.ConfigException;
-
-import io.aiven.kafka.connect.common.source.task.Context;
-import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
 
 public enum ObjectDistributionStrategy {
 

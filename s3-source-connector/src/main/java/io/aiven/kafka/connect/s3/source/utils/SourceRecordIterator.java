@@ -30,7 +30,7 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
-import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import software.amazon.awssdk.services.s3.model.S3Object;

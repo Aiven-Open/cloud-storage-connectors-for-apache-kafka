@@ -55,7 +55,7 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
-import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 

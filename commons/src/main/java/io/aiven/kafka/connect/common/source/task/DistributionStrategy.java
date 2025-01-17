@@ -54,7 +54,7 @@ public final class DistributionStrategy {
      * @return the taskId which this particular task should be assigned to.
      */
     public int getTaskFor(final Context<?> ctx) {
-        return mutation.apply(ctx).map(aLong -> aLong.intValue() % maxTasks).orElse(UNDEFINED);
+        return mutation.apply(ctx).map(aLong -> Math.floorMod(aLong, maxTasks)).orElse(UNDEFINED);
     }
 
     /**

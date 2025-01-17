@@ -75,61 +75,57 @@ public final class FilePatternUtils<K> {
     }
 
     public Optional<Context<K>> process(final K sourceName) {
-        if (fileMatches(sourceName.toString())) {
+        final Optional<Matcher> matcher = fileMatches(sourceName.toString());
+        if (matcher.isPresent()) {
             final Context<K> ctx = new Context<>(sourceName);
-            getTopic(sourceName.toString()).ifPresent(ctx::setTopic);
-            getPartitionId(sourceName.toString()).ifPresent(ctx::setPartition);
-            getOffset(sourceName.toString()).ifPresent(ctx::setOffset);
+            getTopic(matcher.get()).ifPresent(ctx::setTopic);
+            getPartitionId(matcher.get()).ifPresent(ctx::setPartition);
+            getOffset(matcher.get()).ifPresent(ctx::setOffset);
             return Optional.of(ctx);
         }
         return Optional.empty();
 
     }
 
-    private boolean fileMatches(final String sourceName) {
-        return matchPattern(sourceName).isPresent();
+    private Optional<Matcher> fileMatches(final String sourceName) {
+        return matchPattern(sourceName);
     }
 
-    private Optional<String> getTopic(final String sourceName) {
+    private Optional<String> getTopic(final Matcher matcher) {
         if (targetTopic.isPresent()) {
             return targetTopic;
         }
 
-        return matchPattern(sourceName).flatMap(matcher -> {
-            try {
-                // TODO check why this worked before without the try catch
-                return Optional.of(matcher.group(PATTERN_TOPIC_KEY));
-            } catch (IllegalArgumentException ex) {
-                // It is possible that when checking for the group it does not match and returns an
-                // illegalArgumentException
-                return Optional.empty();
-            }
-        });
-    }
-
-    private Optional<Integer> getPartitionId(final String sourceName) {
-        return matchPattern(sourceName).flatMap(matcher -> {
-            try {
-                return Optional.of(Integer.parseInt(matcher.group(PATTERN_PARTITION_KEY)));
-            } catch (IllegalArgumentException e) {
-                // It is possible that when checking for the group it does not match and returns an
-                // illegalStateException, Number format exception is also covered by this in this case.
-                return Optional.empty();
-            }
-        });
+        try {
+            // TODO check why this worked before without the try catch
+            return Optional.of(matcher.group(PATTERN_TOPIC_KEY));
+        } catch (IllegalArgumentException ex) {
+            // It is possible that when checking for the group it does not match and returns an
+            // illegalArgumentException
+            return Optional.empty();
+        }
 
     }
 
-    private Optional<Integer> getOffset(final String sourceName) {
-        return matchPattern(sourceName).flatMap(matcher -> {
-            try {
-                return Optional.of(Integer.parseInt(matcher.group(START_OFFSET_PATTERN)));
-            } catch (IllegalArgumentException e) {
-                // It is possible that when checking for the group it does not match and returns an
-                // illegalStateException, Number format exception is also covered by this in this case.
-                return Optional.empty();
-            }
-        });
+    private Optional<Integer> getPartitionId(final Matcher matcher) {
+        try {
+            return Optional.of(Integer.parseInt(matcher.group(PATTERN_PARTITION_KEY)));
+        } catch (IllegalArgumentException e) {
+            // It is possible that when checking for the group it does not match and returns an
+            // illegalStateException, Number format exception is also covered by this in this case.
+            return Optional.empty();
+        }
+
+    }
+
+    private Optional<Integer> getOffset(final Matcher matcher) {
+        try {
+            return Optional.of(Integer.parseInt(matcher.group(START_OFFSET_PATTERN)));
+        } catch (IllegalArgumentException e) {
+            // It is possible that when checking for the group it does not match and returns an
+            // illegalStateException, Number format exception is also covered by this in this case.
+            return Optional.empty();
+        }
 
     }
 

@@ -16,14 +16,14 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy.OBJECT_HASH;
-import static io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy.PARTITION;
+import static io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy.OBJECT_HASH;
+import static io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy.PARTITION;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
-import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy;
 
 import org.apache.commons.lang3.StringUtils;
 
