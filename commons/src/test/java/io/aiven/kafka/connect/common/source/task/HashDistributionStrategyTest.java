@@ -28,7 +28,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 final class HashDistributionStrategyTest {
-    final ObjectDistributionStrategy strategy = ObjectDistributionStrategy.OBJECT_HASH;
+    final DistributionType strategy = DistributionType.OBJECT_HASH;
     @ParameterizedTest
     @CsvSource({ "logs-0-0002.txt", "logs-1-0002.txt", "logs-2-0002.txt", "logs-3-0002.txt", "logs-4-0002.txt",
             "logs-5-0002.txt", "logs-6-0002.txt", "logs-7-0002.txt", "logs-8-0002.txt", "logs-9-0002.txt",

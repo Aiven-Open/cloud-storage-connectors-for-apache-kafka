@@ -23,7 +23,7 @@ import java.util.function.Function;
 
 import org.apache.kafka.common.config.ConfigException;
 
-public enum ObjectDistributionStrategy {
+public enum DistributionType {
 
     /**
      * Object_Hash takes the context and uses the storage key implementation to get a hash value of the storage key and
@@ -57,20 +57,20 @@ public enum ObjectDistributionStrategy {
      * @param mutation
      *            the mutation required to get the correct details from the context for distribution
      */
-    ObjectDistributionStrategy(final String name, final Function<Context<?>, Optional<Long>> mutation) {
+    DistributionType(final String name, final Function<Context<?>, Optional<Long>> mutation) {
         this.name = name;
         this.mutation = mutation;
     }
 
-    public static ObjectDistributionStrategy forName(final String name) {
+    public static DistributionType forName(final String name) {
         Objects.requireNonNull(name, "name cannot be null");
-        for (final ObjectDistributionStrategy objectDistributionStrategy : ObjectDistributionStrategy.values()) {
-            if (objectDistributionStrategy.name.equalsIgnoreCase(name)) {
-                return objectDistributionStrategy;
+        for (final DistributionType distributionType : DistributionType.values()) {
+            if (distributionType.name.equalsIgnoreCase(name)) {
+                return distributionType;
             }
         }
         throw new ConfigException(String.format("Unknown object.distribution.strategy type: %s, allowed values %s ",
-                name, Arrays.toString(ObjectDistributionStrategy.values())));
+                name, Arrays.toString(DistributionType.values())));
     }
 
     /**

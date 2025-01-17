@@ -16,14 +16,14 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy.OBJECT_HASH;
-import static io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy.PARTITION;
+import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
+import static io.aiven.kafka.connect.common.source.task.DistributionType.PARTITION;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
-import io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -104,8 +104,8 @@ public final class SourceConfigFragment extends ConfigFragment {
         return ErrorsTolerance.forName(cfg.getString(ERRORS_TOLERANCE));
     }
 
-    public ObjectDistributionStrategy getObjectDistributionStrategy() {
-        return ObjectDistributionStrategy.forName(cfg.getString(OBJECT_DISTRIBUTION_STRATEGY));
+    public DistributionType getObjectDistributionStrategy() {
+        return DistributionType.forName(cfg.getString(OBJECT_DISTRIBUTION_STRATEGY));
     }
 
     private static class ErrorsToleranceValidator implements ConfigDef.Validator {
@@ -125,7 +125,7 @@ public final class SourceConfigFragment extends ConfigFragment {
             final String objectDistributionStrategy = (String) value;
             if (StringUtils.isNotBlank(objectDistributionStrategy)) {
                 // This will throw an Exception if not a valid value.
-                ObjectDistributionStrategy.forName(objectDistributionStrategy);
+                DistributionType.forName(objectDistributionStrategy);
             }
         }
     }

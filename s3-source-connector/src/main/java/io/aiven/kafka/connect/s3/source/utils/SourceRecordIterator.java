@@ -30,7 +30,7 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
-import io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -141,13 +141,13 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     }
 
     private DistributionStrategy initializeObjectDistributionStrategy() {
-        final ObjectDistributionStrategy objectDistributionStrategy = s3SourceConfig.getObjectDistributionStrategy();
+        final DistributionType distributionType = s3SourceConfig.getObjectDistributionStrategy();
         final int maxTasks = s3SourceConfig.getMaxTasks();
         this.taskId = s3SourceConfig.getTaskId() % maxTasks;
         this.filePattern = new FilePatternUtils<>(
                 s3SourceConfig.getS3FileNameFragment().getFilenameTemplate().toString(),
                 s3SourceConfig.getTargetTopics());
-        return objectDistributionStrategy.getDistributionStrategy(maxTasks);
+        return distributionType.getDistributionStrategy(maxTasks);
     }
 
     /**

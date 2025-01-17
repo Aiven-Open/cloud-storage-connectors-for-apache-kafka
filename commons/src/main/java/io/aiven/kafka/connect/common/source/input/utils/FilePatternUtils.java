@@ -97,7 +97,6 @@ public final class FilePatternUtils<K> {
         }
 
         try {
-            // TODO check why this worked before without the try catch
             return Optional.of(matcher.group(PATTERN_TOPIC_KEY));
         } catch (IllegalArgumentException ex) {
             // It is possible that when checking for the group it does not match and returns an

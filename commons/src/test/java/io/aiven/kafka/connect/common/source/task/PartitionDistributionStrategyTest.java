@@ -29,7 +29,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 final class PartitionDistributionStrategyTest {
-    final ObjectDistributionStrategy strategy = ObjectDistributionStrategy.PARTITION;
+    final DistributionType strategy = DistributionType.PARTITION;
     @Test
     void partitionInFileNameDefaultAivenS3Sink() {
         final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(2);

@@ -55,7 +55,7 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
-import io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -98,7 +98,7 @@ final class SourceRecordIteratorTest {
     }
 
     private void mockSourceConfig(final S3SourceConfig s3SourceConfig, final String filePattern, final int taskId, final int maxTasks,final String targetTopic ){
-        when(s3SourceConfig.getObjectDistributionStrategy()).thenReturn(ObjectDistributionStrategy.OBJECT_HASH);
+        when(s3SourceConfig.getObjectDistributionStrategy()).thenReturn(DistributionType.OBJECT_HASH);
         when(s3SourceConfig.getTaskId()).thenReturn(taskId);
         when(s3SourceConfig.getMaxTasks()).thenReturn(maxTasks);
         when(s3SourceConfig.getS3FileNameFragment()).thenReturn(mockFileNameFrag);

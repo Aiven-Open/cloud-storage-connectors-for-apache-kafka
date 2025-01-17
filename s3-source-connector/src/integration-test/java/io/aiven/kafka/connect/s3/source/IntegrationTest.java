@@ -58,7 +58,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.task.ObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 
@@ -156,21 +156,21 @@ final class IntegrationTest implements IntegrationBase {
     @ValueSource(booleans = { true, false })
     void bytesTest(final boolean addPrefix) {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final ObjectDistributionStrategy objectDistributionStrategy;
+        final DistributionType distributionType;
         final int partitionId = 0;
         final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
         String s3Prefix = "";
         if (addPrefix) {
-            objectDistributionStrategy = ObjectDistributionStrategy.PARTITION;
+            distributionType = DistributionType.PARTITION;
             s3Prefix = "topics/" + topicName + "/partition=" + partitionId + "/";
         } else {
-            objectDistributionStrategy = ObjectDistributionStrategy.PARTITION;
+            distributionType = DistributionType.PARTITION;
         }
 
         final String fileNamePatternSeparator = "_";
 
-        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1, objectDistributionStrategy,
-                addPrefix, s3Prefix, prefixPattern, fileNamePatternSeparator);
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1, distributionType, addPrefix,
+                s3Prefix, prefixPattern, fileNamePatternSeparator);
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
@@ -212,7 +212,7 @@ final class IntegrationTest implements IntegrationBase {
         final var topicName = IntegrationBase.topicName(testInfo);
         final boolean addPrefix = false;
         final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.AVRO, addPrefix, "", "",
-                ObjectDistributionStrategy.OBJECT_HASH);
+                DistributionType.OBJECT_HASH);
 
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
 
@@ -274,10 +274,10 @@ final class IntegrationTest implements IntegrationBase {
         final var topicName = IntegrationBase.topicName(testInfo);
 
         final String partition = "0";
-        final ObjectDistributionStrategy objectDistributionStrategy;
+        final DistributionType distributionType;
         final String prefixPattern = "bucket/topics/{{topic}}/partition/{{partition}}/";
         String s3Prefix = "";
-        objectDistributionStrategy = ObjectDistributionStrategy.PARTITION;
+        distributionType = DistributionType.PARTITION;
         if (addPrefix) {
             s3Prefix = "bucket/topics/" + topicName + "/partition/" + partition + "/";
         }
@@ -287,7 +287,7 @@ final class IntegrationTest implements IntegrationBase {
         final String name = "testuser";
 
         final Map<String, String> connectorConfig = getAvroConfig(topicName, InputFormat.PARQUET, addPrefix, s3Prefix,
-                prefixPattern, objectDistributionStrategy);
+                prefixPattern, distributionType);
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
         final Path path = ContentUtils.getTmpFilePath(name);
 
@@ -311,9 +311,9 @@ final class IntegrationTest implements IntegrationBase {
 
     private Map<String, String> getAvroConfig(final String topicName, final InputFormat inputFormat,
             final boolean addPrefix, final String s3Prefix, final String prefixPattern,
-            final ObjectDistributionStrategy objectDistributionStrategy) {
-        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 4, objectDistributionStrategy,
-                addPrefix, s3Prefix, prefixPattern, "-");
+            final DistributionType distributionType) {
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 4, distributionType, addPrefix,
+                s3Prefix, prefixPattern, "-");
         connectorConfig.put(INPUT_FORMAT_KEY, inputFormat.getValue());
         connectorConfig.put(SCHEMA_REGISTRY_URL, schemaRegistry.getSchemaRegistryUrl());
         connectorConfig.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
@@ -325,8 +325,8 @@ final class IntegrationTest implements IntegrationBase {
     @Test
     void jsonTest(final TestInfo testInfo) {
         final var topicName = IntegrationBase.topicName(testInfo);
-        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1,
-                ObjectDistributionStrategy.PARTITION, false, "", "", "-");
+        final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1, DistributionType.PARTITION,
+                false, "", "", "-");
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.JSONL.getValue());
         connectorConfig.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.json.JsonConverter");
 
@@ -355,7 +355,7 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     private Map<String, String> getConfig(final String connectorName, final String topics, final int maxTasks,
-            final ObjectDistributionStrategy taskDistributionConfig, final boolean addPrefix, final String s3Prefix,
+            final DistributionType taskDistributionConfig, final boolean addPrefix, final String s3Prefix,
             final String prefixPattern, final String fileNameSeparator) {
         final Map<String, String> config = new HashMap<>(basicS3ConnectorConfig(addPrefix, s3Prefix));
         config.put("name", connectorName);
