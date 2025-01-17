@@ -97,7 +97,8 @@ class AbstractSourceTaskTest {
         backoff.delay();
         stopWatch.stop();
         assertThat(stopWatch.getTime()).as("Result without timer running")
-                .isBetween(estimatedDelay - backoff.getMaxJitter()  - TIMING_DELTA, estimatedDelay + backoff.getMaxJitter() + TIMING_DELTA);
+                .isBetween(estimatedDelay - backoff.getMaxJitter() - TIMING_DELTA,
+                        estimatedDelay + backoff.getMaxJitter() + TIMING_DELTA);
 
         timer.start();
         for (int i = 0; i < 9; i++) {
