@@ -23,19 +23,20 @@ import java.util.List;
 import java.util.Optional;
 
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 final class HashDistributionStrategyTest {
-
+    final ObjectDistributionStrategy strategy = ObjectDistributionStrategy.OBJECT_HASH;
     @ParameterizedTest
     @CsvSource({ "logs-0-0002.txt", "logs-1-0002.txt", "logs-2-0002.txt", "logs-3-0002.txt", "logs-4-0002.txt",
             "logs-5-0002.txt", "logs-6-0002.txt", "logs-7-0002.txt", "logs-8-0002.txt", "logs-9-0002.txt",
             "logs-1-0002.txt", "logs-3-0002.txt", "logs-5-0002.txt", "value-6-0002.txt", "logs-7-0002.txt" })
     void hashDistributionExactlyOnce(final String path) {
         final int maxTaskId = 10;
-        final DistributionStrategy taskDistribution = new HashDistributionStrategy(maxTaskId);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTaskId);
         final Context<String> ctx = getContext("{{topic}}-{{partition}}-{{start_offset}}", path, null);
 
         final List<Integer> results = new ArrayList<>();
@@ -51,7 +52,7 @@ final class HashDistributionStrategyTest {
             "logs-1-0002.txt", "logs-3-0002.txt", "logs-5-0002.txt", "value-6-0002.txt", "logs-7-0002.txt" })
     void hashDistributionExactlyOnceWithReconfigureEvent(final String path) {
         int maxTasks = 10;
-        final DistributionStrategy taskDistribution = new HashDistributionStrategy(maxTasks);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
         final Context<String> ctx = getContext("{{topic}}-{{partition}}-{{start_offset}}", path, null);
 
         final List<Integer> results = new ArrayList<>();
@@ -73,7 +74,7 @@ final class HashDistributionStrategyTest {
             "reallylongfilenamecreatedonS3tohisdesomedata and alsohassome spaces.txt" })
     void hashDistributionExactlyOnceWithReconfigureEventAndMatchAllExpectedSource(final String path) {
         int maxTasks = 10;
-        final DistributionStrategy taskDistribution = new HashDistributionStrategy(maxTasks);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
         final Context<String> ctx = getContext(".*", path, "topic1");
 
         final List<Integer> results = new ArrayList<>();

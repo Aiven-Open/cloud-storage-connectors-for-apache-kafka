@@ -76,11 +76,11 @@ public final class FilePatternUtils<K> {
 
     public Optional<Context<K>> process(final K sourceName) {
         if (fileMatches(sourceName.toString())) {
-            final Optional<String> topic = getTopic(sourceName.toString());
-            final Optional<Integer> partition = getPartitionId(sourceName.toString());
-            final Optional<Integer> offset = getOffset(sourceName.toString());
-            return Optional
-                    .of(new Context<K>(topic.orElse(null), offset.orElse(null), partition.orElse(null), sourceName));
+            final Context<K> ctx = new Context<>(sourceName);
+            getTopic(sourceName.toString()).ifPresent(ctx::setTopic);
+            getPartitionId(sourceName.toString()).ifPresent(ctx::setPartition);
+            getOffset(sourceName.toString()).ifPresent(ctx::setOffset);
+            return Optional.of(ctx);
         }
         return Optional.empty();
 

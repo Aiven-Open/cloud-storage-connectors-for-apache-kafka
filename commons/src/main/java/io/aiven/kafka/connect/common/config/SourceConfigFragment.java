@@ -17,7 +17,7 @@
 package io.aiven.kafka.connect.common.config;
 
 import static io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy.OBJECT_HASH;
-import static io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy.PARTITION_IN_FILENAME;
+import static io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy.PARTITION;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -77,8 +77,7 @@ public final class SourceConfigFragment extends ConfigFragment {
         configDef.define(OBJECT_DISTRIBUTION_STRATEGY, ConfigDef.Type.STRING, OBJECT_HASH.name(),
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
                 "Based on tasks.max config and this strategy, objects are processed in distributed"
-                        + " way by Kafka connect workers, supported values : " + OBJECT_HASH + ", "
-                        + PARTITION_IN_FILENAME,
+                        + " way by Kafka connect workers, supported values : " + OBJECT_HASH + ", " + PARTITION,
                 GROUP_OTHER, offsetStorageGroupCounter++, ConfigDef.Width.NONE, OBJECT_DISTRIBUTION_STRATEGY); // NOPMD
                                                                                                                // UnusedAssignment
 

@@ -23,16 +23,17 @@ import java.util.List;
 import java.util.Optional;
 
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 final class PartitionDistributionStrategyTest {
-
+    final ObjectDistributionStrategy strategy = ObjectDistributionStrategy.PARTITION;
     @Test
     void partitionInFileNameDefaultAivenS3Sink() {
-        final DistributionStrategy taskDistribution = new PartitionDistributionStrategy(2);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(2);
         final Context<String> ctx = getContext("{{topic}}-{{partition}}-{{start_offset}}", "logs-1-00112.gz");
         assertThat(taskDistribution.getTaskFor(ctx)).isEqualTo(1);
     }
@@ -50,7 +51,7 @@ final class PartitionDistributionStrategyTest {
             "{{topic}}-{{partition}},DEV_team_1-00112.gz",
             "{{topic}}-{{partition}}-{{start_offset}},timeseries-1-00112.gz" })
     void testPartitionFileNamesAndExpectedOutcomes(final String configuredFilenamePattern, final String filename) {
-        final DistributionStrategy taskDistribution = new PartitionDistributionStrategy(1);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(1);
         // This test is testing the filename matching not the task allocation.
         final Context<String> ctx = getContext(configuredFilenamePattern, filename);
         assertThat(taskDistribution.getTaskFor(ctx)).isEqualTo(0);
@@ -76,7 +77,7 @@ final class PartitionDistributionStrategyTest {
             "8,10,topics/logs/8/logs-8-0002.txt", "9,10,topics/logs/9/logs-9-0002.txt" })
     void checkCorrectDistributionAcrossTasksOnFileName(final int taskId, final int maxTasks, final String path) {
 
-        final DistributionStrategy taskDistribution = new PartitionDistributionStrategy(maxTasks);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
         final Context<String> ctx = getContext("logs-{{partition}}-{{start_offset}}", path);
         assertThat(taskDistribution.getTaskFor(ctx)).isEqualTo(taskId);
     }
@@ -88,7 +89,7 @@ final class PartitionDistributionStrategyTest {
             "10,topics/logs/9/logs-0002.txt" })
     void filenameDistributionExactlyOnceDistribution(final int maxTasks, final String path) {
 
-        final DistributionStrategy taskDistribution = new PartitionDistributionStrategy(maxTasks);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
         final List<Integer> results = new ArrayList<>();
         final Context<String> ctx = getContext("logs-{{partition}}.txt", path);
         for (int taskId = 0; taskId < maxTasks; taskId++) {
@@ -106,7 +107,7 @@ final class PartitionDistributionStrategyTest {
     void filenameDistributionExactlyOnceDistributionWithTaskReconfiguration(final int maxTasks,
             final int maxTaskAfterReConfig, final String path) {
 
-        final DistributionStrategy taskDistribution = new PartitionDistributionStrategy(maxTasks);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
         final Context<String> ctx = getContext("logs-{{partition}}.txt", path);
 
         final List<Integer> results = new ArrayList<>();
@@ -132,7 +133,7 @@ final class PartitionDistributionStrategyTest {
             final int maxTaskAfterReConfig, final String path) {
 
         final String expectedSourceNameFormat = "topics/{{topic}}/{{partition}}/.*$";
-        final DistributionStrategy taskDistribution = new PartitionDistributionStrategy(maxTasks);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
         final Context<String> ctx = getContext(expectedSourceNameFormat, path);
         final List<Integer> results = new ArrayList<>();
         for (int taskId = 0; taskId < maxTasks; taskId++) {
@@ -154,7 +155,7 @@ final class PartitionDistributionStrategyTest {
             "10,topics/logs/6/logs-0002.txt", "10,topics/logs/7/logs-0002.txt", "10,topics/logs/8/logs-0002.txt",
             "10,topics/logs/9/logs-0002.txt" })
     void partitionPathDistributionExactlyOnceDistribution(final int maxTasks, final String path) {
-        final DistributionStrategy taskDistribution = new PartitionDistributionStrategy(maxTasks);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
         final List<Integer> results = new ArrayList<>();
         final Context<String> ctx = getContext("topics/{{topic}}/{{partition}}/.*$", path);
         for (int taskId = 0; taskId < maxTasks; taskId++) {
@@ -185,7 +186,7 @@ final class PartitionDistributionStrategyTest {
             "5,10,topics/logs/5/logs-0002.txt", "6,10,topics/logs/6/logs-0002.txt", "7,10,topics/logs/7/logs-0002.txt",
             "8,10,topics/logs/8/logs-0002.txt", "9,10,topics/logs/9/logs-0002.txt" })
     void checkCorrectDistributionAcrossTasks(final int taskId, final int maxTaskId, final String path) {
-        final PartitionDistributionStrategy taskDistribution = new PartitionDistributionStrategy(maxTaskId);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTaskId);
         final Context<String> ctx = getContext("topics/{{topic}}/{{partition}}/.*$", path);
         assertThat(taskDistribution.getTaskFor(ctx)).isEqualTo(taskId);
     }
@@ -196,7 +197,7 @@ final class PartitionDistributionStrategyTest {
             "5,bucket/topics/topic-1/5/logs+5+0002.txt,0", "3,bucket/topics/topic-1/5/logs+5+0002.txt,2" })
     void partitionInPathConvention(final int maxTaskId, final String path, final int expectedResult) {
 
-        final PartitionDistributionStrategy taskDistribution = new PartitionDistributionStrategy(maxTaskId);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTaskId);
         final Context<String> ctx = getContext("bucket/topics/{{topic}}/{{partition}}/.*$", path);
         assertThat(taskDistribution.getTaskFor(ctx)).isEqualTo(expectedResult);
     }
@@ -207,7 +208,7 @@ final class PartitionDistributionStrategyTest {
             "5,topics/logs/partition=5/logs+5+0002.txt,0", "3,topics/logs/partition=5/logs+5+0002.txt,2" })
     void withLeadingStringPartitionNamingConvention(final int maxTasks, final String path, final int expectedResult) {
 
-        final PartitionDistributionStrategy taskDistribution = new PartitionDistributionStrategy(maxTasks);
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
         final Context<String> ctx = getContext("topics/{{topic}}/partition={{partition}}/.*$", path);
 
         assertThat(taskDistribution.getTaskFor(ctx)).isEqualTo(expectedResult);

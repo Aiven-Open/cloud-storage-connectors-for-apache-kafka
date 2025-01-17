@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.s3.source.utils;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -31,8 +30,6 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
-import io.aiven.kafka.connect.common.source.task.HashDistributionStrategy;
-import io.aiven.kafka.connect.common.source.task.PartitionDistributionStrategy;
 import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -79,7 +76,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
         // Initialize predicates
         sourceClient.addPredicate(this::isFileMatchingPattern);
-        sourceClient.addPredicate(ass -> isFileAssignedToTask(context, taskId));
+        sourceClient.addPredicate(obj -> isFileAssignedToTask(context, taskId));
 
         // call filters out bad file names and extracts topic/partition
         inner = sourceClient.getS3ObjectIterator(null);
@@ -147,17 +144,10 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         final ObjectDistributionStrategy objectDistributionStrategy = s3SourceConfig.getObjectDistributionStrategy();
         final int maxTasks = s3SourceConfig.getMaxTasks();
         this.taskId = s3SourceConfig.getTaskId() % maxTasks;
-
-        if (Objects.requireNonNull(objectDistributionStrategy) == ObjectDistributionStrategy.PARTITION_IN_FILENAME) {
-            this.filePattern = new FilePatternUtils<>(
-                    s3SourceConfig.getS3FileNameFragment().getFilenameTemplate().toString(),
-                    s3SourceConfig.getTargetTopics());
-            return new PartitionDistributionStrategy(maxTasks);
-        }
         this.filePattern = new FilePatternUtils<>(
                 s3SourceConfig.getS3FileNameFragment().getFilenameTemplate().toString(),
                 s3SourceConfig.getTargetTopics());
-        return new HashDistributionStrategy(maxTasks);
+        return objectDistributionStrategy.getDistributionStrategy(maxTasks);
     }
 
     /**

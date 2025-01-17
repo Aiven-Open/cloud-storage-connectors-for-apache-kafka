@@ -18,6 +18,13 @@ package io.aiven.kafka.connect.common.source.task;
 
 import java.util.Optional;
 
+/**
+ * A Context which captures all the details about the source which are required to successfully send a source record
+ * onto Kafka
+ *
+ * @param <K>
+ *            is a key unique to the object the context is being created about
+ */
 public class Context<K> {
 
     private String topic;
@@ -25,11 +32,9 @@ public class Context<K> {
     private Integer offset;
     private K storageKey;
 
-    public Context(final String topic, final Integer offset, final Integer partition, final K storageKey) {
-        this.topic = topic;
-        this.partition = partition;
+    public Context(final K storageKey) {
+
         this.storageKey = storageKey;
-        this.offset = offset;
     }
 
     public Optional<String> getTopic() {

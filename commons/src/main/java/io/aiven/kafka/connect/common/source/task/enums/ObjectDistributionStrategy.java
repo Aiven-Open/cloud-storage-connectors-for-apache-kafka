@@ -18,21 +18,51 @@ package io.aiven.kafka.connect.common.source.task.enums;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
 
 import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.kafka.connect.common.source.task.Context;
+import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
+
 public enum ObjectDistributionStrategy {
 
-    OBJECT_HASH("object_hash"), PARTITION_IN_FILENAME("partition_in_filename");
+    /**
+     * Object_Hash takes the context and uses the storage key implementation to get a hash value of the storage key and
+     * return a modulus of that relative to the number of maxTasks to decide which task should process a given object
+     */
+    OBJECT_HASH("object_hash",
+            context -> context.getStorageKey().isPresent()
+                    ? Optional.of((long) context.getStorageKey().get().hashCode())
+                    : Optional.empty()),
+    /**
+     * Partition takes the context and requires the context contain the partition id for it to be able to decide the
+     * distribution across the max tasks, using a modulus to ensure even distribution against the configured max tasks
+     */
+    PARTITION("partition",
+            context -> context.getPartition().isPresent()
+                    ? Optional.of((long) context.getPartition().get())
+                    : Optional.empty());
 
     private final String name;
+    private final Function<Context<?>, Optional<Long>> mutation;
 
     public String value() {
         return name;
     }
 
-    ObjectDistributionStrategy(final String name) {
+    /**
+     * Get the Object distribution strategy for the configured ObjectDistributionStrategy
+     *
+     * @param name
+     *            the name of the ObjectDistributionStrategy
+     * @param mutation
+     *            the mutation required to get the correct details from the context for distribution
+     */
+    ObjectDistributionStrategy(final String name, final Function<Context<?>, Optional<Long>> mutation) {
         this.name = name;
+        this.mutation = mutation;
     }
 
     public static ObjectDistributionStrategy forName(final String name) {
@@ -44,5 +74,18 @@ public enum ObjectDistributionStrategy {
         }
         throw new ConfigException(String.format("Unknown object.distribution.strategy type: %s, allowed values %s ",
                 name, Arrays.toString(ObjectDistributionStrategy.values())));
+    }
+
+    /**
+     * Returns a configured Distribution Strategy
+     *
+     * @param maxTasks
+     *            the maximum number of configured tasks for this connector
+     *
+     * @return a configured Distribution Strategy with the correct mutation configured for proper distribution across
+     *         tasks of objects being processed.
+     */
+    public DistributionStrategy getDistributionStrategy(final int maxTasks) {
+        return new DistributionStrategy(mutation, maxTasks);
     }
 }

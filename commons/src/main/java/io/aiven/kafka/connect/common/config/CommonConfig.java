@@ -62,13 +62,14 @@ public class CommonConfig extends AbstractConfig {
 
     /**
      *
-     * Get the maximum number of tasks that should be run by this connector configuration
-     *  Max Tasks is set within the Kafka Connect framework and so is retrieved slightly differently in ConnectorConfig.java
+     * Get the maximum number of tasks that should be run by this connector configuration Max Tasks is set within the
+     * Kafka Connect framework and so is retrieved slightly differently in ConnectorConfig.java
      *
      * @return The maximum number of tasks that should be run by this connector configuration
      */
     public int getMaxTasks() {
-//        TODO when Connect framework is upgraded it will be possible to retrieve this information from the configDef as tasksMax
+        // TODO when Connect framework is upgraded it will be possible to retrieve this information from the configDef
+        // as tasksMax
         return Integer.parseInt(this.originalsStrings().get(MAX_TASKS));
     }
     /**

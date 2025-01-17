@@ -18,6 +18,10 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import java.util.Objects;
 
+/**
+ * The S3Key is a specific implementation of a Context Storage Key which implements the required methods, toString,
+ * hashCode and equals. This allows all S3 Objects to be correctly processed into context.
+ */
 public final class S3Key {
     String storageKey;
 

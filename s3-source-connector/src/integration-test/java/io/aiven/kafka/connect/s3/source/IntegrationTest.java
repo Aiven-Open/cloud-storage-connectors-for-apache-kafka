@@ -161,10 +161,10 @@ final class IntegrationTest implements IntegrationBase {
         final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
         String s3Prefix = "";
         if (addPrefix) {
-            objectDistributionStrategy = ObjectDistributionStrategy.PARTITION_IN_FILENAME;
+            objectDistributionStrategy = ObjectDistributionStrategy.PARTITION;
             s3Prefix = "topics/" + topicName + "/partition=" + partitionId + "/";
         } else {
-            objectDistributionStrategy = ObjectDistributionStrategy.PARTITION_IN_FILENAME;
+            objectDistributionStrategy = ObjectDistributionStrategy.PARTITION;
         }
 
         final String fileNamePatternSeparator = "_";
@@ -277,7 +277,7 @@ final class IntegrationTest implements IntegrationBase {
         final ObjectDistributionStrategy objectDistributionStrategy;
         final String prefixPattern = "bucket/topics/{{topic}}/partition/{{partition}}/";
         String s3Prefix = "";
-        objectDistributionStrategy = ObjectDistributionStrategy.PARTITION_IN_FILENAME;
+        objectDistributionStrategy = ObjectDistributionStrategy.PARTITION;
         if (addPrefix) {
             s3Prefix = "bucket/topics/" + topicName + "/partition/" + partition + "/";
         }
@@ -326,7 +326,7 @@ final class IntegrationTest implements IntegrationBase {
     void jsonTest(final TestInfo testInfo) {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topicName, 1,
-                ObjectDistributionStrategy.PARTITION_IN_FILENAME, false, "", "", "-");
+                ObjectDistributionStrategy.PARTITION, false, "", "", "-");
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.JSONL.getValue());
         connectorConfig.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.json.JsonConverter");
 
