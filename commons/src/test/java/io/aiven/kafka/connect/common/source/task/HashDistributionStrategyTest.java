@@ -36,7 +36,7 @@ final class HashDistributionStrategyTest {
     void hashDistributionExactlyOnce(final String path) {
         final int maxTaskId = 10;
         final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTaskId);
-        final Context<String> ctx = getContext("{{topic}}-{{partition}}-{{start_offset}}", path, null);
+        final Context<String> ctx = getContext("{{topic}}-{{partition}}-{{start_offset}}", path);
 
         final List<Integer> results = new ArrayList<>();
         for (int taskId = 0; taskId < maxTaskId; taskId++) {
@@ -52,7 +52,7 @@ final class HashDistributionStrategyTest {
     void hashDistributionExactlyOnceWithReconfigureEvent(final String path) {
         int maxTasks = 10;
         final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
-        final Context<String> ctx = getContext("{{topic}}-{{partition}}-{{start_offset}}", path, null);
+        final Context<String> ctx = getContext("{{topic}}-{{partition}}-{{start_offset}}", path);
 
         final List<Integer> results = new ArrayList<>();
         for (int taskId = 0; taskId < maxTasks; taskId++) {
@@ -74,7 +74,7 @@ final class HashDistributionStrategyTest {
     void hashDistributionExactlyOnceWithReconfigureEventAndMatchAllExpectedSource(final String path) {
         int maxTasks = 10;
         final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
-        final Context<String> ctx = getContext(".*", path, "topic1");
+        final Context<String> ctx = getContext(".*", path);
 
         final List<Integer> results = new ArrayList<>();
         for (int taskId = 0; taskId < maxTasks; taskId++) {
@@ -95,7 +95,7 @@ final class HashDistributionStrategyTest {
     void hashDistributionWithNegativeValues(final int hashCode) {
         final int maxTasks = 10;
         final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
-        final FilePatternUtils utils = new FilePatternUtils(".*", "targetTopic");
+        final FilePatternUtils utils = new FilePatternUtils(".*");
         final Optional<Context<HashCodeKey>> ctx = utils.process(new HashCodeKey(hashCode));
 
         assertThat(ctx).isPresent();
@@ -106,9 +106,8 @@ final class HashDistributionStrategyTest {
 
     }
 
-    private Context<String> getContext(final String expectedSourceName, final String filename,
-            final String targetTopic) {
-        final FilePatternUtils utils = new FilePatternUtils(expectedSourceName, targetTopic);
+    private Context<String> getContext(final String expectedSourceName, final String filename) {
+        final FilePatternUtils utils = new FilePatternUtils(expectedSourceName);
         final Optional<Context<String>> ctx = utils.process(filename);
         assertThat(ctx.isPresent()).isTrue();
         // Hash distribution can have an empty context can have an empty context

@@ -221,7 +221,7 @@ final class PartitionDistributionStrategyTest {
 
     public static Optional<Context<String>> getOptionalContext(final String configuredFilenamePattern,
             final String filename) {
-        final FilePatternUtils utils = new FilePatternUtils(configuredFilenamePattern, null);
+        final FilePatternUtils utils = new FilePatternUtils(configuredFilenamePattern);
         return utils.process(filename);
     }
 

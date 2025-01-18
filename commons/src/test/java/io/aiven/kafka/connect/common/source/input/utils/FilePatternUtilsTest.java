@@ -28,13 +28,12 @@ import org.junit.jupiter.params.provider.CsvSource;
 class FilePatternUtilsTest {
 
     @ParameterizedTest
-    @CsvSource({ "{{topic}}-1.txt,'topic', logs-1.txt, topic", "{{topic}}-{{partition}}.txt,, logs-1.txt, logs",
-            "{{topic}}-{{partition}}.txt,, logs2-1.txt, logs2",
-            "{{topic}}-{{partition}}.txt,anomaly, logs2-1.txt, anomaly" })
-    void checkTopicDistribution(final String expectedSourceFormat, final String configuredTopic,
-            final String sourceName, final String expectedTopic) {
+    @CsvSource({ "{{topic}}-1.txt, logs-1.txt, logs", "{{topic}}-{{partition}}.txt,logs-1.txt, logs",
+            "{{topic}}-{{partition}}.txt,logs2-1.txt, logs2", "{{topic}}-{{partition}}.txt, logs2-1.txt, logs2" })
+    void checkTopicDistribution(final String expectedSourceFormat, final String sourceName,
+            final String expectedTopic) {
 
-        final FilePatternUtils utils = new FilePatternUtils(expectedSourceFormat, configuredTopic);
+        final FilePatternUtils utils = new FilePatternUtils(expectedSourceFormat);
         final Optional<Context<String>> ctx = utils.process(sourceName);
         assertThat(ctx.isPresent()).isTrue();
         assertThat(ctx.get().getTopic().isPresent()).isTrue();
@@ -42,16 +41,15 @@ class FilePatternUtilsTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "{{topic}}-{{partition}}-{{start_offset}}.txt,, logs2-1-0001.txt, logs2,1,0001",
-            "{{topic}}-{{start_offset}}-{{partition}}.txt,, logs2-0001-1.txt, logs2,0001,1",
-            "{{topic}}-{{start_offset}}-{{partition}}.txt,, logs2-99999-1.txt, logs2,1,99999",
-            "{{partition}}-{{start_offset}}-{{topic}}.txt,, logs2-1-logs2.txt, logs2,2,0001",
-            "{{partition}}-{{start_offset}}-{{topic}}.txt,secondaryTopic, logs2-1-logs2.txt, secondaryTopic,2,0001", })
-    void checkTopicDistribution(final String expectedSourceFormat, final String configuredTopic,
-            final String sourceName, final String expectedTopic, final int expectedPartition,
-            final int expectedOffset) {
+    @CsvSource({ "{{topic}}-{{partition}}-{{start_offset}}.txt, logs2-1-0001.txt, logs2,1,0001",
+            "{{topic}}-{{start_offset}}-{{partition}}.txt, logs2-0001-1.txt, logs2,0001,1",
+            "{{topic}}-{{start_offset}}-{{partition}}.txt, logs2-99999-1.txt, logs2,1,99999",
+            "{{partition}}-{{start_offset}}-{{topic}}.txt, logs2-1-logs2.txt, logs2,2,0001",
+            "{{partition}}-{{start_offset}}-{{topic}}.txt, logs2-1-logs2.txt, logs2,2,0001", })
+    void checkTopicDistribution(final String expectedSourceFormat, final String sourceName, final String expectedTopic,
+            final int expectedPartition, final int expectedOffset) {
 
-        final FilePatternUtils utils = new FilePatternUtils(expectedSourceFormat, configuredTopic);
+        final FilePatternUtils utils = new FilePatternUtils(expectedSourceFormat);
         final Optional<Context<String>> ctx = utils.process(sourceName);
         assertThat(ctx.isPresent()).isTrue();
         assertThat(ctx.get().getTopic().isPresent()).isTrue();

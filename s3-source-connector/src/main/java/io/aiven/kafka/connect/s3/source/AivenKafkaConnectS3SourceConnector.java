@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,7 +64,7 @@ public class AivenKafkaConnectS3SourceConnector extends SourceConnector {
         final var taskProps = new ArrayList<Map<String, String>>();
         for (int i = 0; i < maxTasks; i++) {
             final var props = new HashMap<>(configProperties); // NOPMD
-            props.put("task.id", String.valueOf(i));
+            props.put(TASK_ID, String.valueOf(i));
             taskProps.add(props);
         }
         return taskProps;

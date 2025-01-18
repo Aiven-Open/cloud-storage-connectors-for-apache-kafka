@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
+import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.AVRO_VALUE_SERIALIZER;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
@@ -107,7 +109,7 @@ class AwsIntegrationTest implements IntegrationBase {
         config.put(TARGET_TOPICS, topics);
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put("tasks.max", String.valueOf(maxTasks));
+        config.put(MAX_TASKS, String.valueOf(maxTasks));
         return config;
     }
 
@@ -126,8 +128,8 @@ class AwsIntegrationTest implements IntegrationBase {
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         configData.put(FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
-        configData.put("task.id", String.valueOf(taskId));
-        configData.put("tasks.max", String.valueOf(maxTasks));
+        configData.put(TASK_ID, String.valueOf(taskId));
+        configData.put(MAX_TASKS, String.valueOf(maxTasks));
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
@@ -180,8 +182,8 @@ class AwsIntegrationTest implements IntegrationBase {
         configData.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
         configData.put(AVRO_VALUE_SERIALIZER, "io.confluent.kafka.serializers.KafkaAvroSerializer");
         configData.put(FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
-        configData.put("task.id", String.valueOf(taskId));
-        configData.put("tasks.max", String.valueOf(maxTasks));
+        configData.put(TASK_ID, String.valueOf(taskId));
+        configData.put(MAX_TASKS, String.valueOf(maxTasks));
 
         // Define Avro schema
         final String schemaJson = "{\n" + "  \"type\": \"record\",\n" + "  \"name\": \"TestRecord\",\n"

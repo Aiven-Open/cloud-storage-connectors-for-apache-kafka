@@ -25,7 +25,7 @@ import java.util.Optional;
  * @param <K>
  *            is is the type/class of the key unique to the object the context is being created about
  */
-public class Context<K> {
+public class Context<K extends Comparable<K>> {
 
     private String topic;
     private Integer partition;

@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -33,6 +34,8 @@ import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
@@ -41,6 +44,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
  */
 public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     public static final long BYTES_TRANSFORMATION_NUM_OF_RECS = 1L;
+    private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
 
     private final OffsetManager offsetManager;
 
@@ -61,6 +65,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     private Iterator<S3SourceRecord> outer;
     private FilePatternUtils filePattern;
+    private final Optional<String> targetTopics;
 
     public SourceRecordIterator(final S3SourceConfig s3SourceConfig, final OffsetManager offsetManager,
             final Transformer transformer, final AWSV2SourceClient sourceClient) {
@@ -71,7 +76,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.bucketName = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
         this.sourceClient = sourceClient;
-
+        this.targetTopics = Optional.ofNullable(s3SourceConfig.getTargetTopics());
         this.distributionStrategy = initializeDistributionStrategy();
 
         // Initialize predicates
@@ -122,7 +127,10 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
      * @return a stream of S3SourceRecords created from the input stream of the S3Object.
      */
     private Stream<S3SourceRecord> convert(final S3Object s3Object) {
-
+        // Set the target topic in the context if it has been set from configuration.
+        if (targetTopics.isPresent()) {
+            overrideContextTopic();
+        }
         final Map<String, Object> partitionMap = ConnectUtils.getPartitionMap(context.getTopic().get(),
                 context.getPartition().get(), bucketName);
         final long recordCount = offsetManager.recordsProcessedForObjectKey(partitionMap, s3Object.key());
@@ -140,12 +148,21 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
                 .map(new Mapper(partitionMap, recordCount, keyData, s3Object.key()));
     }
 
+    private Consumer<String> overrideContextTopic() {
+        if (context.getTopic().isPresent()) {
+            LOGGER.debug(
+                    "Overriding topic '{}' extracted from S3 Object Key with topic '{}' from configuration 'topics'. ",
+                    context.getTopic().get(), targetTopics.get());
+        }
+        return context::setTopic;
+    }
+
     private DistributionStrategy initializeDistributionStrategy() {
         final DistributionType distributionType = s3SourceConfig.getDistributionType();
         final int maxTasks = s3SourceConfig.getMaxTasks();
         this.taskId = s3SourceConfig.getTaskId() % maxTasks;
-        this.filePattern = new FilePatternUtils(s3SourceConfig.getS3FileNameFragment().getFilenameTemplate().toString(),
-                s3SourceConfig.getTargetTopics());
+        this.filePattern = new FilePatternUtils(
+                s3SourceConfig.getS3FileNameFragment().getFilenameTemplate().toString());
         return distributionType.getDistributionStrategy(maxTasks);
     }
 

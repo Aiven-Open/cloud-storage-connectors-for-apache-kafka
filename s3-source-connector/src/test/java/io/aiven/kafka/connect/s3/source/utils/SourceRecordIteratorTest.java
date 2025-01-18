@@ -73,8 +73,6 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 @SuppressWarnings("PMD.ExcessiveImports")
 final class SourceRecordIteratorTest {
 
-    public static final String TASK_ID = "task.id";
-    public static final String MAX_TASKS = "tasks.max";
     private S3SourceConfig mockConfig;
     private OffsetManager mockOffsetManager;
     private Transformer mockTransformer;
@@ -231,7 +229,7 @@ final class SourceRecordIteratorTest {
         final String key = "topic-00001-abc123.txt";
         final String filePattern = "{{partition}}";
         final String topic = "topic";
-        final FilePatternUtils filePatternUtils = new FilePatternUtils(filePattern, topic);
+        final FilePatternUtils filePatternUtils = new FilePatternUtils(filePattern);
         final S3SourceConfig config = getConfig(Collections.emptyMap());
         final S3ClientBuilder builder = new S3ClientBuilder();
         mockSourceConfig(mockConfig, filePattern, taskId, maxTasks, topic);
@@ -261,7 +259,7 @@ final class SourceRecordIteratorTest {
         mockSourceConfig(mockConfig, filePattern, taskId, maxTasks, topic);
         final S3ClientBuilder builder = new S3ClientBuilder();
         final S3SourceConfig config = getConfig(Collections.emptyMap());
-        final FilePatternUtils filePatternUtils = new FilePatternUtils(filePattern, topic);
+        final FilePatternUtils filePatternUtils = new FilePatternUtils(filePattern);
 
         final S3Object obj = S3Object.builder().key(objectKey).build();
 

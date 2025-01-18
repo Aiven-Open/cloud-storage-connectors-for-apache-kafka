@@ -25,8 +25,16 @@ import org.apache.kafka.common.config.ConfigException;
 import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/**
+ * FilePatternUtils allows the construction of a regex pattern to extract the
+ * {@link io.aiven.kafka.connect.common.source.task.Context Context} from an Object Key.
+ *
+ */
 public final class FilePatternUtils {
+    private static final Logger LOGGER = LoggerFactory.getLogger(FilePatternUtils.class);
     public static final String PATTERN_PARTITION_KEY = "partition";
     public static final String PATTERN_TOPIC_KEY = "topic";
     public static final String PATTERN_START_OFFSET_KEY = "startOffset"; // no undercore allowed as it breaks the regex.
@@ -41,16 +49,29 @@ public final class FilePatternUtils {
     public static final String START_OFFSET_NAMED_GROUP_REGEX_PATTERN = "(?<" + PATTERN_START_OFFSET_KEY + ">\\d+)";
     public static final String NUMBER_REGEX_PATTERN = "(?:\\d+)";
     public static final String TOPIC_NAMED_GROUP_REGEX_PATTERN = "(?<" + PATTERN_TOPIC_KEY + ">[a-zA-Z0-9\\-_.]+)";
+    public static final String START_OFFSET = "Start offset";
 
     final Pattern pattern;
-    final Optional<String> targetTopic;
+    private final boolean startOffsetConfigured;
+    private final boolean partitionConfigured;
+    private final boolean topicConfigured;
 
-    public FilePatternUtils(final String pattern, final String targetTopic) {
+    /**
+     * Creates an instance of FilePatternUtils, this constructor is used to configure the Pattern that is used to
+     * extract Context from Object 'K'.
+     *
+     * @param pattern
+     */
+    public FilePatternUtils(final String pattern) {
         this.pattern = configurePattern(pattern);
-        this.targetTopic = Optional.ofNullable(targetTopic);
+        startOffsetConfigured = pattern.contains(START_OFFSET_PATTERN);
+        partitionConfigured = pattern.contains(PARTITION_PATTERN);
+        topicConfigured = pattern.contains(TOPIC_PATTERN);
     }
 
     /**
+     * Sets a Regex Pattern based on initial configuration that allows group regex to be used to extract information
+     * from the toString() of Object K which is passed in for Context extraction.
      *
      * @param expectedSourceNameFormat
      *            This is a string in the expected compatible format which will allow object name or keys to have unique
@@ -62,6 +83,7 @@ public final class FilePatternUtils {
             throw new ConfigException(
                     "Source name format is missing please configure the expected source to include the partition pattern.");
         }
+
         // Build REGEX Matcher
         String regexString = StringUtils.replace(expectedSourceNameFormat, START_OFFSET_PATTERN,
                 START_OFFSET_NAMED_GROUP_REGEX_PATTERN);
@@ -81,9 +103,9 @@ public final class FilePatternUtils {
         final Optional<Matcher> matcher = fileMatches(sourceName.toString());
         if (matcher.isPresent()) {
             final Context<K> ctx = new Context<>(sourceName);
-            getTopic(matcher.get()).ifPresent(ctx::setTopic);
-            getPartitionId(matcher.get()).ifPresent(ctx::setPartition);
-            getOffset(matcher.get()).ifPresent(ctx::setOffset);
+            getTopic(matcher.get(), sourceName.toString()).ifPresent(ctx::setTopic);
+            getPartitionId(matcher.get(), sourceName.toString()).ifPresent(ctx::setPartition);
+            getOffset(matcher.get(), sourceName.toString()).ifPresent(ctx::setOffset);
             return Optional.of(ctx);
         }
         return Optional.empty();
@@ -94,38 +116,44 @@ public final class FilePatternUtils {
         return matchPattern(sourceName);
     }
 
-    private Optional<String> getTopic(final Matcher matcher) {
-        if (targetTopic.isPresent()) {
-            return targetTopic;
-        }
+    private Optional<String> getTopic(final Matcher matcher, final String sourceName) {
 
         try {
             return Optional.of(matcher.group(PATTERN_TOPIC_KEY));
         } catch (IllegalArgumentException ex) {
             // It is possible that when checking for the group it does not match and returns an
             // illegalArgumentException
+            if (topicConfigured) {
+                LOGGER.warn("Unable to extract Topic from {} and 'topics' not configured.", sourceName);
+            }
             return Optional.empty();
         }
 
     }
 
-    private Optional<Integer> getPartitionId(final Matcher matcher) {
+    private Optional<Integer> getPartitionId(final Matcher matcher, final String sourceName) {
         try {
             return Optional.of(Integer.parseInt(matcher.group(PATTERN_PARTITION_KEY)));
         } catch (IllegalArgumentException e) {
             // It is possible that when checking for the group it does not match and returns an
             // illegalStateException, Number format exception is also covered by this in this case.
+            if (partitionConfigured) {
+                LOGGER.warn("Unable to extract Partition id from {}.", sourceName);
+            }
             return Optional.empty();
         }
 
     }
 
-    private Optional<Integer> getOffset(final Matcher matcher) {
+    private Optional<Integer> getOffset(final Matcher matcher, final String sourceName) {
         try {
             return Optional.of(Integer.parseInt(matcher.group(PATTERN_START_OFFSET_KEY)));
         } catch (IllegalArgumentException e) {
             // It is possible that when checking for the group it does not match and returns an
             // illegalStateException, Number format exception is also covered by this in this case.
+            if (startOffsetConfigured) {
+                LOGGER.warn("Unable to extract start offset from {}.", sourceName);
+            }
             return Optional.empty();
         }
 
