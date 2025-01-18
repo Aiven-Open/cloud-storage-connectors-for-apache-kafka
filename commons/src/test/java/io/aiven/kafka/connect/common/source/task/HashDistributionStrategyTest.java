@@ -115,10 +115,14 @@ final class HashDistributionStrategyTest {
         return ctx.get();
     }
 
-    static class HashCodeKey {
+    static class HashCodeKey implements Comparable<HashCodeKey> {
         private final int hashCodeValue;
         public HashCodeKey(final int hashCodeValue) {
             this.hashCodeValue = hashCodeValue;
+        }
+
+        private int getHashCodeValue() {
+            return hashCodeValue;
         }
 
         @Override
@@ -136,6 +140,11 @@ final class HashDistributionStrategyTest {
         @Override
         public int hashCode() {
             return hashCodeValue;
+        }
+
+        @Override
+        public int compareTo(final HashCodeKey hashCodeKey) {
+            return Integer.compare(this.hashCodeValue, hashCodeKey.getHashCodeValue());
         }
     }
 }

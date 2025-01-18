@@ -77,7 +77,7 @@ public final class FilePatternUtils {
         }
     }
 
-    public <K> Optional<Context<K>> process(final K sourceName) {
+    public <K extends Comparable<K>> Optional<Context<K>> process(final K sourceName) {
         final Optional<Matcher> matcher = fileMatches(sourceName.toString());
         if (matcher.isPresent()) {
             final Context<K> ctx = new Context<>(sourceName);

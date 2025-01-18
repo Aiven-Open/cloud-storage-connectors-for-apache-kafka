@@ -38,7 +38,7 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static final String TARGET_TOPICS = "topics";
     public static final String ERRORS_TOLERANCE = "errors.tolerance";
 
-    public static final String DISTRIBUTION_TYPE = "object.distribution.strategy";
+    public static final String DISTRIBUTION_TYPE = "distribution.type";
 
     /**
      * Construct the ConfigFragment..

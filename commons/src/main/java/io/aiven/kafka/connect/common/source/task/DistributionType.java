@@ -69,8 +69,8 @@ public enum DistributionType {
                 return distributionType;
             }
         }
-        throw new ConfigException(String.format("Unknown object.distribution.strategy type: %s, allowed values %s ",
-                name, Arrays.toString(DistributionType.values())));
+        throw new ConfigException(String.format("Unknown distribution.type : %s, allowed values %s ", name,
+                Arrays.toString(DistributionType.values())));
     }
 
     /**
