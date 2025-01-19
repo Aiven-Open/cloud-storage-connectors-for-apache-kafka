@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.s3.source.utils;
 
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,6 +31,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.function.Consumer;
 
@@ -107,93 +109,77 @@ final class SourceRecordIteratorTest {
         final Iterator<S3SourceRecord> s3ObjectIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
                 mockTransformer, sourceApiClient);
 
-        // assertThat(s3ObjectIterator).hasNext();
-        // assertThat(s3ObjectIterator.next()).isNotNull();
+        assertThat(s3ObjectIterator).hasNext();
+        assertThat(s3ObjectIterator.next()).isNotNull();
         assertThat(s3ObjectIterator).isExhausted();
 
     }
 
-    // @Test
-    // void testIteratorExpectExceptionWhenGetsContextWithNoTopic() throws Exception {
-    //
-    // final String key = "topic-00001-abc123.txt";
-    // final String filePattern = "{{partition}}";
-    // final S3SourceConfig config = getConfig(Collections.emptyMap());
-    // final S3ClientBuilder builder = new S3ClientBuilder();
-    // sourceApiClient = new AWSV2SourceClient(builder.build(), config);
-    //
-    // mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
-    //
-    // mockSourceConfig(mockConfig, filePattern, 0, 1, null);
-    //
-    // final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
-    // mockTransformer, sourceApiClient);
-    // assertThat(iterator).isExhausted();
-    //
-    // builder.reset().addObject(key, "Hello World").endOfBlock();
-    // sourceApiClient = new AWSV2SourceClient(builder.build(), config);
-    // final Iterator<S3SourceRecord> s3ObjectIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
-    // mockTransformer, sourceApiClient);
-    //
-    // assertThatThrownBy(s3ObjectIterator::hasNext).isInstanceOf(NoSuchElementException.class)
-    // .hasMessage("No value present");
-    //
-    // }
+    @Test
+    void testIteratorExpectExceptionWhenGetsContextWithNoTopic() throws Exception {
 
-    // @Test
-    // void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws Exception {
-    // final String key = "topic-00001-abc123.txt";
-    // final String filePattern = "{{topic}}-{{partition}}";
-    //
-    // final S3SourceConfig config = getConfig(Collections.emptyMap());
-    // final S3ClientBuilder builder = new S3ClientBuilder();
-    //
-    // builder.reset().addObject(key, "Hello World").endOfBlock();
-    // sourceApiClient = new AWSV2SourceClient(builder.build(), config);
-    //
-    // mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
-    //
-    //// when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
-    //
-    // mockSourceConfig(mockConfig, filePattern, 0, 1, null);
-    //
-    // // With ByteArrayTransformer
-    //
-    // mockTransformer = mock(ByteArrayTransformer.class);
-    // when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-    // .thenReturn(Stream.of(SchemaAndValue.NULL));
-    //
-    //// when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
-    ////
-    //// when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
-    //// .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
-    //
-    // // should skip if any records were produced by source record iterator.
-    // final Iterator<S3SourceRecord> byteArrayIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
-    // mockTransformer, sourceApiClient);
-    //
-    // assertThat(byteArrayIterator).isExhausted();
-    //
-    // verify(mockTransformer, never()).getRecords(any(), anyString(), anyInt(), any(), anyLong());
-    //
-    // // With AvroTransformer
-    //
-    // mockTransformer = mock(AvroTransformer.class);
-    //
-    //// when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
-    //// .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
-    //
-    // when(mockTransformer.getKeyData(anyString(), anyString(), any())).thenReturn(SchemaAndValue.NULL);
-    // when(mockTransformer.getRecords(any(), anyString(), anyInt(), any(), anyLong()))
-    // .thenReturn(Arrays.asList(SchemaAndValue.NULL).stream());
-    //
-    // final Iterator<S3SourceRecord> avroIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
-    // mockTransformer, sourceApiClient);
-    // assertThat(avroIterator).isExhausted();
-    //
-    // verify(mockTransformer, times(0)).getRecords(any(), anyString(), anyInt(), any(), anyLong());
-    //
-    // }
+        final String key = "topic-00001-abc123.txt";
+        final String filePattern = "{{partition}}";
+        final S3SourceConfig config = getConfig(Collections.emptyMap());
+        final S3ClientBuilder builder = new S3ClientBuilder();
+        sourceApiClient = new AWSV2SourceClient(builder.build(), config);
+
+        mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+
+        mockSourceConfig(mockConfig, filePattern, 0, 1, null);
+
+        final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
+                mockTransformer, sourceApiClient);
+        assertThat(iterator).isExhausted();
+
+        builder.reset().addObject(key, "Hello World").endOfBlock();
+        sourceApiClient = new AWSV2SourceClient(builder.build(), config);
+        final Iterator<S3SourceRecord> s3ObjectIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
+                mockTransformer, sourceApiClient);
+
+        assertThatThrownBy(s3ObjectIterator::next).isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws Exception {
+        final String key = "topic-00001-abc123.txt";
+        final String key2 = "topic-00001-abc124.txt";
+        final String filePattern = "{{topic}}-{{partition}}";
+
+        final S3SourceConfig config = getConfig(Collections.emptyMap());
+        final S3ClientBuilder builder = new S3ClientBuilder();
+        final int byteArraySize = 6000;
+        final byte[] testData = new byte[byteArraySize];
+        for (int i = 0; i < byteArraySize; i++) {
+            testData[i] = ((Integer) i).byteValue();
+        }
+
+        builder.reset().addObject(key, testData).endOfBlock();
+        sourceApiClient = new AWSV2SourceClient(builder.build(), config);
+
+        Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+
+        mockSourceConfig(mockConfig, filePattern, 0, 1, null);
+
+        // With ByteArrayTransformer
+        final Iterator<S3SourceRecord> byteArrayIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
+                transformer, sourceApiClient);
+
+        assertThat(byteArrayIterator.hasNext()).isTrue();
+
+        // Expect 2 items as the transformer will use the default 4096 bytes to split the testdata into two chunks.
+        assertThat(byteArrayIterator.next()).isNotNull();
+        assertThat(byteArrayIterator.next()).isNotNull();
+
+        assertThat(byteArrayIterator).isExhausted();
+
+        // With AvroTransformer all items are already exhausted so nothing should be left.
+        transformer = TransformerFactory.getTransformer(InputFormat.AVRO);
+
+        Iterator<S3SourceRecord> avroIterator = new SourceRecordIterator(mockConfig, mockOffsetManager, transformer,
+                sourceApiClient);
+        assertThat(avroIterator).isExhausted();
+    }
 
     // @ParameterizedTest
     // @CsvSource({ "4, 2, key1", "4, 3, key2", "4, 0, key3", "4, 1, key4" })
