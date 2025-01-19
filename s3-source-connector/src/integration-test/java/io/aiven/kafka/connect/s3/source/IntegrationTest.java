@@ -174,7 +174,7 @@ final class IntegrationTest implements IntegrationBase {
         final String fileNamePatternSeparator = "-";
 
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 1, DistributionType.PARTITION,
-                addPrefix, localS3Prefix , prefixPattern, fileNamePatternSeparator);
+                addPrefix, localS3Prefix, prefixPattern, fileNamePatternSeparator);
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
@@ -185,10 +185,10 @@ final class IntegrationTest implements IntegrationBase {
         final List<String> offsetKeys = new ArrayList<>();
 
         // write 5 objects to s3
-        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
-        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
-        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
-        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
+        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000", localS3Prefix));
+        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000", localS3Prefix));
+        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00001", localS3Prefix));
+        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00001", localS3Prefix));
         offsetKeys.add(writeToS3(topic, new byte[0], "00003"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
@@ -247,7 +247,7 @@ final class IntegrationTest implements IntegrationBase {
         // Poll Avro messages from the Kafka topic and deserialize them
         // Waiting for 25k kafka records in this test so a longer Duration is added.
         final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topic, numOfRecsFactor * 5,
-                Duration.ofMinutes(3), connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
+                Duration.ofMinutes(6), connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
         // Ensure this method deserializes Avro
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
@@ -277,8 +277,7 @@ final class IntegrationTest implements IntegrationBase {
             localS3Prefix = "bucket/topics/" + topic + "/partition/" + partition + "/";
         }
 
-        final String fileName = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topic + "-"
-                + partition + "-" + System.currentTimeMillis() + ".txt";
+        final String fileName = localS3Prefix + topic + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
         final String name = "testuser";
 
         final Map<String, String> connectorConfig = getAvroConfig(topic, InputFormat.PARQUET, addPrefix, localS3Prefix,

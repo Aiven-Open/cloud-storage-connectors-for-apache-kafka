@@ -58,7 +58,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private final String bucket;
 
     /** The inner iterator to provides S3Object that have been filtered potentially had data extracted */
-    private final Iterator<S3SourceRecord> inner;
+    private Iterator<S3SourceRecord> inner;
     /** The outer iterator that provides S3SourceRecords */
     private Iterator<S3SourceRecord> outer;
 
@@ -68,6 +68,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     final Predicate<Optional<S3SourceRecord>> taskAssignment;
     private FilePatternUtils filePattern;
+    private String lastSeenObjectKey;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
 
@@ -85,17 +86,23 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.taskAssignment = new TaskAssignment(initializeDistributionStrategy());
         this.taskId = s3SourceConfig.getTaskId();
         this.fileMatching = new FileMatching(filePattern);
-        final Stream<S3SourceRecord> s3SourceRecordStream = sourceClient.getS3ObjectStream(null)
+
+        inner = getS3SourceRecordStream(sourceClient).iterator();
+        outer = Collections.emptyIterator();
+    }
+
+    private Stream<S3SourceRecord> getS3SourceRecordStream(AWSV2SourceClient sourceClient) {
+        return sourceClient.getS3ObjectStream(lastSeenObjectKey)
                 .map(fileMatching)
                 .filter(taskAssignment)
                 .map(Optional::get);
-
-        inner = s3SourceRecordStream.iterator();
-        outer = Collections.emptyIterator();
     }
 
     @Override
     public boolean hasNext() {
+        if (!inner.hasNext()) {
+            inner = getS3SourceRecordStream(sourceClient).iterator();
+        }
         while (!outer.hasNext() && inner.hasNext()) {
             outer = convert(inner.next()).iterator();
         }
@@ -197,6 +204,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
             final Optional<Context<String>> optionalContext = utils.process(s3Object.key());
             if (optionalContext.isPresent()) {
+                lastSeenObjectKey = s3Object.key();
                 final S3SourceRecord s3SourceRecord = new S3SourceRecord(s3Object);
                 context = optionalContext.get();
                 overrideContextTopic();

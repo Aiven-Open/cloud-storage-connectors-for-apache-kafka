@@ -136,7 +136,27 @@ public interface IntegrationBase {
      *         {@link OffsetManager}
      */
     default String writeToS3(final String topic, final byte[] testDataBytes, final String partitionId) {
-        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topic + "-"
+        return writeToS3(topic, testDataBytes, partitionId, getS3Prefix());
+
+    }
+
+    /**
+     * Writes to S3 using a key of the form {@code [prefix]topic-partitionId-systemTime.txt}.
+     *
+     * @param topic
+     *            the topic name to use
+     * @param testDataBytes
+     *            the data.
+     * @param partitionId
+     *            the partition id.
+     * @param s3Prefix
+     *            the S3 prefix to add to the S3 Object key
+     * @return the key prefixed by {@link io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry#OBJECT_KEY} and
+     *         {@link OffsetManager}
+     */
+    default String writeToS3(final String topic, final byte[] testDataBytes, final String partitionId,
+            final String s3Prefix) {
+        final String objectKey = org.apache.commons.lang3.StringUtils.defaultIfBlank(s3Prefix, "") + topic + "-"
                 + partitionId + "-" + System.currentTimeMillis() + ".txt";
         writeToS3WithKey(objectKey, testDataBytes);
         return objectKey;
