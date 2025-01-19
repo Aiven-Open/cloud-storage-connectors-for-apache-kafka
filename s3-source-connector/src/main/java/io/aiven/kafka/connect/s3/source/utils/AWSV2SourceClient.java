@@ -76,7 +76,7 @@ public class AWSV2SourceClient {
      *            the beginning key, or {@code null} to start at the beginning.
      * @return a Stream of S3Objects for the current state of the S3 storage.
      */
-    private Stream<S3Object> getS3ObjectStream(final String startToken) {
+    Stream<S3Object> getS3ObjectStream(final String startToken) {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)

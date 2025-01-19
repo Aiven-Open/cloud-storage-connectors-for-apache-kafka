@@ -53,7 +53,7 @@ class RecordProcessorTest {
     @Mock
     private Converter keyConverter;
     @Mock
-    private OffsetManager offsetManager;
+    private S3OffsetManagerEntry s3OffsetManagerEntry;
 
     @Mock
     private AWSV2SourceClient sourceClient;
@@ -66,10 +66,10 @@ class RecordProcessorTest {
 
         final SourceRecord mockSourceRecord = mock(SourceRecord.class);
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenReturn(mockSourceRecord);
+        when(mockRecord.getSourceRecord(any(S3OffsetManagerEntry.class))).thenReturn(mockSourceRecord);
 
         final SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
-                offsetManager);
+                s3OffsetManagerEntry);
 
         verify(mockRecord, times(1)).getSourceRecord(any());
         assertThat(result).isEqualTo(mockSourceRecord);
@@ -80,27 +80,28 @@ class RecordProcessorTest {
     void testCreateSourceRecordWithDataError() {
 
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenThrow(new DataException("Testing exception"));
+        when(mockRecord.getSourceRecord(any(S3OffsetManagerEntry.class)))
+                .thenThrow(new DataException("Testing exception"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.NONE);
 
         assertThatExceptionOfType(ConnectException.class).as("Errors tolerance: NONE")
                 .isThrownBy(() -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
-                        offsetManager));
+                        s3OffsetManagerEntry));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.ALL);
         final SourceRecord result = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
-                offsetManager);
+                s3OffsetManagerEntry);
         assertThat(result).isNull();
     }
 
     @Test
     void testCreateSourceRecords() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenReturn(mock(SourceRecord.class));
+        when(mockRecord.getSourceRecord(any(S3OffsetManagerEntry.class))).thenReturn(mock(SourceRecord.class));
 
         final SourceRecord sourceRecords = RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
-                offsetManager);
+                s3OffsetManagerEntry);
 
         assertThat(sourceRecords).isNotNull();
     }
@@ -108,13 +109,12 @@ class RecordProcessorTest {
     @Test
     void errorToleranceOnNONE() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenThrow(new DataException("generic issue"));
+        when(mockRecord.getSourceRecord(any(S3OffsetManagerEntry.class))).thenThrow(new DataException("generic issue"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.NONE);
 
-        assertThatThrownBy(
-                () -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient, offsetManager))
-                .isInstanceOf(ConnectException.class)
+        assertThatThrownBy(() -> RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient,
+                s3OffsetManagerEntry)).isInstanceOf(ConnectException.class)
                 .hasMessage("Data Exception caught during S3 record to source record transformation");
 
     }
@@ -122,11 +122,11 @@ class RecordProcessorTest {
     @Test
     void errorToleranceOnALL() {
         final S3SourceRecord mockRecord = mock(S3SourceRecord.class);
-        when(mockRecord.getSourceRecord(any(OffsetManager.class))).thenThrow(new DataException("generic issue"));
+        when(mockRecord.getSourceRecord(any(S3OffsetManagerEntry.class))).thenThrow(new DataException("generic issue"));
 
         when(s3SourceConfig.getErrorsTolerance()).thenReturn(ErrorsTolerance.ALL);
 
-        assertThat(RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient, offsetManager))
+        assertThat(RecordProcessor.createSourceRecord(mockRecord, s3SourceConfig, sourceClient, s3OffsetManagerEntry))
                 .isNull();
 
     }

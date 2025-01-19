@@ -21,6 +21,9 @@ import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
+import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.BUCKET;
+import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.OBJECT_KEY;
+import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.RECORD_COUNT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -50,8 +53,7 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.ConnectUtils;
-import io.aiven.kafka.connect.s3.source.utils.OffsetManager;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 
 import io.findify.s3mock.S3Mock;
@@ -65,6 +67,7 @@ import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 final class S3SourceTaskTest {
 
@@ -82,7 +85,7 @@ final class S3SourceTaskTest {
 
     private static final int PARTITION = 1;
 
-    private static final String OBJECT_KEY = "object_key";
+    private static final String TEST_OBJECT_KEY = "object_key";
 
     // TODO S3Mock has not been maintained in 4 years
     // Adobe have an alternative we can move to.
@@ -153,11 +156,15 @@ final class S3SourceTaskTest {
         assertThat(s3SourceTask.isRunning()).isFalse();
     }
 
-    private static S3SourceRecord createS3SourceRecord(final String topicName, final Integer defaultPartitionId,
-            final String bucketName, final String objectKey, final byte[] key, final byte[] value) {
-        return new S3SourceRecord(ConnectUtils.getPartitionMap(topicName, defaultPartitionId, bucketName), 0L,
-                topicName, defaultPartitionId, objectKey, new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, key),
-                new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, value));
+    private static S3SourceRecord createS3SourceRecord(final String topic, final Integer defaultPartitionId,
+            final String bucket, final String objectKey, final byte[] key, final byte[] value) {
+
+        final S3SourceRecord result = new S3SourceRecord(
+                S3Object.builder().key(objectKey).size((long) value.length).build());
+        result.setOffsetManagerEntry(new S3OffsetManagerEntry(bucket, objectKey, topic, defaultPartitionId));
+        result.setKeyData(new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, key));
+        result.setValueData(new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, value));
+        return result;
     }
 
     private void startSourceTask(final S3SourceTask s3SourceTask) {
@@ -201,11 +208,14 @@ final class S3SourceTaskTest {
 
     private void assertEquals(final S3SourceRecord s3Record, final SourceRecord sourceRecord) {
         assertThat(sourceRecord).isNotNull();
-        assertThat(sourceRecord.sourcePartition()).isEqualTo(s3Record.getPartitionMap());
+
+        assertThat(sourceRecord.sourcePartition()).hasSize(2);
+        assertThat(sourceRecord.sourcePartition().get(BUCKET)).isEqualTo(s3Record.getOffsetManagerEntry().getBucket());
+        assertThat(sourceRecord.sourcePartition().get(OBJECT_KEY)).isEqualTo(s3Record.getOffsetManagerEntry().getKey());
+
         final Map<String, Object> map = (Map<String, Object>) sourceRecord.sourceOffset();
 
-        assertThat(map.get(OffsetManager.getObjectMapKey(s3Record.getObjectKey())))
-                .isEqualTo(s3Record.getRecordNumber());
+        assertThat(map.get(RECORD_COUNT)).isEqualTo(s3Record.getOffsetManagerEntry().getRecordCount());
         assertThat(sourceRecord.key()).isEqualTo(s3Record.getKey().value());
         assertThat(sourceRecord.value()).isEqualTo(s3Record.getValue().value());
     }
@@ -231,10 +241,11 @@ final class S3SourceTaskTest {
     private List<S3SourceRecord> createS3SourceRecords(final int count) {
         final List<S3SourceRecord> lst = new ArrayList<>();
         if (count > 0) {
-            lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY,
+
+            lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, TEST_OBJECT_KEY,
                     "Hello".getBytes(StandardCharsets.UTF_8), "Hello World".getBytes(StandardCharsets.UTF_8)));
             for (int i = 1; i < count; i++) {
-                lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, OBJECT_KEY + i,
+                lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, TEST_OBJECT_KEY + i,
                         "Goodbye".getBytes(StandardCharsets.UTF_8),
                         String.format("Goodbye cruel World (%s)", i).getBytes(StandardCharsets.UTF_8)));
             }
@@ -292,7 +303,7 @@ final class S3SourceTaskTest {
         final List<S3SourceRecord> lst = createS3SourceRecords(3);
 
         final Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
-            final Iterator<S3SourceRecord> inner = lst.iterator();
+            Iterator<S3SourceRecord> inner = lst.iterator();
             @Override
             public boolean hasNext() {
                 return inner.hasNext();
