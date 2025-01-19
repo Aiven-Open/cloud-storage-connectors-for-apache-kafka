@@ -69,7 +69,7 @@ final class S3OffsetManagerEntryTest {
     }
 
     public static S3OffsetManagerEntry newEntry() {
-        return new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
+        return new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY);
     }
 
     @Test
@@ -84,9 +84,6 @@ final class S3OffsetManagerEntryTest {
         final Optional<S3OffsetManagerEntry> entry = offsetManager.getEntry(keyEntry.getManagerKey(),
                 keyEntry::fromProperties);
         assertThat(entry).isPresent();
-        assertThat(entry.get().getPartition()).isEqualTo(PARTITION);
-        assertThat(entry.get().getRecordCount()).isEqualTo(0);
-        assertThat(entry.get().getTopic()).isEqualTo(TOPIC);
         assertThat(entry.get().getBucket()).isEqualTo(TEST_BUCKET);
         assertThat(entry.get().getProperty("random_entry")).isEqualTo(5L);
         verify(sourceTaskContext, times(1)).offsetStorageReader();
@@ -96,9 +93,6 @@ final class S3OffsetManagerEntryTest {
         final Optional<S3OffsetManagerEntry> entry2 = offsetManager.getEntry(entry.get().getManagerKey(),
                 entry.get()::fromProperties);
         assertThat(entry2).isPresent();
-        assertThat(entry2.get().getPartition()).isEqualTo(PARTITION);
-        assertThat(entry2.get().getRecordCount()).isEqualTo(0);
-        assertThat(entry2.get().getTopic()).isEqualTo(TOPIC);
         assertThat(entry2.get().getBucket()).isEqualTo(TEST_BUCKET);
         assertThat(entry2.get().getProperty("random_entry")).isEqualTo(5L);
         verify(sourceTaskContext, times(1)).offsetStorageReader();
@@ -106,7 +100,7 @@ final class S3OffsetManagerEntryTest {
 
     @Test
     void testFromProperties() {
-        final S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY, TOPIC, PARTITION);
+        final S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET, OBJECT_KEY);
         assertThat(entry.getRecordCount()).isEqualTo(0L);
         assertThat(entry.getProperty("random_entry")).isNull();
 

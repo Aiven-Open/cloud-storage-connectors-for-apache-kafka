@@ -28,7 +28,6 @@ import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
-import io.aiven.kafka.connect.s3.source.utils.RecordProcessor;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
@@ -106,8 +105,7 @@ public class S3SourceTask extends AbstractSourceTask {
             @Override
             public SourceRecord next() {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
-                final S3OffsetManagerEntry entry = s3SourceRecord.getOffsetManagerEntry();
-                return RecordProcessor.createSourceRecord(s3SourceRecord, s3SourceConfig, awsv2SourceClient, entry);
+                return s3SourceRecord.getSourceRecord(s3SourceConfig.getErrorsTolerance());
             }
         };
         return IteratorUtils.filteredIterator(inner, Objects::nonNull);

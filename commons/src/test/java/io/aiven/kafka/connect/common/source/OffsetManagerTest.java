@@ -128,17 +128,6 @@ final class OffsetManagerTest {
         }
 
         @Override
-        public String getTopic() {
-            return getProperty("topic").toString();
-        }
-
-        @Override
-        public int getPartition() {
-            final Object value = getProperty("partition");
-            return value instanceof Integer ? (Integer) value : 0;
-        }
-
-        @Override
         public void incrementRecordCount() {
             recordCount++;
         }

@@ -166,15 +166,15 @@ final class IntegrationTest implements IntegrationBase {
         final var topic = IntegrationBase.getTopic(testInfo);
         final int partitionId = 0;
         final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
-
+        String localS3Prefix = null;
         if (addPrefix) {
-            s3Prefix = "topics/" + topic + "/partition=" + partitionId + "/";
+            localS3Prefix = "topics/" + topic + "/partition=" + partitionId + "/";
         }
 
-        final String fileNamePatternSeparator = "_";
+        final String fileNamePatternSeparator = "-";
 
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 1, DistributionType.PARTITION,
-                addPrefix, s3Prefix, prefixPattern, fileNamePatternSeparator);
+                addPrefix, localS3Prefix , prefixPattern, fileNamePatternSeparator);
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
@@ -184,7 +184,7 @@ final class IntegrationTest implements IntegrationBase {
 
         final List<String> offsetKeys = new ArrayList<>();
 
-        // write 2 objects to s3
+        // write 5 objects to s3
         offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
         offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
         offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
@@ -192,7 +192,6 @@ final class IntegrationTest implements IntegrationBase {
         offsetKeys.add(writeToS3(topic, new byte[0], "00003"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
-
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeByteMessages(topic, 4, connectRunner.getBootstrapServers());
 
@@ -272,17 +271,17 @@ final class IntegrationTest implements IntegrationBase {
 
         final String partition = "0";
         final String prefixPattern = "bucket/topics/{{topic}}/partition/{{partition}}/";
-        String s3Prefix = "";
 
+        String localS3Prefix = "";
         if (addPrefix) {
-            s3Prefix = "bucket/topics/" + topic + "/partition/" + partition + "/";
+            localS3Prefix = "bucket/topics/" + topic + "/partition/" + partition + "/";
         }
 
         final String fileName = org.apache.commons.lang3.StringUtils.defaultIfBlank(getS3Prefix(), "") + topic + "-"
                 + partition + "-" + System.currentTimeMillis() + ".txt";
         final String name = "testuser";
 
-        final Map<String, String> connectorConfig = getAvroConfig(topic, InputFormat.PARQUET, addPrefix, s3Prefix,
+        final Map<String, String> connectorConfig = getAvroConfig(topic, InputFormat.PARQUET, addPrefix, localS3Prefix,
                 prefixPattern, DistributionType.PARTITION);
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
         final Path path = ContentUtils.getTmpFilePath(name);

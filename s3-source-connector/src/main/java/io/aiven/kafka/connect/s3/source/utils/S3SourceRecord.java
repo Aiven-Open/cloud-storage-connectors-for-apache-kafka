@@ -17,32 +17,38 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+import io.aiven.kafka.connect.common.source.task.Context;
+
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
-public class S3SourceRecord implements Cloneable {
-
+public class S3SourceRecord {
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceRecord.class);
     private SchemaAndValue keyData;
     private SchemaAndValue valueData;
     /** The S3OffsetManagerEntry for this source record */
     private S3OffsetManagerEntry offsetManagerEntry;
-
+    private Context<String> context;
     private final S3Object s3Object;
 
     public S3SourceRecord(final S3Object s3Object) {
         this.s3Object = s3Object;
     }
 
-    @Override
-    public S3SourceRecord clone() throws CloneNotSupportedException {
-        super.clone();
-        final S3SourceRecord result = new S3SourceRecord(s3Object);
-        result.setOffsetManagerEntry(offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties()));
-        result.keyData = keyData;
-        result.valueData = valueData;
-        return result;
+    public S3SourceRecord(final S3SourceRecord s3SourceRecord) {
+        this(s3SourceRecord.s3Object);
+        this.offsetManagerEntry = s3SourceRecord.offsetManagerEntry
+                .fromProperties(s3SourceRecord.getOffsetManagerEntry().getProperties());
+        this.keyData = s3SourceRecord.keyData;
+        this.valueData = s3SourceRecord.valueData;
+        this.context = s3SourceRecord.context;
     }
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "offsetManagerEntry is essentially read only")
     public void setOffsetManagerEntry(final S3OffsetManagerEntry offsetManagerEntry) {
@@ -66,11 +72,11 @@ public class S3SourceRecord implements Cloneable {
     }
 
     public String getTopic() {
-        return offsetManagerEntry.getTopic();
+        return context.getTopic().isPresent() ? context.getTopic().get() : null;
     }
 
-    public int getPartition() {
-        return offsetManagerEntry.getPartition();
+    public Integer getPartition() {
+        return context.getPartition().isPresent() ? context.getPartition().get() : null;
     }
 
     public String getObjectKey() {
@@ -89,9 +95,50 @@ public class S3SourceRecord implements Cloneable {
         return offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties()); // return a defensive copy
     }
 
-    public SourceRecord getSourceRecord(final S3OffsetManagerEntry offsetManager) {
-        return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(),
-                offsetManagerEntry.getProperties(), offsetManagerEntry.getTopic(), offsetManagerEntry.getPartition(),
-                keyData.schema(), keyData.value(), valueData.schema(), valueData.value());
+    public Context<String> getContext() {
+        return defensiveContextCopy(context);
+
     }
+    public void setContext(final Context<String> context) {
+        this.context = defensiveContextCopy(context);
+    }
+
+    /**
+     * Creates a SourceRecord that can be returned to a Kafka topic
+     *
+     * @return A kafka {@link org.apache.kafka.connect.source.SourceRecord SourceRecord}
+     */
+    public SourceRecord getSourceRecord(final ErrorsTolerance tolerance) {
+        try {
+            return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(),
+                    offsetManagerEntry.getProperties(), getTopic(), getPartition(), keyData.schema(), keyData.value(),
+                    valueData.schema(), valueData.value());
+        } catch (DataException e) {
+            if (ErrorsTolerance.NONE.equals(tolerance)) {
+                throw new ConnectException("Data Exception caught during S3 record to source record transformation", e);
+            } else {
+                LOGGER.warn(
+                        "Data Exception caught during S3 record to source record transformation {} . errors.tolerance set to 'all', logging warning and continuing to process.",
+                        e.getMessage(), e);
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Creates a defensive copy of the Context for use internally by the S3SourceRecord
+     *
+     * @param context
+     *            The Context which needs to be copied
+     * @return The new Context object which has been created from the original context
+     */
+    private Context<String> defensiveContextCopy(final Context<String> context) {
+        final Context<String> returnValue = new Context<>(
+                context.getStorageKey().isPresent() ? context.getStorageKey().get() : null);
+        context.getTopic().ifPresent(returnValue::setTopic);
+        context.getPartition().ifPresent(returnValue::setPartition);
+        context.getOffset().ifPresent(returnValue::setOffset);
+        return returnValue;
+    }
+
 }

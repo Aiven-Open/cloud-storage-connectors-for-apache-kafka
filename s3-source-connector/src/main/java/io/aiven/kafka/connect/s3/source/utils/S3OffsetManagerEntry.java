@@ -45,8 +45,6 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
 
     private final String bucket;
     private final String objectKey;
-    private final String topic;
-    private final Integer partition;
 
     /**
      * Construct the S3OffsetManagerEntry.
@@ -55,17 +53,10 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      *            the bucket we are using.
      * @param s3ObjectKey
      *            the S3Object key.
-     * @param topic
-     *            The topic we are using.
-     * @param partition
-     *            the partition we are using.
      */
-    public S3OffsetManagerEntry(final String bucket, final String s3ObjectKey, final String topic,
-            final Integer partition) {
+    public S3OffsetManagerEntry(final String bucket, final String s3ObjectKey) {
         this.bucket = bucket;
         this.objectKey = s3ObjectKey;
-        this.topic = topic;
-        this.partition = partition;
         data = new HashMap<>();
     }
 
@@ -76,9 +67,8 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      * @param properties
      *            the property map.
      */
-    private S3OffsetManagerEntry(final String bucket, final String s3ObjectKey, final String topic,
-            final Integer partition, final Map<String, Object> properties) {
-        this(bucket, s3ObjectKey, topic, partition);
+    private S3OffsetManagerEntry(final String bucket, final String s3ObjectKey, final Map<String, Object> properties) {
+        this(bucket, s3ObjectKey);
         data.putAll(properties);
         final Object recordCountProperty = data.computeIfAbsent(RECORD_COUNT, s -> 0L);
         if (recordCountProperty instanceof Number) {
@@ -100,7 +90,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         if (properties == null) {
             return null;
         }
-        return new S3OffsetManagerEntry(bucket, objectKey, topic, partition, properties);
+        return new S3OffsetManagerEntry(bucket, objectKey, properties);
     }
 
     @Override
@@ -143,16 +133,6 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         return objectKey;
     }
 
-    @Override
-    public int getPartition() {
-        return partition;
-    }
-
-    @Override
-    public String getTopic() {
-        return topic;
-    }
-
     /**
      * Gets the S3 bucket for the current object.
      *
@@ -192,7 +172,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(getBucket(), getTopic(), getPartition());
+        return Objects.hashCode(getBucket(), getKey());
     }
 
     @Override

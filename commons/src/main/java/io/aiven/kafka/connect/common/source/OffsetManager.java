@@ -229,20 +229,6 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
         OffsetManagerKey getManagerKey();
 
         /**
-         * Gets the Kafka topic for this entry.
-         *
-         * @return The Kafka topic for this entry.
-         */
-        String getTopic();
-
-        /**
-         * Gets the Kafka partition for this entry.
-         *
-         * @return The Kafka partition for this entry.
-         */
-        int getPartition();
-
-        /**
          * Increments the record count.
          */
         void incrementRecordCount();

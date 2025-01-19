@@ -50,6 +50,7 @@ import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -80,10 +81,6 @@ final class S3SourceTaskTest {
     private Map<String, String> properties;
 
     private static final String TEST_BUCKET = "test-bucket";
-
-    private static final String TOPIC = "TOPIC1";
-
-    private static final int PARTITION = 1;
 
     private static final String TEST_OBJECT_KEY = "object_key";
 
@@ -156,14 +153,18 @@ final class S3SourceTaskTest {
         assertThat(s3SourceTask.isRunning()).isFalse();
     }
 
-    private static S3SourceRecord createS3SourceRecord(final String topic, final Integer defaultPartitionId,
-            final String bucket, final String objectKey, final byte[] key, final byte[] value) {
+    private static S3SourceRecord createS3SourceRecord(final String bucket, final String objectKey, final byte[] key,
+            final byte[] value) {
 
         final S3SourceRecord result = new S3SourceRecord(
                 S3Object.builder().key(objectKey).size((long) value.length).build());
-        result.setOffsetManagerEntry(new S3OffsetManagerEntry(bucket, objectKey, topic, defaultPartitionId));
+        result.setOffsetManagerEntry(new S3OffsetManagerEntry(bucket, objectKey));
         result.setKeyData(new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, key));
         result.setValueData(new SchemaAndValue(Schema.OPTIONAL_BYTES_SCHEMA, value));
+        final Context<String> context = new Context<>(objectKey);
+        context.setTopic("topic");
+        context.setPartition(null);
+        result.setContext(context);
         return result;
     }
 
@@ -242,10 +243,10 @@ final class S3SourceTaskTest {
         final List<S3SourceRecord> lst = new ArrayList<>();
         if (count > 0) {
 
-            lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, TEST_OBJECT_KEY,
-                    "Hello".getBytes(StandardCharsets.UTF_8), "Hello World".getBytes(StandardCharsets.UTF_8)));
+            lst.add(createS3SourceRecord(TEST_BUCKET, TEST_OBJECT_KEY, "Hello".getBytes(StandardCharsets.UTF_8),
+                    "Hello World".getBytes(StandardCharsets.UTF_8)));
             for (int i = 1; i < count; i++) {
-                lst.add(createS3SourceRecord(TOPIC, PARTITION, TEST_BUCKET, TEST_OBJECT_KEY + i,
+                lst.add(createS3SourceRecord(TEST_BUCKET, TEST_OBJECT_KEY + i,
                         "Goodbye".getBytes(StandardCharsets.UTF_8),
                         String.format("Goodbye cruel World (%s)", i).getBytes(StandardCharsets.UTF_8)));
             }

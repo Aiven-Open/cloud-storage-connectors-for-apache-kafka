@@ -35,7 +35,8 @@ public abstract class Transformer {
     public abstract void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
 
     public final Stream<SchemaAndValue> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final int topicPartition, final AbstractConfig sourceConfig, final long skipRecords) {
+            final String topic, final Integer topicPartition, final AbstractConfig sourceConfig,
+            final long skipRecords) {
 
         final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, topic, topicPartition,
                 sourceConfig);
@@ -56,7 +57,7 @@ public abstract class Transformer {
      * @return a StreamSpliterator instance.
      */
     protected abstract StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier, String topic,
-            int topicPartition, AbstractConfig sourceConfig);
+            Integer topicPartition, AbstractConfig sourceConfig);
 
     public abstract SchemaAndValue getKeyData(Object cloudStorageKey, String topic, AbstractConfig sourceConfig);
 
