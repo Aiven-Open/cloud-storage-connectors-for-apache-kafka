@@ -16,14 +16,16 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy.OBJECT_HASH;
-import static io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy.PARTITION_IN_FILENAME;
+import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
-import io.aiven.kafka.connect.common.source.task.enums.ObjectDistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -36,7 +38,7 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static final String TARGET_TOPICS = "topics";
     public static final String ERRORS_TOLERANCE = "errors.tolerance";
 
-    public static final String OBJECT_DISTRIBUTION_STRATEGY = "object.distribution.strategy";
+    public static final String DISTRIBUTION_TYPE = "distribution.type";
 
     /**
      * Construct the ConfigFragment..
@@ -74,13 +76,15 @@ public final class SourceConfigFragment extends ConfigFragment {
         configDef.define(TARGET_TOPICS, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "eg : connect-storage-offsets", GROUP_OFFSET_TOPIC,
                 offsetStorageGroupCounter++, ConfigDef.Width.NONE, TARGET_TOPICS);
-        configDef.define(OBJECT_DISTRIBUTION_STRATEGY, ConfigDef.Type.STRING, OBJECT_HASH.name(),
+        configDef.define(DISTRIBUTION_TYPE, ConfigDef.Type.STRING, OBJECT_HASH.name(),
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
-                "Based on tasks.max config and this strategy, objects are processed in distributed"
-                        + " way by Kafka connect workers, supported values : " + OBJECT_HASH + ", "
-                        + PARTITION_IN_FILENAME,
-                GROUP_OTHER, offsetStorageGroupCounter++, ConfigDef.Width.NONE, OBJECT_DISTRIBUTION_STRATEGY); // NOPMD
-                                                                                                               // UnusedAssignment
+                "Based on tasks.max config and the type of strategy selected, objects are processed in distributed"
+                        + " way by Kafka connect workers, supported values : "
+                        + Arrays.stream(DistributionType.values())
+                                .map(DistributionType::value)
+                                .collect(Collectors.joining(", ")),
+                GROUP_OTHER, offsetStorageGroupCounter++, ConfigDef.Width.NONE, DISTRIBUTION_TYPE); // NOPMD
+                                                                                                    // UnusedAssignment
 
         return configDef;
     }
@@ -105,8 +109,8 @@ public final class SourceConfigFragment extends ConfigFragment {
         return ErrorsTolerance.forName(cfg.getString(ERRORS_TOLERANCE));
     }
 
-    public ObjectDistributionStrategy getObjectDistributionStrategy() {
-        return ObjectDistributionStrategy.forName(cfg.getString(OBJECT_DISTRIBUTION_STRATEGY));
+    public DistributionType getDistributionType() {
+        return DistributionType.forName(cfg.getString(DISTRIBUTION_TYPE));
     }
 
     private static class ErrorsToleranceValidator implements ConfigDef.Validator {
@@ -126,7 +130,7 @@ public final class SourceConfigFragment extends ConfigFragment {
             final String objectDistributionStrategy = (String) value;
             if (StringUtils.isNotBlank(objectDistributionStrategy)) {
                 // This will throw an Exception if not a valid value.
-                ObjectDistributionStrategy.forName(objectDistributionStrategy);
+                DistributionType.forName(objectDistributionStrategy);
             }
         }
     }

@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
 
@@ -27,49 +28,122 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 final class HashDistributionStrategyTest {
-
+    final DistributionType strategy = DistributionType.OBJECT_HASH;
     @ParameterizedTest
     @CsvSource({ "logs-0-0002.txt", "logs-1-0002.txt", "logs-2-0002.txt", "logs-3-0002.txt", "logs-4-0002.txt",
-            "logs-5-0002.txt", "logs-6-0002.txt", "logs-7-0002.txt", "logs-8-0002.txt", "logs-9-0002.txt", "key-0.txt",
-            "logs-1-0002.txt", "key-0002.txt", "logs-3-0002.txt", "key-0002.txt", "logs-5-0002.txt", "value-6-0002.txt",
-            "logs-7-0002.txt", "anImage8-0002.png",
-            "reallylongfilenamecreatedonS3tohisdesomedata and alsohassome spaces.txt" })
+            "logs-5-0002.txt", "logs-6-0002.txt", "logs-7-0002.txt", "logs-8-0002.txt", "logs-9-0002.txt",
+            "logs-1-0002.txt", "logs-3-0002.txt", "logs-5-0002.txt", "value-6-0002.txt", "logs-7-0002.txt" })
     void hashDistributionExactlyOnce(final String path) {
         final int maxTaskId = 10;
-        final DistributionStrategy taskDistribution = new HashDistributionStrategy(maxTaskId);
-        final List<Boolean> results = new ArrayList<>();
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTaskId);
+        final Context<String> ctx = getContext("{{topic}}-{{partition}}-{{start_offset}}", path);
+
+        final List<Integer> results = new ArrayList<>();
         for (int taskId = 0; taskId < maxTaskId; taskId++) {
-            results.add(taskDistribution.isPartOfTask(taskId, path,
-                    FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}")));
+            results.add(taskDistribution.getTaskFor(ctx));
         }
-        assertThat(results).containsExactlyInAnyOrder(Boolean.TRUE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE,
-                Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE);
+        assertThat(results).allMatch(i -> i == taskDistribution.getTaskFor(ctx));
     }
 
     @ParameterizedTest
     @CsvSource({ "logs-0-0002.txt", "logs-1-0002.txt", "logs-2-0002.txt", "logs-3-0002.txt", "logs-4-0002.txt",
-            "logs-5-0002.txt", "logs-6-0002.txt", "logs-7-0002.txt", "logs-8-0002.txt", "logs-9-0002.txt", "key-0.txt",
-            "logs-1-0002.txt", "key-0002.txt", "logs-3-0002.txt", "key-0002.txt", "logs-5-0002.txt", "value-6-0002.txt",
-            "logs-7-0002.txt", "anImage8-0002.png",
-            "reallylongfilenamecreatedonS3tohisdesomedata and alsohassome spaces.txt" })
+            "logs-5-0002.txt", "logs-6-0002.txt", "logs-7-0002.txt", "logs-8-0002.txt", "logs-9-0002.txt",
+            "logs-1-0002.txt", "logs-3-0002.txt", "logs-5-0002.txt", "value-6-0002.txt", "logs-7-0002.txt" })
     void hashDistributionExactlyOnceWithReconfigureEvent(final String path) {
         int maxTasks = 10;
-        final DistributionStrategy taskDistribution = new HashDistributionStrategy(maxTasks);
-        final List<Boolean> results = new ArrayList<>();
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
+        final Context<String> ctx = getContext("{{topic}}-{{partition}}-{{start_offset}}", path);
+
+        final List<Integer> results = new ArrayList<>();
         for (int taskId = 0; taskId < maxTasks; taskId++) {
-            results.add(taskDistribution.isPartOfTask(taskId, path,
-                    FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}")));
+            results.add(taskDistribution.getTaskFor(ctx));
         }
-        assertThat(results).containsExactlyInAnyOrder(Boolean.TRUE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE,
-                Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE);
+        assertThat(results).allMatch(i -> i == taskDistribution.getTaskFor(ctx));
         results.clear();
         maxTasks = 5;
         taskDistribution.configureDistributionStrategy(maxTasks);
         for (int taskId = 0; taskId < maxTasks; taskId++) {
-            results.add(taskDistribution.isPartOfTask(taskId, path,
-                    FilePatternUtils.configurePattern("{{topic}}-{{partition}}-{{start_offset}}")));
+            results.add(taskDistribution.getTaskFor(ctx));
         }
-        assertThat(results).containsExactlyInAnyOrder(Boolean.TRUE, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE,
-                Boolean.FALSE);
+        assertThat(results).allMatch(i -> i == taskDistribution.getTaskFor(ctx));
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "key-0.txt", "key-0002.txt", "key-0002.txt", "anImage8-0002.png",
+            "reallylongfilenamecreatedonS3tohisdesomedata and alsohassome spaces.txt" })
+    void hashDistributionExactlyOnceWithReconfigureEventAndMatchAllExpectedSource(final String path) {
+        int maxTasks = 10;
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
+        final Context<String> ctx = getContext(".*", path);
+
+        final List<Integer> results = new ArrayList<>();
+        for (int taskId = 0; taskId < maxTasks; taskId++) {
+            results.add(taskDistribution.getTaskFor(ctx));
+        }
+        assertThat(results).allMatch(i -> i == taskDistribution.getTaskFor(ctx));
+        results.clear();
+        maxTasks = 5;
+        taskDistribution.configureDistributionStrategy(maxTasks);
+        for (int taskId = 0; taskId < maxTasks; taskId++) {
+            results.add(taskDistribution.getTaskFor(ctx));
+        }
+        assertThat(results).allMatch(i -> i == taskDistribution.getTaskFor(ctx));
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "-0", "-1", "-999", "-01", "-2002020" })
+    void hashDistributionWithNegativeValues(final int hashCode) {
+        final int maxTasks = 10;
+        final DistributionStrategy taskDistribution = strategy.getDistributionStrategy(maxTasks);
+        final FilePatternUtils utils = new FilePatternUtils(".*");
+        final Optional<Context<HashCodeKey>> ctx = utils.process(new HashCodeKey(hashCode));
+
+        assertThat(ctx).isPresent();
+        final int result = taskDistribution.getTaskFor(ctx.get());
+
+        assertThat(result).isLessThan(maxTasks);
+        assertThat(result).isGreaterThanOrEqualTo(0);
+
+    }
+
+    private Context<String> getContext(final String expectedSourceName, final String filename) {
+        final FilePatternUtils utils = new FilePatternUtils(expectedSourceName);
+        final Optional<Context<String>> ctx = utils.process(filename);
+        assertThat(ctx.isPresent()).isTrue();
+        // Hash distribution can have an empty context can have an empty context
+        return ctx.get();
+    }
+
+    static class HashCodeKey implements Comparable<HashCodeKey> {
+        private final int hashCodeValue;
+        public HashCodeKey(final int hashCodeValue) {
+            this.hashCodeValue = hashCodeValue;
+        }
+
+        private int getHashCodeValue() {
+            return hashCodeValue;
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (other == null || getClass() != other.getClass()) {
+                return false;
+            }
+            final HashCodeKey that = (HashCodeKey) other;
+            return hashCodeValue == that.hashCodeValue;
+        }
+
+        @Override
+        public int hashCode() {
+            return hashCodeValue;
+        }
+
+        @Override
+        public int compareTo(final HashCodeKey hashCodeKey) {
+            return Integer.compare(this.hashCodeValue, hashCodeKey.getHashCodeValue());
+        }
     }
 }
