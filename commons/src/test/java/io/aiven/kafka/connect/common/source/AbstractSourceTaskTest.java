@@ -31,7 +31,7 @@ class AbstractSourceTaskTest {
     /**
      * The amount of extra time that we will allow for timing errors.
      */
-    private static final long TIMING_DELTA = 250;
+    private static final long TIMING_DELTA_MS = 250;
 
     @Test
     void timerTest() {
@@ -97,8 +97,8 @@ class AbstractSourceTaskTest {
         backoff.delay();
         stopWatch.stop();
         assertThat(stopWatch.getTime()).as("Result without timer running")
-                .isBetween(estimatedDelay - backoff.getMaxJitter() - TIMING_DELTA,
-                        estimatedDelay + backoff.getMaxJitter() + TIMING_DELTA);
+                .isBetween(estimatedDelay - backoff.getMaxJitter() - TIMING_DELTA_MS,
+                        estimatedDelay + backoff.getMaxJitter() + TIMING_DELTA_MS);
 
         timer.start();
         for (int i = 0; i < 9; i++) {
@@ -115,8 +115,8 @@ class AbstractSourceTaskTest {
             final int step = i;
             if (!timer.isExpired()) {
                 assertThat(stopWatch.getTime()).as(() -> String.format("Result with timer running at step %s", step))
-                        .isBetween(Duration.ofSeconds(1).toMillis() - backoff.getMaxJitter() - TIMING_DELTA,
-                                Duration.ofSeconds(1).toMillis() + backoff.getMaxJitter() + TIMING_DELTA);
+                        .isBetween(Duration.ofSeconds(1).toMillis() - backoff.getMaxJitter() - TIMING_DELTA_MS,
+                                Duration.ofSeconds(1).toMillis() + backoff.getMaxJitter() + TIMING_DELTA_MS);
             }
         }
     }
