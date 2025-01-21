@@ -38,6 +38,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -59,6 +60,7 @@ import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
 
 import org.apache.avro.Schema;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,9 +70,9 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.S3Object;
 
 @Testcontainers
+@SuppressWarnings("PMD.ExcessiveImports")
 class AwsIntegrationTest implements IntegrationBase {
 
     private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-AWS-test-";
@@ -274,6 +276,7 @@ class AwsIntegrationTest implements IntegrationBase {
         // create 2 files.
         final var topic = IntegrationBase.getTopic(testInfo);
         final Map<String, String> configData = getConfig(topic, 1);
+        configData.put(TASK_ID, "0");
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
 
@@ -293,26 +296,52 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configData);
         final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
-        final Iterator<S3Object> iter = sourceClient.getS3ObjectIterator(null);
+        final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(s3SourceConfig, createOffsetManager(),
+                TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient);
 
-        assertThat(iter).hasNext();
-        S3Object object = iter.next();
-        actualKeys.add(object.key());
-        assertThat(iter).hasNext();
-        object = iter.next();
-        actualKeys.add(object.key());
-        assertThat(iter).isExhausted();
+        assertThat(iterator).hasNext();
+        S3SourceRecord s3SourceRecord = iterator.next();
+        actualKeys.add(s3SourceRecord.getObjectKey());
+        assertThat(iterator).hasNext();
+        s3SourceRecord = iterator.next();
+        actualKeys.add(s3SourceRecord.getObjectKey());
+        assertThat(iterator).isExhausted();
         assertThat(actualKeys).containsAll(expectedKeys);
 
         // write 3rd object to s3
         expectedKeys.add(writeToS3(topic, testData3.getBytes(StandardCharsets.UTF_8), "00000"));
         assertThat(testBucketAccessor.listObjects()).hasSize(3);
 
-        assertThat(iter).hasNext();
-        object = iter.next();
-        actualKeys.add(object.key());
-        assertThat(iter).isExhausted();
+        assertThat(iterator).hasNext();
+        s3SourceRecord = iterator.next();
+        actualKeys.add(s3SourceRecord.getObjectKey());
+        assertThat(iterator).isExhausted();
         assertThat(actualKeys).containsAll(expectedKeys);
 
+    }
+
+    private static @NotNull OffsetManager<S3OffsetManagerEntry> createOffsetManager() {
+        return new OffsetManager<>(new SourceTaskContext() {
+            @Override
+            public Map<String, String> configs() {
+                return Map.of();
+            }
+
+            @Override
+            public OffsetStorageReader offsetStorageReader() {
+                return new OffsetStorageReader() {
+                    @Override
+                    public <T> Map<String, Object> offset(final Map<String, T> map) {
+                        return Map.of();
+                    }
+
+                    @Override
+                    public <T> Map<Map<String, T>, Map<String, Object>> offsets(
+                            final Collection<Map<String, T>> collection) {
+                        return Map.of();
+                    }
+                };
+            }
+        });
     }
 }

@@ -51,7 +51,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private final Transformer transformer;
     /** The AWS client that provides the S3Objects */
     private final AWSV2SourceClient sourceClient;
-
+    /** the taskId of this running task */
     private int taskId;
 
     /** The S3 bucket we are processing */
@@ -61,13 +61,19 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private Iterator<S3SourceRecord> inner;
     /** The outer iterator that provides S3SourceRecords */
     private Iterator<S3SourceRecord> outer;
-
+    /** The topic(s) which have been configured with the 'topics' configuration */
     private final Optional<String> targetTopics;
 
+    /** Check if the S3 Object Key is part of the 'target' files configured to be extracted from S3 */
     final FileMatching fileMatching;
-
+    /** The predicate which will determine if an S3Object should be assigned to this task for processing */
     final Predicate<Optional<S3SourceRecord>> taskAssignment;
+    /** The utility to extract the context from the S3 Object Key */
     private FilePatternUtils filePattern;
+    /**
+     * The object key which is currently being processed, when rehydrating from S3 we will seek S3 Objects after this
+     * key
+     */
     private String lastSeenObjectKey;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);

@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.source.OffsetManager;
@@ -47,6 +48,8 @@ import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -180,57 +183,46 @@ final class SourceRecordIteratorTest {
         assertThat(avroIterator).isExhausted();
     }
 
-    // @ParameterizedTest
-    // @CsvSource({ "4, 2, key1", "4, 3, key2", "4, 0, key3", "4, 1, key4" })
-    // void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdAssigned(final int maxTasks, final int taskId,
-    // final String objectKey) {
-    //
-    // mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
-    //
-    // final String key = "topic-00001-abc123.txt";
-    // final String filePattern = "{{partition}}";
-    // final String topic = "topic";
-    // final S3SourceConfig config = getConfig(Collections.emptyMap());
-    // final S3ClientBuilder builder = new S3ClientBuilder();
-    // mockSourceConfig(mockConfig, filePattern, taskId, maxTasks, topic);
-    //
-    // // Build s3 Client
-    // builder.reset().addObject(key, "Hello World").endOfBlock();
-    // sourceApiClient = new AWSV2SourceClient(builder.build(), config);
-    //
-    // final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
-    // sourceApiClient);
-    // assertThat(iterator).hasNext();
-    // final Predicate<S3Object> s3ObjectPredicate = s3Object -> iterator.isFileMatchingPattern(s3Object)
-    // && iterator.isFileAssignedToTask(filePatternUtils.process(s3Object.key()).orElseThrow(), taskId);
-    // // Assert
-    // assertThat(s3ObjectPredicate).accepts(obj);
-    // }
+    @ParameterizedTest
+    @CsvSource({ "4, 2, key1", "4, 3, key2", "4, 0, key3", "4, 1, key4" })
+    void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdAssigned(final int maxTasks, final int taskId,
+            final String objectKey) {
 
-    // @ParameterizedTest
-    // @CsvSource({ "4, 1, topic1-2-0", "4, 3,key1", "4, 0, key1", "4, 1, key2", "4, 2, key2", "4, 0, key2", "4, 1,
-    // key3",
-    // "4, 2, key3", "4, 3, key3", "4, 0, key4", "4, 2, key4", "4, 3, key4" })
-    // void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdUnassigned(final int maxTasks, final int taskId,
-    // final String objectKey) {
-    // mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
-    // final String filePattern = "{{partition}}";
-    // final String topic = "topic";
-    // mockSourceConfig(mockConfig, filePattern, taskId, maxTasks, topic);
-    // final S3ClientBuilder builder = new S3ClientBuilder();
-    // final S3SourceConfig config = getConfig(Collections.emptyMap());
-    //
-    // builder.reset().addObject(objectKey, "Hello World").endOfBlock();
-    // sourceApiClient = new AWSV2SourceClient(builder.build(), config);
-    //
-    // final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
-    // sourceApiClient);
-    // assertThat(iterator).hasNext();
-    // final Predicate<S3Object> stringPredicate = s3Object -> iterator.isFileMatchingPattern(s3Object)
-    // && iterator.isFileAssignedToTask(filePatternUtils.process(s3Object.key()).orElseThrow(), taskId);
-    // // Assert
-    // assertThat(stringPredicate.test(obj)).as("Predicate should accept the objectKey: " + objectKey).isFalse();
-    // }
+        mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        final String filePattern = "{{partition}}";
+        final String topic = "topic";
+        mockSourceConfig(mockConfig, filePattern, taskId, maxTasks, topic);
+        final S3Object obj = S3Object.builder().key(objectKey).build();
+        sourceApiClient = mock(AWSV2SourceClient.class);
+
+        final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+                sourceApiClient);
+
+        final Predicate<S3Object> s3ObjectPredicate = s3Object -> iterator.taskAssignment
+                .test(iterator.fileMatching.apply(s3Object));
+        assertThat(s3ObjectPredicate).accepts(obj);
+
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "4, 1, topic1-2-0", "4, 3,key1", "4, 0, key1", "4, 1, key2", "4, 2, key2", "4, 0, key2", "4, 1,key3",
+            "4, 2, key3", "4, 3, key3", "4, 0, key4", "4, 2, key4", "4, 3, key4" })
+    void testFetchObjectSummariesWithOneNonZeroByteObjectWithTaskIdUnassigned(final int maxTasks, final int taskId,
+            final String objectKey) {
+        mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        final String filePattern = "{{partition}}";
+        final String topic = "topic";
+        mockSourceConfig(mockConfig, filePattern, taskId, maxTasks, topic);
+        final S3Object obj = S3Object.builder().key(objectKey).build();
+        sourceApiClient = mock(AWSV2SourceClient.class);
+
+        final SourceRecordIterator iterator = new SourceRecordIterator(mockConfig, mockOffsetManager, mockTransformer,
+                sourceApiClient);
+        final Predicate<S3Object> s3ObjectPredicate = s3Object -> iterator.taskAssignment
+                .test(iterator.fileMatching.apply(s3Object));
+        // Assert
+        assertThat(s3ObjectPredicate.test(obj)).as("Predicate should accept the objectKey: " + objectKey).isFalse();
+    }
 
     @Test
     void testS3ClientIteratorMock() {
@@ -242,7 +234,7 @@ final class SourceRecordIteratorTest {
         assertThat(response.contents()).isNotEmpty();
 
         sourceApiClient = new AWSV2SourceClient(builder.build(), getConfig(Collections.emptyMap()));
-        final Iterator<S3Object> iterator = sourceApiClient.getS3ObjectIterator(null);
+        final Iterator<S3Object> iterator = sourceApiClient.getS3ObjectStream(null).iterator();
         assertThat(iterator.hasNext()).isTrue();
 
     }

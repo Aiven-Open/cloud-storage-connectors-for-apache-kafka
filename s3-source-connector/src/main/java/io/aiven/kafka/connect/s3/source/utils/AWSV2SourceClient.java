@@ -76,7 +76,7 @@ public class AWSV2SourceClient {
      *            the beginning key, or {@code null} to start at the beginning.
      * @return a Stream of S3Objects for the current state of the S3 storage.
      */
-    Stream<S3Object> getS3ObjectStream(final String startToken) {
+    public Stream<S3Object> getS3ObjectStream(final String startToken) {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
@@ -96,19 +96,6 @@ public class AWSV2SourceClient {
             }
 
         }).flatMap(response -> response.contents().stream().filter(filterPredicate));
-    }
-
-    /**
-     * Creates an S3Object iterator that will return the objects from the current objects in S3 storage and then try to
-     * refresh on every {@code hasNext()} that returns false. This should pick up new files as they are dropped on the
-     * file system.
-     *
-     * @param startToken
-     *            the beginning key, or {@code null} to start at the beginning.
-     * @return an Iterator on the S3Objects.
-     */
-    public Iterator<S3Object> getS3ObjectIterator(final String startToken) {
-        return new S3ObjectIterator(startToken);
     }
 
     /**
@@ -134,41 +121,6 @@ public class AWSV2SourceClient {
 
     public void addPredicate(final Predicate<S3Object> objectPredicate) {
         this.filterPredicate = this.filterPredicate.and(objectPredicate);
-    }
-
-    /**
-     * An iterator that reads from
-     */
-    public class S3ObjectIterator implements Iterator<S3Object> {
-
-        /** The current iterator. */
-        private Iterator<S3Object> inner;
-        /** The last object key that was seen. */
-        private String lastSeenObjectKey;
-
-        private S3ObjectIterator(final String initialKey) {
-            lastSeenObjectKey = initialKey;
-            inner = getS3ObjectStream(lastSeenObjectKey).iterator();
-        }
-        @Override
-        public boolean hasNext() {
-            if (!inner.hasNext()) {
-                inner = getS3ObjectStream(lastSeenObjectKey).iterator();
-            }
-            return inner.hasNext();
-        }
-
-        @Override
-        public S3Object next() {
-            final S3Object result = inner.next();
-            lastSeenObjectKey = result.key();
-            return result;
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
-        }
     }
 
 }

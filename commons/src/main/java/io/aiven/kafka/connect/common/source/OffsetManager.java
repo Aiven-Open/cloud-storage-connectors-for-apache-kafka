@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.source;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -109,6 +110,17 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
                 return v;
             }
         });
+    }
+
+    /**
+     * Gets any offset information stored in the offsetStorageReader and adds to the local offsets Map. This provides a
+     * performance improvement over when checking if offsets exists individually.
+     *
+     * @param partitionMaps
+     *            A Collection of partition maps which identify individual offset entries
+     */
+    public void hydrateOffsetManager(final Collection<Map<String, Object>> partitionMaps) {
+        offsets.putAll(context.offsetStorageReader().offsets(partitionMaps));
     }
 
     /**

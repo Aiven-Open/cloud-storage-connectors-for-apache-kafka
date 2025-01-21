@@ -17,10 +17,15 @@
 package io.aiven.kafka.connect.common.source;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -72,6 +77,56 @@ final class OffsetManagerTest {
         final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(() -> partitionKey,
                 TestingOffsetManagerEntry::new);
         assertThat(result).isNotPresent();
+    }
+
+    @Test
+    void testHydrateOffsetManagerWithPartitionMapsNoExistingEntries() {
+        final List<Map<String, Object>> partitionMaps = new ArrayList<>();
+
+        for (int i = 0; i < 10; i++) {
+            final Map<String, Object> partitionKey = new HashMap<>(); // NOPMD avoid instantiating objects in loops.
+            partitionKey.put("segment1", "topic" + i);
+            partitionKey.put("segment2", String.valueOf(i));
+            partitionKey.put("segment3", "something else" + i);
+            partitionMaps.add(partitionKey);
+        }
+
+        when(offsetStorageReader.offsets(eq(partitionMaps))).thenReturn(Map.of());
+
+        offsetManager.hydrateOffsetManager(partitionMaps);
+        verify(offsetStorageReader, times(1)).offsets(eq(partitionMaps));
+
+        // No Existing entries so we expect nothing to exist and for it to try check the offsets again.
+        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(() -> partitionMaps.get(0),
+                TestingOffsetManagerEntry::new);
+        assertThat(result).isEmpty();
+        verify(offsetStorageReader, times(1)).offset(eq(partitionMaps.get(0)));
+
+    }
+
+    @Test
+    void testHydrateOffsetManagerWithPartitionMapsAllEntriesExist() {
+        final List<Map<String, Object>> partitionMaps = new ArrayList<>();
+        final Map<Map<String, Object>, Map<String, Object>> offsetReaderMap = new HashMap<>();
+
+        for (int i = 0; i < 10; i++) {
+            final Map<String, Object> partitionKey = Map.of("segment1", "topic" + 1, "segment2", String.valueOf(i),
+                    "segment3", "somethingelse" + i); // NOPMD avoid instantiating objects in loops.
+            partitionMaps.add(partitionKey);
+            offsetReaderMap.put(partitionKey, Map.of("recordCount", (long) i));
+        }
+
+        when(offsetStorageReader.offsets(eq(partitionMaps))).thenReturn(offsetReaderMap);
+
+        offsetManager.hydrateOffsetManager(partitionMaps);
+        verify(offsetStorageReader, times(1)).offsets(eq(partitionMaps));
+
+        // No Existing entries so we expect nothing to exist and for it to try check the offsets again.
+        final Optional<TestingOffsetManagerEntry> result = offsetManager.getEntry(() -> partitionMaps.get(0),
+                TestingOffsetManagerEntry::new);
+        assertThat(result).isPresent();
+        verify(offsetStorageReader, times(0)).offset(eq(partitionMaps.get(0)));
+
     }
 
     @SuppressWarnings("PMD.TestClassWithoutTestCases") // TODO figure out why this fails.
