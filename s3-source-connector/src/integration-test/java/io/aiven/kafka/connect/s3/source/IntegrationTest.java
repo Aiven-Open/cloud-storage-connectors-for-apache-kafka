@@ -247,7 +247,7 @@ final class IntegrationTest implements IntegrationBase {
         // Poll Avro messages from the Kafka topic and deserialize them
         // Waiting for 25k kafka records in this test so a longer Duration is added.
         final List<GenericRecord> records = IntegrationBase.consumeAvroMessages(topic, numOfRecsFactor * 5,
-                Duration.ofMinutes(6), connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
+                Duration.ofMinutes(3), connectRunner.getBootstrapServers(), schemaRegistry.getSchemaRegistryUrl());
         // Ensure this method deserializes Avro
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka

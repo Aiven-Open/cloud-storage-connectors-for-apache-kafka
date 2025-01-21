@@ -143,7 +143,6 @@ final class SourceRecordIteratorTest {
     @Test
     void testIteratorProcessesS3ObjectsForByteArrayTransformer() throws Exception {
         final String key = "topic-00001-abc123.txt";
-        final String key2 = "topic-00001-abc124.txt";
         final String filePattern = "{{topic}}-{{partition}}";
 
         final S3SourceConfig config = getConfig(Collections.emptyMap());
@@ -176,8 +175,8 @@ final class SourceRecordIteratorTest {
         // With AvroTransformer all items are already exhausted so nothing should be left.
         transformer = TransformerFactory.getTransformer(InputFormat.AVRO);
 
-        Iterator<S3SourceRecord> avroIterator = new SourceRecordIterator(mockConfig, mockOffsetManager, transformer,
-                sourceApiClient);
+        final Iterator<S3SourceRecord> avroIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
+                transformer, sourceApiClient);
         assertThat(avroIterator).isExhausted();
     }
 

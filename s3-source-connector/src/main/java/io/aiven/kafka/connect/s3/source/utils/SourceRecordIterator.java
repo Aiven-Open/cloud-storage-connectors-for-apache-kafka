@@ -91,7 +91,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         outer = Collections.emptyIterator();
     }
 
-    private Stream<S3SourceRecord> getS3SourceRecordStream(AWSV2SourceClient sourceClient) {
+    private Stream<S3SourceRecord> getS3SourceRecordStream(final AWSV2SourceClient sourceClient) {
         return sourceClient.getS3ObjectStream(lastSeenObjectKey)
                 .map(fileMatching)
                 .filter(taskAssignment)
@@ -100,7 +100,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     @Override
     public boolean hasNext() {
-        if (!inner.hasNext()) {
+        if (!inner.hasNext() && !outer.hasNext()) {
             inner = getS3SourceRecordStream(sourceClient).iterator();
         }
         while (!outer.hasNext() && inner.hasNext()) {
@@ -129,6 +129,10 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private Stream<S3SourceRecord> convert(final S3SourceRecord s3SourceRecord) {
         s3SourceRecord.setKeyData(
                 transformer.getKeyData(s3SourceRecord.getObjectKey(), s3SourceRecord.getTopic(), s3SourceConfig));
+
+        if (!s3SourceRecord.getObjectKey().equals(lastSeenObjectKey)) {
+            lastSeenObjectKey = s3SourceRecord.getObjectKey();
+        }
 
         return transformer
                 .getRecords(sourceClient.getObject(s3SourceRecord.getObjectKey()), s3SourceRecord.getTopic(),
@@ -204,7 +208,6 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
             final Optional<Context<String>> optionalContext = utils.process(s3Object.key());
             if (optionalContext.isPresent()) {
-                lastSeenObjectKey = s3Object.key();
                 final S3SourceRecord s3SourceRecord = new S3SourceRecord(s3Object);
                 context = optionalContext.get();
                 overrideContextTopic();
