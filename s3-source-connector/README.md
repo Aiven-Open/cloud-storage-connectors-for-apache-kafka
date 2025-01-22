@@ -65,9 +65,9 @@ subdirectories in the bucket.
 `<filename>` is the file name. The connector has a fixed
 template for file names.
 
-    Fixed template for file : `{{topic}}-{{partition}}-{{start_offset}}`
+    Configuration property `file.name.template`. If not set, default template for file : `{{topic}}-{{partition}}-{{start_offset}}`
 
-Example object name : customertopic-00001-1734445664111.txt
+Example object name : customertopic-1-1734445664111.txt
 
 ## Data Format
 
