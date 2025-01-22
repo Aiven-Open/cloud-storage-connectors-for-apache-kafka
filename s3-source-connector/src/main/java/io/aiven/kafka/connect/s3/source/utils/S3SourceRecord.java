@@ -24,7 +24,6 @@ import org.apache.kafka.connect.source.SourceRecord;
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.task.Context;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -50,9 +49,9 @@ public class S3SourceRecord {
         this.valueData = s3SourceRecord.valueData;
         this.context = s3SourceRecord.context;
     }
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "offsetManagerEntry is essentially read only")
+
     public void setOffsetManagerEntry(final S3OffsetManagerEntry offsetManagerEntry) {
-        this.offsetManagerEntry = offsetManagerEntry;
+        this.offsetManagerEntry = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
     }
 
     public long getRecordCount() {
@@ -96,11 +95,13 @@ public class S3SourceRecord {
     }
 
     public Context<String> getContext() {
-        return defensiveContextCopy(context);
+        return new Context<>(context) {
+        };
 
     }
     public void setContext(final Context<String> context) {
-        this.context = defensiveContextCopy(context);
+        this.context = new Context<>(context) {
+        };
     }
 
     /**
@@ -123,22 +124,6 @@ public class S3SourceRecord {
                 return null;
             }
         }
-    }
-
-    /**
-     * Creates a defensive copy of the Context for use internally by the S3SourceRecord
-     *
-     * @param context
-     *            The Context which needs to be copied
-     * @return The new Context object which has been created from the original context
-     */
-    private Context<String> defensiveContextCopy(final Context<String> context) {
-        final Context<String> returnValue = new Context<>(
-                context.getStorageKey().isPresent() ? context.getStorageKey().get() : null);
-        context.getTopic().ifPresent(returnValue::setTopic);
-        context.getPartition().ifPresent(returnValue::setPartition);
-        context.getOffset().ifPresent(returnValue::setOffset);
-        return returnValue;
     }
 
 }

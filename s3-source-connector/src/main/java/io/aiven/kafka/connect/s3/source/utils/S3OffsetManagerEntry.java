@@ -30,8 +30,6 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     // TODO make this package private after values in S3SourceTask are no longer needed
     public static final String BUCKET = "bucket";
     public static final String OBJECT_KEY = "objectKey";
-    public static final String TOPIC = "topic";
-    public static final String PARTITION = "partition";
     public static final String RECORD_COUNT = "recordCount";
 
     /**

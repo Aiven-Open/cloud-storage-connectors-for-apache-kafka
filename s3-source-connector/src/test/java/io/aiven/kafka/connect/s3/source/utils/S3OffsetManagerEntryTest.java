@@ -61,8 +61,6 @@ final class S3OffsetManagerEntryTest {
 
     private Map<String, Object> createPartitionMap() {
         final Map<String, Object> partitionKey = new HashMap<>();
-        partitionKey.put(S3OffsetManagerEntry.TOPIC, TOPIC);
-        partitionKey.put(S3OffsetManagerEntry.PARTITION, PARTITION);
         partitionKey.put(S3OffsetManagerEntry.BUCKET, TEST_BUCKET);
         partitionKey.put(S3OffsetManagerEntry.OBJECT_KEY, OBJECT_KEY);
         return partitionKey;

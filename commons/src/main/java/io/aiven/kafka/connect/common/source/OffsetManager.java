@@ -17,12 +17,12 @@
 package io.aiven.kafka.connect.common.source;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
@@ -95,32 +95,18 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     }
 
     /**
-     * Copies the entry into the offset manager data.
-     *
-     * @param entry
-     *            the entry to update.
-     */
-    public void updateCurrentOffsets(final E entry) {
-        LOGGER.debug("Updating current offsets: {}", entry.getManagerKey().getPartitionMap());
-        offsets.compute(entry.getManagerKey().getPartitionMap(), (k, v) -> {
-            if (v == null) {
-                return new HashMap<>(entry.getProperties());
-            } else {
-                v.putAll(entry.getProperties());
-                return v;
-            }
-        });
-    }
-
-    /**
      * Gets any offset information stored in the offsetStorageReader and adds to the local offsets Map. This provides a
      * performance improvement over when checking if offsets exists individually.
      *
-     * @param partitionMaps
-     *            A Collection of partition maps which identify individual offset entries
+     * @param offsetManagerKeys
+     *            A Collection of OffsetManagerKey which identify individual offset entries
      */
-    public void hydrateOffsetManager(final Collection<Map<String, Object>> partitionMaps) {
-        offsets.putAll(context.offsetStorageReader().offsets(partitionMaps));
+    public void populateOffsetManager(final Collection<OffsetManager.OffsetManagerKey> offsetManagerKeys) {
+
+        offsets.putAll(context.offsetStorageReader()
+                .offsets(offsetManagerKeys.stream()
+                        .map(OffsetManagerKey::getPartitionMap)
+                        .collect(Collectors.toList())));
     }
 
     /**

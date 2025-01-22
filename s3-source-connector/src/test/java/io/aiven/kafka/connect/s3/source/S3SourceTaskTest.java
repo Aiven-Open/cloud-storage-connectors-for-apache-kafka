@@ -20,7 +20,6 @@ import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.BUCKET;
 import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.OBJECT_KEY;
 import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.RECORD_COUNT;
@@ -186,7 +185,6 @@ final class S3SourceTaskTest {
         properties.putIfAbsent(MAX_TASKS, "1");
         properties.put(TASK_ID, "1");
         properties.putIfAbsent("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
-        properties.putIfAbsent(TARGET_TOPIC_PARTITIONS, "0,1");
         properties.putIfAbsent(TARGET_TOPICS, "testtopic");
 
     }

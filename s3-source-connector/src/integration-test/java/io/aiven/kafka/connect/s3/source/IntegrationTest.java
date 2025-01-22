@@ -25,7 +25,6 @@ import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA
 import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.DISTRIBUTION_TYPE;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC_PARTITIONS;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG;
@@ -378,7 +377,6 @@ final class IntegrationTest implements IntegrationBase {
         if (addPrefix) {
             config.put(AWS_S3_PREFIX_CONFIG, s3Prefix);
         }
-        config.put(TARGET_TOPIC_PARTITIONS, "0,1");
         return config;
     }
 

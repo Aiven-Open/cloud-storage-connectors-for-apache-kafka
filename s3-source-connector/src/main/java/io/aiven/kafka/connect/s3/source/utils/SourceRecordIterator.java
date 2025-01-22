@@ -136,9 +136,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         s3SourceRecord.setKeyData(
                 transformer.getKeyData(s3SourceRecord.getObjectKey(), s3SourceRecord.getTopic(), s3SourceConfig));
 
-        if (!s3SourceRecord.getObjectKey().equals(lastSeenObjectKey)) {
-            lastSeenObjectKey = s3SourceRecord.getObjectKey();
-        }
+        lastSeenObjectKey = s3SourceRecord.getObjectKey();
 
         return transformer
                 .getRecords(sourceClient.getObject(s3SourceRecord.getObjectKey()), s3SourceRecord.getTopic(),
@@ -193,9 +191,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             if (s3SourceRecord.isPresent()) {
                 final S3SourceRecord record = s3SourceRecord.get();
                 final Context<String> context = record.getContext();
-                if (context != null) {
-                    return taskId == distributionStrategy.getTaskFor(context);
-                }
+                return taskId == distributionStrategy.getTaskFor(context);
+
             }
             return false;
         }
@@ -203,7 +200,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     }
 
     class FileMatching implements Function<S3Object, Optional<S3SourceRecord>> {
-        private Context<String> context;
+
         final FilePatternUtils utils;
         FileMatching(final FilePatternUtils utils) {
             this.utils = utils;
@@ -215,8 +212,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             final Optional<Context<String>> optionalContext = utils.process(s3Object.key());
             if (optionalContext.isPresent()) {
                 final S3SourceRecord s3SourceRecord = new S3SourceRecord(s3Object);
-                context = optionalContext.get();
-                overrideContextTopic();
+                final Context<String> context = optionalContext.get();
+                overrideContextTopic(context);
                 s3SourceRecord.setContext(context);
                 S3OffsetManagerEntry offsetManagerEntry = new S3OffsetManagerEntry(bucket, s3Object.key());
                 offsetManagerEntry = offsetManager
@@ -228,7 +225,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
             return Optional.empty();
         }
 
-        private void overrideContextTopic() {
+        private void overrideContextTopic(final Context<String> context) {
             // Set the target topic in the context if it has been set from configuration.
             if (targetTopics.isPresent()) {
                 if (context.getTopic().isPresent()) {
