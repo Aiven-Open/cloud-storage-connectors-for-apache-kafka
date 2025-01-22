@@ -40,8 +40,10 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.apache.commons.io.function.IOSupplier;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -51,13 +53,22 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 class TransformerStreamingTest {
 
+    private Context<String> context;
+
+    @BeforeEach
+    public void setup() {
+        context = new Context<>("storage-key");
+        context.setTopic("topic");
+        context.setPartition(1);
+    }
+
     @ParameterizedTest
     @MethodSource("testData")
     void verifyExceptionDuringIOOpen(final Transformer transformer, final byte[] testData,
             final SourceCommonConfig config, final int expectedCount) throws IOException {
         final IOSupplier<InputStream> ioSupplier = mock(IOSupplier.class);
         when(ioSupplier.get()).thenThrow(new IOException("Test IOException during initialization"));
-        final Stream<?> objStream = transformer.getRecords(ioSupplier, UNKNOWN_STREAM_LENGTH, "topic", 1, config, 0);
+        final Stream<?> objStream = transformer.getRecords(ioSupplier, UNKNOWN_STREAM_LENGTH, context, config, 0);
         assertThat(objStream).isEmpty();
     }
 
@@ -75,8 +86,8 @@ class TransformerStreamingTest {
             when(inputStream.readNBytes(anyInt())).thenThrow(new IOException("Test IOException during read"));
             when(inputStream.readAllBytes()).thenThrow(new IOException("Test IOException during read"));
             try (CloseTrackingStream stream = new CloseTrackingStream(inputStream)) {
-                final Stream<?> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, "topic", 1,
-                        config, 0);
+                final Stream<?> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, context, config,
+                        0);
                 assertThat(objStream).isEmpty();
                 assertThat(stream.closeCount).isGreaterThan(0);
             }
@@ -88,7 +99,7 @@ class TransformerStreamingTest {
     void verifyCloseCalledAtEnd(final Transformer transformer, final byte[] testData, final SourceCommonConfig config,
             final int expectedCount) throws IOException {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
-        final Stream<?> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, "topic", 1, config, 0);
+        final Stream<?> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, context, config, 0);
         final long count = objStream.count();
         assertThat(count).isEqualTo(expectedCount);
         assertThat(stream.closeCount).isGreaterThan(0);
@@ -99,7 +110,7 @@ class TransformerStreamingTest {
     void verifyCloseCalledAtIteratorEnd(final Transformer transformer, final byte[] testData,
             final SourceCommonConfig config, final int expectedCount) throws IOException {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
-        final Stream<SchemaAndValue> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, "topic", 1,
+        final Stream<SchemaAndValue> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, context,
                 config, 0);
         final Iterator<SchemaAndValue> iter = objStream.iterator();
         long count = 0L;

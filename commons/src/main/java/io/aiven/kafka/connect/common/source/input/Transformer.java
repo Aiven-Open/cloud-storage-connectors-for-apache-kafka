@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.common.source.input;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -27,6 +26,7 @@ import java.util.stream.StreamSupport;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
@@ -35,14 +35,12 @@ public abstract class Transformer {
 
     public final static long UNKNOWN_STREAM_LENGTH = -1;
 
-    public abstract void configureValueConverter(Map<String, String> config, SourceCommonConfig sourceConfig);
-
     public final Stream<SchemaAndValue> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final long streamLength, final String topic, final int topicPartition,
-            final SourceCommonConfig sourceConfig, final long skipRecords) {
+            final long streamLength, final Context<?> context, final SourceCommonConfig sourceConfig,
+            final long skipRecords) {
 
-        final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, streamLength, topic,
-                topicPartition, sourceConfig);
+        final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, streamLength, context,
+                sourceConfig);
         return StreamSupport.stream(spliterator, false).onClose(spliterator::close).skip(skipRecords);
     }
 
@@ -54,16 +52,14 @@ public abstract class Transformer {
      * @param streamLength
      *            the length of the input stream, {@link #UNKNOWN_STREAM_LENGTH} may be used to specify a stream with an
      *            unknown length, streams of length zero will log an error and return an empty stream
-     * @param topic
-     *            the topic.
-     * @param topicPartition
-     *            the partition.
+     * @param context
+     *            the context
      * @param sourceConfig
      *            the source configuration.
      * @return a StreamSpliterator instance.
      */
     protected abstract StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier,
-            long streamLength, String topic, int topicPartition, SourceCommonConfig sourceConfig);
+            long streamLength, Context<?> context, SourceCommonConfig sourceConfig);
 
     public abstract SchemaAndValue getKeyData(Object cloudStorageKey, String topic, SourceCommonConfig sourceConfig);
 

@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,13 +24,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.parquet.LocalInputFile;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import io.confluent.connect.avro.AvroData;
 import org.apache.avro.generic.GenericRecord;
@@ -55,11 +53,6 @@ public class ParquetTransformer extends Transformer {
     }
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final SourceCommonConfig sourceConfig) {
-        config.put(SCHEMA_REGISTRY_URL, sourceConfig.getString(SCHEMA_REGISTRY_URL));
-    }
-
-    @Override
     public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
             final SourceCommonConfig sourceConfig) {
         return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
@@ -67,8 +60,7 @@ public class ParquetTransformer extends Transformer {
 
     @Override
     public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final long streamLength, final String topic, final int topicPartition,
-            final SourceCommonConfig sourceConfig) {
+            final long streamLength, final Context<?> context, final SourceCommonConfig sourceConfig) {
 
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
 
@@ -81,7 +73,8 @@ public class ParquetTransformer extends Transformer {
 
                 try {
                     // Create a temporary file for the Parquet data
-                    parquetFile = File.createTempFile(topic + "_" + topicPartition + "_" + timestamp, ".parquet");
+                    parquetFile = File.createTempFile(context.getTopic().orElse("topic") + "_"
+                            + context.getPartition().orElse(null) + "_" + timestamp, ".parquet");
                 } catch (IOException e) {
                     LOGGER.error("Error creating temp file for Parquet data: {}", e.getMessage(), e);
                     throw e;

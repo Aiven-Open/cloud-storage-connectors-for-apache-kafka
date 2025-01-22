@@ -143,8 +143,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         final SchemaAndValue keyData = transformer.getKeyData(s3Object.key(), context.getTopic().get(), s3SourceConfig);
 
         return transformer // s3Object.Size() in bytes of the object
-                .getRecords(sourceClient.getObject(s3Object.key()), s3Object.size(), context.getTopic().get(),
-                        context.getPartition().get(), s3SourceConfig, recordCount)
+                .getRecords(sourceClient.getObject(s3Object.key()), s3Object.size(), context, s3SourceConfig,
+                        recordCount)
                 .map(new Mapper(partitionMap, recordCount, keyData, s3Object.key()));
     }
 

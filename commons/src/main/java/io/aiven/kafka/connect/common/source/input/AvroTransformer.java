@@ -16,18 +16,16 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import io.confluent.connect.avro.AvroData;
 import org.apache.avro.file.DataFileStream;
@@ -50,14 +48,8 @@ public class AvroTransformer extends Transformer {
     }
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final SourceCommonConfig sourceConfig) {
-        config.put(SCHEMA_REGISTRY_URL, sourceConfig.getString(SCHEMA_REGISTRY_URL));
-    }
-
-    @Override
     public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final long streamLength, final String topic, final int topicPartition,
-            final SourceCommonConfig sourceConfig) {
+            final long streamLength, final Context<?> context, final SourceCommonConfig sourceConfig) {
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
             private DataFileStream<GenericRecord> dataFileStream;
             private final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();

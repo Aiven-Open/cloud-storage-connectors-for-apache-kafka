@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
@@ -55,6 +54,7 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -189,12 +189,12 @@ final class SourceRecordIteratorTest {
         // With ByteArrayTransformer
 
         mockTransformer = mock(ByteArrayTransformer.class);
-        when(mockTransformer.getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong()))
+        when(mockTransformer.getRecords(any(), anyLong(), any(Context.class), any(), anyLong()))
                 .thenReturn(Stream.of(SchemaAndValue.NULL));
 
         when(mockOffsetManager.getOffsets()).thenReturn(Collections.emptyMap());
         mockTransformer = mock(ByteArrayTransformer.class);
-        when(mockTransformer.getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong()))
+        when(mockTransformer.getRecords(any(), anyLong(), any(Context.class), any(), anyLong()))
                 .thenReturn(Stream.of(SchemaAndValue.NULL));
 
         when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
@@ -206,7 +206,7 @@ final class SourceRecordIteratorTest {
 
         assertThat(byteArrayIterator).isExhausted();
 
-        verify(mockTransformer, never()).getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong());
+        verify(mockTransformer, never()).getRecords(any(), anyLong(), any(Context.class), any(), anyLong());
 
         // With AvroTransformer
 
@@ -215,20 +215,20 @@ final class SourceRecordIteratorTest {
         when(mockOffsetManager.recordsProcessedForObjectKey(anyMap(), anyString()))
                 .thenReturn(BYTES_TRANSFORMATION_NUM_OF_RECS);
         when(mockTransformer.getKeyData(anyString(), anyString(), any())).thenReturn(SchemaAndValue.NULL);
-        when(mockTransformer.getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong()))
+        when(mockTransformer.getRecords(any(), anyLong(), any(Context.class), any(), anyLong()))
                 .thenReturn(Arrays.asList(SchemaAndValue.NULL).stream());
 
         when(mockTransformer.getKeyData(anyString(), anyString(), any())).thenReturn(SchemaAndValue.NULL);
-        when(mockTransformer.getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong()))
+        when(mockTransformer.getRecords(any(), anyLong(), any(Context.class), any(), anyLong()))
                 .thenReturn(Arrays.asList(SchemaAndValue.NULL).stream());
 
         final Iterator<S3SourceRecord> avroIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
                 mockTransformer, sourceApiClient);
         assertThat(avroIterator).isExhausted();
 
-        verify(mockTransformer, times(0)).getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong());
+        verify(mockTransformer, times(0)).getRecords(any(), anyLong(), any(Context.class), any(), anyLong());
 
-        verify(mockTransformer, times(0)).getRecords(any(), anyLong(), anyString(), anyInt(), any(), anyLong());
+        verify(mockTransformer, times(0)).getRecords(any(), anyLong(), any(Context.class), any(), anyLong());
     }
 
     @ParameterizedTest

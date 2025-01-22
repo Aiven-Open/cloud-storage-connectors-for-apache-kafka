@@ -20,12 +20,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
@@ -41,15 +41,8 @@ public class ByteArrayTransformer extends Transformer {
     private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayTransformer.class);
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final SourceCommonConfig sourceConfig) {
-        // For byte array transformations, ByteArrayConverter is the converter which is the default config.
-
-    }
-
-    @Override
     public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final long streamLength, final String topic, final int topicPartition,
-            final SourceCommonConfig sourceConfig) {
+            final long streamLength, final Context<?> context, final SourceCommonConfig sourceConfig) {
         if (streamLength == 0) {
             LOGGER.warn(
                     "Object sent for processing has an invalid streamLength of {}, object is empty returning an empty spliterator.",
@@ -71,18 +64,16 @@ public class ByteArrayTransformer extends Transformer {
 
             @Override
             protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
-                final byte[] buffer = new byte[maxBufferSize];
+
                 try {
-                    final int bytesRead = IOUtils.read(inputStream, buffer);
-                    if (bytesRead == 0) {
-                        return false;
+                    final byte[] buffer = new byte[maxBufferSize];
+                    final byte[] chunk = Arrays.copyOf(buffer, IOUtils.read(inputStream, buffer));
+                    if (chunk.length > 0) {
+                        action.accept(new SchemaAndValue(null, chunk));
+                        return true;
                     }
-                    if (bytesRead < maxBufferSize) {
-                        action.accept(new SchemaAndValue(null, Arrays.copyOf(buffer, bytesRead)));
-                    } else {
-                        action.accept(new SchemaAndValue(null, buffer));
-                    }
-                    return true;
+
+                    return false;
                 } catch (IOException e) {
                     LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
                     return false;
