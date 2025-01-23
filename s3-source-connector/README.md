@@ -55,14 +55,12 @@ It is also important to specify `aws.sts.role.external.id` for the security reas
 
 ### File name format
 
-> File name format is tightly related to [Record Grouping](#record-grouping)
-
 The connector uses the following format for input files (blobs):
 `<prefix><filename>`.
 
 `<prefix>`is the optional prefix that can be used, for example, for
 subdirectories in the bucket.
-`<filename>` is the file name. The connector has a fixed
+`<filename>` is the file name. The connector has the configurable
 template for file names.
 
     Configuration property `file.name.template`. If not set, default template for file : `{{topic}}-{{partition}}-{{start_offset}}`
