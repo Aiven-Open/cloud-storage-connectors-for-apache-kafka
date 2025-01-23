@@ -68,7 +68,7 @@ public class ParquetTransformer extends Transformer {
             private File parquetFile;
 
             @Override
-            protected InputStream inputOpened(final InputStream input) throws IOException {
+            protected void inputOpened(final InputStream input) throws IOException {
                 final String timestamp = String.valueOf(Instant.now().toEpochMilli());
 
                 try {
@@ -84,7 +84,7 @@ public class ParquetTransformer extends Transformer {
                     IOUtils.copy(input, outputStream); // Copy input stream to temporary file
                 }
                 reader = AvroParquetReader.<GenericRecord>builder(new LocalInputFile(parquetFile.toPath())).build();
-                return input;
+
             }
 
             @Override

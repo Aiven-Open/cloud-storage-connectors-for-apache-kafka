@@ -27,6 +27,8 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class TransformerFragmentTest {
 
@@ -41,21 +43,22 @@ class TransformerFragmentTest {
         assertThat(schemaReg.getTransformerMaxBufferSize()).isEqualTo(bufferSize);
     }
 
-    @Test
-    void validateInvalidBufferSizeThrowsConfigException() {
+    @ParameterizedTest
+    @CsvSource({
+            "21474836471,Invalid value 21474836471 for configuration transformer.max.buffer.size: Not a number of type INT",
+            "-1,transformer.max.buffer.size must be larger then 0 and less then 2147483647",
+            "MAX,Invalid value MAX for configuration transformer.max.buffer.size: Not a number of type INT",
+            "0,transformer.max.buffer.size must be larger then 0 and less then 2147483647",
+            "-9000,transformer.max.buffer.size must be larger then 0 and less then 2147483647",
+            "MTA=,Invalid value MTA= for configuration transformer.max.buffer.size: Not a number of type INT" })
+    void validateInvalidBufferSizeThrowsConfigException(final String value, final String expectedMessage) {
         final ConfigDef configDef = TransformerFragment.update(new ConfigDef());
         final Map<String, Object> props = new HashMap<>();
-        // Too small
-        props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, 0);
 
-        assertThatThrownBy(() -> new TransformerFragment(new AbstractConfig(configDef, props)))
-                .isInstanceOf(ConfigException.class);
-        // Too large
-        props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, Integer.MAX_VALUE + "1");
+        props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, value);
         assertThatThrownBy(() -> new TransformerFragment(new AbstractConfig(configDef, props)))
                 .isInstanceOf(ConfigException.class)
-                .hasMessage(
-                        "Invalid value 21474836471 for configuration transformer.max.buffer.size: Not a number of type INT");
+                .hasMessage(expectedMessage);
     }
 
 }

@@ -52,9 +52,10 @@ public class ByteArrayTransformer extends Transformer {
         // The max buffer size for the byte array the default is 4096 if not set by the user.
         final int maxBufferSize = sourceConfig.getTransformerMaxBufferSize();
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
+
             @Override
-            protected InputStream inputOpened(final InputStream input) {
-                return input;
+            protected void inputOpened(final InputStream input) {
+
             }
 
             @Override
@@ -102,9 +103,9 @@ public class ByteArrayTransformer extends Transformer {
             }
 
             @Override
-            protected InputStream inputOpened(final InputStream input) throws IOException {
-                return InputStream.nullInputStream();
+            protected void inputOpened(final InputStream input) {
             }
+
         };
     }
 

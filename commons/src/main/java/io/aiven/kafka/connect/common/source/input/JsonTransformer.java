@@ -55,9 +55,9 @@ public class JsonTransformer extends Transformer {
             BufferedReader reader;
 
             @Override
-            protected InputStream inputOpened(final InputStream input) throws IOException {
+            protected void inputOpened(final InputStream input) {
                 reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
-                return input;
+
             }
 
             @Override

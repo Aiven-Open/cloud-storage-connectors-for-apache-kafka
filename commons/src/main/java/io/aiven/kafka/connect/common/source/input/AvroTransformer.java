@@ -55,9 +55,8 @@ public class AvroTransformer extends Transformer {
             private final DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
 
             @Override
-            protected InputStream inputOpened(final InputStream input) throws IOException {
+            protected void inputOpened(final InputStream input) throws IOException {
                 dataFileStream = new DataFileStream<>(input, datumReader);
-                return input;
             }
 
             @Override

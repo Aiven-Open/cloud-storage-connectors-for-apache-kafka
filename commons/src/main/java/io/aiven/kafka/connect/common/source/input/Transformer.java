@@ -76,7 +76,7 @@ public abstract class Transformer {
          */
         protected final Logger logger;
         /**
-         * The input stream. Will be null until {@link #inputOpened} has completed. May be used for reading but should
+         * * The input stream. Will be null until {@link #inputOpened} has completed. May be used for reading but should
          * not be closed or otherwise made unreadable.
          */
         protected InputStream inputStream;
@@ -131,15 +131,16 @@ public abstract class Transformer {
          * Allows modification of input stream. Called immediatly after the input stream is opened. Implementations may
          * modify the type of input stream by wrapping it with a specific implementation, or may create Readers from the
          * input stream. The modified input stream must be returned. If a Reader or similar class is created from the
-         * input stream the input stream must be returned.
+         * input stream the input stream must be returned. The input stream will be null until {@link #inputOpened} has
+         * completed. The implementation of the interface is responsible for closing any newly constructed readers or
+         * input streams in the doClose() method.
          *
          * @param input
          *            the input stream that was just opened.
-         * @return the input stream or modified input stream.
          * @throws IOException
          *             on IO error.
          */
-        abstract protected InputStream inputOpened(InputStream input) throws IOException;
+        abstract protected void inputOpened(InputStream input) throws IOException;
 
         @Override
         public final boolean tryAdvance(final Consumer<? super SchemaAndValue> action) {
