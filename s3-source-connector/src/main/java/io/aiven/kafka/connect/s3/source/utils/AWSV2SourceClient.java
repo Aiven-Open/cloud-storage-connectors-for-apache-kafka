@@ -88,6 +88,7 @@ public class AWSV2SourceClient {
             // This is called every time next() is called on the iterator.
             if (response.isTruncated()) {
                 return s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                        .bucket(bucketName)
                         .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
                         .continuationToken(response.nextContinuationToken())
                         .build());
