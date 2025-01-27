@@ -53,21 +53,8 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      *            the context for this instance to use.
      */
     public OffsetManager(final SourceTaskContext context) {
-        this(context, new ConcurrentHashMap<>());
-    }
-
-    /**
-     * Package private for testing.
-     *
-     * @param context
-     *            the context for this instance to use.
-     * @param offsets
-     *            the offsets
-     */
-    protected OffsetManager(final SourceTaskContext context,
-            final ConcurrentMap<Map<String, Object>, Map<String, Object>> offsets) {
         this.context = context;
-        this.offsets = offsets;
+        this.offsets = new ConcurrentHashMap<>();
     }
 
     /**

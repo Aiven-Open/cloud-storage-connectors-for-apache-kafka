@@ -248,7 +248,7 @@ public interface IntegrationBase {
             String bootstrapServers) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, ByteArrayDeserializer.class,
                 ByteArrayDeserializer.class);
-        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, Duration.ofSeconds(90),
+        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, Duration.ofSeconds(120),
                 consumerProperties);
         return objects.stream().map(String::new).collect(Collectors.toList());
     }

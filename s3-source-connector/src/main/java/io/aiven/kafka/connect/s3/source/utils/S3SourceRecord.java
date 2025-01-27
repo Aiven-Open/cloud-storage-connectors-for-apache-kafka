@@ -71,11 +71,11 @@ public class S3SourceRecord {
     }
 
     public String getTopic() {
-        return context.getTopic().isPresent() ? context.getTopic().get() : null;
+        return context.getTopic().orElse(null);
     }
 
     public Integer getPartition() {
-        return context.getPartition().isPresent() ? context.getPartition().get() : null;
+        return context.getPartition().orElse(null);
     }
 
     public String getObjectKey() {

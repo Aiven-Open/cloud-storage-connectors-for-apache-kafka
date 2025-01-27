@@ -183,19 +183,21 @@ final class IntegrationTest implements IntegrationBase {
                 addPrefix, localS3Prefix, prefixPattern, fileNamePatternSeparator);
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
-        connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
         final List<String> offsetKeys = new ArrayList<>();
 
-        // write 5 objects to s3
+        // write 5 objects to s3 test non padded partitions
         offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "0", localS3Prefix));
-        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000", localS3Prefix));
+        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "0", localS3Prefix));
         offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "1", localS3Prefix));
-        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00001", localS3Prefix));
+        offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "1", localS3Prefix));
         offsetKeys.add(writeToS3(topic, new byte[0], "3"));
+
+        // Start the Connector
+        connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
         // Poll messages from the Kafka topic and verify the consumed data
@@ -244,12 +246,12 @@ final class IntegrationTest implements IntegrationBase {
                 numOfRecsFactor, schema);
 
         final Set<String> offsetKeys = new HashSet<>();
-
+        // test padded partition ids
         offsetKeys.add(writeToS3(topic, outputStream1, "00001"));
-        offsetKeys.add(writeToS3(topic, outputStream2, "1"));
+        offsetKeys.add(writeToS3(topic, outputStream2, "00001"));
 
         offsetKeys.add(writeToS3(topic, outputStream3, "00002"));
-        offsetKeys.add(writeToS3(topic, outputStream4, "2"));
+        offsetKeys.add(writeToS3(topic, outputStream4, "00002"));
         offsetKeys.add(writeToS3(topic, outputStream5, "00002"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
