@@ -104,7 +104,7 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      *            A Collection of OffsetManagerKey which identify individual offset entries
      */
     public void populateOffsetManager(final Collection<OffsetManager.OffsetManagerKey> offsetManagerKeys) {
-        Map<Map<String, Object>, Map<String, Object>> matchingOffsets = new HashMap<>();
+        final Map<Map<String, Object>, Map<String, Object>> matchingOffsets = new HashMap<>();
         context.offsetStorageReader()
                 .offsets(offsetManagerKeys.stream().map(OffsetManagerKey::getPartitionMap).collect(toList()))
                 .entrySet()
