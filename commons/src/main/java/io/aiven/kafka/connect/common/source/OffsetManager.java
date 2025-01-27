@@ -16,13 +16,15 @@
 
 package io.aiven.kafka.connect.common.source;
 
+import static java.util.stream.Collectors.toList;
+
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
@@ -102,11 +104,16 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
      *            A Collection of OffsetManagerKey which identify individual offset entries
      */
     public void populateOffsetManager(final Collection<OffsetManager.OffsetManagerKey> offsetManagerKeys) {
+        Map<Map<String, Object>, Map<String, Object>> matchingOffsets = new HashMap<>();
+        context.offsetStorageReader()
+                .offsets(offsetManagerKeys.stream().map(OffsetManagerKey::getPartitionMap).collect(toList()))
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue() != null)
+                .forEach(entry -> matchingOffsets.put(entry.getKey(), entry.getValue()));
+        // offsets is multithreaded batching in matchingOffsets is faster
+        offsets.putAll(matchingOffsets);
 
-        offsets.putAll(context.offsetStorageReader()
-                .offsets(offsetManagerKeys.stream()
-                        .map(OffsetManagerKey::getPartitionMap)
-                        .collect(Collectors.toList())));
     }
 
     /**
@@ -238,7 +245,8 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     @FunctionalInterface
     public interface OffsetManagerKey {
         /**
-         * gets the partition map used by Kafka to identify this Offset entry.
+         * gets the partition map used by Kafka to identify this Offset entry. Kafka stores all numbers as longs and so
+         * all keys based off integers should be created as longs in the manager key
          *
          * @return The partition map used by Kafka to identify this Offset entry.
          */

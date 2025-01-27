@@ -20,6 +20,8 @@ import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.OBJECT
 import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.RECORD_COUNT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -46,10 +48,23 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.utils.Time;
+import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.json.JsonDeserializer;
+import org.apache.kafka.connect.runtime.WorkerConfig;
+import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
+import org.apache.kafka.connect.storage.ConnectorOffsetBackingStore;
+import org.apache.kafka.connect.storage.KafkaOffsetBackingStore;
+import org.apache.kafka.connect.storage.OffsetBackingStore;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+import org.apache.kafka.connect.storage.OffsetStorageReaderImpl;
+import org.apache.kafka.connect.util.KafkaBasedLog;
+import org.apache.kafka.connect.util.LoggingContext;
+import org.apache.kafka.connect.util.TopicAdmin;
 
 import io.aiven.kafka.connect.common.source.OffsetManager;
 
@@ -63,6 +78,7 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.localstack.LocalStackContainer;
@@ -83,6 +99,7 @@ public interface IntegrationBase {
     String S3_ACCESS_KEY_ID = "test-key-id0";
     String VALUE_CONVERTER_KEY = "value.converter";
     String S3_SECRET_ACCESS_KEY = "test_secret_key0";
+    String CONNECT_OFFSET_TOPIC_PREFIX = "connect-offset-topic-";
 
     static byte[] generateNextAvroMessagesStartingFromId(final int messageId, final int noOfAvroRecs,
             final Schema schema) throws IOException {
@@ -231,7 +248,7 @@ public interface IntegrationBase {
             String bootstrapServers) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, ByteArrayDeserializer.class,
                 ByteArrayDeserializer.class);
-        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, Duration.ofSeconds(60),
+        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, Duration.ofSeconds(90),
                 consumerProperties);
         return objects.stream().map(String::new).collect(Collectors.toList());
     }
@@ -283,7 +300,7 @@ public interface IntegrationBase {
         final Map<String, Object> messages = new HashMap<>();
         final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(1));
         for (final ConsumerRecord<byte[], byte[]> record : records) {
-            final Map<String, Object> offsetRec = OBJECT_MAPPER.readValue(record.value(), new TypeReference<>() { // NOPMD
+            final Map<String, Long> offsetRec = OBJECT_MAPPER.readValue(record.value(), new TypeReference<>() { // NOPMD
             });
             final List<Object> key = OBJECT_MAPPER.readValue(record.key(), new TypeReference<>() { // NOPMD
             });
@@ -312,5 +329,119 @@ public interface IntegrationBase {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getName());
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         return props;
+    }
+
+    // Create OffsetReader to read back in offsets
+
+    /**
+     * Create an offsetReader that is configured to use a preconfigured OffsetBackingStore and configures the
+     * JsonConverters correctly.
+     *
+     * @param backingStore
+     *            OffsetBackingStore implementation which will read from the kafka offset topic
+     * @param connectorName
+     *            The name of the connector.
+     * @return Configured OffsetStorageReader
+     */
+    static OffsetStorageReader getOffsetReader(final OffsetBackingStore backingStore, final String connectorName) {
+        final JsonConverter keyConverter = new JsonConverter(); // NOPMD close resource after use
+        final JsonConverter valueConverter = new JsonConverter(); // NOPMD close resource after use
+        keyConverter.configure(Map.of("schemas.enable", "false", "converter.type", "key"));
+        valueConverter.configure(Map.of("schemas.enable", "false", "converter.type", "value"));
+        return new OffsetStorageReaderImpl(backingStore, connectorName, keyConverter, valueConverter);
+    }
+
+    /**
+     *
+     * @param bootstrapServers
+     *            The bootstrap servers for the Kafka cluster to attach to
+     * @param topicAdminConfig
+     *            Internal Connector Config for creating and modifying topics
+     * @param workerProperties
+     *            The worker properties from the Kafka Connect Instance
+     * @param connectorName
+     *            The name of the connector
+     * @return Configured ConnectorOffsetBackingStore
+     */
+
+    static ConnectorOffsetBackingStore getConnectorOffsetBackingStore(final String bootstrapServers,
+            final Map<String, String> topicAdminConfig, final Map<String, String> workerProperties,
+            final String connectorName) {
+        final Properties consumerProperties = IntegrationBase.getConsumerProperties(bootstrapServers,
+                ByteArrayDeserializer.class, ByteArrayDeserializer.class);
+
+        consumerProperties.forEach((key, value) -> topicAdminConfig.putIfAbsent(key.toString(), (String) value));
+        // Add config def
+        final ConfigDef def = getRequiredConfigDefSettings();
+
+        consumerProperties.put("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+        consumerProperties.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+
+        // create connector store
+        final KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProperties); // NOPMD close resource
+                                                                                                // after use
+        // Create Topic Admin
+        final TopicAdmin topicAdmin = new TopicAdmin(new HashMap<>(topicAdminConfig)); // NOPMD close resource after use
+
+        final KafkaOffsetBackingStore kafkaBackingStore = createKafkaOffsetBackingStore(topicAdmin,
+                CONNECT_OFFSET_TOPIC_PREFIX + connectorName, consumer);
+        kafkaBackingStore.configure(new WorkerConfig(def, workerProperties));
+        return ConnectorOffsetBackingStore.withOnlyWorkerStore(() -> LoggingContext.forConnector("source-connector"),
+                kafkaBackingStore, CONNECT_OFFSET_TOPIC_PREFIX + connectorName);
+
+    }
+
+    /**
+     * Returns the WorkerConfig ConfigDef with the must have configurations set.
+     *
+     * @return A configured ConfigDef
+     */
+    private static @NotNull ConfigDef getRequiredConfigDefSettings() {
+        final ConfigDef def = new ConfigDef();
+        def.define("offset.storage.partitions", ConfigDef.Type.INT, 25, ConfigDef.Importance.MEDIUM, "partitions");
+        def.define("offset.storage.replication.factor", ConfigDef.Type.SHORT, Short.valueOf("2"),
+                ConfigDef.Importance.MEDIUM, "partitions");
+        return def;
+    }
+
+    /**
+     *
+     * @param topicAdmin
+     *            An administrative instance with the power to create topics when they do not exist
+     * @param topic
+     *            The name of the offset topic
+     * @param consumer
+     *            A configured consumer that has not been assigned or subscribed to any topic
+     * @return A configured KafkaOffsetBackingStore which can be used as a WorkerStore
+     */
+    static KafkaOffsetBackingStore createKafkaOffsetBackingStore(final TopicAdmin topicAdmin, final String topic,
+            KafkaConsumer<byte[], byte[]> consumer) {
+        return new KafkaOffsetBackingStore(() -> topicAdmin) {
+            @Override
+            public void configure(final WorkerConfig config) {
+                this.exactlyOnce = config.exactlyOnceSourceEnabled();
+                this.offsetLog = KafkaBasedLog.withExistingClients(topic, consumer, null, topicAdmin, consumedCallback,
+                        Time.SYSTEM, topicAdmin1 -> {
+                        });
+
+                this.offsetLog.start();
+
+            }
+        };
+    }
+
+    /**
+     * Configure a WorkerSourceTaskContext to return the offsetReader when called
+     *
+     * @param offsetReader
+     *            An instantiated configured offsetReader
+     * @return A mock WorkerSourceTaskContext
+     */
+    static WorkerSourceTaskContext getWorkerSourceTaskContext(final OffsetStorageReader offsetReader) {
+
+        final WorkerSourceTaskContext context = mock(WorkerSourceTaskContext.class);
+        when(context.offsetStorageReader()).thenReturn(offsetReader);
+
+        return context;
     }
 }

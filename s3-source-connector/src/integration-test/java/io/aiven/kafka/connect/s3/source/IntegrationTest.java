@@ -42,11 +42,13 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
@@ -56,11 +58,16 @@ import java.util.stream.IntStream;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetBackingStore;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.avro.Schema;
@@ -184,11 +191,11 @@ final class IntegrationTest implements IntegrationBase {
         final List<String> offsetKeys = new ArrayList<>();
 
         // write 5 objects to s3
-        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000", localS3Prefix));
+        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "0", localS3Prefix));
         offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000", localS3Prefix));
-        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00001", localS3Prefix));
+        offsetKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "1", localS3Prefix));
         offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00001", localS3Prefix));
-        offsetKeys.add(writeToS3(topic, new byte[0], "00003"));
+        offsetKeys.add(writeToS3(topic, new byte[0], "3"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
         // Poll messages from the Kafka topic and verify the consumed data
@@ -198,10 +205,14 @@ final class IntegrationTest implements IntegrationBase {
         assertThat(records).containsOnly(testData1, testData2);
 
         // Verify offset positions
-        final Map<String, Object> expectedOffsetRecords = offsetKeys.subList(0, offsetKeys.size() - 1)
+        final Map<String, Long> expectedOffsetRecords = offsetKeys.subList(0, offsetKeys.size() - 1)
                 .stream()
-                .collect(Collectors.toMap(Function.identity(), s -> 1));
+                .collect(Collectors.toMap(Function.identity(), s -> 1L));
         verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
+        // add keys we haent processed before
+        offsetKeys.add("s3-object-key-from-bucket");
+        offsetKeys.add("topic-one/s3-object-key-from-bucket");
+        verifyOffsetsConsumeableByS3OffsetMgr(connectorConfig, offsetKeys, expectedOffsetRecords);
     }
 
     @Test
@@ -235,10 +246,10 @@ final class IntegrationTest implements IntegrationBase {
         final Set<String> offsetKeys = new HashSet<>();
 
         offsetKeys.add(writeToS3(topic, outputStream1, "00001"));
-        offsetKeys.add(writeToS3(topic, outputStream2, "00001"));
+        offsetKeys.add(writeToS3(topic, outputStream2, "1"));
 
         offsetKeys.add(writeToS3(topic, outputStream3, "00002"));
-        offsetKeys.add(writeToS3(topic, outputStream4, "00002"));
+        offsetKeys.add(writeToS3(topic, outputStream4, "2"));
         offsetKeys.add(writeToS3(topic, outputStream5, "00002"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
@@ -259,8 +270,10 @@ final class IntegrationTest implements IntegrationBase {
                         entry(4 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (4 * numOfRecsFactor)),
                         entry(5 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (5 * numOfRecsFactor)));
 
-        verifyOffsetPositions(offsetKeys.stream().collect(Collectors.toMap(Function.identity(), s -> numOfRecsFactor)),
-                connectRunner.getBootstrapServers());
+        final Map<String, Long> expectedRecords = offsetKeys.stream()
+                .collect(Collectors.toMap(Function.identity(), s -> (long) numOfRecsFactor));
+        verifyOffsetPositions(expectedRecords, connectRunner.getBootstrapServers());
+        verifyOffsetsConsumeableByS3OffsetMgr(connectorConfig, offsetKeys, expectedRecords);
     }
 
     @ParameterizedTest
@@ -346,7 +359,11 @@ final class IntegrationTest implements IntegrationBase {
         });
 
         // Verify offset positions
-        verifyOffsetPositions(Map.of(offsetKey, 500), connectRunner.getBootstrapServers());
+        final Map<String, Long> expectedRecords = Map.of(offsetKey, 500L);
+        verifyOffsetPositions(expectedRecords, connectRunner.getBootstrapServers());
+        // Fake key 1 and 2 will not be populated into the offset manager.
+        verifyOffsetsConsumeableByS3OffsetMgr(connectorConfig, List.of(offsetKey, "fake-key-1", "fake-key-2"),
+                expectedRecords);
     }
 
     private Map<String, String> getConfig(final String connectorName, final String topics, final int maxTasks,
@@ -380,7 +397,7 @@ final class IntegrationTest implements IntegrationBase {
         return config;
     }
 
-    static void verifyOffsetPositions(final Map<String, Object> expectedRecords, final String bootstrapServers) {
+    static void verifyOffsetPositions(final Map<String, Long> expectedRecords, final String bootstrapServers) {
         final Properties consumerProperties = IntegrationBase.getConsumerProperties(bootstrapServers,
                 ByteArrayDeserializer.class, ByteArrayDeserializer.class);
 
@@ -393,4 +410,39 @@ final class IntegrationTest implements IntegrationBase {
             });
         }
     }
+
+    private void verifyOffsetsConsumeableByS3OffsetMgr(final Map<String, String> connectorConfig,
+            final Collection<String> offsetKeys, final Map<String, Long> expected) {
+
+        final OffsetBackingStore backingStore = IntegrationBase.getConnectorOffsetBackingStore(
+                connectRunner.getBootstrapServers(), connectorConfig, connectRunner.getWorkerProperties(),
+                CONNECTOR_NAME);
+        final OffsetStorageReader reader = IntegrationBase.getOffsetReader(backingStore, CONNECTOR_NAME);
+
+        final WorkerSourceTaskContext sourceTask = IntegrationBase.getWorkerSourceTaskContext(reader);
+
+        final OffsetManager<S3OffsetManagerEntry> manager = new OffsetManager<>(sourceTask);
+        final List<OffsetManager.OffsetManagerKey> managerKeys = offsetKeys.stream()
+                .map(key -> new S3OffsetManagerEntry(TEST_BUCKET_NAME, key).getManagerKey())
+                .collect(Collectors.toList());
+
+        manager.populateOffsetManager(managerKeys);
+
+        for (final OffsetManager.OffsetManagerKey offsetManagerKey : managerKeys) {
+            final String key = (String) offsetManagerKey.getPartitionMap().get("objectKey");
+            final S3OffsetManagerEntry entry = new S3OffsetManagerEntry(TEST_BUCKET_NAME, key);// NOPMD avoid
+                                                                                               // instantiation in loops
+            final Optional<S3OffsetManagerEntry> actualKey = manager.getEntry(offsetManagerKey, entry::fromProperties);
+
+            if (expected.containsKey(key)) {
+                assertThat(actualKey).isPresent();
+                assertThat(actualKey.get().getRecordCount()).isEqualTo(expected.get(key));
+                assertThat(actualKey.get().getBucket()).isEqualTo(TEST_BUCKET_NAME);
+            } else {
+                // unprocessed keys should be empty
+                assertThat(actualKey).isEmpty();
+            }
+        }
+    }
+
 }
