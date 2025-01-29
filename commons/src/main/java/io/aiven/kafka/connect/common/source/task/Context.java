@@ -37,35 +37,48 @@ public class Context<K extends Comparable<K>> {
         this.storageKey = storageKey;
     }
 
-    public Optional<String> getTopic() {
+    /**
+     * Creates a defensive copy of the Context for use internally by the S3SourceRecord
+     *
+     * @param anotherContext
+     *            The Context which needs to be copied
+     */
+    protected Context(final Context<K> anotherContext) {
+        this.storageKey = anotherContext.storageKey;
+        this.partition = anotherContext.partition;
+        this.topic = anotherContext.topic;
+        this.offset = anotherContext.offset;
+    }
+
+    public final Optional<String> getTopic() {
         return Optional.ofNullable(topic);
     }
 
-    public void setTopic(final String topic) {
+    public final void setTopic(final String topic) {
         this.topic = topic;
     }
 
-    public Optional<Integer> getPartition() {
+    public final Optional<Integer> getPartition() {
         return Optional.ofNullable(partition);
     }
 
-    public void setPartition(final Integer partition) {
+    public final void setPartition(final Integer partition) {
         this.partition = partition;
     }
 
-    public Optional<K> getStorageKey() {
+    public final Optional<K> getStorageKey() {
         return Optional.ofNullable(storageKey);
     }
 
-    public void setStorageKey(final K storageKey) {
+    public final void setStorageKey(final K storageKey) {
         this.storageKey = storageKey;
     }
 
-    public Optional<Integer> getOffset() {
+    public final Optional<Integer> getOffset() {
         return Optional.ofNullable(offset);
     }
 
-    public void setOffset(final Integer offset) {
+    public final void setOffset(final Integer offset) {
         this.offset = offset;
     }
 }

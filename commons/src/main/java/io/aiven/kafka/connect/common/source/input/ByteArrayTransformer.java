@@ -43,7 +43,7 @@ public class ByteArrayTransformer extends Transformer {
 
     @Override
     public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final int topicPartition, final AbstractConfig sourceConfig) {
+            final Integer topicPartition, final AbstractConfig sourceConfig) {
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
             @Override
             protected InputStream inputOpened(final InputStream input) {

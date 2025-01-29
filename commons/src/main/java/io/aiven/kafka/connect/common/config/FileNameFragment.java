@@ -72,8 +72,7 @@ public final class FileNameFragment extends ConfigFragment {
                         + "Only some combinations of variables are valid, which currently are:\n"
                         + "- `topic`, `partition`, `start_offset`."
                         + "There is also `key` only variable {{key}} for grouping by keys",
-                GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment
-                ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
+                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
         final String supportedCompressionTypes = CompressionType.names()
                 .stream()
@@ -84,8 +83,7 @@ public final class FileNameFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM,
                 "The compression type used for files put on S3. " + "The supported values are: "
                         + supportedCompressionTypes + ".",
-                GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment
-                ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
+                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(CompressionType.names()));
 
         configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, new ConfigDef.Validator() {
@@ -99,8 +97,7 @@ public final class FileNameFragment extends ConfigFragment {
         }, ConfigDef.Importance.MEDIUM,
                 "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.",
-                GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment
-                ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
+                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
 
         configDef.define(FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(),
                 new TimeZoneValidator(), ConfigDef.Importance.LOW,
@@ -113,16 +110,6 @@ public final class FileNameFragment extends ConfigFragment {
                 new TimestampSourceValidator(), ConfigDef.Importance.LOW,
                 "Specifies the the timestamp variable source. Default is wall-clock.", GROUP_FILE, fileGroupCounter++, // NOPMD
                 ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_SOURCE);
-
-        configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, DEFAULT_FILE_PATH_PREFIX_TEMPLATE,
-                new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM,
-                "The template for file prefix on S3. "
-                        + "Supports `{{ variable }}` placeholders for substituting variables. "
-                        + "Currently supported variables are `topic` and `partition` "
-                        + "and are mandatory to have these in the directory structure."
-                        + "Example prefix : topics/{{topic}}/partition/{{partition}}/",
-                GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment
-                ConfigDef.Width.LONG, FILE_PATH_PREFIX_TEMPLATE_CONFIG);
 
         return configDef;
     }
@@ -195,10 +182,6 @@ public final class FileNameFragment extends ConfigFragment {
      */
     public int getMaxRecordsPerFile() {
         return cfg.getInt(FILE_MAX_RECORDS);
-    }
-
-    public String getFilePathPrefixTemplateConfig() {
-        return cfg.getString(FILE_PATH_PREFIX_TEMPLATE_CONFIG);
     }
 
 }
