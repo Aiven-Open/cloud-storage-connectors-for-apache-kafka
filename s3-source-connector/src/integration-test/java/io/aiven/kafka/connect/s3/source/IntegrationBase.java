@@ -253,6 +253,20 @@ public interface IntegrationBase {
         return objects.stream().map(String::new).collect(Collectors.toList());
     }
 
+    static List<byte[]> consumeRawByteMessages(final String topic, final int expectedMessageCount,
+            String bootstrapServers) {
+        final Properties consumerProperties = getConsumerProperties(bootstrapServers, ByteArrayDeserializer.class,
+                ByteArrayDeserializer.class);
+        final List<byte[]> objects = consumeMessages(topic, expectedMessageCount, Duration.ofSeconds(60),
+                consumerProperties);
+        return objects.stream().map(obj -> {
+            final byte[] byteArray = new byte[obj.length];
+            System.arraycopy(obj, 0, byteArray, 0, obj.length);
+            return byteArray;
+        }).collect(Collectors.toList());
+
+    }
+
     static List<GenericRecord> consumeAvroMessages(final String topic, final int expectedMessageCount,
             final Duration expectedMaxDuration, final String bootstrapServers, final String schemaRegistryUrl) {
         final Properties consumerProperties = getConsumerProperties(bootstrapServers, StringDeserializer.class,

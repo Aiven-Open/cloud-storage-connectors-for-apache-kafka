@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
+import static io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG;
+import static io.aiven.kafka.connect.common.source.input.Transformer.UNKNOWN_STREAM_LENGTH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -32,13 +34,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
-import io.aiven.kafka.connect.common.config.CommonConfig;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.config.TransformerFragment;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.apache.commons.io.function.IOSupplier;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -48,20 +53,29 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 class TransformerStreamingTest {
 
+    private Context<String> context;
+
+    @BeforeEach
+    public void setup() {
+        context = new Context<>("storage-key");
+        context.setTopic("topic");
+        context.setPartition(1);
+    }
+
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyExceptionDuringIOOpen(final Transformer transformer, final byte[] testData, final AbstractConfig config,
-            final int expectedCount) throws IOException {
+    void verifyExceptionDuringIOOpen(final Transformer transformer, final byte[] testData,
+            final SourceCommonConfig config, final int expectedCount) throws IOException {
         final IOSupplier<InputStream> ioSupplier = mock(IOSupplier.class);
         when(ioSupplier.get()).thenThrow(new IOException("Test IOException during initialization"));
-        final Stream<?> objStream = transformer.getRecords(ioSupplier, "topic", 1, config, 0);
+        final Stream<?> objStream = transformer.getRecords(ioSupplier, UNKNOWN_STREAM_LENGTH, context, config, 0);
         assertThat(objStream).isEmpty();
     }
 
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyExceptionDuringRead(final Transformer transformer, final byte[] testData, final AbstractConfig config,
-            final int expectedCount) throws IOException {
+    void verifyExceptionDuringRead(final Transformer transformer, final byte[] testData,
+            final SourceCommonConfig config, final int expectedCount) throws IOException {
         try (InputStream inputStream = mock(InputStream.class)) {
             when(inputStream.read()).thenThrow(new IOException("Test IOException during read"));
             when(inputStream.read(any())).thenThrow(new IOException("Test IOException during read"));
@@ -72,7 +86,8 @@ class TransformerStreamingTest {
             when(inputStream.readNBytes(anyInt())).thenThrow(new IOException("Test IOException during read"));
             when(inputStream.readAllBytes()).thenThrow(new IOException("Test IOException during read"));
             try (CloseTrackingStream stream = new CloseTrackingStream(inputStream)) {
-                final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+                final Stream<?> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, context, config,
+                        0);
                 assertThat(objStream).isEmpty();
                 assertThat(stream.closeCount).isGreaterThan(0);
             }
@@ -81,10 +96,10 @@ class TransformerStreamingTest {
 
     @ParameterizedTest
     @MethodSource("testData")
-    void verifyCloseCalledAtEnd(final Transformer transformer, final byte[] testData, final AbstractConfig config,
+    void verifyCloseCalledAtEnd(final Transformer transformer, final byte[] testData, final SourceCommonConfig config,
             final int expectedCount) throws IOException {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
-        final Stream<?> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+        final Stream<?> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, context, config, 0);
         final long count = objStream.count();
         assertThat(count).isEqualTo(expectedCount);
         assertThat(stream.closeCount).isGreaterThan(0);
@@ -93,9 +108,10 @@ class TransformerStreamingTest {
     @ParameterizedTest
     @MethodSource("testData")
     void verifyCloseCalledAtIteratorEnd(final Transformer transformer, final byte[] testData,
-            final AbstractConfig config, final int expectedCount) throws IOException {
+            final SourceCommonConfig config, final int expectedCount) throws IOException {
         final CloseTrackingStream stream = new CloseTrackingStream(new ByteArrayInputStream(testData));
-        final Stream<SchemaAndValue> objStream = transformer.getRecords(() -> stream, "topic", 1, config, 0);
+        final Stream<SchemaAndValue> objStream = transformer.getRecords(() -> stream, UNKNOWN_STREAM_LENGTH, context,
+                config, 0);
         final Iterator<SchemaAndValue> iter = objStream.iterator();
         long count = 0L;
         while (iter.hasNext()) {
@@ -108,19 +124,23 @@ class TransformerStreamingTest {
 
     static Stream<Arguments> testData() throws IOException {
         final List<Arguments> lst = new ArrayList<>();
+        final var props = new HashMap<>();
+        props.put(FORMAT_OUTPUT_TYPE_CONFIG.key(), "avro");
         lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.AVRO),
                 AvroTransformerTest.generateMockAvroData(100).toByteArray(),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
+                new SourceCommonConfig(OutputFormatFragment.update(new ConfigDef(), null), props) {
                 }, 100));
         lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.BYTES),
-                "Hello World".getBytes(StandardCharsets.UTF_8), new CommonConfig(new ConfigDef(), new HashMap<>()) {
+                "Hello World".getBytes(StandardCharsets.UTF_8), new SourceCommonConfig(
+                        TransformerFragment.update(OutputFormatFragment.update(new ConfigDef(), null)), props) {
                 }, 1));
         lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.JSONL),
                 JsonTransformerTest.getJsonRecs(100).getBytes(StandardCharsets.UTF_8),
-                new CommonConfig(new ConfigDef(), new HashMap<>()) {
+                new SourceCommonConfig(OutputFormatFragment.update(new ConfigDef(), null), props) {
                 }, 100));
         lst.add(Arguments.of(TransformerFactory.getTransformer(InputFormat.PARQUET),
-                ParquetTransformerTest.generateMockParquetData(), new CommonConfig(new ConfigDef(), new HashMap<>()) {
+                ParquetTransformerTest.generateMockParquetData(),
+                new SourceCommonConfig(OutputFormatFragment.update(new ConfigDef(), null), props) {
                 }, 100));
         return lst.stream();
     }

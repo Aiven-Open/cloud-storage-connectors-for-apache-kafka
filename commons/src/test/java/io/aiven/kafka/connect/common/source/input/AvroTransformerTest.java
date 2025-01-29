@@ -16,9 +16,8 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.source.input.Transformer.UNKNOWN_STREAM_LENGTH;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,9 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,6 +33,7 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.Struct;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import io.confluent.connect.avro.AvroData;
 import org.apache.avro.Schema;
@@ -57,29 +55,18 @@ final class AvroTransformerTest {
     private SourceCommonConfig sourceCommonConfig;
 
     private AvroTransformer avroTransformer;
-    private Map<String, String> config;
 
     @BeforeEach
     void setUp() {
         avroTransformer = new AvroTransformer(new AvroData(100));
-        config = new HashMap<>();
-    }
-
-    @Test
-    void testConfigureValueConverter() {
-        final String value = "http://localhost:8081";
-        when(sourceCommonConfig.getString(SCHEMA_REGISTRY_URL)).thenReturn(value);
-        avroTransformer.configureValueConverter(config, sourceCommonConfig);
-        assertThat(config.get(SCHEMA_REGISTRY_URL)).isEqualTo("http://localhost:8081")
-                .describedAs("The schema registry URL should be correctly set in the config.");
     }
 
     @Test
     void testReadAvroRecordsInvalidData() {
         final InputStream inputStream = new ByteArrayInputStream("mock-avro-data".getBytes(StandardCharsets.UTF_8));
 
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                0);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, UNKNOWN_STREAM_LENGTH,
+                new Context<>("storage-key"), sourceCommonConfig, 0);
 
         final List<Object> recs = records.collect(Collectors.toList());
         assertThat(recs).isEmpty();
@@ -95,8 +82,8 @@ final class AvroTransformerTest {
             expected.add("Hello, Kafka Connect S3 Source! object " + i);
         }
 
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                0);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, avroData.size(),
+                new Context<>("storage-key"), sourceCommonConfig, 0);
 
         assertThat(records).extracting(SchemaAndValue::value)
                 .extracting(sv -> ((Struct) sv).getString("message"))
@@ -112,8 +99,8 @@ final class AvroTransformerTest {
         for (int i = 5; i < 20; i++) {
             expected.add("Hello, Kafka Connect S3 Source! object " + i);
         }
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                5);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, avroData.size(),
+                new Context<>("storage-key"), sourceCommonConfig, 5);
 
         assertThat(records).extracting(SchemaAndValue::value)
                 .extracting(sv -> ((Struct) sv).getString("message"))
@@ -125,8 +112,8 @@ final class AvroTransformerTest {
         final ByteArrayOutputStream avroData = generateMockAvroData(20);
         final InputStream inputStream = new ByteArrayInputStream(avroData.toByteArray());
 
-        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, "", 0, sourceCommonConfig,
-                25);
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, avroData.size(),
+                new Context<>("storage-key"), sourceCommonConfig, 25);
 
         assertThat(records).isEmpty();
     }

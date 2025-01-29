@@ -20,34 +20,42 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Map;
 import java.util.function.Consumer;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.SchemaAndValue;
+
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * ByteArrayTransformer chunks an entire object into a maximum size specified by the
+ * {@link io.aiven.kafka.connect.common.config.TransformerFragment#TRANSFORMER_MAX_BUFFER_SIZE} configuration option.
+ * This will split large files into multiple records and each record will have the same key.
+ */
 public class ByteArrayTransformer extends Transformer {
     private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayTransformer.class);
 
-    private static final int MAX_BUFFER_SIZE = 4096;
-
     @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
-        // For byte array transformations, ByteArrayConverter is the converter which is the default config.
-    }
-
-    @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final Integer topicPartition, final AbstractConfig sourceConfig) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final long streamLength, final Context<?> context, final SourceCommonConfig sourceConfig) {
+        if (streamLength == 0) {
+            LOGGER.warn(
+                    "Object sent for processing has an invalid streamLength of {}, object is empty returning an empty spliterator.",
+                    streamLength);
+            return emptySpliterator(inputStreamIOSupplier);
+        }
+        // The max buffer size for the byte array the default is 4096 if not set by the user.
+        final int maxBufferSize = sourceConfig.getTransformerMaxBufferSize();
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
+
             @Override
-            protected InputStream inputOpened(final InputStream input) {
-                return input;
+            protected void inputOpened(final InputStream input) {
+
             }
 
             @Override
@@ -57,18 +65,16 @@ public class ByteArrayTransformer extends Transformer {
 
             @Override
             protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
-                final byte[] buffer = new byte[MAX_BUFFER_SIZE];
+
                 try {
-                    final int bytesRead = IOUtils.read(inputStream, buffer);
-                    if (bytesRead == 0) {
-                        return false;
+                    final byte[] buffer = new byte[maxBufferSize];
+                    final byte[] chunk = Arrays.copyOf(buffer, IOUtils.read(inputStream, buffer));
+                    if (chunk.length > 0) {
+                        action.accept(new SchemaAndValue(null, chunk));
+                        return true;
                     }
-                    if (bytesRead < MAX_BUFFER_SIZE) {
-                        action.accept(new SchemaAndValue(null, Arrays.copyOf(buffer, bytesRead)));
-                    } else {
-                        action.accept(new SchemaAndValue(null, buffer));
-                    }
-                    return true;
+
+                    return false;
                 } catch (IOException e) {
                     LOGGER.error("Error trying to advance inputStream: {}", e.getMessage(), e);
                     return false;
@@ -77,9 +83,35 @@ public class ByteArrayTransformer extends Transformer {
         };
     }
 
+    /**
+     * This method returns an empty spliterator when an empty input stream is supplied to be split
+     *
+     * @param inputStreamIOSupplier
+     *            The empty input stream that was supplied
+     * @return an Empty spliterator to return to the calling method.
+     */
+    private static StreamSpliterator emptySpliterator(final IOSupplier<InputStream> inputStreamIOSupplier) {
+        return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
+            @Override
+            protected boolean doAdvance(final Consumer<? super SchemaAndValue> action) {
+                return false;
+            }
+
+            @Override
+            protected void doClose() {
+                // nothing to do
+            }
+
+            @Override
+            protected void inputOpened(final InputStream input) {
+            }
+
+        };
+    }
+
     @Override
     public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
-            final AbstractConfig sourceConfig) {
+            final SourceCommonConfig sourceConfig) {
         return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 }
