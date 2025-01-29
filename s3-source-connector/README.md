@@ -77,6 +77,8 @@ Example object names :
 - {{topic}}/{{partition}}/{{start_offset}} customer-topic/1/1734445664111.txt
 - topic/{{topic}}/partition/{{partition}}/timestamp/{{timestamp}} customer-topic/1/1734445664111.txt
 
+{{topic}} is the destination kafka topic where data is produced to. This will be used if `topics` config is not defined.
+
 ## Data Format
 
 Connector class name, in this case: `io.aiven.kafka.connect.s3.AivenKafkaConnectS3SourceConnector`.
