@@ -65,7 +65,17 @@ template for file names.
 
     Configuration property `file.name.template`. If not set, default template for file : `{{topic}}-{{partition}}-{{start_offset}}`
 
-Example object name : customertopic-1-1734445664111.txt
+It supports placeholders with variable names:
+`{{ variable_name }}`. Currently, supported variables are:
+- `topic` - the Kafka topic;
+- `partition` - the Kafka partition;
+- `start_offset` - the Kafka offset of the first record in the file;
+- `timestamp` - the timestamp of when the Kafka record has been processed by the connector.
+
+Example object names : 
+- {{topic}}-{{partition}}-{{start_offset}} customer-topic-1-1734445664111.txt
+- {{topic}}/{{partition}}/{{start_offset}} customer-topic/1/1734445664111.txt
+- topic/{{topic}}/partition/{{partition}}/timestamp/{{timestamp}} customer-topic/1/1734445664111.txt
 
 ## Data Format
 
