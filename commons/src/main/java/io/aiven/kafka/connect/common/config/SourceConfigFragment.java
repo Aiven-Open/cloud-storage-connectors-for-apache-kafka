@@ -34,7 +34,6 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String EXPECTED_MAX_MESSAGE_BYTES = "expected.max.message.bytes";
     private static final String GROUP_OFFSET_TOPIC = "OFFSET_TOPIC";
-    public static final String TARGET_TOPIC_PARTITIONS = "topic.partitions";
     public static final String TARGET_TOPICS = "topics";
     public static final String ERRORS_TOLERANCE = "errors.tolerance";
 
@@ -70,9 +69,6 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         // Offset Storage config group includes target topics
         int offsetStorageGroupCounter = 0;
-        configDef.define(TARGET_TOPIC_PARTITIONS, ConfigDef.Type.STRING, "0", new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : 0,1", GROUP_OFFSET_TOPIC, offsetStorageGroupCounter++,
-                ConfigDef.Width.NONE, TARGET_TOPIC_PARTITIONS);
         configDef.define(TARGET_TOPICS, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "eg : connect-storage-offsets", GROUP_OFFSET_TOPIC,
                 offsetStorageGroupCounter++, ConfigDef.Width.NONE, TARGET_TOPICS);
@@ -91,10 +87,6 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     public String getTargetTopics() {
         return cfg.getString(TARGET_TOPICS);
-    }
-
-    public String getTargetTopicPartitions() {
-        return cfg.getString(TARGET_TOPIC_PARTITIONS);
     }
 
     public int getMaxPollRecords() {

@@ -16,54 +16,70 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+import io.aiven.kafka.connect.common.source.task.Context;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.model.S3Object;
+
 public class S3SourceRecord {
-    private final Map<String, Object> partitionMap;
-    private final long recordNumber;
-    private final String topic;
-    private final Integer topicPartition;
-    private final SchemaAndValue keyData;
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceRecord.class);
+    private SchemaAndValue keyData;
+    private SchemaAndValue valueData;
+    /** The S3OffsetManagerEntry for this source record */
+    private S3OffsetManagerEntry offsetManagerEntry;
+    private Context<String> context;
+    private final S3Object s3Object;
 
-    private final SchemaAndValue valueData;
+    public S3SourceRecord(final S3Object s3Object) {
+        this.s3Object = s3Object;
+    }
 
-    private final String objectKey;
+    public S3SourceRecord(final S3SourceRecord s3SourceRecord) {
+        this(s3SourceRecord.s3Object);
+        this.offsetManagerEntry = s3SourceRecord.offsetManagerEntry
+                .fromProperties(s3SourceRecord.getOffsetManagerEntry().getProperties());
+        this.keyData = s3SourceRecord.keyData;
+        this.valueData = s3SourceRecord.valueData;
+        this.context = s3SourceRecord.context;
+    }
 
-    public S3SourceRecord(final Map<String, Object> partitionMap, final long recordNumber, final String topic,
-            final Integer topicPartition, final String objectKey, final SchemaAndValue keyData,
-            final SchemaAndValue valueData) {
-        this.partitionMap = new HashMap<>(partitionMap);
-        this.recordNumber = recordNumber;
-        this.topic = topic;
-        this.topicPartition = topicPartition;
+    public void setOffsetManagerEntry(final S3OffsetManagerEntry offsetManagerEntry) {
+        this.offsetManagerEntry = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
+    }
+
+    public long getRecordCount() {
+        return offsetManagerEntry == null ? 0 : offsetManagerEntry.getRecordCount();
+    }
+
+    public void setKeyData(final SchemaAndValue keyData) {
         this.keyData = keyData;
+    }
+
+    public void incrementRecordCount() {
+        this.offsetManagerEntry.incrementRecordCount();
+    }
+
+    public void setValueData(final SchemaAndValue valueData) {
         this.valueData = valueData;
-        this.objectKey = objectKey;
-    }
-
-    public Map<String, Object> getPartitionMap() {
-        return Collections.unmodifiableMap(partitionMap);
-    }
-
-    public long getRecordNumber() {
-        return recordNumber;
     }
 
     public String getTopic() {
-        return topic;
+        return context.getTopic().orElse(null);
     }
 
-    public Integer partition() {
-        return topicPartition;
+    public Integer getPartition() {
+        return context.getPartition().orElse(null);
     }
 
     public String getObjectKey() {
-        return objectKey;
+        return s3Object.key();
     }
 
     public SchemaAndValue getKey() {
@@ -74,10 +90,40 @@ public class S3SourceRecord {
         return new SchemaAndValue(valueData.schema(), valueData.value());
     }
 
-    public SourceRecord getSourceRecord(final OffsetManager offsetManager) {
-        final Map<String, Object> offsetMap = offsetManager.updateAndReturnCurrentOffsets(getPartitionMap(),
-                getObjectKey(), getRecordNumber());
-        return new SourceRecord(getPartitionMap(), offsetMap, topic, partition(), keyData.schema(), keyData.value(),
-                valueData.schema(), valueData.value());
+    public S3OffsetManagerEntry getOffsetManagerEntry() {
+        return offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties()); // return a defensive copy
     }
+
+    public Context<String> getContext() {
+        return new Context<>(context) {
+        };
+
+    }
+    public void setContext(final Context<String> context) {
+        this.context = new Context<>(context) {
+        };
+    }
+
+    /**
+     * Creates a SourceRecord that can be returned to a Kafka topic
+     *
+     * @return A kafka {@link org.apache.kafka.connect.source.SourceRecord SourceRecord}
+     */
+    public SourceRecord getSourceRecord(final ErrorsTolerance tolerance) {
+        try {
+            return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(),
+                    offsetManagerEntry.getProperties(), getTopic(), getPartition(), keyData.schema(), keyData.value(),
+                    valueData.schema(), valueData.value());
+        } catch (DataException e) {
+            if (ErrorsTolerance.NONE.equals(tolerance)) {
+                throw new ConnectException("Data Exception caught during S3 record to source record transformation", e);
+            } else {
+                LOGGER.warn(
+                        "Data Exception caught during S3 record to source record transformation {} . errors.tolerance set to 'all', logging warning and continuing to process.",
+                        e.getMessage(), e);
+                return null;
+            }
+        }
+    }
+
 }
