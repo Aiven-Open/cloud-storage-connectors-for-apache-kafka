@@ -17,6 +17,9 @@
 package io.aiven.kafka.connect.common.source.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -27,11 +30,15 @@ import java.util.stream.Stream;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.apache.commons.io.function.IOSupplier;
+import org.apache.http.util.ByteArrayBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -44,9 +51,13 @@ final class ByteArrayTransformerTest {
     @Mock
     private SourceCommonConfig sourceCommonConfig;
 
+    private Context<String> context;
+
     @BeforeEach
     void setUp() {
         byteArrayTransformer = new ByteArrayTransformer();
+        context = new Context<>("storage-key");
+        context.setTopic(TEST_TOPIC);
     }
 
     @Test
@@ -54,9 +65,9 @@ final class ByteArrayTransformerTest {
         final byte[] data = { 1, 2, 3, 4, 5 };
         final InputStream inputStream = new ByteArrayInputStream(data);
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
-
-        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
-                sourceCommonConfig, 0);
+        when(sourceCommonConfig.getTransformerMaxBufferSize()).thenReturn(4096);
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier,
+                (long) data.length, context, sourceCommonConfig, 0);
 
         final List<SchemaAndValue> recs = records.collect(Collectors.toList());
         assertThat(recs).hasSize(1);
@@ -69,9 +80,39 @@ final class ByteArrayTransformerTest {
 
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
 
-        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, TEST_TOPIC, 0,
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier, 0, context,
                 sourceCommonConfig, 0);
 
         assertThat(records).hasSize(0);
+    }
+
+    /**
+     * @param maxBufferSize
+     *            the maximum buffer size
+     * @param numberOfExpectedRecords
+     *            the number of records the byte array is split into based off the max buffer size
+     */
+    @ParameterizedTest
+    @CsvSource({ "1,10", "2,5", "3,4", "4,3", "5,2", "6,2", "7,2", "8,2", "9,2", "10,1", "11,1", "12,1" })
+    void testGetRecordsWithVariableMaxBufferSize(final int maxBufferSize, final int numberOfExpectedRecords) {
+        final byte[] data = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+        final InputStream inputStream = new ByteArrayInputStream(data);
+        final IOSupplier<InputStream> inputStreamIOSupplier = () -> inputStream;
+        when(sourceCommonConfig.getTransformerMaxBufferSize()).thenReturn(maxBufferSize);
+
+        final Stream<SchemaAndValue> records = byteArrayTransformer.getRecords(inputStreamIOSupplier,
+                (long) data.length, context, sourceCommonConfig, 0);
+
+        final List<SchemaAndValue> recs = records.collect(Collectors.toList());
+        assertThat(recs).hasSize(numberOfExpectedRecords);
+        final ByteArrayBuffer processedData = new ByteArrayBuffer(10);
+
+        recs.forEach(rec -> {
+            final byte[] val = (byte[]) rec.value();
+            processedData.append(val, 0, val.length);
+        });
+        assertThat(processedData.buffer()).isEqualTo(data);
+        // Should only get called once per splitIterator
+        verify(sourceCommonConfig, times(1)).getTransformerMaxBufferSize();
     }
 }

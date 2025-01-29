@@ -18,27 +18,28 @@ package io.aiven.kafka.connect.common.source.input;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.SchemaAndValue;
+
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 
 public abstract class Transformer {
 
-    public abstract void configureValueConverter(Map<String, String> config, AbstractConfig sourceConfig);
+    public final static long UNKNOWN_STREAM_LENGTH = -1;
 
     public final Stream<SchemaAndValue> getRecords(final IOSupplier<InputStream> inputStreamIOSupplier,
-            final String topic, final Integer topicPartition, final AbstractConfig sourceConfig,
+            final long streamLength, final Context<?> context, final SourceCommonConfig sourceConfig,
             final long skipRecords) {
 
-        final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, topic, topicPartition,
+        final StreamSpliterator spliterator = createSpliterator(inputStreamIOSupplier, streamLength, context,
                 sourceConfig);
         return StreamSupport.stream(spliterator, false).onClose(spliterator::close).skip(skipRecords);
     }
@@ -48,18 +49,19 @@ public abstract class Transformer {
      *
      * @param inputStreamIOSupplier
      *            the input stream supplier.
-     * @param topic
-     *            the topic.
-     * @param topicPartition
-     *            the partition.
+     * @param streamLength
+     *            the length of the input stream, {@link #UNKNOWN_STREAM_LENGTH} may be used to specify a stream with an
+     *            unknown length, streams of length zero will log an error and return an empty stream
+     * @param context
+     *            the context
      * @param sourceConfig
-     *            the source configuraiton.
+     *            the source configuration.
      * @return a StreamSpliterator instance.
      */
-    protected abstract StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier, String topic,
-            Integer topicPartition, AbstractConfig sourceConfig);
+    protected abstract StreamSpliterator createSpliterator(IOSupplier<InputStream> inputStreamIOSupplier,
+            long streamLength, Context<?> context, SourceCommonConfig sourceConfig);
 
-    public abstract SchemaAndValue getKeyData(Object cloudStorageKey, String topic, AbstractConfig sourceConfig);
+    public abstract SchemaAndValue getKeyData(Object cloudStorageKey, String topic, SourceCommonConfig sourceConfig);
 
     /**
      * A Spliterator that performs various checks on the opening/closing of the input stream.
@@ -74,7 +76,7 @@ public abstract class Transformer {
          */
         protected final Logger logger;
         /**
-         * The input stream. Will be null until {@link #inputOpened} has completed. May be used for reading but should
+         * * The input stream. Will be null until {@link #inputOpened} has completed. May be used for reading but should
          * not be closed or otherwise made unreadable.
          */
         protected InputStream inputStream;
@@ -129,15 +131,16 @@ public abstract class Transformer {
          * Allows modification of input stream. Called immediatly after the input stream is opened. Implementations may
          * modify the type of input stream by wrapping it with a specific implementation, or may create Readers from the
          * input stream. The modified input stream must be returned. If a Reader or similar class is created from the
-         * input stream the input stream must be returned.
+         * input stream the input stream must be returned. The input stream will be null until {@link #inputOpened} has
+         * completed. The implementation of the interface is responsible for closing any newly constructed readers or
+         * input streams in the doClose() method.
          *
          * @param input
          *            the input stream that was just opened.
-         * @return the input stream or modified input stream.
          * @throws IOException
          *             on IO error.
          */
-        abstract protected InputStream inputOpened(InputStream input) throws IOException;
+        abstract protected void inputOpened(InputStream input) throws IOException;
 
         @Override
         public final boolean tryAdvance(final Consumer<? super SchemaAndValue> action) {

@@ -94,6 +94,10 @@ public class S3SourceRecord {
         return offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties()); // return a defensive copy
     }
 
+    public long getS3ObjectSize() {
+        return s3Object.size();
+    }
+
     public Context<String> getContext() {
         return new Context<>(context) {
         };

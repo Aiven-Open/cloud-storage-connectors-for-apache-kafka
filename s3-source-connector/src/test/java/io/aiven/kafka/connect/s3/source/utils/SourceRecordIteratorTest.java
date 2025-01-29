@@ -88,6 +88,7 @@ final class SourceRecordIteratorTest {
         when(s3SourceConfig.getS3FileNameFragment()).thenReturn(mockFileNameFrag);
         when(mockFileNameFrag.getFilenameTemplate()).thenReturn(Template.of(filePattern));
         when(mockConfig.getTargetTopics()).thenReturn(targetTopic);
+        when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
     }
 
     @Test
@@ -128,6 +129,7 @@ final class SourceRecordIteratorTest {
         sourceApiClient = new AWSV2SourceClient(builder.build(), config);
 
         mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
 
         mockSourceConfig(mockConfig, filePattern, 0, 1, null);
 
@@ -160,6 +162,7 @@ final class SourceRecordIteratorTest {
         sourceApiClient = new AWSV2SourceClient(builder.build(), config);
 
         Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
 
         mockSourceConfig(mockConfig, filePattern, 0, 1, null);
 

@@ -21,12 +21,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 import java.util.function.Consumer;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.json.JsonConverter;
+
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
@@ -48,19 +49,15 @@ public class JsonTransformer extends Transformer {
     }
 
     @Override
-    public void configureValueConverter(final Map<String, String> config, final AbstractConfig sourceConfig) {
-    }
-
-    @Override
-    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier, final String topic,
-            final Integer topicPartition, final AbstractConfig sourceConfig) {
+    public StreamSpliterator createSpliterator(final IOSupplier<InputStream> inputStreamIOSupplier,
+            final long streamLength, final Context<?> context, final SourceCommonConfig sourceConfig) {
         return new StreamSpliterator(LOGGER, inputStreamIOSupplier) {
             BufferedReader reader;
 
             @Override
-            protected InputStream inputOpened(final InputStream input) throws IOException {
+            protected void inputOpened(final InputStream input) {
                 reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
-                return input;
+
             }
 
             @Override
@@ -87,7 +84,9 @@ public class JsonTransformer extends Transformer {
                         }
                     }
                     line = line.trim();
-                    action.accept(jsonConverter.toConnectData(topic, line.getBytes(StandardCharsets.UTF_8)));
+                    // toConnectData does not actually use topic in the conversion so its fine if it is null.
+                    action.accept(jsonConverter.toConnectData(context.getTopic().orElse(null),
+                            line.getBytes(StandardCharsets.UTF_8)));
                     return true;
                 } catch (IOException e) {
                     LOGGER.error("Error reading input stream: {}", e.getMessage(), e);
@@ -99,7 +98,7 @@ public class JsonTransformer extends Transformer {
 
     @Override
     public SchemaAndValue getKeyData(final Object cloudStorageKey, final String topic,
-            final AbstractConfig sourceConfig) {
+            final SourceCommonConfig sourceConfig) {
         return new SchemaAndValue(null, ((String) cloudStorageKey).getBytes(StandardCharsets.UTF_8));
     }
 }

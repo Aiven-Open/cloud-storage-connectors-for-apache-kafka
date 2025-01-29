@@ -28,7 +28,7 @@ import io.aiven.kafka.connect.common.source.task.DistributionType;
 
 public class SourceCommonConfig extends CommonConfig {
 
-    private final SchemaRegistryFragment schemaRegistryFragment;
+    private final TransformerFragment transformerFragment;
     private final SourceConfigFragment sourceConfigFragment;
     private final FileNameFragment fileNameFragment;
     private final OutputFormatFragment outputFormatFragment;
@@ -36,7 +36,7 @@ public class SourceCommonConfig extends CommonConfig {
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
         super(definition, originals);
         // Construct Fragments
-        schemaRegistryFragment = new SchemaRegistryFragment(this);
+        transformerFragment = new TransformerFragment(this);
         sourceConfigFragment = new SourceConfigFragment(this);
         fileNameFragment = new FileNameFragment(this);
         outputFormatFragment = new OutputFormatFragment(this);
@@ -45,18 +45,18 @@ public class SourceCommonConfig extends CommonConfig {
     }
 
     private void validate() {
-        schemaRegistryFragment.validate();
+        transformerFragment.validate();
         sourceConfigFragment.validate();
         fileNameFragment.validate();
         outputFormatFragment.validate();
     }
 
     public InputFormat getInputFormat() {
-        return schemaRegistryFragment.getInputFormat();
+        return transformerFragment.getInputFormat();
     }
 
     public String getSchemaRegistryUrl() {
-        return schemaRegistryFragment.getSchemaRegistryUrl();
+        return transformerFragment.getSchemaRegistryUrl();
     }
 
     public String getTargetTopics() {
@@ -76,7 +76,11 @@ public class SourceCommonConfig extends CommonConfig {
     }
 
     public Transformer getTransformer() {
-        return TransformerFactory.getTransformer(schemaRegistryFragment.getInputFormat());
+        return TransformerFactory.getTransformer(transformerFragment.getInputFormat());
+    }
+
+    public int getTransformerMaxBufferSize() {
+        return transformerFragment.getTransformerMaxBufferSize();
     }
 
 }

@@ -139,8 +139,8 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         lastSeenObjectKey = s3SourceRecord.getObjectKey();
 
         return transformer
-                .getRecords(sourceClient.getObject(s3SourceRecord.getObjectKey()), s3SourceRecord.getTopic(),
-                        s3SourceRecord.getPartition(), s3SourceConfig, s3SourceRecord.getRecordCount())
+                .getRecords(sourceClient.getObject(s3SourceRecord.getObjectKey()), s3SourceRecord.getS3ObjectSize(),
+                        s3SourceRecord.getContext(), s3SourceConfig, s3SourceRecord.getRecordCount())
                 .map(new Mapper(s3SourceRecord));
 
     }

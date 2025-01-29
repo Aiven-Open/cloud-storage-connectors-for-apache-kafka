@@ -16,7 +16,8 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import static io.aiven.kafka.connect.common.config.SchemaRegistryFragment.SCHEMAS_ENABLE;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMAS_ENABLE;
+import static io.aiven.kafka.connect.common.source.input.Transformer.UNKNOWN_STREAM_LENGTH;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -35,6 +36,7 @@ import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.json.JsonConverter;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.junit.jupiter.api.AfterEach;
@@ -56,6 +58,7 @@ final class JsonTransformerTest {
     private IOSupplier<InputStream> inputStreamIOSupplierMock;
 
     JsonConverter jsonConverter;
+    private Context<String> context;
 
     @BeforeEach
     void setUp() {
@@ -63,6 +66,9 @@ final class JsonTransformerTest {
         final Map<String, String> config = new HashMap<>();
         config.put(SCHEMAS_ENABLE, "false");
         jsonConverter.configure(config, false);
+        context = new Context<>("storage-key");
+        context.setTopic(TESTTOPIC);
+        context.setPartition(1);
 
         jsonTransformer = new JsonTransformer(jsonConverter);
         sourceCommonConfig = mock(SourceCommonConfig.class);
@@ -74,7 +80,7 @@ final class JsonTransformerTest {
     }
 
     @Test
-    void testHandleValueDataWithValidJson() {
+    void testHandleValueDataWithValidJson() throws IOException {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
 
@@ -83,8 +89,8 @@ final class JsonTransformerTest {
             expected.add("value" + i);
         }
 
-        final Stream<SchemaAndValue> records = jsonTransformer.getRecords(() -> validJsonInputStream, TESTTOPIC, 1,
-                sourceCommonConfig, 0);
+        final Stream<SchemaAndValue> records = jsonTransformer.getRecords(() -> validJsonInputStream,
+                UNKNOWN_STREAM_LENGTH, context, sourceCommonConfig, 0);
 
         assertThat(records).extracting(SchemaAndValue::value)
                 .extracting(sv -> ((Map) sv).get("key"))
@@ -92,7 +98,7 @@ final class JsonTransformerTest {
     }
 
     @Test
-    void testHandleValueDataWithValidJsonSkipFew() {
+    void testHandleValueDataWithValidJsonSkipFew() throws IOException {
         final InputStream validJsonInputStream = new ByteArrayInputStream(
                 getJsonRecs(100).getBytes(StandardCharsets.UTF_8));
 
@@ -101,8 +107,8 @@ final class JsonTransformerTest {
             expected.add("value" + i);
         }
 
-        final Stream<SchemaAndValue> records = jsonTransformer.getRecords(() -> validJsonInputStream, TESTTOPIC, 1,
-                sourceCommonConfig, 25L);
+        final Stream<SchemaAndValue> records = jsonTransformer.getRecords(() -> validJsonInputStream,
+                UNKNOWN_STREAM_LENGTH, context, sourceCommonConfig, 25L);
 
         assertThat(records).extracting(SchemaAndValue::value)
                 .extracting(sv -> ((Map) sv).get("key"))
@@ -111,13 +117,13 @@ final class JsonTransformerTest {
     }
 
     @Test
-    void testHandleValueDataWithInvalidJson() {
+    void testHandleValueDataWithInvalidJson() throws IOException {
         final InputStream invalidJsonInputStream = new ByteArrayInputStream(
                 "invalid-json".getBytes(StandardCharsets.UTF_8));
         final IOSupplier<InputStream> inputStreamIOSupplier = () -> invalidJsonInputStream;
 
-        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier, TESTTOPIC, 1,
-                sourceCommonConfig, 0);
+        final Stream<SchemaAndValue> jsonNodes = jsonTransformer.getRecords(inputStreamIOSupplier,
+                UNKNOWN_STREAM_LENGTH, context, sourceCommonConfig, 0);
 
         assertThat(jsonNodes).isEmpty();
 
@@ -126,7 +132,8 @@ final class JsonTransformerTest {
     @Test
     void testGetRecordsWithIOException() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException"));
-        final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
+        context.setPartition(0);
+        final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, UNKNOWN_STREAM_LENGTH, context, null, 0);
 
         assertThat(resultStream).isEmpty();
     }
@@ -134,7 +141,8 @@ final class JsonTransformerTest {
     @Test
     void testCustomSpliteratorWithIOExceptionDuringInitialization() throws IOException {
         when(inputStreamIOSupplierMock.get()).thenThrow(new IOException("Test IOException during initialization"));
-        final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, "topic", 0, null, 0);
+        context.setPartition(0);
+        final Stream<SchemaAndValue> resultStream = jsonTransformer.getRecords(inputStreamIOSupplierMock, UNKNOWN_STREAM_LENGTH, context, null, 0);
 
         assertThat(resultStream).isEmpty();
     }
