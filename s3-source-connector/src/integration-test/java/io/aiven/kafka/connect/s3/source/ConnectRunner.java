@@ -73,7 +73,7 @@ final class ConnectRunner {
         return connectCluster.configureConnector(connName, connConfig);
     }
 
-    private Map<String, String> getWorkerProperties() {
+    public Map<String, String> getWorkerProperties() {
         final Map<String, String> workerProps = new HashMap<>();
 
         workerProps.put("offset.flush.interval.ms", Integer.toString(offsetFlushIntervalMs));

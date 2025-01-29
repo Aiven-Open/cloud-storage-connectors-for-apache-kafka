@@ -62,9 +62,6 @@ public class SourceCommonConfig extends CommonConfig {
     public String getTargetTopics() {
         return sourceConfigFragment.getTargetTopics();
     }
-    public String getTargetTopicPartitions() {
-        return sourceConfigFragment.getTargetTopicPartitions();
-    }
 
     public ErrorsTolerance getErrorsTolerance() {
         return sourceConfigFragment.getErrorsTolerance();
