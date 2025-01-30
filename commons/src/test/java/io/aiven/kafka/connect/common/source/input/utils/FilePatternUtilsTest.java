@@ -48,9 +48,11 @@ class FilePatternUtilsTest {
             "{{partition}}-{{start_offset}}-{{topic}}.txt, logs2-1-logs2.txt, logs2,2,0001",
             "{{topic}}-{{start_offset}}-{{partition}}.txt, logs2-99999-0001.txt, logs2,1,99999",
             "{{partition}}-{{start_offset}}-{{topic}}.txt, logs0002-01-logs2.txt, logs2,2,0001",
-            "{{partition}}-{{start_offset}}-{{topic}}.txt, logs002-1-logs2.txt, logs2,2,0001", })
+            "{{partition}}-{{start_offset}}-{{topic}}.txt, logs002-1-logs2.txt, logs2,2,0001",
+            "{{partition}}-{{start_offset}}-{{topic}}.txt, logs002-9223372036854775807-logs2.txt, logs2,2,9223372036854775807",
+            "{{partition}}-{{start_offset}}-{{topic}}.txt, logs002-8273685692-logs2.txt, logs2,2,8273685692" })
     void checkTopicDistribution(final String expectedSourceFormat, final String sourceName, final String expectedTopic,
-            final int expectedPartition, final int expectedOffset) {
+            final int expectedPartition, final long expectedOffset) {
 
         final FilePatternUtils utils = new FilePatternUtils(expectedSourceFormat);
         final Optional<Context<String>> ctx = utils.process(sourceName);
