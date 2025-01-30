@@ -250,11 +250,6 @@ input.type=jsonl
 # See https://kafka.apache.org/documentation/#connect_configuring
 topics=topic1,topic2
 
-# A comma-separated list of topic partitions where the connector's offset storage reader
-# can read the stored offsets for those partitions. If not mentioned, s3 objects will be read again if
-# available in the bucket
-topic.partitions=1,2,3
-
 ### Connector-specific configuration
 ### Fill in you values
 # AWS Access Key ID
