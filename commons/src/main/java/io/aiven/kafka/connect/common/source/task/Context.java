@@ -29,7 +29,7 @@ public class Context<K extends Comparable<K>> {
 
     private String topic;
     private Integer partition;
-    private Integer offset;
+    private Long offset;
     private K storageKey;
 
     public Context(final K storageKey) {
@@ -74,11 +74,11 @@ public class Context<K extends Comparable<K>> {
         this.storageKey = storageKey;
     }
 
-    public final Optional<Integer> getOffset() {
+    public final Optional<Long> getOffset() {
         return Optional.ofNullable(offset);
     }
 
-    public final void setOffset(final Integer offset) {
+    public final void setOffset(final Long offset) {
         this.offset = offset;
     }
 }

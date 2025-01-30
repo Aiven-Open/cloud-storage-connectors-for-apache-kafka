@@ -145,9 +145,9 @@ public final class FilePatternUtils {
 
     }
 
-    private Optional<Integer> getOffset(final Matcher matcher, final String sourceName) {
+    private Optional<Long> getOffset(final Matcher matcher, final String sourceName) {
         try {
-            return Optional.of(Integer.parseInt(matcher.group(PATTERN_START_OFFSET_KEY)));
+            return Optional.of(Long.parseLong(matcher.group(PATTERN_START_OFFSET_KEY)));
         } catch (IllegalArgumentException e) {
             // It is possible that when checking for the group it does not match and returns an
             // illegalStateException, Number format exception is also covered by this in this case.
