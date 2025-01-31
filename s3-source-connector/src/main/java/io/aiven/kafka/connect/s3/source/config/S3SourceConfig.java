@@ -127,6 +127,10 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
     }
 
+    public int getS3FetchBufferSize() {
+        return s3ConfigFragment.getS3FetchBufferSize();
+    }
+
     public S3ConfigFragment getS3ConfigFragment() {
         return s3ConfigFragment;
     }

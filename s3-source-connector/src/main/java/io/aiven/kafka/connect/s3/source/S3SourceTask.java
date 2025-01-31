@@ -105,7 +105,7 @@ public class S3SourceTask extends AbstractSourceTask {
             @Override
             public SourceRecord next() {
                 final S3SourceRecord s3SourceRecord = s3SourceRecordIterator.next();
-                return s3SourceRecord.getSourceRecord(s3SourceConfig.getErrorsTolerance());
+                return s3SourceRecord.getSourceRecord(s3SourceConfig.getErrorsTolerance(), offsetManager);
             }
         };
         return IteratorUtils.filteredIterator(inner, Objects::nonNull);
@@ -133,7 +133,6 @@ public class S3SourceTask extends AbstractSourceTask {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Committed individual record {}  committed", (Map<String, Object>) record.sourceOffset());
         }
-        offsetManager.removeEntry(record);
     }
 
     /**

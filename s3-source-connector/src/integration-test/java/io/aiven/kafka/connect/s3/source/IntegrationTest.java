@@ -24,10 +24,12 @@ import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_T
 import static io.aiven.kafka.connect.common.config.TransformerFragment.AVRO_VALUE_SERIALIZER;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_FETCH_BUFFER_SIZE;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static java.util.Map.entry;
@@ -79,6 +81,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -182,7 +185,7 @@ final class IntegrationTest implements IntegrationBase {
 
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 1, DistributionType.PARTITION,
                 addPrefix, localS3Prefix, prefixPattern, fileNamePatternSeparator);
-
+        connectorConfig.put("aws.s3.fetch.buffer.size", "10");
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
@@ -218,9 +221,9 @@ final class IntegrationTest implements IntegrationBase {
         verifyOffsetsConsumeableByS3OffsetMgr(connectorConfig, offsetKeys, expectedOffsetRecords);
     }
 
-    @Test
-    void bytesDefaultBufferTest() {
-        final int maxBufferSize = 4096;
+    @ParameterizedTest
+    @CsvSource({ "4096", "3000", "4101" })
+    void bytesBufferTest(final int maxBufferSize) {
         final var topic = IntegrationBase.getTopic(testInfo);
         final DistributionType distributionType;
         final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
@@ -230,6 +233,8 @@ final class IntegrationTest implements IntegrationBase {
                 prefixPattern, "-");
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
+        connectorConfig.put(TRANSFORMER_MAX_BUFFER_SIZE, String.valueOf(maxBufferSize));
+        connectorConfig.put(AWS_S3_FETCH_BUFFER_SIZE, String.valueOf(10));
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
 
         final int byteArraySize = 6000;

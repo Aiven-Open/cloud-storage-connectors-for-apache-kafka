@@ -84,6 +84,17 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     }
 
     /**
+     * Get add an entry to the offset manager. For retrieval later
+     *
+     * @param entry
+     *            the entry that should be added to the offset manager.
+     *
+     */
+    public void addEntry(final OffsetManagerEntry<E> entry) {
+        offsets.put(entry.getManagerKey().getPartitionMap(), entry.getProperties());
+    }
+
+    /**
      * Gets any offset information stored in the offsetStorageReader and adds to the local offsets Map. This provides a
      * performance improvement over when checking if offsets exists individually.
      *

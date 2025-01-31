@@ -22,6 +22,7 @@ import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.slf4j.Logger;
@@ -111,14 +112,17 @@ public class S3SourceRecord {
     /**
      * Creates a SourceRecord that can be returned to a Kafka topic
      *
-     * @return A kafka {@link org.apache.kafka.connect.source.SourceRecord SourceRecord}
+     * @return A kafka {@link org.apache.kafka.connect.source.SourceRecord SourceRecord} This can return null if error
+     *         tolerance is set to 'All'
      */
-    public SourceRecord getSourceRecord(final ErrorsTolerance tolerance) {
+    public SourceRecord getSourceRecord(final ErrorsTolerance tolerance,
+            final OffsetManager<S3OffsetManagerEntry> offsetManager) {
         try {
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Source Record: {} for Topic: {} , Partition: {}, recordCount: {}", getObjectKey(),
                         getTopic(), getPartition(), getRecordCount());
             }
+            offsetManager.addEntry(offsetManagerEntry);
             return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(),
                     offsetManagerEntry.getProperties(), getTopic(), getPartition(), keyData.schema(), keyData.value(),
                     valueData.schema(), valueData.value());
