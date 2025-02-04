@@ -10,7 +10,9 @@ The `AbstractSourceTask` handles most of the issues around synchronization and c
  * `Iterator<SourceRecord> getIterator(BackoffConfig config)`
  * `void closeResources()`
 
-In addition, implementations will want to implement an `OffsetManager.OffsetManagerEntry`.  This class maps the information about the stored object to information describing how far the processing has progressed.  In general, the values that are needed to locate the original object in the object store are placed in the 'key' and data describing the processing is placed in the data.  There are no restrictions on either key or data elements except that they must be natively serializable by the Kafka process.
+In addition, implementations will want to implement an `OffsetManager.OffsetManagerEntry`.  This class maps the information about the stored object to information describing how far the processing has progressed.  In general, the values that are needed to locate the original object in the object store are placed in the 'key' and data describing the processing is placed in the data.  There are no restrictions on either key or data elements except that they must be natively serializable by the Kafka process. See the [Kafka documentation](https://github.com/a0x8o/kafka/blob/master/connect/runtime/src/main/java/org/apache/kafka/connect/storage/OffsetStorageReaderImpl.java) for more information.
+
+
 
 ### Helper classes
 
