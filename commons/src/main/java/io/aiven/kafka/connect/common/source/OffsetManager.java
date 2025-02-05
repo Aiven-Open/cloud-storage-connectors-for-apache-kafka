@@ -144,6 +144,10 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
 
         /**
          * Extracts the data from the entry in the correct format to return to Kafka.
+         * <p>
+         * This method should make a copy of the internal data and return that to prevent any accidental updates to the
+         * internal data.
+         * </p>
          *
          * @return the properties in a format to return to Kafka.
          */
@@ -214,7 +218,11 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
         }
 
         /**
-         * ManagerKey getManagerKey
+         * Gets the OffsetManagerKey for this entry.
+         * <p>
+         * The return value should be a copy of the internal structure or constructed in such a way that modification to
+         * the key values is not reflected in the OffsetManagerEntry.
+         * </p>
          *
          * @return The offset manager key for this entry.
          */
@@ -232,8 +240,15 @@ public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     @FunctionalInterface
     public interface OffsetManagerKey {
         /**
-         * gets the partition map used by Kafka to identify this Offset entry. Kafka stores all numbers as longs and so
-         * all keys based off integers should be created as longs in the manager key
+         * Gets the partition map used by Kafka to identify this Offset entry.
+         * <p>
+         * Kafka stores all numbers as longs and so all keys based off integers should be created as longs in the
+         * manager key.
+         * </p>
+         * <p>
+         * This method should make a copy of the internal data and return that to prevent any accidental updates to the
+         * internal data.
+         * </p>
          *
          * @return The partition map used by Kafka to identify this Offset entry.
          */
