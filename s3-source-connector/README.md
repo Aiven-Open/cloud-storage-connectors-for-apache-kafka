@@ -75,7 +75,7 @@ It supports placeholders with variable names:
 Example object names :
 - {{topic}}-{{partition}}-{{start_offset}} customer-topic-1-1734445664111.txt
 - {{topic}}/{{partition}}/{{start_offset}} customer-topic/1/1734445664111.txt
-- topic/{{topic}}/partition/{{partition}}/timestamp/{{timestamp}} customer-topic/1/1734445664111.txt
+- topic/{{topic}}/partition/{{partition}}/startOffset/{{start_offset}} topic/customer-topic/partition/1/startOffset/1734445664111.txt
 
 {{topic}} is the destination kafka topic where data is produced to. This will be used if `topics` config is not defined.
 
