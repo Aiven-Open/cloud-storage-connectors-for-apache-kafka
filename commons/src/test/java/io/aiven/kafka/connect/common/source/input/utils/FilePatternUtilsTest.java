@@ -41,7 +41,9 @@ class FilePatternUtilsTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "{{topic}}-{{partition}}-{{start_offset}}.txt, logs2-1-0001.txt, logs2,1,0001",
+    @CsvSource({ "{{topic}}-{{partition}}-{{start_offset}}.txt, logs2-1-1-0001.txt, logs2-1,1,0001",
+            "{{topic}}-{{start_offset}}-{{partition}}.txt, logs2_1-0001-1.txt, logs2_1,0001,1",
+            "{{topic}}-{{start_offset}}-{{partition}}.txt, logs2.1-0001-00000001.txt, logs2.1,0001,1",
             "{{topic}}-{{start_offset}}-{{partition}}.txt, logs2-0001-1.txt, logs2,0001,1",
             "{{topic}}-{{start_offset}}-{{partition}}.txt, logs2-99999-1.txt, logs2,1,99999",
             "{{partition}}-{{start_offset}}-{{topic}}.txt, logs2-1-logs2.txt, logs2,2,0001",
@@ -49,6 +51,9 @@ class FilePatternUtilsTest {
             "{{topic}}-{{start_offset}}-{{partition}}.txt, logs2-99999-0001.txt, logs2,1,99999",
             "{{partition}}-{{start_offset}}-{{topic}}.txt, logs0002-01-logs2.txt, logs2,2,0001",
             "{{partition}}-{{start_offset}}-{{topic}}.txt, logs002-1-logs2.txt, logs2,2,0001",
+            "topic/{{topic}}/partition/{{partition}}/startOffset/{{start_offset}},"
+                    + " topic/logs0002-12_2.topic/partition/000001/startOffset/432342322/file.txt, logs0002-12_2.topic,1,432342322",
+            "{{topic}}/{{partition}}/{{start_offset}}, logs0002/01/4323422/file.txt, logs0002,1,4323422",
             "{{partition}}-{{start_offset}}-{{topic}}.txt, logs002-9223372036854775807-logs2.txt, logs2,2,9223372036854775807",
             "{{partition}}-{{start_offset}}-{{topic}}.txt, logs002-8273685692-logs2.txt, logs2,2,8273685692" })
     void checkTopicDistribution(final String expectedSourceFormat, final String sourceName, final String expectedTopic,

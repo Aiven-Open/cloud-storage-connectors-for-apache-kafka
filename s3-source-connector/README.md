@@ -55,19 +55,30 @@ It is also important to specify `aws.sts.role.external.id` for the security reas
 
 ### File name format
 
-> File name format is tightly related to [Record Grouping](#record-grouping)
-
 The connector uses the following format for input files (blobs):
 `<prefix><filename>`.
 
 `<prefix>`is the optional prefix that can be used, for example, for
 subdirectories in the bucket.
-`<filename>` is the file name. The connector has a fixed
+`<filename>` is the file name. The connector has the configurable
 template for file names.
 
-    Fixed template for file : `{{topic}}-{{partition}}-{{start_offset}}`
+    Configuration property `file.name.template` is a mandatory config. If not set, objects would not be processed.
+Example templates are mentioned below.
 
-Example object name : customertopic-00001-1734445664111.txt
+It supports placeholders with variable names:
+`{{ variable_name }}`. Currently, supported variables are:
+- `topic` - the Kafka topic;
+- `partition` - the Kafka partition;
+- `start_offset` - the Kafka offset of the first record in the file;
+- `timestamp` - the timestamp of when the Kafka record has been processed by the connector.
+
+Example object names :
+- {{topic}}-{{partition}}-{{start_offset}} customer-topic-1-1734445664111.txt
+- {{topic}}/{{partition}}/{{start_offset}} customer-topic/1/1734445664111.txt
+- topic/{{topic}}/partition/{{partition}}/startOffset/{{start_offset}} topic/customer-topic/partition/1/startOffset/1734445664111.txt
+
+{{topic}} is the destination kafka topic where data is produced to. This will be used if `topics` config is not defined.
 
 ## Data Format
 
@@ -239,11 +250,6 @@ input.type=jsonl
 # Also a regular expression version `topics.regex` is supported.
 # See https://kafka.apache.org/documentation/#connect_configuring
 topics=topic1,topic2
-
-# A comma-separated list of topic partitions where the connector's offset storage reader
-# can read the stored offsets for those partitions. If not mentioned, s3 objects will be read again if
-# available in the bucket
-topic.partitions=1,2,3
 
 ### Connector-specific configuration
 ### Fill in you values
