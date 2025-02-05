@@ -108,6 +108,8 @@ public final class FilePatternUtils {
             getOffset(matcher.get(), sourceName.toString()).ifPresent(ctx::setOffset);
             return Optional.of(ctx);
         }
+        // TODO return to debug before release.
+        LOGGER.info("{} did not match pattern and was skipped for processing.", sourceName);
         return Optional.empty();
 
     }
