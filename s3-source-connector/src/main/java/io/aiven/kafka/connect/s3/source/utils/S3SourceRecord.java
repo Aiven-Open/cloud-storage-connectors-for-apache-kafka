@@ -115,6 +115,11 @@ public class S3SourceRecord {
      */
     public SourceRecord getSourceRecord(final ErrorsTolerance tolerance) {
         try {
+            // TODO return to debug before release.
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info("Source Record: {} for Topic: {} , Partition: {}, recordCount: {}", getObjectKey(),
+                        getTopic(), getPartition(), getRecordCount());
+            }
             return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(),
                     offsetManagerEntry.getProperties(), getTopic(), getPartition(), keyData.schema(), keyData.value(),
                     valueData.schema(), valueData.value());
