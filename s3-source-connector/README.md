@@ -63,7 +63,8 @@ subdirectories in the bucket.
 `<filename>` is the file name. The connector has the configurable
 template for file names.
 
-    Configuration property `file.name.template`. If not set, default template for file : `{{topic}}-{{partition}}-{{start_offset}}`
+    Configuration property `file.name.template` is a mandatory config. If not set, objects would not be processed.
+Example templates are mentioned below.
 
 It supports placeholders with variable names:
 `{{ variable_name }}`. Currently, supported variables are:
