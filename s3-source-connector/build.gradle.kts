@@ -80,6 +80,7 @@ dependencies {
   integrationTestImplementation(apache.parquet.hadoop)
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
+  testImplementation(testinglibs.awaitility)
 
   testImplementation("org.apache.kafka:connect-api:$kafkaVersion")
   testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")

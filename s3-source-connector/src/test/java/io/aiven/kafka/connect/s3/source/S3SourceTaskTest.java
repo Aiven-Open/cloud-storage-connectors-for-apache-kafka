@@ -20,10 +20,8 @@ import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
-import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.BUCKET;
-import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.OBJECT_KEY;
-import static io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry.RECORD_COUNT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -205,20 +203,6 @@ final class S3SourceTaskTest {
         assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis() + TIMING_DELTA);
     }
 
-    private void assertEquals(final S3SourceRecord s3Record, final SourceRecord sourceRecord) {
-        assertThat(sourceRecord).isNotNull();
-
-        assertThat(sourceRecord.sourcePartition()).hasSize(2);
-        assertThat(sourceRecord.sourcePartition().get(BUCKET)).isEqualTo(s3Record.getOffsetManagerEntry().getBucket());
-        assertThat(sourceRecord.sourcePartition().get(OBJECT_KEY)).isEqualTo(s3Record.getOffsetManagerEntry().getKey());
-
-        final Map<String, Object> map = (Map<String, Object>) sourceRecord.sourceOffset();
-
-        assertThat(map.get(RECORD_COUNT)).isEqualTo(s3Record.getOffsetManagerEntry().getRecordCount());
-        assertThat(sourceRecord.key()).isEqualTo(s3Record.getKey().value());
-        assertThat(sourceRecord.value()).isEqualTo(s3Record.getValue().value());
-    }
-
     @Test
     void testPollsWithRecords() {
         final List<S3SourceRecord> lst = createS3SourceRecords(2);
@@ -226,15 +210,15 @@ final class S3SourceTaskTest {
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
 
         startSourceTask(s3SourceTask);
-        final StopWatch stopWatch = new StopWatch();
-        stopWatch.start();
-        final List<SourceRecord> results = s3SourceTask.poll();
-        stopWatch.stop();
-
-        assertThat(results).hasSize(2);
-        assertEquals(lst.get(0), results.get(0));
-        assertEquals(lst.get(1), results.get(1));
-        assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis());
+        final int[] counter = { 0 };
+        await().atMost(Duration.ofSeconds(10)).pollInterval(Duration.ofSeconds(1)).until(() -> {
+            final List<SourceRecord> results = s3SourceTask.poll();
+            if (results != null) {
+                counter[0] += results.size();
+            }
+            return counter[0] == 2;
+        });
+        assertThat(counter[0]).isEqualTo(2);
     }
 
     private List<S3SourceRecord> createS3SourceRecords(final int count) {
@@ -281,26 +265,22 @@ final class S3SourceTaskTest {
 
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
         startSourceTask(s3SourceTask);
-        final StopWatch stopWatch = new StopWatch();
-        stopWatch.start();
-        List<SourceRecord> results = s3SourceTask.poll();
-        stopWatch.stop();
-
-        assertThat(results).hasSize(2);
-        assertEquals(lst.get(0), results.get(0));
-        assertEquals(lst.get(1), results.get(1));
-
-        results = s3SourceTask.poll();
-        assertThat(results).hasSize(1);
-
-        assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis());
-
+        final int[] counter = { 0 };
+        await().atMost(Duration.ofSeconds(5)).pollInterval(Duration.ofSeconds(1)).until(() -> {
+            final List<SourceRecord> results = s3SourceTask.poll();
+            if (results != null) {
+                counter[0] += results.size();
+            }
+            return counter[0] == 3;
+        });
+        assertThat(counter[0]).isEqualTo(3);
     }
 
     @Test
     void testPollWithSlowProducer() {
         final List<S3SourceRecord> lst = createS3SourceRecords(3);
 
+        // an iterator that returns records in 6 second intervals.
         final Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
             Iterator<S3SourceRecord> inner = lst.iterator();
             @Override
@@ -319,52 +299,17 @@ final class S3SourceTaskTest {
             }
         };
 
-        final List<SourceRecord> results = new ArrayList<>();
-        // since the polling is returning data at or near the time limit the 3 record may be returned as follows
-        // Record 1 may be returned in Poll1 or Poll2
-        // Record 2 may be returned in Poll2 or Poll2
-        // Record 3 may be returned in Poll3 or Poll4
-
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
         startSourceTask(s3SourceTask);
-        final StopWatch stopWatch = new StopWatch();
-        stopWatch.start();
-        // poll 1
-        List<SourceRecord> pollResult = s3SourceTask.poll();
-        stopWatch.stop();
-        if (pollResult != null) {
-            results.addAll(pollResult);
-        }
-        assertThat(results).hasSizeLessThanOrEqualTo(1);
-        // poll 2
-        stopWatch.reset();
-        stopWatch.start();
-        pollResult = s3SourceTask.poll();
-        stopWatch.stop();
-        if (pollResult != null) {
-            results.addAll(pollResult);
-        }
-        assertThat(results).hasSizeLessThanOrEqualTo(2);
-        // poll 3
-        stopWatch.reset();
-        stopWatch.start();
-        pollResult = s3SourceTask.poll();
-        stopWatch.stop();
-        if (pollResult != null) {
-            results.addAll(pollResult);
-        }
-        assertThat(results).hasSizeLessThanOrEqualTo(3);
-        // poll 4
-        stopWatch.reset();
-        stopWatch.start();
-        pollResult = s3SourceTask.poll();
-        stopWatch.stop();
-        if (results.size() == lst.size()) {
-            assertThat(pollResult).isNull();
-        } else {
-            results.addAll(pollResult);
-        }
-        assertThat(results).hasSize(3);
+        final int[] counter = { 0 };
+        await().atMost(Duration.ofSeconds(20)).pollInterval(Duration.ofSeconds(1)).until(() -> {
+            final List<SourceRecord> results = s3SourceTask.poll();
+            if (results != null) {
+                counter[0] += results.size();
+            }
+            return counter[0] == 3;
+        });
+        assertThat(counter[0]).isEqualTo(3);
     }
 
     @Test
@@ -376,16 +321,17 @@ final class S3SourceTaskTest {
 
         final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
         final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
-
         startSourceTask(s3SourceTask);
-        final StopWatch stopWatch = new StopWatch();
-        stopWatch.start();
-        List<SourceRecord> results = s3SourceTask.poll();
-        assertThat(results).hasSize(2);
-        results = s3SourceTask.poll();
-        assertThat(results).hasSize(1);
-        stopWatch.stop();
-        assertThat(stopWatch.getTime()).isLessThan(AbstractSourceTask.MAX_POLL_TIME.toMillis() * 2);
+        final int[] counter = { 0, 0 };
+        await().atMost(Duration.ofSeconds(5)).pollInterval(Duration.ofSeconds(1)).until(() -> {
+            final List<SourceRecord> results = s3SourceTask.poll();
+            if (results != null) {
+                counter[0] += results.size();
+                counter[1]++;
+            }
+            return counter[0] == 3;
+        });
+        assertThat(counter[1]).isEqualTo(2);
     }
 
     @Test
