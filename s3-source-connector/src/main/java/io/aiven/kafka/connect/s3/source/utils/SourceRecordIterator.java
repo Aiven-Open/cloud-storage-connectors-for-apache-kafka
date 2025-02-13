@@ -33,6 +33,7 @@ import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -53,13 +54,24 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
     private final AWSV2SourceClient sourceClient;
     /** the taskId of this running task */
     private int taskId;
+    /**
+     * The ring buffer which contains recently processed s3 object keys, this is used to set the startAfter variable in
+     * the AWSV2Client request.
+     */
+    private final RingBuffer s3ObjectKeyRingBuffer;
 
     /** The S3 bucket we are processing */
     private final String bucket;
 
-    /** The inner iterator to provides S3Object that have been filtered potentially had data extracted */
+    /**
+     * /** The inner iterator to provides a base S3SourceRecord for an S3Object that has passed the filters and
+     * potentially had data extracted.
+     */
     private Iterator<S3SourceRecord> inner;
-    /** The outer iterator that provides S3SourceRecords */
+    /**
+     * The outer iterator that provides an S3SourceRecord for each record contained by the S3Object identified by the
+     * inner record.
+     */
     private Iterator<S3SourceRecord> outer;
     /** The topic(s) which have been configured with the 'topics' configuration */
     private final Optional<String> targetTopics;
@@ -92,13 +104,14 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.taskAssignment = new TaskAssignment(initializeDistributionStrategy());
         this.taskId = s3SourceConfig.getTaskId();
         this.fileMatching = new FileMatching(filePattern);
+        s3ObjectKeyRingBuffer = new RingBuffer(s3SourceConfig.getS3FetchBufferSize());
 
         inner = getS3SourceRecordStream(sourceClient).iterator();
         outer = Collections.emptyIterator();
     }
 
     private Stream<S3SourceRecord> getS3SourceRecordStream(final AWSV2SourceClient sourceClient) {
-        return sourceClient.getS3ObjectStream(lastSeenObjectKey)
+        return sourceClient.getS3ObjectStream(s3ObjectKeyRingBuffer.getOldest())
                 .map(fileMatching)
                 .filter(taskAssignment)
                 .map(Optional::get);
@@ -106,6 +119,13 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
 
     @Override
     public boolean hasNext() {
+        if (!outer.hasNext()) {
+            // update the buffer to contain this new objectKey
+            s3ObjectKeyRingBuffer.enqueue(lastSeenObjectKey);
+            // Remove the last seen Object Key from the offsets as the file has been completely processed.
+            offsetManager
+                    .removeEntry(S3OffsetManagerEntry.asKey(bucket, StringUtils.defaultIfBlank(lastSeenObjectKey, "")));
+        }
         if (!inner.hasNext() && !outer.hasNext()) {
             inner = getS3SourceRecordStream(sourceClient).iterator();
         }
@@ -210,7 +230,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         public Optional<S3SourceRecord> apply(final S3Object s3Object) {
 
             final Optional<Context<String>> optionalContext = utils.process(s3Object.key());
-            if (optionalContext.isPresent()) {
+            if (optionalContext.isPresent() && !s3ObjectKeyRingBuffer.contains(s3Object.key())) {
                 final S3SourceRecord s3SourceRecord = new S3SourceRecord(s3Object);
                 final Context<String> context = optionalContext.get();
                 overrideContextTopic(context);

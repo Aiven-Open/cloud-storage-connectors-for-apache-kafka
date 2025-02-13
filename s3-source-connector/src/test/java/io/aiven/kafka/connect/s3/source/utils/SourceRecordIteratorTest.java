@@ -89,6 +89,7 @@ final class SourceRecordIteratorTest {
         when(mockFileNameFrag.getFilenameTemplate()).thenReturn(Template.of(filePattern));
         when(mockConfig.getTargetTopics()).thenReturn(targetTopic);
         when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
+        when(mockConfig.getS3FetchBufferSize()).thenReturn(1);
     }
 
     @Test
@@ -103,6 +104,7 @@ final class SourceRecordIteratorTest {
         mockTransformer = TransformerFactory.getTransformer(InputFormat.BYTES);
 
         mockSourceConfig(mockConfig, filePattern, 0, 1, null);
+        when(mockConfig.getInputFormat()).thenReturn(InputFormat.BYTES);
 
         final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
                 mockTransformer, sourceApiClient);
@@ -165,7 +167,7 @@ final class SourceRecordIteratorTest {
         when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
 
         mockSourceConfig(mockConfig, filePattern, 0, 1, null);
-
+        when(mockConfig.getInputFormat()).thenReturn(InputFormat.BYTES);
         // With ByteArrayTransformer
         final Iterator<S3SourceRecord> byteArrayIterator = new SourceRecordIterator(mockConfig, mockOffsetManager,
                 transformer, sourceApiClient);

@@ -25,6 +25,7 @@ import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FOR
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_FETCH_BUFFER_SIZE;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -126,6 +127,7 @@ class AwsIntegrationTest implements IntegrationBase {
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(MAX_TASKS, String.valueOf(maxTasks));
+        config.put(AWS_S3_FETCH_BUFFER_SIZE, "2");
         return config;
     }
 

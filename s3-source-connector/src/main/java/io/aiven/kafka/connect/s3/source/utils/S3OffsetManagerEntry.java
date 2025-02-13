@@ -75,6 +75,18 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     }
 
     /**
+     *
+     * @param bucket
+     *            the bucket we are using.
+     * @param s3ObjectKey
+     *            the S3Object key.
+     * @return a new instance of OffsetManagerKey
+     */
+    public static OffsetManager.OffsetManagerKey asKey(final String bucket, final String s3ObjectKey) {
+        return () -> Map.of(BUCKET, bucket, OBJECT_KEY, s3ObjectKey);
+    }
+
+    /**
      * Creates an S3OffsetManagerEntry. Will return {@code null} if properties is {@code null}.
      *
      * @param properties
