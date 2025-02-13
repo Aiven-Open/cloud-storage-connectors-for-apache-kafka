@@ -625,6 +625,14 @@ There are four configuration properties to configure retry strategy exists.
 - To use SSE-KMS set to `aws:kms`
 - To use DSSE-KMS set to `aws:kms:dsse`
 
+
+### Cleaning temporary files from failed multipart uploads
+The S3 Sink Connector uploads files using the S3 multipart upload API for improved performance and handling large files.
+Occasionally the API can throw an exception or the connector can fail to complete a multipart upload.
+This can leave orphaned "parts" of a failed multipart upload taking up unnecessary space.
+To handle these incomplete parts AWS recommends setting up a Lifecycle rule to delete old parts that weren't completed as described in this excellent (blog post)[https://aws.amazon.com/blogs/aws-cloud-financial-management/discovering-and-deleting-incomplete-multipart-uploads-to-lower-amazon-s3-costs/].
+Alternatively, if you would prefer to work through the official documentation it is available (here)[https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu-lifecycle-config.html]
+
 ## Development
 
 ### Developing together with Commons library
