@@ -25,6 +25,7 @@ import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
@@ -133,8 +134,11 @@ public abstract class AbstractSourceTask extends SourceTask {
                         }
                     }
                 } catch (InterruptedException e) {
-                    logger.warn(this.toString() + " interrupted -- EXITING");
+                    logger.warn("{} interrupted -- EXITING", this.toString());
+                } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
+                    logger.error("{} failed -- EXITING", this.toString(), e);
                 }
+
             }
         }, this.getClass().getName() + " polling thread");
     }
@@ -210,17 +214,20 @@ public abstract class AbstractSourceTask extends SourceTask {
     @Override
     public final List<SourceRecord> poll() {
         logger.debug("Polling");
-        if (connectorStopped.get()) {
-            logger.info("Stopping");
-            closeResources();
-            return NULL_RESULT;
-        } else {
+        if (stillPolling()) {
             List<SourceRecord> results = new ArrayList<>(maxPollRecords);
             results = 0 == queue.drainTo(results, maxPollRecords) ? NULL_RESULT : results;
             if (logger.isDebugEnabled()) {
                 logger.debug("Poll() returning {} SourceRecords.", results == null ? null : results.size());
             }
+            if (results == null && !implemtationPollingThread.isAlive()) {
+                throw new ConnectException(implemtationPollingThread.getName() + " has died");
+            }
             return results;
+        } else {
+            logger.info("Stopping");
+            closeResources();
+            return NULL_RESULT;
         }
     }
 
