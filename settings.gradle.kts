@@ -10,7 +10,7 @@ val commonsCollections4Version by extra("4.4")
 val hadoopVersion by extra("3.4.0")
 val hamcrestVersion by extra("2.2")
 val jacksonVersion by extra("2.15.3")
-val junitVersion by extra("5.10.2")
+val junitVersion by extra("5.11.4")
 val jqwikVersion by extra("1.8.4")
 // TODO: document why we stick to these versions
 val kafkaVersion by extra("1.1.0")
