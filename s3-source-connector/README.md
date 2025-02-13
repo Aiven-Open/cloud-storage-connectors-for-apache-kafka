@@ -207,6 +207,7 @@ List of new configuration parameters:
 - `aws.s3.endpoint` - The endpoint configuration (service endpoint & signing region) to be used for requests.
 - `aws.s3.prefix` - The prefix that will be added to the file name in the bucket. Can be used for putting output files into a subdirectory.
 - `aws.s3.region` - Name of the region for the bucket used for storing the records. Defaults to `us-east-1`.
+- `aws.s3.fetch.buffer.size` - The Size of the buffer in processing S3 Object Keys to ensure slow to upload objects are not missed by Source Connector. Minimum value is 1.
 - `aws.sts.role.arn` - AWS role ARN, for cross-account access role instead of `aws.access.key.id` and `aws.secret.access.key`
 - `aws.sts.role.external.id` - AWS ExternalId for cross-account access role
 - `aws.sts.role.session.name` - AWS session name for cross-account access role
@@ -274,7 +275,33 @@ aws.s3.prefix=file-prefix
 # Possible values 'none' or 'all'. Default being 'none'
 # Errors are logged and ignored for 'all'
 errors.tolerance=none
+
+#AWS S3 fetch Buffer
+# Possible values are any value greater than 0. Default being '1000'
+aws.s3.fetch.buffer.size=1000
+
 ```
+
+### How the AWS S3 API works
+The Aws S3 ListObjectsV2 api which the S3 Source Connector uses to list all objects in a bucket,
+- For general purpose buckets, ListObjectsV2 returns objects in lexicographical order based on their key names
+- Directory bucket - For directory buckets, ListObjectsV2 does not return objects in lexicographical order.
+  - Directory buckets **are not supported** in the current release of the S3 Source Connector
+The S3 Source connector uses the S3 ListObjectsV2 API with the 'startAfter' token allowing the connector to minimize the number of objects which are returned to the connector to those that it has yet to process.
+
+This has a number of impacts which should be considered:
+
+The first being that when adding Objects to S3 they should be added in lexicographical order,
+for example objects should use a date format at the beginning of the key or use the offset value to identify the file when added to S3 from a sink connector.
+
+The second consideration is that when using the source connector that if it is querying for new entries, if the connector process a file which is lexicographical larger and which uploaded to S3 quicker then another file due to
+various reasons such as an API error with retries or the file being generally larger, it might be prudent to increase the `aws.s3.fetch.buffer.size` to ensure that the source connector
+is always allowing for scenarios where a file is not uploaded in sequence. Any file which has already been processed will not be reprocessed as it is only added to the buffer after the file has completed processing.
+A maximum 1,000 results are returned with each query, it may be of benefit to set the `aws.s3.fetch.buffer.size` to this maximum or slightly larger to ensure you do not miss any Objects.
+
+If used in conjunction with the Aiven S3 Sink Connector, it should be possible to reduce this number to as low as '1' if you have one task per partition as the sink connector will only upload one file per partition at a time.
+
+
 
 ### Retry strategy configuration
 

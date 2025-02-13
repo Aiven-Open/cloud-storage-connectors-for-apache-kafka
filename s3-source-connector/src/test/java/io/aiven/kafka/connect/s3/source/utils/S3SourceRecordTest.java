@@ -28,6 +28,7 @@ import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
@@ -44,6 +45,9 @@ class S3SourceRecordTest {
     public static final String BUCKET_ONE = "bucket-one";
     @Mock
     private S3SourceConfig s3SourceConfig;
+
+    @Mock
+    private OffsetManager<S3OffsetManagerEntry> offsetManager;
 
     private Context<String> context;
 
@@ -63,7 +67,7 @@ class S3SourceRecordTest {
         s3Record.setValueData(new SchemaAndValue(null, ""));
         s3Record.setKeyData(new SchemaAndValue(null, ""));
 
-        final SourceRecord result = s3Record.getSourceRecord(ErrorsTolerance.NONE);
+        final SourceRecord result = s3Record.getSourceRecord(ErrorsTolerance.NONE, offsetManager);
 
         assertThat(result.topic()).isEqualTo(topic);
         assertThat(result.kafkaPartition()).isEqualTo(null);
@@ -81,8 +85,8 @@ class S3SourceRecordTest {
         s3Record.setContext(context);
 
         assertThatExceptionOfType(ConnectException.class).as("Errors tolerance: NONE")
-                .isThrownBy(() -> s3Record.getSourceRecord(ErrorsTolerance.NONE));
-        final SourceRecord result = s3Record.getSourceRecord(ErrorsTolerance.ALL);
+                .isThrownBy(() -> s3Record.getSourceRecord(ErrorsTolerance.NONE, offsetManager));
+        final SourceRecord result = s3Record.getSourceRecord(ErrorsTolerance.ALL, offsetManager);
         assertThat(result).isNull();
     }
 
@@ -102,7 +106,7 @@ class S3SourceRecordTest {
         // alter context and it should have no impact on the source record.
         context.setPartition(14);
         context.setTopic("a-diff-topic");
-        SourceRecord result = s3Record.getSourceRecord(ErrorsTolerance.NONE);
+        SourceRecord result = s3Record.getSourceRecord(ErrorsTolerance.NONE, offsetManager);
         assertThat(result.topic()).isEqualTo(topic);
         assertThat(result.kafkaPartition()).isEqualTo(null);
 
@@ -110,7 +114,7 @@ class S3SourceRecordTest {
         context = s3Record.getContext();
         context.setPartition(99);
         context.setTopic("another-diff-topic");
-        result = s3Record.getSourceRecord(ErrorsTolerance.NONE);
+        result = s3Record.getSourceRecord(ErrorsTolerance.NONE, offsetManager);
         assertThat(result.topic()).isEqualTo(topic);
         assertThat(result.kafkaPartition()).isEqualTo(null);
 

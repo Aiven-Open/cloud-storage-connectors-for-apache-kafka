@@ -113,13 +113,12 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG = "aws.s3.backoff.max.retries";
 
     public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
+    public static final String AWS_S3_FETCH_BUFFER_SIZE = "aws.s3.fetch.buffer.size";
 
     private static final String GROUP_AWS = "AWS";
     private static final String GROUP_AWS_STS = "AWS STS";
 
     private static final String GROUP_S3_RETRY_BACKOFF_POLICY = "S3 retry backoff policy";
-
-    public static final int DEFAULT_PART_SIZE = 5 * 1024 * 1024;
 
     // Default values from AWS SDK, since they are hidden
     public static final int AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT = 100;
@@ -223,9 +222,15 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
         configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, awsGroupCounter++, // NOPMD
-                // UnusedAssignment
+                ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, FETCH_PAGE_SIZE);
+
+        configDef.define(AWS_S3_FETCH_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(1),
+                ConfigDef.Importance.MEDIUM,
+                "AWS S3 Fetch buffer size, this is the number of s3object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
+                GROUP_AWS, awsGroupCounter++, // NOPMD
+                // UnusedAssignment
+                ConfigDef.Width.NONE, AWS_S3_FETCH_BUFFER_SIZE);
     }
 
     static void addAwsStsConfigGroup(final ConfigDef configDef) {
@@ -521,6 +526,10 @@ public final class S3ConfigFragment extends ConfigFragment {
 
     public int getFetchPageSize() {
         return cfg.getInt(FETCH_PAGE_SIZE);
+    }
+
+    public int getS3FetchBufferSize() {
+        return cfg.getInt(AWS_S3_FETCH_BUFFER_SIZE);
     }
 
 }
