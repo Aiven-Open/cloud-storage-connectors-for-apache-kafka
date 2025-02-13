@@ -22,13 +22,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
@@ -76,16 +77,21 @@ public abstract class AbstractSourceTask extends SourceTask {
     private int maxPollRecords;
 
     /**
+     * The transfer queue from concrete implementation to Kafka
+     */
+    private LinkedBlockingQueue<SourceRecord> queue;
+
+    /**
+     * The thread that is running the polling of the implementation.
+     */
+    private final Thread implemtationPollingThread;
+
+    /**
      * The Backoff implementation that executes the delay in the poll loop.
      */
     private final Backoff backoff;
 
-    private final Timer timer;
-
-    /**
-     * The configuration
-     */
-    private SourceCommonConfig config;
+    private final BackoffConfig backoffConfig;
 
     private Iterator<SourceRecord> sourceRecordIterator;
 
@@ -99,8 +105,42 @@ public abstract class AbstractSourceTask extends SourceTask {
         super();
         this.logger = logger;
         connectorStopped = new AtomicBoolean();
-        timer = new Timer(MAX_POLL_TIME);
-        backoff = new Backoff(timer.getBackoffConfig());
+        backoffConfig = new BackoffConfig() {
+            @Override
+            public SupplierOfLong getSupplierOfTimeRemaining() {
+                return MAX_POLL_TIME::toMillis;
+            }
+
+            @Override
+            public AbortTrigger getAbortTrigger() {
+                return () -> {
+                };
+            }
+
+            @Override
+            public boolean applyTimerRule() {
+                return false;
+            }
+        };
+        backoff = new Backoff(backoffConfig);
+        implemtationPollingThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    while (stillPolling()) {
+                        if (!tryAdd()) {
+                            logger.debug("Attempting {}", backoff);
+                            backoff.cleanDelay();
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    logger.warn("{} interrupted -- EXITING", this.toString());
+                } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
+                    logger.error("{} failed -- EXITING", this.toString(), e);
+                }
+
+            }
+        }, this.getClass().getName() + " polling thread");
     }
 
     /**
@@ -130,31 +170,33 @@ public abstract class AbstractSourceTask extends SourceTask {
     @Override
     public final void start(final Map<String, String> props) {
         logger.debug("Starting");
-        config = configure(props);
+        final SourceCommonConfig config = configure(props);
         maxPollRecords = config.getMaxPollRecords();
-        sourceRecordIterator = getIterator(timer.getBackoffConfig());
+        queue = new LinkedBlockingQueue<>(maxPollRecords * 2);
+        sourceRecordIterator = getIterator(backoffConfig);
+        implemtationPollingThread.start();
     }
 
     /**
      * Try to add a SourceRecord to the results.
      *
-     * @param results
-     *            the result to add the record to.
-     * @param sourceRecordIterator
-     *            the source record iterator.
      * @return true if successful, false if the iterator is empty.
      */
-    private boolean tryAdd(final List<SourceRecord> results, final Iterator<SourceRecord> sourceRecordIterator) {
-        if (sourceRecordIterator.hasNext()) {
-            backoff.reset();
-            final SourceRecord sourceRecord = sourceRecordIterator.next();
-            if (logger.isDebugEnabled()) {
-                logger.debug("tryAdd() : read record {}", sourceRecord.sourceOffset());
+    private boolean tryAdd() throws InterruptedException {
+        if (queue.remainingCapacity() > 0) {
+            if (sourceRecordIterator.hasNext()) {
+                backoff.reset();
+                final SourceRecord sourceRecord = sourceRecordIterator.next();
+                if (logger.isDebugEnabled()) {
+                    logger.debug("tryAdd() : read record {}", sourceRecord.sourceOffset());
+                }
+                queue.put(sourceRecord);
+                return true;
             }
-            results.add(sourceRecord);
-            return true;
+            logger.info("No records found in tryAdd call");
+        } else {
+            logger.info("No space in queue");
         }
-        logger.info("No records found in tryAdd call");
         return false;
     }
 
@@ -164,7 +206,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * @return {@code true} if the connector is not stopped and the timer has not expired.
      */
     protected final boolean stillPolling() {
-        final boolean result = !connectorStopped.get() && !timer.isExpired();
+        final boolean result = !connectorStopped.get();
         logger.debug("Still polling: {}", result);
         return result;
     }
@@ -172,54 +214,21 @@ public abstract class AbstractSourceTask extends SourceTask {
     @Override
     public final List<SourceRecord> poll() {
         logger.debug("Polling");
-        if (connectorStopped.get()) {
+        if (stillPolling()) {
+            List<SourceRecord> results = new ArrayList<>(maxPollRecords);
+            results = 0 == queue.drainTo(results, maxPollRecords) ? NULL_RESULT : results;
+            if (logger.isDebugEnabled()) {
+                logger.debug("Poll() returning {} SourceRecords.", results == null ? null : results.size());
+            }
+            if (results == null && !implemtationPollingThread.isAlive()) {
+                throw new ConnectException(implemtationPollingThread.getName() + " has died");
+            }
+            return results;
+        } else {
             logger.info("Stopping");
             closeResources();
             return NULL_RESULT;
-        } else {
-            timer.start();
-            try {
-                final List<SourceRecord> result = populateList();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Poll() returning {} SourceRecords.", result == null ? null : result.size());
-                }
-                return result;
-            } finally {
-                timer.stop();
-                timer.reset();
-            }
         }
-    }
-
-    /**
-     * Attempts to populate the return list. Will read as many records into the list as it can until the timer expires
-     * or the task is shut down.
-     *
-     * @return A list SourceRecords or {@code null} if the system hit a runtime exception.
-     */
-    private List<SourceRecord> populateList() {
-        final List<SourceRecord> results = new ArrayList<>();
-        try {
-            while (stillPolling() && results.size() < maxPollRecords) {
-                if (!tryAdd(results, sourceRecordIterator)) {
-                    if (!results.isEmpty()) {
-                        logger.debug("tryAdd() did not add to the list, returning current results.");
-                        // if we could not get a record and the results are not empty return them
-                        break;
-                    }
-                    logger.debug("Attempting {}", backoff);
-                    backoff.cleanDelay();
-                }
-            }
-
-        } catch (RuntimeException e) { // NOPMD must catch runtime here.
-            logger.error("Error during poll(): {}", e.getMessage(), e);
-            if (config.getErrorsTolerance() == ErrorsTolerance.NONE) {
-                logger.error("Stopping Task");
-                throw e;
-            }
-        }
-        return results.isEmpty() ? NULL_RESULT : results;
     }
 
     @Override
@@ -358,12 +367,12 @@ public abstract class AbstractSourceTask extends SourceTask {
         /**
          * A supplier of the time remaining (in milliseconds) on the overriding timer.
          */
-        private final SupplierOfLong timeRemaining;
+        protected final SupplierOfLong timeRemaining;
 
         /**
          * A function to call to abort the timer.
          */
-        private final AbortTrigger abortTrigger;
+        protected final AbortTrigger abortTrigger;
 
         /**
          * The maximum number of times {@link #delay()} will be called before maxWait is reached.
@@ -373,6 +382,10 @@ public abstract class AbstractSourceTask extends SourceTask {
          * The number of times {@link #delay()} has been called.
          */
         private int waitCount;
+        /**
+         * If true then when wait count is exceeded {@link ##delay()} automatically returns without delay.
+         */
+        private final boolean applyTimerRule;
 
         /**
          * A random number generator to construct jitter.
@@ -388,6 +401,7 @@ public abstract class AbstractSourceTask extends SourceTask {
         public Backoff(final BackoffConfig config) {
             this.timeRemaining = config.getSupplierOfTimeRemaining();
             this.abortTrigger = config.getAbortTrigger();
+            this.applyTimerRule = config.applyTimerRule();
             reset();
         }
 
@@ -395,7 +409,7 @@ public abstract class AbstractSourceTask extends SourceTask {
          * Reset the backoff time so that delay is again at the minimum.
          */
         public final void reset() {
-            // if the reminaing time is 0 or negative the maxCount will be infinity
+            // if the remaining time is 0 or negative the maxCount will be infinity
             // so make sure that it is 0 in that case.
             final long remainingTime = timeRemaining.get();
             maxCount = remainingTime < 1L ? 0 : (int) (Math.log10(remainingTime) / Math.log10(2));
@@ -416,7 +430,7 @@ public abstract class AbstractSourceTask extends SourceTask {
         }
 
         /**
-         * Calculates the delay wihtout jitter.
+         * Calculates the delay without jitter.
          *
          * @return the number of milliseconds the delay will be.
          */
@@ -444,6 +458,23 @@ public abstract class AbstractSourceTask extends SourceTask {
         }
 
         /**
+         * If {@link #applyTimerRule} is true then this method will return false if the wait count has exceeded the
+         * maximum count. Otherwise it returns true. This method also increments the wait count if the wait count is
+         * less than the maximum count.
+         *
+         * @return true if sleep should occur.
+         */
+        private boolean shouldSleep(final long sleepTime) {
+            // maxcount may have been reset so check and set if necessary.
+            final boolean result = sleepTime > 0
+                    && (!applyTimerRule || waitCount < (maxCount == 0 ? getMaxCount() : maxCount));
+            if (waitCount < maxCount) {
+                waitCount++;
+            }
+            return result;
+        }
+
+        /**
          * Delay execution based on the number of times this method has been called.
          *
          * @throws InterruptedException
@@ -451,8 +482,7 @@ public abstract class AbstractSourceTask extends SourceTask {
          */
         public void delay() throws InterruptedException {
             final long sleepTime = timeRemaining.get();
-            if (sleepTime > 0 && waitCount < (maxCount == 0 ? getMaxCount() : maxCount)) {
-                waitCount++;
+            if (shouldSleep(sleepTime)) {
                 final long nextSleep = timeWithJitter();
                 // don't sleep negative time. Jitter can introduce negative tme.
                 if (nextSleep > 0) {
@@ -505,7 +535,30 @@ public abstract class AbstractSourceTask extends SourceTask {
      * An interface to define the Backoff configuration. Used for convenience with Timer.
      */
     public interface BackoffConfig {
+        /**
+         * Gets Supplier that will return the number of milliseconds remaining in the timer. Should be the maximum delay
+         * for situations that do not use a timer.
+         *
+         * @return A supplier of the number of milliseconds until the timer expires.
+         */
         SupplierOfLong getSupplierOfTimeRemaining();
+
+        /**
+         * The AbortTrigger that will abort the timer.
+         *
+         * @return the AbortTrigger.
+         */
         AbortTrigger getAbortTrigger();
+
+        /**
+         * Gets the abort timer rule flag. If there is no timer that may expire and shorten the time for the delay then
+         * this value should be {@code false} otherwise if the delay time will exceed the maximum time remaining no
+         * delay is executed. By default, the false is {@code true}.
+         *
+         * @return The abort time rule flag.
+         */
+        default boolean applyTimerRule() {
+            return true;
+        }
     }
 }
