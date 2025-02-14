@@ -40,7 +40,6 @@ import software.amazon.awssdk.services.s3.model.S3Object;
  */
 public class AWSV2SourceClient {
 
-    public static final int PAGE_SIZE_FACTOR = 2;
     private final S3SourceConfig s3SourceConfig;
     private final S3Client s3Client;
     private final String bucketName;
@@ -79,7 +78,7 @@ public class AWSV2SourceClient {
     public Stream<S3Object> getS3ObjectStream(final String startToken) {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
-                .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
+                .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize())
                 .prefix(StringUtils.defaultIfBlank(s3SourceConfig.getAwsS3Prefix(), null))
                 .startAfter(StringUtils.defaultIfBlank(startToken, null))
                 .build();
@@ -89,7 +88,7 @@ public class AWSV2SourceClient {
             if (response.isTruncated()) {
                 return s3Client.listObjectsV2(ListObjectsV2Request.builder()
                         .bucket(bucketName)
-                        .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize() * PAGE_SIZE_FACTOR)
+                        .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize())
                         .continuationToken(response.nextContinuationToken())
                         .build());
             } else {

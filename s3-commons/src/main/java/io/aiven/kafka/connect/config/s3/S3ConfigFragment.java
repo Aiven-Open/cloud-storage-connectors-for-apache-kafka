@@ -418,12 +418,20 @@ public final class S3ConfigFragment extends ConfigFragment {
         return new AwsStsEndpointConfig(cfg.getString(AWS_STS_CONFIG_ENDPOINT), cfg.getString(AWS_S3_REGION_CONFIG));
     }
 
+    /**
+     * @deprecated getAwsEndpointConfiguration uses the AWS SDK 1.X which is deprecated and out of maintenance in
+     *             December 2025 After upgrading to use SDK 2.X this no longer is required.
+     */
     @Deprecated
     public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
         final AwsStsEndpointConfig config = getStsEndpointConfig();
         return new AwsClientBuilder.EndpointConfiguration(config.getServiceEndpoint(), config.getSigningRegion());
     }
 
+    /**
+     * @deprecated Use {@link #getAwsCredentialsV2} instead getAwsCredentials uses the AWS SDK 1.X which is deprecated
+     *             and out of maintenance in December 2025
+     */
     @Deprecated
     public BasicAWSCredentials getAwsCredentials() {
         if (Objects.nonNull(cfg.getPassword(AWS_ACCESS_KEY_ID_CONFIG))
@@ -459,6 +467,11 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ? cfg.getString(AWS_S3_ENDPOINT_CONFIG)
                 : cfg.getString(AWS_S3_ENDPOINT);
     }
+
+    /**
+     * @deprecated Use {@link #getAwsS3RegionV2} instead getAwsS3Region uses the AWS SDK 1.X which is deprecated and out
+     *             of maintenance in December 2025
+     */
     @Deprecated
     public Region getAwsS3Region() {
         // we have priority of properties if old one not set or both old and new one set

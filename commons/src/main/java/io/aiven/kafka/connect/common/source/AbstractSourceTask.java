@@ -144,7 +144,7 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     /**
-     * Gets the iterator of SourceRecords. The iterator that SourceRecords are extracted from during a poll event. When
+     * Gets the iterator of SourceRecords. The iterator that SourceRecords are extracted from for a poll event. When
      * this iterator runs out of records it should attempt to reset and read more records from the backend on the next
      * {@code hasNext()} call. In this way it should detect when new data has been added to the backend and continue
      * processing.
@@ -490,7 +490,7 @@ public abstract class AbstractSourceTask extends SourceTask {
                         LOGGER.debug("Backoff aborting timer");
                         abortTrigger.apply();
                     } else {
-                        LOGGER.debug("Backoff sleepiing {}", nextSleep);
+                        LOGGER.debug("Backoff sleeping {}", nextSleep);
                         Thread.sleep(nextSleep);
                     }
                 }
