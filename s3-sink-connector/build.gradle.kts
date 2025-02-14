@@ -117,7 +117,6 @@ dependencies {
 
   integrationTestImplementation(apache.avro)
 
-  testImplementation(apache.parquet.tools) { exclude(group = "org.slf4j", module = "slf4j-api") }
   testImplementation(apache.hadoop.mapreduce.client.core) {
     exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
     exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")
