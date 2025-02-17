@@ -131,9 +131,9 @@ public abstract class Transformer {
          * Allows modification of input stream. Called immediatly after the input stream is opened. Implementations may
          * modify the type of input stream by wrapping it with a specific implementation, or may create Readers from the
          * input stream. The modified input stream must be returned. If a Reader or similar class is created from the
-         * input stream the input stream must be returned. The input stream will be null until {@link #inputOpened} has
-         * completed. The implementation of the interface is responsible for closing any newly constructed readers or
-         * input streams in the doClose() method.
+         * input stream the input stream must be returned. The {@link #inputStream} instance variable will be null until
+         * {@link #inputOpened} has completed. The implementation of the interface is responsible for closing any newly
+         * constructed readers or input streams in the doClose() method.
          *
          * @param input
          *            the input stream that was just opened.
