@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source.config;
 
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,7 +44,7 @@ final class S3SourceConfigTest {
 
         // record, topic specific props
         props.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
-        props.put(TARGET_TOPICS, "testtopic");
+        props.put(TARGET_TOPIC, "testtopic");
         props.put(SCHEMA_REGISTRY_URL, "localhost:8081");
 
         final var conf = new S3SourceConfig(props);

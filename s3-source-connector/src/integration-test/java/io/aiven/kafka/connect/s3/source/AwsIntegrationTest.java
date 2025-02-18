@@ -19,7 +19,7 @@ package io.aiven.kafka.connect.s3.source;
 import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.AVRO_VALUE_SERIALIZER;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
@@ -123,7 +123,7 @@ class AwsIntegrationTest implements IntegrationBase {
         config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);
         config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
         config.put(AWS_S3_PREFIX_CONFIG, getS3Prefix());
-        config.put(TARGET_TOPICS, topics);
+        config.put(TARGET_TOPIC, topics);
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(MAX_TASKS, String.valueOf(maxTasks));
