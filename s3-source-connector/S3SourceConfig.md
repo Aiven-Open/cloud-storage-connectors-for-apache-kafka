@@ -319,13 +319,13 @@ Output fields. A comma separated list of one or more: key, offset, timestamp, va
 
 SCHEMA REGISTRY URL
 
-## topics
+## topic
 - Default value: null
 - Type: STRING
 - Valid values: non\-empty string
 - Importance: MEDIUM
 
-eg : connect-storage-offsets
+eg : logging-topic
 
 ## input\.format
 - Default value: 4096

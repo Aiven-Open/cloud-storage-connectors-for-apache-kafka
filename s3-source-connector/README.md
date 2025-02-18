@@ -30,7 +30,7 @@ The connector needs the following permissions to the specified bucket:
 * ``s3:GetObject``
 * ``s3:ListObjectsV2``
 
-In case of ``Access Denied`` error, see the [AWS documentation](https://aws.amazon.com/premiumsupport/knowledge-center/s3-troubleshoot-403/).
+In case of ``Access Denied`` error, see the [AWS documentation](https://aws.amazon.com/premiumsupport/knowledge-center/S3-troubleshoot-403/).
 
 #### Authentication
 
@@ -82,15 +82,13 @@ The file name format supports placeholders with variable names of the form: `{{v
 
 **NOTE:** The `file.name.template` may accidentally match unintended parts of the S3 object key as is noted in the table below.
 
-e.g. {{topic}}-{{partition}}-{{start_offset}} could have multiple matches in 22-11-2022/topic-1-000020202.txt
-
-Example templates are mentioned below.
-
- | pattern | matches                                                        |
- | ------- |----------------------------------------------------------------|
- | {{topic}}-{{partition}}-{{start_offset}} | `customer-topic-1-1734445664111.txt` |
- | {{topic}}/{{partition}}/{{start_offset}} | `customer-topic/1/1734445664111.txt` |
-  | topic/{{topic}}/partition/{{partition}}/startOffset/{{start_offset}} | `topic/customer-topic/partition/1/startOffset/1734445664111.txt` |
+#### Pattern match examples
+ | pattern | matches                                                          | values                                                        |
+ | ------- |------------------------------------------------------------------|---------------------------------------------------------------|
+ | {{topic}}-{{partition}}-{{start_offset}} | `customer-topic-1-1734445664111.txt`                             | topic=customer-topic, partition=1, start_offset=1734445664111 |
+ | {{topic}}-{{partition}}-{{start_offset}} | `22-10-12/customer-topic-1-1734445664111.txt`                    | topic=22, partition=10, start_offset=112                      |
+ | {{topic}}/{{partition}}/{{start_offset}} | `customer-topic/1/1734445664111.txt`                             | topic=customer-topic, partition=1, start_offset=1734445664111 |
+  | topic/{{topic}}/partition/{{partition}}/startOffset/{{start_offset}} | `topic/customer-topic/partition/1/startOffset/1734445664111.txt` | topic=customer-topic, partition=1, start_offset=1734445664111 |
 
 
 ## Data Format
@@ -99,8 +97,8 @@ Example templates are mentioned below.
 
 The Kafka topic name(s) on which the extracted data will be written are specified by one of the following.  The options are checked in the order specified here and the first result is used.
 
-1. The `{{topic}}` entry in the `file.name.template`.
-2. The  `topics` configuration file entry.
+1. The  `topics` configuration file entry.
+2. The `{{topic}}` entry in the `file.name.template`.
 
 ### Kafka partitions
 
@@ -148,14 +146,12 @@ For example, if we output `key,value,offset,timestamp`, a record line might look
 
 org.apache.kafka.connect.json.JsonConverter is used internally to convert this data and make output files human-readable.
 
-**NB!**
-
-- Value/Key schema will not be presented in output kafka event, even if `value.converter.schemas.enable` property is `true`,
+**Note:** Value/Key schema will not be presented in output kafka event, even if `value.converter.schemas.enable` property is `true`,
   however, if this is set to true, it has no impact at the moment.
 
 #### Parquet or Avro format example
 
-For example, if we input `key,offset,timestamp,headers,value`, an input - Parquet schema in an s3 object might look like this:
+For example, if we input `key,offset,timestamp,headers,value`, an input - Parquet schema in an S3 object might look like this:
 ```json
 {
     "type": "record", "fields": [
@@ -205,6 +201,18 @@ the final `Avro` schema for `Parquet` is:
 }
 ```
 **Note:** The connector works just fine with and without a schema registry.
+
+
+### Acked Records
+
+When records are delivered to Kafka the Kafka system will send an Ack for each record.  When debug logging is enabled, the acks are noted in the log.
+The ack signifies that the record has been received by Kafka but may not yet be written to the `offset topic`.  If the connector stopped and restarted
+fast enough it may attempt to read from the `offset topic` before Kafka has written the data.  This is an extremity rare occurrence but will result in
+duplicated delivery of some records.
+
+The `offset topic` is a topic that Kafka uses to track the offsets that the connector has sent.  This topic is used when restarting the connector to determine
+where in the S3 object stream to start processing.  If an S3 object contains multiple records, for example in a parquet file, the `offset topic` will record which
+record within the S3 object was the last one sent.
 
 ## Usage
 
@@ -260,10 +268,8 @@ key.converter=org.apache.kafka.connect.storage.StringConverter
 # The supported values are: `jsonl`, 'avro', `parquet` and 'bytes'.
 input.type=jsonl
 
-# A comma-separated list of topics to use as output for this connector
-# Also a regular expression version `topics.regex` is supported.
-# See https://kafka.apache.org/documentation/#connect_configuring
-topics=topic1,topic2
+# The topic to use as output for this connector
+topic=topic1
 
 ### Connector-specific configuration
 ### Fill in you values
@@ -376,4 +382,4 @@ This project is licensed under the [Apache License, Version 2.0](LICENSE).
 
 ## Trademarks
 
-Apache Kafka, Apache Kafka Connect are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries. AWS S3 is a trademark and property of their respective owners. All product and service names used in this website are for identification purposes only and do not imply endorsement.
+Apache Kafka, Apache Kafka Connect, Parquet, and Avro are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries. AWS and Amazon S3 are a trademarks and property of  Amazon Web Services, Inc. All product and service names used in this website are for identification purposes only and do not imply endorsement.
