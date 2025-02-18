@@ -83,7 +83,6 @@ dependencies {
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
   testImplementation(testinglibs.junit.jupiter)
-  testImplementation(apache.parquet.tools) { exclude(group = "org.slf4j", module = "slf4j-api") }
   testImplementation(jackson.databind)
   testImplementation(testinglibs.mockito.core)
   testImplementation(testinglibs.assertj.core)

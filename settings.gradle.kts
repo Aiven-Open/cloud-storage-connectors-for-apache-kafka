@@ -17,7 +17,7 @@ val kafkaVersion by extra("1.1.0")
 val logbackVersion by extra("1.5.6")
 val localstackVersion by extra("0.2.23")
 val mockitoVersion by extra("5.12.0")
-val parquetVersion by extra("1.11.2")
+val parquetVersion by extra("1.15.0")
 val slf4jVersion by extra("1.7.36")
 val snappyVersion by extra("1.1.10.5")
 val spotbugsAnnotationsVersion by extra("4.8.1")
@@ -43,8 +43,6 @@ dependencyResolutionManagement {
           "hadoop-mapreduce-client-core",
           "org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion")
       library("parquet-avro", "org.apache.parquet:parquet-avro:$parquetVersion")
-      library("parquet-tools", "org.apache.parquet:parquet-tools:$parquetVersion")
-      library("parquet-hadoop", "org.apache.parquet:parquet-hadoop:$parquetVersion")
     }
     create("compressionlibs") {
       library("snappy", "org.xerial.snappy:snappy-java:$snappyVersion")
