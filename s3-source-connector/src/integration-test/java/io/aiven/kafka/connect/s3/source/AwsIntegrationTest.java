@@ -116,14 +116,14 @@ class AwsIntegrationTest implements IntegrationBase {
         s3Client.close();
     }
 
-    private Map<String, String> getConfig(final String topics, final int maxTasks) {
+    private Map<String, String> getConfig(final String topic, final int maxTasks) {
         final Map<String, String> config = new HashMap<>();
         config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
         config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
         config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);
         config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
         config.put(AWS_S3_PREFIX_CONFIG, getS3Prefix());
-        config.put(TARGET_TOPIC, topics);
+        config.put(TARGET_TOPIC, topic);
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(MAX_TASKS, String.valueOf(maxTasks));

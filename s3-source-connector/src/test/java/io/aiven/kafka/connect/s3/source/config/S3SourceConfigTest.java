@@ -57,7 +57,7 @@ final class S3SourceConfigTest {
         assertThat(conf.getAwsS3Region()).isEqualTo(Region.of("us-east-1"));
 
         assertThat(conf.getInputFormat()).isEqualTo(InputFormat.AVRO);
-        assertThat(conf.getTargetTopics()).isEqualTo("testtopic");
+        assertThat(conf.getTargetTopic()).isEqualTo("testtopic");
         assertThat(conf.getSchemaRegistryUrl()).isEqualTo("localhost:8081");
 
         assertThat(conf.getS3RetryBackoffDelayMs()).isEqualTo(S3ConfigFragment.AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT);

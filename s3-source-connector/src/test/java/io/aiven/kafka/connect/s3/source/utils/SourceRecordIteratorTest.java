@@ -87,7 +87,7 @@ final class SourceRecordIteratorTest {
         when(s3SourceConfig.getMaxTasks()).thenReturn(maxTasks);
         when(s3SourceConfig.getS3FileNameFragment()).thenReturn(mockFileNameFrag);
         when(mockFileNameFrag.getFilenameTemplate()).thenReturn(Template.of(filePattern));
-        when(mockConfig.getTargetTopics()).thenReturn(targetTopic);
+        when(mockConfig.getTargetTopic()).thenReturn(targetTopic);
         when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
         when(mockConfig.getS3FetchBufferSize()).thenReturn(1);
     }

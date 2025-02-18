@@ -59,8 +59,8 @@ public class SourceCommonConfig extends CommonConfig {
         return transformerFragment.getSchemaRegistryUrl();
     }
 
-    public String getTargetTopics() {
-        return sourceConfigFragment.getTargetTopics();
+    public String getTargetTopic() {
+        return sourceConfigFragment.getTargetTopic();
     }
 
     public ErrorsTolerance getErrorsTolerance() {

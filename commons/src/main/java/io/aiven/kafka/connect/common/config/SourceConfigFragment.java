@@ -84,7 +84,7 @@ public final class SourceConfigFragment extends ConfigFragment {
         return configDef;
     }
 
-    public String getTargetTopics() {
+    public String getTargetTopic() {
         return cfg.getString(TARGET_TOPIC);
     }
 

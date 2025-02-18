@@ -100,7 +100,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         this.bucket = s3SourceConfig.getAwsS3BucketName();
         this.transformer = transformer;
         this.sourceClient = sourceClient;
-        this.targetTopics = Optional.ofNullable(s3SourceConfig.getTargetTopics());
+        this.targetTopics = Optional.ofNullable(s3SourceConfig.getTargetTopic());
         this.taskAssignment = new TaskAssignment(initializeDistributionStrategy());
         this.taskId = s3SourceConfig.getTaskId();
         this.fileMatching = new FileMatching(filePattern);
