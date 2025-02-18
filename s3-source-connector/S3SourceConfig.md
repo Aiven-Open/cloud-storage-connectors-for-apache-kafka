@@ -1,7 +1,7 @@
 ## aws\.access\.key\.id
 - Default value: null
 - Type: PASSWORD
-- Valid values: null, or a non empty String\.
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.NonEmptyPassword@451d6bc9
 - Importance: MEDIUM
 
 AWS Access Key ID
@@ -41,7 +41,7 @@ Maximum retry limit (if the value is greater than 30, there can be integer overf
 ## aws\.s3\.bucket\.name
 - Default value: null
 - Type: STRING
-- Valid values: Bucket name may not be null, may contain only the characters A\-Z, a\-z, 0\-9, '\-', '\.', '\_' must be between 3 and 63 characters long, must not be formatted as an IP Address, must not contain uppercase characters or white space, must not end with a period or a dash nor contains two adjacent periods, must not contain dashes next to periods nor begin with a dash
+- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$BucketNameValidator@5c936b5f
 - Importance: MEDIUM
 
 AWS S3 Bucket name
@@ -49,10 +49,18 @@ AWS S3 Bucket name
 ## aws\.s3\.endpoint
 - Default value: null
 - Type: STRING
-- Valid values: A valid URL\.  Will default to https protocol if not otherwise specified\.
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.UrlValidator@5c2fc86
 - Importance: LOW
 
 Explicit AWS S3 Endpoint Address, mainly for testing
+
+## aws\.s3\.fetch\.buffer\.size
+- Default value: 1000
+- Type: INT
+- Valid values: \[1,\.\.\.\]
+- Importance: MEDIUM
+
+AWS S3 Fetch buffer size, this is the number of s3object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.
 
 ## aws\.s3\.fetch\.page\.size
 - Default value: 10
@@ -68,15 +76,15 @@ AWS S3 Fetch page size
 - Valid values: non\-empty string
 - Importance: MEDIUM
 
-Prefix for stored objects, for example cluster-1/
+Prefix for stored objects, e.g. cluster-1/
 
 ## aws\.s3\.region
 - Default value: null
 - Type: STRING
-- Valid values: Supported values are: af\-south\-1, ap\-east\-1, ap\-northeast\-1, ap\-northeast\-2, ap\-northeast\-3, ap\-south\-1, ap\-south\-2, ap\-southeast\-1, ap\-southeast\-2, ap\-southeast\-3, ap\-southeast\-4, ca\-central\-1, ca\-west\-1, cn\-north\-1, cn\-northwest\-1, eu\-central\-1, eu\-central\-2, eu\-north\-1, eu\-south\-1, eu\-south\-2, eu\-west\-1, eu\-west\-2, eu\-west\-3, il\-central\-1, me\-central\-1, me\-south\-1, sa\-east\-1, us\-east\-1, us\-east\-2, us\-gov\-east\-1, us\-gov\-west\-1, us\-iso\-east\-1, us\-iso\-west\-1, us\-isob\-east\-1, us\-west\-1, us\-west\-2
+- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$AwsRegionValidator@2baf9cd4
 - Importance: MEDIUM
 
-AWS S3 Region, for example us-east-1
+AWS S3 Region, e.g. us-east-1
 
 ## aws\.s3\.sse\.algorithm
 - Default value: null
@@ -89,7 +97,7 @@ AWS S3 Server Side Encryption Algorithm. Example values: 'AES256', 'aws:kms'.
 ## aws\.secret\.access\.key
 - Default value: null
 - Type: PASSWORD
-- Valid values: null, or a non empty String\.
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.NonEmptyPassword@50c0392d
 - Importance: MEDIUM
 
 AWS Secret Access Key
@@ -137,7 +145,7 @@ AWS STS Session name
 ## aws\_access\_key\_id
 - Default value: null
 - Type: PASSWORD
-- Valid values: null, or a non empty String\.
+- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$1@174e79f9
 - Importance: MEDIUM
 
 AWS Access Key ID
@@ -145,7 +153,7 @@ AWS Access Key ID
 ## aws\_s3\_bucket
 - Default value: null
 - Type: STRING
-- Valid values: Bucket name may not be null, may contain only the characters A\-Z, a\-z, 0\-9, '\-', '\.', '\_' must be between 3 and 63 characters long, must not be formatted as an IP Address, must not contain uppercase characters or white space, must not end with a period or a dash nor contains two adjacent periods, must not contain dashes next to periods nor begin with a dash
+- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$3@57a815a
 - Importance: MEDIUM
 
 AWS S3 Bucket name
@@ -153,7 +161,7 @@ AWS S3 Bucket name
 ## aws\_s3\_endpoint
 - Default value: null
 - Type: STRING
-- Valid values: A valid URL\.  Will default to https protocol if not otherwise specified\.
+- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$4@5264e41d
 - Importance: LOW
 
 Explicit AWS S3 Endpoint Address, mainly for testing
@@ -164,20 +172,20 @@ Explicit AWS S3 Endpoint Address, mainly for testing
 - Valid values: non\-empty string
 - Importance: MEDIUM
 
-Prefix for stored objects, for example cluster-1/
+Prefix for stored objects, e.g. cluster-1/
 
 ## aws\_s3\_region
 - Default value: null
 - Type: STRING
-- Valid values: Supported values are: af\-south\-1, ap\-east\-1, ap\-northeast\-1, ap\-northeast\-2, ap\-northeast\-3, ap\-south\-1, ap\-south\-2, ap\-southeast\-1, ap\-southeast\-2, ap\-southeast\-3, ap\-southeast\-4, ca\-central\-1, ca\-west\-1, cn\-north\-1, cn\-northwest\-1, eu\-central\-1, eu\-central\-2, eu\-north\-1, eu\-south\-1, eu\-south\-2, eu\-west\-1, eu\-west\-2, eu\-west\-3, il\-central\-1, me\-central\-1, me\-south\-1, sa\-east\-1, us\-east\-1, us\-east\-2, us\-gov\-east\-1, us\-gov\-west\-1, us\-iso\-east\-1, us\-iso\-west\-1, us\-isob\-east\-1, us\-west\-1, us\-west\-2
+- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$5@3bca62d
 - Importance: MEDIUM
 
-AWS S3 Region, for example us-east-1
+AWS S3 Region, e.g. us-east-1
 
 ## aws\_secret\_access\_key
 - Default value: null
 - Type: PASSWORD
-- Valid values: null, or a non empty String\.
+- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$2@67d99612
 - Importance: MEDIUM
 
 AWS Secret Access Key
@@ -185,7 +193,7 @@ AWS Secret Access Key
 ## distribution\.type
 - Default value: OBJECT\_HASH
 - Type: STRING
-- Valid values: Must be one of: \[OBJECT\_HASH, PARTITION\]
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.SourceConfigFragment$ObjectDistributionStrategyValidator@36f8abe2
 - Importance: MEDIUM
 
 Based on tasks.max config and the type of strategy selected, objects are processed in distributed way by Kafka connect workers, supported values : object_hash, partition
@@ -193,7 +201,7 @@ Based on tasks.max config and the type of strategy selected, objects are process
 ## errors\.tolerance
 - Default value: NONE
 - Type: STRING
-- Valid values: io\.aiven\.kafka\.connect\.common\.config\.SourceConfigFragment$ErrorsToleranceValidator@20bd4fd2
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.SourceConfigFragment$ErrorsToleranceValidator@4349f52c
 - Importance: MEDIUM
 
 Indicates to the connector what level of exceptions are allowed before the connector stops, supported values : none,all
@@ -209,7 +217,7 @@ The largest record batch size allowed by Kafka config max.message.bytes
 ## file\.compression\.type
 - Default value: null
 - Type: STRING
-- Valid values: Supported values are: 'none', 'gzip', 'snappy', 'zstd'
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.FileCompressionTypeValidator@2522bea6
 - Importance: MEDIUM
 
 The compression type used for files put on S3. The supported values are: 'none', 'gzip', 'snappy', 'zstd'.
@@ -217,7 +225,7 @@ The compression type used for files put on S3. The supported values are: 'none',
 ## file\.max\.records
 - Default value: 0
 - Type: INT
-- Valid values: io\.aiven\.kafka\.connect\.common\.config\.FileNameFragment$1@69cd4267
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.FileNameFragment$1@e60c516
 - Importance: MEDIUM
 
 The maximum number of records to put in a single file. Must be a non-negative integer number. 0 is interpreted as "unlimited", which is the default.
@@ -225,7 +233,7 @@ The maximum number of records to put in a single file. Must be a non-negative in
 ## file\.name\.template
 - Default value: null
 - Type: STRING
-- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.FilenameTemplateValidator@1ebb6e20
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.FilenameTemplateValidator@7db4c883
 - Importance: MEDIUM
 
 The template for file names on S3. Supports `{{ variable }}` placeholders for substituting variables. Currently supported variables are `topic`, `partition`, and `start_offset` (the offset of the first record in the file). Only some combinations of variables are valid, which currently are:
@@ -234,7 +242,7 @@ The template for file names on S3. Supports `{{ variable }}` placeholders for su
 ## file\.name\.timestamp\.source
 - Default value: WALLCLOCK
 - Type: STRING
-- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.TimestampSourceValidator@85420
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.TimestampSourceValidator@7158a28c
 - Importance: LOW
 
 Specifies the the timestamp variable source. Default is wall-clock.
@@ -242,7 +250,7 @@ Specifies the the timestamp variable source. Default is wall-clock.
 ## file\.name\.timestamp\.timezone
 - Default value: Z
 - Type: STRING
-- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.TimeZoneValidator@4a81582c
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.TimeZoneValidator@413fe58f
 - Importance: LOW
 
 Specifies the timezone in which the dates and time for the timestamp variable will be treated. Use standard shot and long names. Default is UTC
@@ -258,7 +266,7 @@ Whether to enable envelope for entries with single field.
 ## format\.output\.fields
 - Default value: \[value\]
 - Type: LIST
-- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.OutputFieldsValidator@49dce561
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.OutputFieldsValidator@49ffd0cb
 - Importance: MEDIUM
 
 Fields to put into output files. The supported values are: 'key', 'value', 'offset', 'timestamp', 'headers'.
@@ -266,7 +274,7 @@ Fields to put into output files. The supported values are: 'key', 'value', 'offs
 ## format\.output\.fields\.value\.encoding
 - Default value: base64
 - Type: STRING
-- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.OutputFieldsEncodingValidator@c534814
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.OutputFieldsEncodingValidator@1254e9a7
 - Importance: MEDIUM
 
 The type of encoding for the value field. The supported values are: 'none', 'base64'.
@@ -274,10 +282,10 @@ The type of encoding for the value field. The supported values are: 'none', 'bas
 ## format\.output\.type
 - Default value: csv
 - Type: STRING
-- Valid values: Supported values are: 'avro', 'csv', 'json', 'jsonl', 'parquet'
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.validators\.OutputTypeValidator@262c75a3
 - Importance: MEDIUM
 
-The format type of output content.
+The format type of output contentThe supported values are: 'avro', 'csv', 'json', 'jsonl', 'parquet'.
 
 ## input\.format
 - Default value: bytes
@@ -298,7 +306,7 @@ Max poll records
 ## output\_compression
 - Default value: null
 - Type: STRING
-- Valid values: Supported values are: 'none', 'gzip', 'snappy', 'zstd'
+- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$8@1881ef74
 - Importance: MEDIUM
 
 Output compression. Valid values are: gzip and none
@@ -306,7 +314,7 @@ Output compression. Valid values are: gzip and none
 ## output\_fields
 - Default value: null
 - Type: LIST
-- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$7@4e38b4ea
+- Valid values: io\.aiven\.kafka\.connect\.config\.s3\.S3ConfigFragment$7@2fcf1d27
 - Importance: MEDIUM
 
 Output fields. A comma separated list of one or more: key, offset, timestamp, value, headers
@@ -319,18 +327,18 @@ Output fields. A comma separated list of one or more: key, offset, timestamp, va
 
 SCHEMA REGISTRY URL
 
-## topic
+## topics
 - Default value: null
 - Type: STRING
 - Valid values: non\-empty string
 - Importance: MEDIUM
 
-eg : logging-topic
+eg : connect-storage-offsets
 
 ## input\.format
 - Default value: 4096
 - Type: INT
-- Valid values: io\.aiven\.kafka\.connect\.common\.config\.TransformerFragment$ByteArrayTransformerMaxBufferSizeValidator@eb8d539
+- Valid values: io\.aiven\.kafka\.connect\.common\.config\.TransformerFragment$ByteArrayTransformerMaxBufferSizeValidator@1ae3d0a8
 - Importance: MEDIUM
 
 Max Size of the byte buffer when using the BYTE Transformer
@@ -350,3 +358,4 @@ SCHEMA REGISTRY URL
 - Importance: MEDIUM
 
 Avro value serializer
+
