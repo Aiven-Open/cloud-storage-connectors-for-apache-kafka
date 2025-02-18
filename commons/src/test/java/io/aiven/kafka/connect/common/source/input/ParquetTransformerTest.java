@@ -37,6 +37,7 @@ import java.util.stream.Stream;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.Struct;
 
+import io.aiven.kafka.connect.common.config.ParquetTestingFixture;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.task.Context;
 
@@ -138,7 +139,8 @@ final class ParquetTransformerTest {
     }
 
     static byte[] generateMockParquetData() throws IOException {
-        final Path path = ContentUtils.getTmpFilePath("name");
+        final Path parquetFileDir = Files.createTempDirectory("parquet_tests");
+        final Path path = ParquetTestingFixture.writeParquetFile(parquetFileDir.resolve("users.parquet"), "name");
         return IOUtils.toByteArray(Files.newInputStream(path));
     }
 

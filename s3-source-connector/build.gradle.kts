@@ -190,6 +190,7 @@ dependencies {
   integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  integrationTestImplementation(testFixtures(project(":commons")))
 
   // Make test utils from 'test' available in 'integration-test'
   integrationTestImplementation(sourceSets["test"].output)
