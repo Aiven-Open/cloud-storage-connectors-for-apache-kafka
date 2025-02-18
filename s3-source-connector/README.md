@@ -107,8 +107,7 @@ The Kafka topic name(s) on which the extracted data will be written are specifie
 The Kafka partitions on which the extracted data will be written are specified by one of the following.  The options are checked in the order specified here and the first result is used.
 
 1. The `{{partition}}` entry in the `file.name.template`.
-2. The `topics.partitions` configuration file entry.
-3. A partition by the Kafka producer.  The [producer java documentation](https://kafka.apache.org/23/javadoc/org/apache/kafka/clients/producer/ProducerRecord.html) states: ```If a valid partition number is specified that partition will be used when sending the record. If no partition is specified but a key is present a partition will be chosen using a hash of the key. If neither key nor partition is present a partition will be assigned in a round-robin fashion.```
+2. A partition by the Kafka producer.  The [producer java documentation](https://kafka.apache.org/23/javadoc/org/apache/kafka/clients/producer/ProducerRecord.html) states: ```If a valid partition number is specified that partition will be used when sending the record. If no partition is specified but a key is present a partition will be chosen using a hash of the key. If neither key nor partition is present a partition will be assigned in a round-robin fashion.```  This connector alwasy produces a key.
 
 ### Data File Format
 
@@ -295,7 +294,7 @@ errors.tolerance=none
 aws.s3.fetch.buffer.size=1000
 ```
 
-We have produces a [complete S3Source configuration](configuration.md) 
+We have produces a [complete S3Source configuration](S3SourceConfig.md) 
 
 ### How the AWS S3 API works
 The Aws S3 ListObjectsV2 api which the S3 Source Connector uses to list all objects in a bucket,
