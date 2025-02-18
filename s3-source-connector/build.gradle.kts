@@ -77,7 +77,7 @@ dependencies {
   implementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
-  integrationTestImplementation(apache.parquet.hadoop)
+
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(testinglibs.awaitility)
