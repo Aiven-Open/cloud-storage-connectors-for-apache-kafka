@@ -52,8 +52,7 @@ public class ParquetTestingFixture {
     }
     /**
      * Writes 100 parquet records to the file specified using the default schema. The topic "some-topic" will be used
-     * for each record.
-     * "some-key-#" will be used for each key.
+     * for each record. "some-key-#" will be used for each key.
      *
      * @param outputFilePath
      *            the path the to the output file.
@@ -68,8 +67,7 @@ public class ParquetTestingFixture {
 
     /**
      * Writes the specified number of parquet records to the file specified using the default schema. The topic
-     * "some-topic" will be used for each record.
-     * "some-key-#" will be used for each key.
+     * "some-topic" will be used for each record. "some-key-#" will be used for each key.
      *
      * @param outputFilePath
      *            the path the to the output file.
@@ -80,11 +78,10 @@ public class ParquetTestingFixture {
      * @throws IOException
      *             on output error.
      */
-    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public static Path writeParquetFile(final Path outputFilePath, final String name, final int numOfRecords)
             throws IOException {
-        Schema schema;
-        schema = testSchema();
+        Schema schema = testSchema();
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
