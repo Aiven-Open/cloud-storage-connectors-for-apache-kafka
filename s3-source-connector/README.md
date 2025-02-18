@@ -1,6 +1,9 @@
 # Aiven's S3 Source Connector for Apache Kafka
 
-This is a source Apache Kafka Connect connector that stores AWS S3 bucket objects onto an Apache Kafka topic.
+This is a source Apache Kafka Connect connector that takes stored AWS S3 bucket objects and places them onto an Apache Kafka topic.
+
+The connector class name is: `io.aiven.kafka.connect.s3.S3SourceConnector`.
+
 
 **Table of Contents**
 
@@ -19,7 +22,7 @@ published into the corresponding Kafka topic.
 
 ### Requirements
 
-The connector requires Java 11 or newer for development and production.
+The connector requires Java 11 or Java 17 for development and production.  These are the same versions supported for Kafka Connect development and production.
 
 #### Authorization
 
@@ -27,20 +30,22 @@ The connector needs the following permissions to the specified bucket:
 * ``s3:GetObject``
 * ``s3:ListObjectsV2``
 
-In case of ``Access Denied`` error, see https://aws.amazon.com/premiumsupport/knowledge-center/s3-troubleshoot-403/
+In case of ``Access Denied`` error, see the [AWS documentation](https://aws.amazon.com/premiumsupport/knowledge-center/S3-troubleshoot-403/).
 
 #### Authentication
 
 To make the connector work, a user has to specify AWS credentials that allow writing to S3.
-There are two ways to specify AWS credentials in this connector:
+There are several ways to specify AWS credentials in this connector:
 
 1) Long term credentials.
 
    It requires both `aws.access.key.id` and `aws.secret.access.key` to be specified.
+
 2) Short term credentials.
 
    The connector will request a temporary token from the AWS STS service and assume a role from another AWS account.
    It requires `aws.sts.role.arn`, `aws.sts.role.session.name` to be specified.
+
 3) Use default provider chain or custom provider
 
    If you prefer to use AWS default provider chain, you can leave {`aws.access.key.id` and `aws.secret.access.key`} and
@@ -50,10 +55,11 @@ There are two ways to specify AWS credentials in this connector:
 It is important not to use both 1 and 2 simultaneously.
 Using option 2, it is recommended to specify the S3 bucket region in `aws.s3.region` and the
 corresponding AWS STS endpoint in `aws.sts.config.endpoint`. It's better to specify both or none.
-It is also important to specify `aws.sts.role.external.id` for the security reason.
-(see some details [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-user_externalid.html)).
+It is also important to specify `aws.sts.role.external.id` for the security reason.  The
+[AWS Identity and Access Management](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-user_externalid.html)
+documentation provides details.
 
-### File name format
+### S3 Object key name format
 
 The connector uses the following format for input files (blobs):
 `<prefix><filename>`.
@@ -63,34 +69,43 @@ subdirectories in the bucket.
 `<filename>` is the file name. The connector has the configurable
 template for file names.
 
-    Configuration property `file.name.template` is a mandatory config. If not set, objects would not be processed.
-Example templates are mentioned below.
+The configuration property `file.name.template` is **mandatory**. If not set **no objects will be processed**.
 
-It supports placeholders with variable names:
-`{{ variable_name }}`. Currently, supported variables are:
-- `topic` - the Kafka topic;
-- `partition` - the Kafka partition;
-- `start_offset` - the Kafka offset of the first record in the file;
-- `timestamp` - the timestamp of when the Kafka record has been processed by the connector.
+The file name format supports placeholders with variable names of the form: `{{variable_name}}`.  The currently, supported variables are:
 
-Example object names :
-- {{topic}}-{{partition}}-{{start_offset}} customer-topic-1-1734445664111.txt
-- {{topic}}/{{partition}}/{{start_offset}} customer-topic/1/1734445664111.txt
-- topic/{{topic}}/partition/{{partition}}/startOffset/{{start_offset}} topic/customer-topic/partition/1/startOffset/1734445664111.txt
+  | name | matches | notes |
+  | ---- | ------- | ----- |
+  | `topic` | a-z, A-Z, 0-9, '-', '_', and '.' one or more times | Ths pattern is the Kafka topic. Once the pattern starts matching it continues until a non-matchable character is encountered or the end of the name is reached. Particular care must be taken to ensure that the topic does not match another part of the file name. If specified, this pattern will specify the topic that the data should be written to. |
+  | `partition` |  0-9 one or more times | This pattern is the Kafka partition. If specified, this pattern will specify the partition that the data should be written to. |
+  | `start_offset` |  0-9 one or more times | This is the Kafka offset of the first record in the file. |
+  | `timestamp` |  0-9 one or more times | This is the timestamp of when the Kafka record was processed by the connector. |
 
-{{topic}} is the destination kafka topic where data is produced to. This will be used if `topics` config is not defined.
+**NOTE:** The `file.name.template` may accidentally match unintended parts of the S3 object key as is noted in the table below.
+
+#### Pattern match examples
+ | pattern | matches                                                          | values                                                        |
+ | ------- |------------------------------------------------------------------|---------------------------------------------------------------|
+ | {{topic}}-{{partition}}-{{start_offset}} | `customer-topic-1-1734445664111.txt`                             | topic=customer-topic, partition=1, start_offset=1734445664111 |
+ | {{topic}}-{{partition}}-{{start_offset}} | `22-10-12/customer-topic-1-1734445664111.txt`                    | topic=22, partition=10, start_offset=112                      |
+ | {{topic}}/{{partition}}/{{start_offset}} | `customer-topic/1/1734445664111.txt`                             | topic=customer-topic, partition=1, start_offset=1734445664111 |
+  | topic/{{topic}}/partition/{{partition}}/startOffset/{{start_offset}} | `topic/customer-topic/partition/1/startOffset/1734445664111.txt` | topic=customer-topic, partition=1, start_offset=1734445664111 |
+
 
 ## Data Format
 
-Connector class name, in this case: `io.aiven.kafka.connect.s3.AivenKafkaConnectS3SourceConnector`.
-
-### S3 Object Names
-
-S3 connector reads series of files in the specified bucket.
-Each object would be of pattern `[<aws.s3.prefix>]<topic>-<partition>-<start_offset>-<extension>`
-
 ### Kafka topic names
-S3 object keys have format with topic names which would be the target kafka topics.
+
+The Kafka topic name on which the extracted data will be written is specified by one of the following.  The options are checked in the order specified here and the first result is used.
+
+1. The  `topic` configuration file entry.
+2. The `{{topic}}` entry in the `file.name.template`.
+
+### Kafka partitions
+
+The Kafka partitions on which the extracted data will be written are specified by one of the following.  The options are checked in the order specified here and the first result is used.
+
+1. The `{{partition}}` entry in the `file.name.template`.
+2. A partition by the Kafka producer.  The [producer java documentation](https://kafka.apache.org/23/javadoc/org/apache/kafka/clients/producer/ProducerRecord.html) states: ```If a valid partition number is specified that partition will be used when sending the record. If no partition is specified but a key is present a partition will be chosen using a hash of the key. If neither key nor partition is present a partition will be assigned in a round-robin fashion.```  This connector alwasy produces a key.
 
 ### Data File Format
 
@@ -131,14 +146,12 @@ For example, if we output `key,value,offset,timestamp`, a record line might look
 
 org.apache.kafka.connect.json.JsonConverter is used internally to convert this data and make output files human-readable.
 
-**NB!**
-
-- Value/Key schema will not be presented in output kafka event, even if `value.converter.schemas.enable` property is `true`,
+**Note:** Value/Key schema will not be presented in output kafka event, even if `value.converter.schemas.enable` property is `true`,
   however, if this is set to true, it has no impact at the moment.
 
 #### Parquet or Avro format example
 
-For example, if we input `key,offset,timestamp,headers,value`, an input - Parquet schema in an s3 object might look like this:
+For example, if we input `key,offset,timestamp,headers,value`, an input - Parquet schema in an S3 object might look like this:
 ```json
 {
     "type": "record", "fields": [
@@ -187,9 +200,19 @@ the final `Avro` schema for `Parquet` is:
   ]
 }
 ```
-**NB!**
+**Note:** The connector works just fine with and without a schema registry.
 
-- Connector works just fine with and without Schema Registry
+
+### Acked Records
+
+When records are delivered to Kafka the Kafka system will send an Ack for each record.  When debug logging is enabled, the acks are noted in the log.
+The ack signifies that the record has been received by Kafka but may not yet be written to the `offset topic`.  If the connector stopped and restarted
+fast enough it may attempt to read from the `offset topic` before Kafka has written the data.  This is an extremity rare occurrence but will result in
+duplicated delivery of some records.
+
+The `offset topic` is a topic that Kafka uses to track the offsets that the connector has sent.  This topic is used when restarting the connector to determine
+where in the S3 object stream to start processing.  If an S3 object contains multiple records, for example in a parquet file, the `offset topic` will record which
+record within the S3 object was the last one sent.
 
 ## Usage
 
@@ -220,12 +243,10 @@ List of new configuration parameters:
 
 ## Configuration
 
-[Here](https://kafka.apache.org/documentation/#connect_running) you can
-read about the Connect workers configuration and
-[here](https://kafka.apache.org/documentation/#connect_resuming), about
-the connector Configuration.
+Apache Kafka has produced a users guide that describes [how to run Kafka Connect](https://kafka.apache.org/documentation/#connect_running).  This documentation describes the Connect workers configuration.  They have also produced a good description of [how Kafka Connect resumes after a failure](https://kafka.apache.org/documentation/#connect_resuming) or stoppage.
 
-Here is an example connector configuration with descriptions:
+
+Below is an example connector configuration with descriptions:
 
 ```properties
 ### Standard connector configuration
@@ -235,7 +256,7 @@ Here is an example connector configuration with descriptions:
 ## These must have exactly these values:
 
 # The Java class for the connector
-connector.class=io.aiven.kafka.connect.s3.AivenKafkaConnectS3SourceConnector
+connector.class=io.aiven.kafka.connect.s3.S3SourceConnector
 
 # Number of worker tasks to run concurrently
 tasks.max=1
@@ -247,10 +268,8 @@ key.converter=org.apache.kafka.connect.storage.StringConverter
 # The supported values are: `jsonl`, 'avro', `parquet` and 'bytes'.
 input.type=jsonl
 
-# A comma-separated list of topics to use as output for this connector
-# Also a regular expression version `topics.regex` is supported.
-# See https://kafka.apache.org/documentation/#connect_configuring
-topics=topic1,topic2
+# The topic to use as output for this connector
+topic=topic1
 
 ### Connector-specific configuration
 ### Fill in you values
@@ -279,8 +298,9 @@ errors.tolerance=none
 #AWS S3 fetch Buffer
 # Possible values are any value greater than 0. Default being '1000'
 aws.s3.fetch.buffer.size=1000
-
 ```
+
+We have produced a [complete S3Source configuration option list](S3SourceConfig.md).
 
 ### How the AWS S3 API works
 The Aws S3 ListObjectsV2 api which the S3 Source Connector uses to list all objects in a bucket,
@@ -362,4 +382,4 @@ This project is licensed under the [Apache License, Version 2.0](LICENSE).
 
 ## Trademarks
 
-Apache Kafka, Apache Kafka Connect are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries. AWS S3 is a trademark and property of their respective owners. All product and service names used in this website are for identification purposes only and do not imply endorsement.
+Apache Kafka, Apache Kafka Connect, Parquet, and Avro are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries. AWS and Amazon S3 are a trademarks and property of  Amazon Web Services, Inc. All product and service names used in this website are for identification purposes only and do not imply endorsement.

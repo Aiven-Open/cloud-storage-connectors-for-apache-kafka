@@ -59,7 +59,7 @@ public final class TransformerFragment extends ConfigFragment {
         configDef.define(TRANSFORMER_MAX_BUFFER_SIZE, ConfigDef.Type.INT, DEFAULT_MAX_BUFFER_SIZE,
                 new ByteArrayTransformerMaxBufferSizeValidator(), ConfigDef.Importance.MEDIUM,
                 "Max Size of the byte buffer when using the BYTE Transformer", TRANSFORMER_GROUP, transformerCounter++,
-                ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
+                ConfigDef.Width.NONE, TRANSFORMER_MAX_BUFFER_SIZE);
         configDef.define(AVRO_VALUE_SERIALIZER, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM,
                 "Avro value serializer", TRANSFORMER_GROUP, transformerCounter++, // NOPMD
                 // UnusedAssignment

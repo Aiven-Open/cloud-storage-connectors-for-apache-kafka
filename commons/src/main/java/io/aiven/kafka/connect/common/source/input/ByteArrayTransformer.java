@@ -35,7 +35,12 @@ import org.slf4j.LoggerFactory;
 /**
  * ByteArrayTransformer chunks an entire object into a maximum size specified by the
  * {@link io.aiven.kafka.connect.common.config.TransformerFragment#TRANSFORMER_MAX_BUFFER_SIZE} configuration option.
- * This will split large files into multiple records and each record will have the same key.
+ * <p>
+ * If the configuration option specifies a buffer that is smaller than the length of the input stream, the record will
+ * be split into multiple parts. When this happens the transformer makes no guarantees for only once delivery or
+ * delivery order as those are dependant upon the Kafka producer and remote consumer configurations. This class will
+ * produce the blocks in order and on restart will send any blocks that were not acknowledged by Kafka.
+ * </p>
  */
 public class ByteArrayTransformer extends Transformer {
     private static final Logger LOGGER = LoggerFactory.getLogger(ByteArrayTransformer.class);
