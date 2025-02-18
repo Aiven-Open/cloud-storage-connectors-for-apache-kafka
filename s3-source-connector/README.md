@@ -55,9 +55,9 @@ There are several ways to specify AWS credentials in this connector:
 It is important not to use both 1 and 2 simultaneously.
 Using option 2, it is recommended to specify the S3 bucket region in `aws.s3.region` and the
 corresponding AWS STS endpoint in `aws.sts.config.endpoint`. It's better to specify both or none.
-It is also important to specify `aws.sts.role.external.id` for the security reason.  The 
+It is also important to specify `aws.sts.role.external.id` for the security reason.  The
 [AWS Identity and Access Management](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-user_externalid.html)
-documentation provides details.  
+documentation provides details.
 
 ### S3 Object key name format
 
@@ -88,8 +88,8 @@ Example templates are mentioned below.
 
  | pattern | matches                                                        |
  | ------- |----------------------------------------------------------------|
- | {{topic}}-{{partition}}-{{start_offset}} | `customer-topic-1-1734445664111.txt`                           |
- | {{topic}}/{{partition}}/{{start_offset}} | `customer-topic/1/1734445664111.txt`                             |
+ | {{topic}}-{{partition}}-{{start_offset}} | `customer-topic-1-1734445664111.txt` |
+ | {{topic}}/{{partition}}/{{start_offset}} | `customer-topic/1/1734445664111.txt` |
   | topic/{{topic}}/partition/{{partition}}/startOffset/{{start_offset}} | `topic/customer-topic/partition/1/startOffset/1734445664111.txt` |
 
 
@@ -97,7 +97,7 @@ Example templates are mentioned below.
 
 ### Kafka topic names
 
-The Kafka topic name(s) on which the extracted data will be written are specified by one of the following.  The options are checked in the order specified here and the first result is used. 
+The Kafka topic name(s) on which the extracted data will be written are specified by one of the following.  The options are checked in the order specified here and the first result is used.
 
 1. The `{{topic}}` entry in the `file.name.template`.
 2. The  `topics` configuration file entry.
@@ -294,7 +294,7 @@ errors.tolerance=none
 aws.s3.fetch.buffer.size=1000
 ```
 
-We have produces a [complete S3Source configuration](S3SourceConfig.md) 
+We have produced a [complete S3Source configuration option list](S3SourceConfig.md).
 
 ### How the AWS S3 API works
 The Aws S3 ListObjectsV2 api which the S3 Source Connector uses to list all objects in a bucket,

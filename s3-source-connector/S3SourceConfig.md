@@ -350,4 +350,3 @@ SCHEMA REGISTRY URL
 - Importance: MEDIUM
 
 Avro value serializer
-
