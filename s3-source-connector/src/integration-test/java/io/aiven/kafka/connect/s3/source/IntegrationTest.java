@@ -435,7 +435,7 @@ final class IntegrationTest implements IntegrationBase {
 
     private static Map<String, String> basicS3ConnectorConfig(final boolean addPrefix, final String s3Prefix) {
         final Map<String, String> config = new HashMap<>();
-        config.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
+        config.put("connector.class", S3SourceConnector.class.getName());
         config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
         config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
         config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);

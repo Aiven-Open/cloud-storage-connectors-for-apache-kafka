@@ -18,8 +18,6 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-val amazonS3Version by extra("2.29.34")
-val amazonSTSVersion by extra("2.29.34")
 val s3mockVersion by extra("0.2.6")
 val kafkaVersion by extra("3.3.0")
 
@@ -68,8 +66,8 @@ dependencies {
   implementation(apache.commons.collection4)
   implementation(project(":commons"))
   implementation(project(":s3-commons"))
-  implementation("software.amazon.awssdk:s3:$amazonS3Version")
-  implementation("software.amazon.awssdk:sts:$amazonSTSVersion")
+  implementation(amazonawssdk.s3)
+  implementation(amazonawssdk.sts)
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -94,7 +92,6 @@ dependencies {
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testImplementation(testinglibs.mockito.junit.jupiter)
-  //  implementation(apache.hadoop.common)
 
   implementation(apache.hadoop.common) {
     exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
@@ -114,7 +111,6 @@ dependencies {
     exclude(group = "log4j")
     exclude(group = "org.apache.commons", module = "commons-text")
     exclude(group = "org.slf4j", module = "slf4j-api")
-    //    exclude(group = "org.apache.hadoop", module = "hadoop-auth")
     exclude(group = "org.apache.hadoop", module = "hadoop-yarn-api")
     exclude(group = "com.google.re2j")
     exclude(group = "com.google.protobuf")
@@ -143,7 +139,6 @@ dependencies {
   integrationTestImplementation(testcontainers.localstack)
   integrationTestImplementation(testinglibs.wiremock)
 
-  // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }

@@ -182,7 +182,7 @@ final class S3SourceTaskTest {
         properties.putIfAbsent("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         properties.putIfAbsent(MAX_TASKS, "1");
         properties.put(TASK_ID, "1");
-        properties.putIfAbsent("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
+        properties.putIfAbsent("connector.class", S3SourceConnector.class.getName());
         properties.putIfAbsent(TARGET_TOPICS, "testtopic");
 
     }
