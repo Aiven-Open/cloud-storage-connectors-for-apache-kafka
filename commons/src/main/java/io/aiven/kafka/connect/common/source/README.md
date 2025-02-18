@@ -30,7 +30,7 @@ Following the `configure` call, the `getIterator` method will be called to initi
 
 ## OffsetManager interactions
 
-The OffsetManager will provide information about source data that the system has processed.  It does this by communicating with the Kafka offset topic.  The `OffsetManager.OffsetManagerEntry` provides the interface for the AbstractSourceTask to communicate with the OffsetManager entry.  The `OffsetManager` information is initially retrieved from Kafka.  It has four (4) methods:
+The OffsetManager will provide information about source data that the system has processed.  It does this by communicating with the Kafka offset topic.  The `OffsetManager.OffsetManagerEntry` provides the interface for the AbstractSourceTask to communicate with the OffsetManager entry.  The `OffsetManager` information is initially retrieved from Kafka.  It has five (5) methods:
 
  * `Optional<E> getEntry(final OffsetManagerKey key, final Function<Map<String, Object>, E> creator)`  - This method retrieves any data Kafka has about the object identified by the key.  If the data are found then the `creator` function is called to create the OffsetManagerEntry implementation.  Otherwise, an empty Optional is returned.
  * `void remove(final OffsetManagerKey key)` - removes the data from the local OffsetManager cache.  This is called when data has been set to Kafka for the record identified by the key. Subsequent calls to `getEntry` will reload the data from Kafka.

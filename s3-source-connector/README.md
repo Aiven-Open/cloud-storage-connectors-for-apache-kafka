@@ -95,9 +95,9 @@ The file name format supports placeholders with variable names of the form: `{{v
 
 ### Kafka topic names
 
-The Kafka topic name(s) on which the extracted data will be written are specified by one of the following.  The options are checked in the order specified here and the first result is used.
+The Kafka topic name on which the extracted data will be written is specified by one of the following.  The options are checked in the order specified here and the first result is used.
 
-1. The  `topics` configuration file entry.
+1. The  `topic` configuration file entry.
 2. The `{{topic}}` entry in the `file.name.template`.
 
 ### Kafka partitions
