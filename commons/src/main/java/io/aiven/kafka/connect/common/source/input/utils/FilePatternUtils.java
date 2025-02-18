@@ -51,16 +51,16 @@ public final class FilePatternUtils {
     public static final String TOPIC_NAMED_GROUP_REGEX_PATTERN = "(?<" + PATTERN_TOPIC_KEY + ">[a-zA-Z0-9\\-_.]+)";
     public static final String START_OFFSET = "Start offset";
 
-    final Pattern pattern;
+    private final Pattern pattern;
     private final boolean startOffsetConfigured;
     private final boolean partitionConfigured;
     private final boolean topicConfigured;
 
     /**
      * Creates an instance of FilePatternUtils, this constructor is used to configure the Pattern that is used to
-     * extract Context from Object 'K'.
-     *
-     * @param pattern
+     * extract Context from Objects of type 'K'.
+     * @param pattern the file pattern definition.
+     * @see #process(Comparable)
      */
     public FilePatternUtils(final String pattern) {
         this.pattern = configurePattern(pattern);
@@ -99,6 +99,14 @@ public final class FilePatternUtils {
         }
     }
 
+    /**
+     * Creates a Context for the source name.  If the pattern does not match the {@code sourceName.toString()} an empty
+     * {@code Optional} is returned.  Otherwise, if "topic", "partition" or "start_offset" are defined in the pattern
+     * the values are extracted from {@code sourceName} and returned in the {@code Context}.
+     * @param sourceName the Source name to create the context for.
+     * @return An {@code Optional Context} for the source name.
+     * @param <K> the data type of the source name.
+     */
     public <K extends Comparable<K>> Optional<Context<K>> process(final K sourceName) {
         final Optional<Matcher> matcher = fileMatches(sourceName.toString());
         if (matcher.isPresent()) {
