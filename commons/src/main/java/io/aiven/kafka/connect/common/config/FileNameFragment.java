@@ -109,6 +109,7 @@ public final class FileNameFragment extends ConfigFragment {
         configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
                 new TimestampSourceValidator(), ConfigDef.Importance.LOW,
                 "Specifies the the timestamp variable source. Default is wall-clock.", GROUP_FILE, fileGroupCounter++, // NOPMD
+                                                                                                                       // UnusedAssignment
                 ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_SOURCE);
 
         return configDef;

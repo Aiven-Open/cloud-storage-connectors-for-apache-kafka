@@ -38,7 +38,7 @@ public class Context<K extends Comparable<K>> {
     }
 
     /**
-     * Creates a defensive copy of the Context for use internally by the S3SourceRecord
+     * Creates a defensive copy of the Context
      *
      * @param anotherContext
      *            The Context which needs to be copied

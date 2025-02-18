@@ -131,7 +131,7 @@ public class S3SourceTask extends AbstractSourceTask {
     @Override
     public void commitRecord(final SourceRecord record) {
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Committed individual record {}  committed", (Map<String, Object>) record.sourceOffset());
+            LOGGER.debug("Kafka Acked record {}, see readme for details", (Map<String, Object>) record.sourceOffset());
         }
     }
 

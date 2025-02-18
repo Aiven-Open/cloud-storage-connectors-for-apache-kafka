@@ -104,11 +104,6 @@ public class BucketAccessor {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         Objects.requireNonNull(fieldsToDecode, "fieldsToDecode cannot be null");
 
-        return readAndDecodeLines0(blobName, compression, fieldsToDecode);
-    }
-
-    private List<List<String>> readAndDecodeLines0(final String blobName, final String compression,
-            final int[] fieldsToDecode) throws IOException {
         return readLines(blobName, compression).stream()
                 .map(l -> l.split(","))
                 .map(fields -> decodeRequiredFields(fields, fieldsToDecode))
