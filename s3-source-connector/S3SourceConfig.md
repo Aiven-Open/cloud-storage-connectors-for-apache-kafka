@@ -335,7 +335,7 @@ SCHEMA REGISTRY URL
 
 eg : connect-storage-offsets
 
-## input\.format
+## transformer\.max\.buffer\.size
 - Default value: 4096
 - Type: INT
 - Valid values: io\.aiven\.kafka\.connect\.common\.config\.TransformerFragment$ByteArrayTransformerMaxBufferSizeValidator@1ae3d0a8
