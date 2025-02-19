@@ -18,13 +18,12 @@ plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
 val amazonS3Version by extra("1.12.777")
 val amazonSTSVersion by extra("1.12.777")
-val amazonV2Version by extra("2.29.34")
 
 dependencies {
   implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
   implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
-  implementation("software.amazon.awssdk:auth:$amazonV2Version")
-  implementation("software.amazon.awssdk:sts:$amazonV2Version")
+  implementation(amazonawssdk.authentication)
+  implementation(amazonawssdk.sts)
 
   implementation(project(":commons"))
 

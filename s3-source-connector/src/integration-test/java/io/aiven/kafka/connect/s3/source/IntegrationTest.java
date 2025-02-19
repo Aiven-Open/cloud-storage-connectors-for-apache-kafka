@@ -20,7 +20,7 @@ import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.DISTRIBUTION_TYPE;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.AVRO_VALUE_SERIALIZER;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
@@ -96,7 +96,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 final class IntegrationTest implements IntegrationBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTest.class);
-    private static final String CONNECTOR_NAME = "aiven-s3-source-connector";
+    private static final String CONNECTOR_NAME = "s3-source-connector";
     private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-test-";
     private static final int OFFSET_FLUSH_INTERVAL_MS = 500;
 
@@ -422,7 +422,7 @@ final class IntegrationTest implements IntegrationBase {
             final String prefixPattern, final String fileNameSeparator) {
         final Map<String, String> config = new HashMap<>(basicS3ConnectorConfig(addPrefix, s3Prefix));
         config.put("name", connectorName);
-        config.put(TARGET_TOPICS, topics);
+        config.put(TARGET_TOPIC, topics);
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(MAX_TASKS, String.valueOf(maxTasks));
@@ -437,7 +437,7 @@ final class IntegrationTest implements IntegrationBase {
 
     private static Map<String, String> basicS3ConnectorConfig(final boolean addPrefix, final String s3Prefix) {
         final Map<String, String> config = new HashMap<>();
-        config.put("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
+        config.put("connector.class", S3SourceConnector.class.getName());
         config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
         config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
         config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);

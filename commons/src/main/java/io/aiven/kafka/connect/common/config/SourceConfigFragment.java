@@ -33,8 +33,7 @@ public final class SourceConfigFragment extends ConfigFragment {
     private static final String GROUP_OTHER = "OTHER_CFG";
     public static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String EXPECTED_MAX_MESSAGE_BYTES = "expected.max.message.bytes";
-    private static final String GROUP_OFFSET_TOPIC = "OFFSET_TOPIC";
-    public static final String TARGET_TOPICS = "topics";
+    public static final String TARGET_TOPIC = "topic";
     public static final String ERRORS_TOLERANCE = "errors.tolerance";
 
     public static final String DISTRIBUTION_TYPE = "distribution.type";
@@ -69,9 +68,9 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         // Offset Storage config group includes target topics
         int offsetStorageGroupCounter = 0;
-        configDef.define(TARGET_TOPICS, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : connect-storage-offsets", GROUP_OFFSET_TOPIC,
-                offsetStorageGroupCounter++, ConfigDef.Width.NONE, TARGET_TOPICS);
+        configDef.define(TARGET_TOPIC, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.MEDIUM, "eg : logging-topic", GROUP_OTHER, offsetStorageGroupCounter++,
+                ConfigDef.Width.NONE, TARGET_TOPIC);
         configDef.define(DISTRIBUTION_TYPE, ConfigDef.Type.STRING, OBJECT_HASH.name(),
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
                 "Based on tasks.max config and the type of strategy selected, objects are processed in distributed"
@@ -85,8 +84,8 @@ public final class SourceConfigFragment extends ConfigFragment {
         return configDef;
     }
 
-    public String getTargetTopics() {
-        return cfg.getString(TARGET_TOPICS);
+    public String getTargetTopic() {
+        return cfg.getString(TARGET_TOPIC);
     }
 
     public int getMaxPollRecords() {

@@ -18,7 +18,7 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPICS;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -182,8 +182,8 @@ final class S3SourceTaskTest {
         properties.putIfAbsent("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         properties.putIfAbsent(MAX_TASKS, "1");
         properties.put(TASK_ID, "1");
-        properties.putIfAbsent("connector.class", AivenKafkaConnectS3SourceConnector.class.getName());
-        properties.putIfAbsent(TARGET_TOPICS, "testtopic");
+        properties.putIfAbsent("connector.class", S3SourceConnector.class.getName());
+        properties.putIfAbsent(TARGET_TOPIC, "testtopic");
 
     }
 

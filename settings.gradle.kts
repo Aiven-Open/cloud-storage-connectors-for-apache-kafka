@@ -5,6 +5,7 @@ val avroVersion by extra("1.11.3")
 val avroConverterVersion by extra("7.2.2")
 val avroDataVersion by extra("7.2.2")
 val awaitilityVersion by extra("4.2.1")
+val amazonAwsSdkV2Version by extra("2.29.34")
 val commonsTextVersion by extra("1.11.0")
 val commonsCollections4Version by extra("4.4")
 val hadoopVersion by extra("3.4.0")
@@ -43,6 +44,11 @@ dependencyResolutionManagement {
           "hadoop-mapreduce-client-core",
           "org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion")
       library("parquet-avro", "org.apache.parquet:parquet-avro:$parquetVersion")
+    }
+    create("amazonawssdk") {
+      library("authentication", "software.amazon.awssdk:auth:$amazonAwsSdkV2Version")
+      library("s3", "software.amazon.awssdk:s3:$amazonAwsSdkV2Version")
+      library("sts", "software.amazon.awssdk:sts:$amazonAwsSdkV2Version")
     }
     create("compressionlibs") {
       library("snappy", "org.xerial.snappy:snappy-java:$snappyVersion")

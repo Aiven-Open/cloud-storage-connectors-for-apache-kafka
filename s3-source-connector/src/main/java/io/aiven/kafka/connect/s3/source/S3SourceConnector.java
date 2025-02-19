@@ -35,12 +35,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * AivenKafkaConnectS3SourceConnector is a Kafka Connect Connector implementation that watches a S3 bucket and generates
- * tasks to ingest contents.
+ * S3SourceConnector is a Kafka Connect Connector implementation that watches a S3 bucket and generates tasks to ingest
+ * contents.
  */
-public class AivenKafkaConnectS3SourceConnector extends SourceConnector {
+public class S3SourceConnector extends SourceConnector {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(AivenKafkaConnectS3SourceConnector.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConnector.class);
 
     private Map<String, String> configProperties;
 
