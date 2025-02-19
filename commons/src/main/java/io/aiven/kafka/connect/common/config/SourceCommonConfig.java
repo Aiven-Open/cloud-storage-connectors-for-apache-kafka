@@ -20,8 +20,67 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.TransformerFactory;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
+
 public class SourceCommonConfig extends CommonConfig {
+
+    private final TransformerFragment transformerFragment;
+    private final SourceConfigFragment sourceConfigFragment;
+    private final FileNameFragment fileNameFragment;
+    private final OutputFormatFragment outputFormatFragment;
+
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
         super(definition, originals);
+        // Construct Fragments
+        transformerFragment = new TransformerFragment(this);
+        sourceConfigFragment = new SourceConfigFragment(this);
+        fileNameFragment = new FileNameFragment(this);
+        outputFormatFragment = new OutputFormatFragment(this);
+
+        validate(); // NOPMD ConstructorCallsOverridableMethod
     }
+
+    private void validate() {
+        transformerFragment.validate();
+        sourceConfigFragment.validate();
+        fileNameFragment.validate();
+        outputFormatFragment.validate();
+    }
+
+    public InputFormat getInputFormat() {
+        return transformerFragment.getInputFormat();
+    }
+
+    public String getSchemaRegistryUrl() {
+        return transformerFragment.getSchemaRegistryUrl();
+    }
+
+    public String getTargetTopic() {
+        return sourceConfigFragment.getTargetTopic();
+    }
+
+    public ErrorsTolerance getErrorsTolerance() {
+        return sourceConfigFragment.getErrorsTolerance();
+    }
+
+    public DistributionType getDistributionType() {
+        return sourceConfigFragment.getDistributionType();
+    }
+
+    public int getMaxPollRecords() {
+        return sourceConfigFragment.getMaxPollRecords();
+    }
+
+    public Transformer getTransformer() {
+        return TransformerFactory.getTransformer(transformerFragment.getInputFormat());
+    }
+
+    public int getTransformerMaxBufferSize() {
+        return transformerFragment.getTransformerMaxBufferSize();
+    }
+
 }

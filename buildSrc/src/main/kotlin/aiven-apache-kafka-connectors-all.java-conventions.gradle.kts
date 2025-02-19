@@ -151,6 +151,8 @@ spotless {
     }
 
     java {
+        // LocalInputFile.java has a different license file and needs to be ignored until it is removed in a future release
+        targetExclude("**/LocalInputFile.java")
         licenseHeaderFile(file("${project.rootDir}/gradle-config/java.header"))
         importOrder("javax", "java", "org.apache.kafka", "io.aiven", "")
         removeUnusedImports()

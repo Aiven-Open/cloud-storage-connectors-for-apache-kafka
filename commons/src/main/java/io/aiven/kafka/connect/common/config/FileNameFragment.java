@@ -43,8 +43,11 @@ public final class FileNameFragment extends ConfigFragment {
     static final String FILE_MAX_RECORDS = "file.max.records";
     static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
-    static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
+    public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
+
+    public static final String FILE_PATH_PREFIX_TEMPLATE_CONFIG = "file.prefix.template";
+    static final String DEFAULT_FILE_PATH_PREFIX_TEMPLATE = "topics/{{topic}}/partition={{partition}}/";
 
     public FileNameFragment(final AbstractConfig cfg) {
         super(cfg);
@@ -69,8 +72,7 @@ public final class FileNameFragment extends ConfigFragment {
                         + "Only some combinations of variables are valid, which currently are:\n"
                         + "- `topic`, `partition`, `start_offset`."
                         + "There is also `key` only variable {{key}} for grouping by keys",
-                GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment
-                ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
+                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
         final String supportedCompressionTypes = CompressionType.names()
                 .stream()
@@ -81,8 +83,7 @@ public final class FileNameFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM,
                 "The compression type used for files put on S3. " + "The supported values are: "
                         + supportedCompressionTypes + ".",
-                GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment
-                ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
+                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(CompressionType.names()));
 
         configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, new ConfigDef.Validator() {
@@ -96,8 +97,7 @@ public final class FileNameFragment extends ConfigFragment {
         }, ConfigDef.Importance.MEDIUM,
                 "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.",
-                GROUP_FILE, fileGroupCounter++, // NOPMD UnusedAssignment
-                ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
+                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
 
         configDef.define(FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(),
                 new TimeZoneValidator(), ConfigDef.Importance.LOW,
@@ -109,7 +109,7 @@ public final class FileNameFragment extends ConfigFragment {
         configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
                 new TimestampSourceValidator(), ConfigDef.Importance.LOW,
                 "Specifies the the timestamp variable source. Default is wall-clock.", GROUP_FILE, fileGroupCounter++, // NOPMD
-                // UnusedAssignment
+                                                                                                                       // UnusedAssignment
                 ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_SOURCE);
 
         return configDef;

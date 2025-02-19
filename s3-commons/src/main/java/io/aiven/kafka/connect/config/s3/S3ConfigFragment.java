@@ -41,11 +41,13 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 /**
  * The configuration fragment that defines the S3 specific characteristics.
  */
-@SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
+@SuppressWarnings({ "PMD.TooManyMethods", "PMD.ExcessiveImports", "PMD.TooManyStaticImports", "PMD.GodClass" })
 public final class S3ConfigFragment extends ConfigFragment {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3ConfigFragment.class);
@@ -110,12 +112,13 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG = "aws.s3.backoff.max.delay.ms";
     public static final String AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG = "aws.s3.backoff.max.retries";
 
+    public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
+    public static final String AWS_S3_FETCH_BUFFER_SIZE = "aws.s3.fetch.buffer.size";
+
     private static final String GROUP_AWS = "AWS";
     private static final String GROUP_AWS_STS = "AWS STS";
 
     private static final String GROUP_S3_RETRY_BACKOFF_POLICY = "S3 retry backoff policy";
-
-    public static final int DEFAULT_PART_SIZE = 5 * 1024 * 1024;
 
     // Default values from AWS SDK, since they are hidden
     public static final int AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT = 100;
@@ -211,9 +214,23 @@ public final class S3ConfigFragment extends ConfigFragment {
                 awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_ENDPOINT_CONFIG);
 
         configDef.define(AWS_S3_REGION_CONFIG, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++, // NOPMD
-                // UnusedAssignment
+                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
+
+        configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
+
+        configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
+                ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Width.NONE, FETCH_PAGE_SIZE);
+
+        configDef.define(AWS_S3_FETCH_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(1),
+                ConfigDef.Importance.MEDIUM,
+                "AWS S3 Fetch buffer size, this is the number of s3object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
+                GROUP_AWS, awsGroupCounter++, // NOPMD
+                // UnusedAssignment
+                ConfigDef.Width.NONE, AWS_S3_FETCH_BUFFER_SIZE);
     }
 
     static void addAwsStsConfigGroup(final ConfigDef configDef) {
@@ -246,10 +263,6 @@ public final class S3ConfigFragment extends ConfigFragment {
     }
 
     static void addDeprecatedConfiguration(final ConfigDef configDef) {
-        configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM,
-                "[Deprecated] Use `file.name.template` instead. Prefix for stored objects, e.g. cluster-1/", GROUP_AWS,
-                0, ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
         configDef.define(AWS_ACCESS_KEY_ID, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword() {
             @Override
@@ -339,7 +352,8 @@ public final class S3ConfigFragment extends ConfigFragment {
             }
         } else {
             final BasicAWSCredentials awsCredentials = getAwsCredentials();
-            if (awsCredentials == null) {
+            final AwsBasicCredentials awsCredentialsV2 = getAwsCredentialsV2();
+            if (awsCredentials == null && awsCredentialsV2 == null) {
                 LOGGER.info(
                         "Connector use {} as credential Provider, "
                                 + "when configuration for {{}, {}} OR {{}, {}} are absent",
@@ -404,11 +418,21 @@ public final class S3ConfigFragment extends ConfigFragment {
         return new AwsStsEndpointConfig(cfg.getString(AWS_STS_CONFIG_ENDPOINT), cfg.getString(AWS_S3_REGION_CONFIG));
     }
 
+    /**
+     * @deprecated getAwsEndpointConfiguration uses the AWS SDK 1.X which is deprecated and out of maintenance in
+     *             December 2025 After upgrading to use SDK 2.X this no longer is required.
+     */
+    @Deprecated
     public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
         final AwsStsEndpointConfig config = getStsEndpointConfig();
         return new AwsClientBuilder.EndpointConfiguration(config.getServiceEndpoint(), config.getSigningRegion());
     }
 
+    /**
+     * @deprecated Use {@link #getAwsCredentialsV2} instead getAwsCredentials uses the AWS SDK 1.X which is deprecated
+     *             and out of maintenance in December 2025
+     */
+    @Deprecated
     public BasicAWSCredentials getAwsCredentials() {
         if (Objects.nonNull(cfg.getPassword(AWS_ACCESS_KEY_ID_CONFIG))
                 && Objects.nonNull(cfg.getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
@@ -424,12 +448,31 @@ public final class S3ConfigFragment extends ConfigFragment {
         return null;
     }
 
+    public AwsBasicCredentials getAwsCredentialsV2() {
+        if (Objects.nonNull(cfg.getPassword(AWS_ACCESS_KEY_ID_CONFIG))
+                && Objects.nonNull(cfg.getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
+
+            return AwsBasicCredentials.create(cfg.getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
+                    cfg.getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value());
+        } else if (Objects.nonNull(cfg.getPassword(AWS_ACCESS_KEY_ID))
+                && Objects.nonNull(cfg.getPassword(AWS_SECRET_ACCESS_KEY))) {
+            LOGGER.warn("Config options {} and {} are not supported for this Connector", AWS_ACCESS_KEY_ID,
+                    AWS_SECRET_ACCESS_KEY);
+        }
+        return null;
+    }
+
     public String getAwsS3EndPoint() {
         return Objects.nonNull(cfg.getString(AWS_S3_ENDPOINT_CONFIG))
                 ? cfg.getString(AWS_S3_ENDPOINT_CONFIG)
                 : cfg.getString(AWS_S3_ENDPOINT);
     }
 
+    /**
+     * @deprecated Use {@link #getAwsS3RegionV2} instead getAwsS3Region uses the AWS SDK 1.X which is deprecated and out
+     *             of maintenance in December 2025
+     */
+    @Deprecated
     public Region getAwsS3Region() {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
@@ -439,6 +482,18 @@ public final class S3ConfigFragment extends ConfigFragment {
             return RegionUtils.getRegion(cfg.getString(AWS_S3_REGION));
         } else {
             return RegionUtils.getRegion(Regions.US_EAST_1.getName());
+        }
+    }
+
+    public software.amazon.awssdk.regions.Region getAwsS3RegionV2() {
+        // we have priority of properties if old one not set or both old and new one set
+        // the new property value will be selected
+        if (Objects.nonNull(cfg.getString(AWS_S3_REGION_CONFIG))) {
+            return software.amazon.awssdk.regions.Region.of(cfg.getString(AWS_S3_REGION_CONFIG));
+        } else if (Objects.nonNull(cfg.getString(AWS_S3_REGION))) {
+            return software.amazon.awssdk.regions.Region.of(cfg.getString(AWS_S3_REGION));
+        } else {
+            return software.amazon.awssdk.regions.Region.of(Regions.US_EAST_1.getName());
         }
     }
 
@@ -477,4 +532,17 @@ public final class S3ConfigFragment extends ConfigFragment {
     public AWSCredentialsProvider getCustomCredentialsProvider() {
         return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
     }
+
+    public AwsCredentialsProvider getCustomCredentialsProviderV2() {
+        return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AwsCredentialsProvider.class);
+    }
+
+    public int getFetchPageSize() {
+        return cfg.getInt(FETCH_PAGE_SIZE);
+    }
+
+    public int getS3FetchBufferSize() {
+        return cfg.getInt(AWS_S3_FETCH_BUFFER_SIZE);
+    }
+
 }

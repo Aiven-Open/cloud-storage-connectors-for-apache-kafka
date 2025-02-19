@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.config.s3;
+package io.aiven.kafka.connect.s3.source.config;
 
 import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYyyyUppercase;
 
@@ -22,27 +22,52 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.config.TransformerFragment;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.Region;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-@SuppressWarnings({ "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
-public class S3SourceBaseConfig extends SourceCommonConfig {
-    public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceBaseConfig.class);
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.regions.Region;
+
+final public class S3SourceConfig extends SourceCommonConfig {
+
+    public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConfig.class);
+
     private final S3ConfigFragment s3ConfigFragment;
-    protected S3SourceBaseConfig(ConfigDef definition, Map<String, String> originals) { // NOPMD UnusedAssignment
-        super(definition, handleDeprecatedYyyyUppercase(originals));
+    private final FileNameFragment s3FileNameFragment;
+    public S3SourceConfig(final Map<String, String> properties) {
+        super(configDef(), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
-        validate();
+        s3FileNameFragment = new FileNameFragment(this);
+        validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
+    }
+
+    public static ConfigDef configDef() {
+
+        final var configDef = new S3SourceConfigDef();
+        S3ConfigFragment.update(configDef);
+        SourceConfigFragment.update(configDef);
+        FileNameFragment.update(configDef);
+        TransformerFragment.update(configDef);
+        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
+
+        return configDef;
     }
 
     private void validate() {
+
+        // s3ConfigFragment is validated in this method as it is created here.
+        // Other Fragments created in the ConfigDef are validated in the parent classes their instances are created in.
+        // e.g. SourceConfigFragment, FileNameFragment, TransformerFragment and OutputFormatFragment are all
+        // validated in SourceCommonConfig.
         s3ConfigFragment.validate();
     }
 
@@ -62,12 +87,8 @@ public class S3SourceBaseConfig extends SourceCommonConfig {
         return s3ConfigFragment.getStsEndpointConfig();
     }
 
-    public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
-        return s3ConfigFragment.getAwsEndpointConfiguration();
-    }
-
-    public BasicAWSCredentials getAwsCredentials() {
-        return s3ConfigFragment.getAwsCredentials();
+    public AwsBasicCredentials getAwsCredentials() {
+        return s3ConfigFragment.getAwsCredentialsV2();
     }
 
     public String getAwsS3EndPoint() {
@@ -75,7 +96,7 @@ public class S3SourceBaseConfig extends SourceCommonConfig {
     }
 
     public Region getAwsS3Region() {
-        return s3ConfigFragment.getAwsS3Region();
+        return s3ConfigFragment.getAwsS3RegionV2();
     }
 
     public String getAwsS3BucketName() {
@@ -106,8 +127,16 @@ public class S3SourceBaseConfig extends SourceCommonConfig {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
     }
 
-    public AWSCredentialsProvider getCustomCredentialsProvider() {
-        return s3ConfigFragment.getCustomCredentialsProvider();
+    public int getS3FetchBufferSize() {
+        return s3ConfigFragment.getS3FetchBufferSize();
+    }
+
+    public S3ConfigFragment getS3ConfigFragment() {
+        return s3ConfigFragment;
+    }
+
+    public FileNameFragment getS3FileNameFragment() {
+        return s3FileNameFragment;
     }
 
 }
