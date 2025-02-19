@@ -65,11 +65,11 @@ import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetBackingStore;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.config.ParquetTestingFixture;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
-import io.aiven.kafka.connect.s3.source.testutils.ContentUtils;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -344,7 +344,9 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, String> connectorConfig = getAvroConfig(topic, InputFormat.PARQUET, addPrefix, localS3Prefix,
                 prefixPattern, DistributionType.PARTITION);
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
-        final Path path = ContentUtils.getTmpFilePath(name);
+
+        final Path parquetFileDir = Files.createTempDirectory("parquet_tests");
+        final Path path = ParquetTestingFixture.writeParquetFile(parquetFileDir.resolve("users.parquet"), name);
 
         try {
             s3Client.putObject(PutObjectRequest.builder().bucket(TEST_BUCKET_NAME).key(fileName).build(), path);

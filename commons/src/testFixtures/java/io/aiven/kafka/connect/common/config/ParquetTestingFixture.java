@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Aiven Oy
+ * Copyright 2025 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.source.input;
+package io.aiven.kafka.connect.common.config;
 
 import static org.apache.kafka.connect.data.Schema.INT32_SCHEMA;
 import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,51 +32,63 @@ import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import io.aiven.kafka.connect.common.config.OutputField;
-import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
-import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
 
-public final class ContentUtils {
-    private ContentUtils() {
-    }
-    public static Path getTmpFilePath(final String name1) throws IOException {
-        final String tmpFile = "users.parquet";
-        final Path parquetFileDir = Files.createTempDirectory("parquet_tests");
-        final String parquetFilePath = parquetFileDir.toAbsolutePath() + "/" + tmpFile;
-
-        writeParquetFile(parquetFilePath, name1);
-        return Paths.get(parquetFilePath);
-    }
-
-    public static void writeParquetFile(final String tempFilePath, final String name1) throws IOException {
-        // Define the Avro schema
-        final Schema schema = SchemaBuilder.struct()
+/**
+ * Test fixture to generate standard parquet file.
+ */
+public class ParquetTestingFixture {
+    /**
+     * Gets the schema used for the test cases.
+     *
+     * @return The schema used for the test cases.
+     */
+    public static Schema testSchema() {
+        return SchemaBuilder.struct()
                 .field("name", STRING_SCHEMA)
                 .field("age", INT32_SCHEMA)
                 .field("email", STRING_SCHEMA)
                 .build();
-        // Write the Parquet file
-        try {
-            writeParquetFile(tempFilePath, schema, name1, 100);
-        } catch (IOException e) {
-            throw new ConnectException("Error writing parquet file");
-        }
+    }
+    /**
+     * Writes 100 parquet records to the file specified using the default schema. The topic "some-topic" will be used
+     * for each record. "some-key-#" will be used for each key.
+     *
+     * @param outputFilePath
+     *            the path the to the output file.
+     * @param name
+     *            the name used for each record. The record number will be appended to the name.
+     * @throws IOException
+     *             on output error.
+     */
+    public static Path writeParquetFile(final Path outputFilePath, final String name) throws IOException {
+        return writeParquetFile(outputFilePath, name, 100);
     }
 
-    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    private static void writeParquetFile(final String outputPath, final Schema schema, final String name1,
-            final int numOfRecords) throws IOException {
-
+    /**
+     * Writes the specified number of parquet records to the file specified using the default schema. The topic
+     * "some-topic" will be used for each record. "some-key-#" will be used for each key.
+     *
+     * @param outputFilePath
+     *            the path the to the output file.
+     * @param name
+     *            the name used for each record. The record number will be appended to the name.
+     * @param numOfRecords
+     *            the number of records to write.
+     * @throws IOException
+     *             on output error.
+     */
+    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    public static Path writeParquetFile(final Path outputFilePath, final String name, final int numOfRecords)
+            throws IOException {
+        Schema schema = testSchema();
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
-            allParquetRecords
-                    .add(new Struct(schema).put("name", name1 + i).put("age", 30).put("email", name1 + "@test"));
+            allParquetRecords.add(new Struct(schema).put("name", name + i).put("age", 30).put("email", name + "@test"));
         }
 
         // Create a Parquet writer
-        final Path outputFilePath = Paths.get(outputPath);
         try (var outputStream = Files.newOutputStream(outputFilePath.toAbsolutePath());
                 var parquetWriter = new ParquetOutputWriter(
                         List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
@@ -94,6 +104,6 @@ public final class ContentUtils {
             }
             parquetWriter.writeRecords(sinkRecords);
         }
-
+        return outputFilePath;
     }
 }

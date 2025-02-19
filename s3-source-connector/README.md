@@ -352,7 +352,7 @@ Default is `3`.
 - To use SSE-KMS set to `aws:kms`
 - To use DSSE-KMS set to `aws:kms:dsse`
 ### Connecting to Kafka
-A source connector produces events to Kafka and when using SSL with certificates, you must ensure the SSL settings are prefixed with producer to send events to Kafka, but the connector also reads offsets, and configuration topics and so there should also be an entry prefixed with consumer for Connect to know what keystore and truststore to use. 
+A source connector produces events to Kafka and when using SSL with certificates, you must ensure the SSL settings are prefixed with producer to send events to Kafka, but the connector also reads offsets, and configuration topics and so there should also be an entry prefixed with consumer for Connect to know what keystore and truststore to use.
 
 producer.security.protocol=SSL
 producer.ssl.truststore.location=<path>/client.truststore.jks

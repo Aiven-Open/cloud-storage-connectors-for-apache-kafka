@@ -77,7 +77,6 @@ dependencies {
   implementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
-
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(testinglibs.awaitility)
@@ -190,6 +189,7 @@ dependencies {
   integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  integrationTestImplementation(testFixtures(project(":commons")))
 
   // Make test utils from 'test' available in 'integration-test'
   integrationTestImplementation(sourceSets["test"].output)

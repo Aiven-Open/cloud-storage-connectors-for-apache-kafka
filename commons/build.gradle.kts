@@ -79,6 +79,8 @@ dependencies {
     exclude(group = "io.netty", module = "netty")
   }
 
+  testFixturesImplementation(apache.kafka.connect.api)
+
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
