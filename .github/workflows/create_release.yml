@@ -34,7 +34,7 @@ jobs:
         run: |
           export commit_title=$(git log --pretty=format:%s -1 ${{ github.event.inputs.commit_hash }})
           echo "Commit title: $commit_title"
-          if [[ $commit_title =~ ^Release\ version\ [0-9]*\.[0-9]*\.[0-9]*$ ]]; then
+          if [[ $commit_title =~ ^Release\ version\ [0-9]*\.[0-9]*\.[0-9]*(\ \(#[0-9]+\))*$ ]]; then
             echo "Valid commit title"
           else
             echo "Invalid commit title"
