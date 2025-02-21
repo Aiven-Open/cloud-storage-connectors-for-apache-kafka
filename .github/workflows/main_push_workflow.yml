@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - feat-azure-blob-source
   pull_request:
     branches:
       - main
+      - feat-azure-blob-source
 jobs:
   build:
     strategy:
