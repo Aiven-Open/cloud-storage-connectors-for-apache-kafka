@@ -60,7 +60,7 @@
                 </dependencies>
                 <configuration>
                     <siteDirectory>build/site</siteDirectory>
-                    <generateReports>false</generateReports>
+<!--                    <generateReports>false</generateReports>-->
                 </configuration>
             </plugin>
         </plugins>
