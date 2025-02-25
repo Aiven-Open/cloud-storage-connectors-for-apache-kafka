@@ -21,27 +21,30 @@ tasks.register<Copy>("processSiteAssets") {
     outputs.upToDateWhen { false }
     rootProject.subprojects.filter { s -> s.name != "site" }.forEach { s ->
         println("Copying from ${s.layout.projectDirectory}/src/site")
-        println("          to ${project.layout.buildDirectory.asFile.get()}/site")
+        println("          to ${rootProject.layout.projectDirectory.asFile}/site/build/site")
         rootProject.copy {
-            from("${s.layout.projectDirectory}/src/site")
-            into("${project.layout.buildDirectory.asFile.get()}/site")
+            from(fileTree("${s.layout.projectDirectory}/src/site"))
+            //mkdir("${rootProject.layout.projectDirectory.asFile}/site/build/site")
+            into("${rootProject.layout.projectDirectory.asFile}/site/build/site")
         }
 
         println("Copying .md files from ${s.layout.projectDirectory}/src")
-        println("          to ${project.layout.buildDirectory.asFile.get()}/site/markdown/${s.name}")
+        println("          to ${rootProject.layout.projectDirectory.asFile}/site/build/site/markdown/${s.name}")
         rootProject.copy {
-            from("${s.layout.projectDirectory}/src")  {
-                include("**.md")
+            includeEmptyDirs = false
+            from("${s.layout.projectDirectory}/src") {
+                include("**/*.md")
+                exclude("**/site/")
             }
-            into("${project.layout.buildDirectory.asFile.get()}/site/markdown/${s.name}")
+            into("${rootProject.layout.projectDirectory.asFile}/site/build/site/markdown/${s.name}")
         }
         println("")
     }
     println("Copying from ${project.layout.projectDirectory.asFile}/src/site")
-    println("          to ${project.layout.buildDirectory.asFile.get()}/build/site")
+    println("          to ${rootProject.layout.projectDirectory.asFile}/site/build/site")
     rootProject.copy {
         from("${project.layout.projectDirectory.asFile}/src/site")
-        into("${project.layout.buildDirectory.asFile.get()}/site")
+        into(" ${rootProject.layout.projectDirectory.asFile}/site/build/site")
     }
     println("DONE")
 }
@@ -56,19 +59,17 @@ tasks.register<Exec>("createSite") {
     args("clean", "site:site")
 }
 
-tasks.register<Copy>("copySiteYamlFiles") {
+tasks.register<Copy>("populateSite") {
     group = "Documentation"
-    description = "Copies documentation yaml files."
+    description = "Copies documentation to additional documentation"
     outputs.upToDateWhen { false }
-    from("${project.layout.projectDirectory.asFile}/build/site")
-    into("${project.layout.projectDirectory.asFile}/target/site")
-    include("**/*.yml")
-}
-
-tasks.register<Copy>("copyJavadocs") {
-    group = "Documentation"
-    description = "Copies javadocs"
-    outputs.upToDateWhen { false }
+    println("copying yml files")
+    project.copy {
+        includeEmptyDirs = false
+        from("${project.layout.projectDirectory.asFile}/build/site")
+        into("${project.layout.projectDirectory.asFile}/target/site")
+        include("**/*.yml")
+    }
     println("Copying javadoc from subprojects to site")
     rootProject.subprojects.filter { s -> s.name != "site" }.forEach { s ->
         println("Copying from ${s.layout.projectDirectory}/build/docs/javadoc")
@@ -85,9 +86,18 @@ tasks.register<Copy>("deploySite") {
     group = "Documentation"
     description = "Copies javadocs"
     outputs.upToDateWhen { false }
-    println("Copying site to docs directory")
-    from("${project.layout.projectDirectory.asFile}/target/site")
-    into("${rootProject.projectDir}/docs/")
+    var rootDirs = arrayOf("/css/", "/fonts/", "/imgages/", "/img", "/js/")
+    println("Copying site to docs ${version} directory")
+    project.copy {
+        from("${project.layout.projectDirectory.asFile}/target/site")
+        into("${rootProject.projectDir}/docs/${version}")
+    }
+    project.copy {
+        from("${project.layout.projectDirectory.asFile}/target/site") {
+            include(rootDirs.asIterable())
+        }
+        into("${rootProject.projectDir}/docs")
+    }
 }
 
 

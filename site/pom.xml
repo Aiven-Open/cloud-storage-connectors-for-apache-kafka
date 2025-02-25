@@ -15,22 +15,19 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.aiven</groupId>
     <artifactId>cloud-storage-connectors-for-apache-kafka</artifactId>
     <version>3</version>
     <packaging>jar</packaging>
-    <name>cloud-storage-connectors-for-apache-kafka</name>
+    <name>Cloud Storage Connectors For Apache Kafka</name>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- taken from https://maven.apache.org/guides/mini/guide-reproducible-builds.html -->
         <!-- MSITE-1018, RAT-397: nil out timestamp in order to get current build timestamp -->
         <project.build.outputTimestamp>a</project.build.outputTimestamp>
-        <javaVersion>1.8</javaVersion>
-        <tika.version>2.9.2</tika.version>
-        <maven.compiler.source>${javaVersion}</maven.compiler.source>
-        <maven.compiler.target>${javaVersion}</maven.compiler.target>
         <!-- This is the version of Maven required to use the Rat Maven Plugin -->
         <mavenMinVersion>3.2.5</mavenMinVersion>
         <mavenVersion>3.9.9</mavenVersion>
@@ -47,13 +44,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
                 <dependencies>
-                        <!-- https://mvnrepository.com/artifact/org.apache.maven.doxia/doxia-module-markdown -->
-                        <dependency>
-                            <groupId>org.apache.maven.doxia</groupId>
-                            <artifactId>doxia-module-markdown</artifactId>
-                            <version>2.0.0</version>
-<!--                            <scope>runtime</scope>-->
-                        </dependency>
+                    <!-- https://mvnrepository.com/artifact/org.apache.maven.doxia/doxia-module-markdown -->
+                    <dependency>
+                        <groupId>org.apache.maven.doxia</groupId>
+                        <artifactId>doxia-module-markdown</artifactId>
+                        <version>2.0.0</version>
+                        <!--                            <scope>runtime</scope>-->
+                    </dependency>
                     <!-- https://mvnrepository.com/artifact/org.apache.maven.doxia/doxia-site-renderer -->
                     <dependency>
                         <groupId>org.apache.maven.doxia</groupId>
@@ -63,6 +60,7 @@
                 </dependencies>
                 <configuration>
                     <siteDirectory>build/site</siteDirectory>
+                    <generateReports>false</generateReports>
                 </configuration>
             </plugin>
         </plugins>
