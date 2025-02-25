@@ -23,8 +23,8 @@ tasks.register<Copy>("processSiteAssets") {
         println("Copying from ${s.layout.projectDirectory}/src/site")
         println("          to ${rootProject.layout.projectDirectory.asFile}/site/build/site")
         rootProject.copy {
+            includeEmptyDirs = false
             from(fileTree("${s.layout.projectDirectory}/src/site"))
-            //mkdir("${rootProject.layout.projectDirectory.asFile}/site/build/site")
             into("${rootProject.layout.projectDirectory.asFile}/site/build/site")
         }
 
@@ -40,11 +40,12 @@ tasks.register<Copy>("processSiteAssets") {
         }
         println("")
     }
-    println("Copying from ${project.layout.projectDirectory.asFile}/src/site")
+    println("Copying from ${rootProject.layout.projectDirectory.asFile}/site/src/site")
     println("          to ${rootProject.layout.projectDirectory.asFile}/site/build/site")
     rootProject.copy {
-        from("${project.layout.projectDirectory.asFile}/src/site")
-        into(" ${rootProject.layout.projectDirectory.asFile}/site/build/site")
+        includeEmptyDirs = false
+        from("${rootProject.layout.projectDirectory.asFile}/site/src/site")
+        into("${rootProject.layout.projectDirectory.asFile}/site/build/site")
     }
     println("DONE")
 }
