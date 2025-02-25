@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"io.aiven.kafka.connect.s3"},{"l":"io.aiven.kafka.connect.s3.config"}];updateSearchResults();
