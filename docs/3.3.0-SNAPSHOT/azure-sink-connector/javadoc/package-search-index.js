@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"io.aiven.kafka.connect.azure.sink"}];updateSearchResults();
