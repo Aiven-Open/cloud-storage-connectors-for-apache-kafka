@@ -214,11 +214,11 @@ public final class S3ConfigFragment extends ConfigFragment {
                 awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_ENDPOINT_CONFIG);
 
         configDef.define(AWS_S3_REGION_CONFIG, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "AWS S3 Region, for example us-east-1", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
 
         configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, for example cluster-1/", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
         configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
@@ -303,7 +303,7 @@ public final class S3ConfigFragment extends ConfigFragment {
                 LOGGER.info(AWS_S3_REGION + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, object);
             }
-        }, ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1");
+        }, ConfigDef.Importance.MEDIUM, "AWS S3 Region, for example us-east-1");
 
         configDef.define(AWS_S3_PREFIX, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString() {
             @Override
@@ -311,7 +311,7 @@ public final class S3ConfigFragment extends ConfigFragment {
                 LOGGER.info(AWS_S3_PREFIX + " property is deprecated please read documentation for the new name");
                 super.ensureValid(name, object);
             }
-        }, ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/");
+        }, ConfigDef.Importance.MEDIUM, "Prefix for stored objects, for example cluster-1/");
 
         configDef.define(OUTPUT_FIELDS, ConfigDef.Type.LIST, null, new OutputFieldsValidator() {
             @Override
@@ -374,6 +374,7 @@ public final class S3ConfigFragment extends ConfigFragment {
     protected static class AwsRegionValidator implements ConfigDef.Validator {
         private static final String SUPPORTED_AWS_REGIONS = Arrays.stream(Regions.values())
                 .map(Regions::getName)
+                .sorted()
                 .collect(Collectors.joining(", "));
 
         @Override
@@ -382,10 +383,16 @@ public final class S3ConfigFragment extends ConfigFragment {
                 final String valueStr = (String) value;
                 final Region region = RegionUtils.getRegion(valueStr);
                 if (!RegionUtils.getRegions().contains(region)) {
-                    throw new ConfigException(name, valueStr, "supported values are: " + SUPPORTED_AWS_REGIONS);
+                    throw new ConfigException(name, valueStr, toString());
                 }
             }
         }
+
+        @Override
+        public String toString() {
+            return "Supported values are: " + SUPPORTED_AWS_REGIONS;
+        }
+
     }
 
     private static class BucketNameValidator implements ConfigDef.Validator {
@@ -398,6 +405,12 @@ public final class S3ConfigFragment extends ConfigFragment {
             } catch (final IllegalArgumentException e) {
                 throw new ConfigException("Illegal bucket name: " + e.getMessage());
             }
+        }
+
+        @Override
+        public String toString() {
+            return "Bucket name may not be null, may contain only the characters A-Z, a-z, 0-9, '-', '.', '_' must be between 3 and 63 characters long, must not be formatted as an IP Address, must not contain uppercase characters or white space, " +
+                    "must not end with a period or a dash nor contains two adjacent periods, must not contain dashes next to periods nor begin with a dash";
         }
     }
 

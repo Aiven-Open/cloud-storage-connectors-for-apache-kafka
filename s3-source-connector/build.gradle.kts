@@ -16,7 +16,11 @@ import com.github.spotbugs.snom.SpotBugsTask
  * limitations under the License.
  */
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+  id("aiven-apache-kafka-connectors-all.java-conventions")
+  id("com.bmuschko.docker-remote-api") version "9.4.0"
+}
+
 
 val s3mockVersion by extra("0.2.6")
 val kafkaVersion by extra("3.3.0")
@@ -31,6 +35,22 @@ val integrationTest: SourceSet =
 
 val integrationTestImplementation: Configuration by
     configurations.getting { extendsFrom(configurations.implementation.get()) }
+
+/**********************************/
+/* Documentation building section */
+/**********************************/
+
+tasks.register<Copy>("createIndexMarkdown") {
+  group = "Documentation"
+  description = "Copies Readme to docs/site"
+  outputs.upToDateWhen { false }
+  into(mkdir(layout.buildDirectory.dir("site/site/s3-source-connector/markdown")).resolve("index.md"))
+  from("src/index.md")
+}
+
+/*********************************/
+/*  End of documentation section */
+/*********************************/
 
 tasks.register<Test>("integrationTest") {
   description = "Runs the integration tests."
@@ -150,6 +170,7 @@ dependencies {
     exclude(group = "org.apache.commons", module = "commons-math3")
     exclude(group = "org.apache.httpcomponents", module = "httpclient")
     exclude(group = "commons-codec", module = "commons-codec")
+    exclude(group = "commons-io", module = "commons-io")
     exclude(group = "commons-net", module = "commons-net")
     exclude(group = "org.eclipse.jetty")
     exclude(group = "org.eclipse.jetty.websocket")

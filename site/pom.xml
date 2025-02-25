@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>io.aiven</groupId>
+    <artifactId>cloud-storage-connectors-for-apache-kafka</artifactId>
+    <version>3</version>
+    <packaging>jar</packaging>
+    <name>cloud-storage-connectors-for-apache-kafka</name>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- taken from https://maven.apache.org/guides/mini/guide-reproducible-builds.html -->
+        <!-- MSITE-1018, RAT-397: nil out timestamp in order to get current build timestamp -->
+        <project.build.outputTimestamp>a</project.build.outputTimestamp>
+        <javaVersion>1.8</javaVersion>
+        <tika.version>2.9.2</tika.version>
+        <maven.compiler.source>${javaVersion}</maven.compiler.source>
+        <maven.compiler.target>${javaVersion}</maven.compiler.target>
+        <!-- This is the version of Maven required to use the Rat Maven Plugin -->
+        <mavenMinVersion>3.2.5</mavenMinVersion>
+        <mavenVersion>3.9.9</mavenVersion>
+        <!-- maven plugin versions -->
+        <mavenPluginPluginVersion>3.15.1</mavenPluginPluginVersion>
+        <mavenChangesVersion>2.12.1</mavenChangesVersion>
+        <mavenJavadocPluginVersion>3.11.2</mavenJavadocPluginVersion>
+    </properties>
+    <dependencies>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <dependencies>
+                        <!-- https://mvnrepository.com/artifact/org.apache.maven.doxia/doxia-module-markdown -->
+                        <dependency>
+                            <groupId>org.apache.maven.doxia</groupId>
+                            <artifactId>doxia-module-markdown</artifactId>
+                            <version>2.0.0</version>
+<!--                            <scope>runtime</scope>-->
+                        </dependency>
+                    <!-- https://mvnrepository.com/artifact/org.apache.maven.doxia/doxia-site-renderer -->
+                    <dependency>
+                        <groupId>org.apache.maven.doxia</groupId>
+                        <artifactId>doxia-site-renderer</artifactId>
+                        <version>2.0.0</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <siteDirectory>build/site</siteDirectory>
+                </configuration>
+            </plugin>
+        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>3.21.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

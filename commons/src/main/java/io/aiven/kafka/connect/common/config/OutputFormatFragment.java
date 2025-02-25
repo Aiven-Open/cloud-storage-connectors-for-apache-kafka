@@ -59,7 +59,7 @@ public final class OutputFormatFragment extends ConfigFragment {
 
         configDef.define(FORMAT_OUTPUT_TYPE_CONFIG, ConfigDef.Type.STRING, FormatType.CSV.name,
                 new OutputTypeValidator(), ConfigDef.Importance.MEDIUM,
-                "The format type of output content" + "The supported values are: " + supportedFormatTypes + ".",
+                "The format type of output content.",
                 GROUP_FORMAT, 0, ConfigDef.Width.NONE, FORMAT_OUTPUT_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(FormatType.names()));
 

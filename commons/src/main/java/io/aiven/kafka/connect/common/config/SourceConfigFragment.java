@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.common.config;
 import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
@@ -123,6 +124,11 @@ public final class SourceConfigFragment extends ConfigFragment {
                 // This will throw an Exception if not a valid value.
                 DistributionType.forName(objectDistributionStrategy);
             }
+        }
+
+        @Override
+        public String toString() {
+            return "Must be one of: " + Arrays.stream(DistributionType.values()).map(DistributionType::name).collect(Collectors.toList());
         }
     }
 
