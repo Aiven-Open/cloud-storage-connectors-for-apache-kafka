@@ -75,7 +75,6 @@ tasks.withType<Jar> {
     }
 }
 
-
 jacoco {
     toolVersion = "0.8.7"
 }
