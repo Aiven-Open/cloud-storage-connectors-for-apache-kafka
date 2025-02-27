@@ -1,19 +1,19 @@
 /*
-  Licensed to the Apache Software Foundation (ASF) under one or more
-  contributor license agreements.  See the NOTICE file distributed with
-  this work for additional information regarding copyright ownership.
-  The ASF licenses this file to You under the Apache License, Version 2.0
-  (the "License"); you may not use this file except in compliance with
-  the License.  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package io.aiven.kafka.connect.docs;
 
 import java.io.IOException;
@@ -63,14 +63,18 @@ public class TextDocAppendable extends BaseDocAppendable {
     // @formatter:on
 
     /**
-     * Finds the next text wrap position after {@code startPos} for the text in {@code text} with the column width {@code width}. The wrap point is the last
-     * position before startPos+width having a whitespace character (space, \n, \r). If there is no whitespace character before startPos+width, it will return
-     * startPos+width.
+     * Finds the next text wrap position after {@code startPos} for the text in {@code text} with the column width
+     * {@code width}. The wrap point is the last position before startPos+width having a whitespace character (space,
+     * \n, \r). If there is no whitespace character before startPos+width, it will return startPos+width.
      *
-     * @param text     The text being searched for the wrap position
-     * @param width    width of the wrapped text
-     * @param startPos position from which to start the lookup whitespace character
-     * @return position on which the text must be wrapped or @{code text.length()} if the wrap position is at the end of the text.
+     * @param text
+     *            The text being searched for the wrap position
+     * @param width
+     *            width of the wrapped text
+     * @param startPos
+     *            position from which to start the lookup whitespace character
+     * @return position on which the text must be wrapped or @{code text.length()} if the wrap position is at the end of
+     *         the text.
      */
     public static int indexOfWrap(final CharSequence text, final int width, final int startPos) {
         if (width < 1) {
@@ -113,8 +117,9 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Constructs an appendable filter built on top of the specified underlying appendable.
      *
-     * @param output the underlying appendable to be assigned to the field {@code this.output} for later use, or {@code null} if this instance is to be created
-     *               without an underlying stream.
+     * @param output
+     *            the underlying appendable to be assigned to the field {@code this.output} for later use, or
+     *            {@code null} if this instance is to be created without an underlying stream.
      */
     public TextDocAppendable(final Appendable output) {
         super(output);
@@ -129,19 +134,22 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Adjusts the table format.
      * <p>
-     * Given the width of the page and the size of the table attempt to resize the columns to fit the page width if necessary. Adjustments are made as follows:
+     * Given the width of the page and the size of the table attempt to resize the columns to fit the page width if
+     * necessary. Adjustments are made as follows:
      * </p>
      * <ul>
      * <li>The minimum size for a column may not be smaller than the length of the column header</li>
      * <li>The maximum size is set to the maximum of the length of the header or the longest line length.</li>
-     * <li>If the total size of the columns is greater than the page wight, adjust the size of VARIABLE columns to attempt reduce the width to the the maximum
-     * size.
+     * <li>If the total size of the columns is greater than the page wight, adjust the size of VARIABLE columns to
+     * attempt reduce the width to the the maximum size.
      * </ul>
      * <p>
-     * Note: it is possible for the size of the columns to exceed the declared page width. In this case the table will extend beyond the desired page width.
+     * Note: it is possible for the size of the columns to exceed the declared page width. In this case the table will
+     * extend beyond the desired page width.
      * </p>
      *
-     * @param table the table to adjust.
+     * @param table
+     *            the table to adjust.
      * @return a new TableDefinition with adjusted values.
      */
     protected TableDefinition adjustTableFormat(final TableDefinition table) {
@@ -206,7 +214,8 @@ public class TextDocAppendable extends BaseDocAppendable {
             final int idx = Math.min(level, fillChars.length) - 1;
             final TextStyle style = textStyleBuilder.get();
             final Queue<String> queue = makeColumnQueue(text, style);
-            queue.add(Util.repeatSpace(style.getLeftPad()) + Util.repeat(Math.min(text.length(), style.getMaxWidth()), fillChars[idx]));
+            queue.add(Util.repeatSpace(style.getLeftPad())
+                    + Util.repeat(Math.min(text.length(), style.getMaxWidth()), fillChars[idx]));
             queue.add(BLANK_LINE);
             printQueue(queue);
         }
@@ -215,10 +224,13 @@ public class TextDocAppendable extends BaseDocAppendable {
     @Override
     public void appendList(final boolean ordered, final Collection<CharSequence> list) throws IOException {
         if (list != null && !list.isEmpty()) {
-            final TextStyle.Builder builder = TextStyle.builder().setLeftPad(textStyleBuilder.getLeftPad()).setIndent(DEFAULT_LIST_INDENT);
+            final TextStyle.Builder builder = TextStyle.builder()
+                    .setLeftPad(textStyleBuilder.getLeftPad())
+                    .setIndent(DEFAULT_LIST_INDENT);
             int i = 1;
             for (final CharSequence line : list) {
-                final String entry = ordered ? String.format(" %s. %s", i++, Util.defaultValue(line, BLANK_LINE))
+                final String entry = ordered
+                        ? String.format(" %s. %s", i++, Util.defaultValue(line, BLANK_LINE))
                         : String.format(" * %s", Util.defaultValue(line, BLANK_LINE));
                 builder.setMaxWidth(Math.min(textStyleBuilder.getMaxWidth(), entry.length()));
                 printQueue(makeColumnQueue(entry, builder.get()));
@@ -257,7 +269,8 @@ public class TextDocAppendable extends BaseDocAppendable {
         if (!Util.isEmpty(title)) {
             final TextStyle style = textStyleBuilder.get();
             final Queue<String> queue = makeColumnQueue(title, style);
-            queue.add(Util.repeatSpace(style.getLeftPad()) + Util.repeat(Math.min(title.length(), style.getMaxWidth()), '#'));
+            queue.add(Util.repeatSpace(style.getLeftPad())
+                    + Util.repeat(Math.min(title.length(), style.getMaxWidth()), '#'));
             queue.add(BLANK_LINE);
             printQueue(queue);
         }
@@ -300,10 +313,13 @@ public class TextDocAppendable extends BaseDocAppendable {
     }
 
     /**
-     * Creates a queue comprising strings extracted from columnData where the alignment and length are determined by the style.
+     * Creates a queue comprising strings extracted from columnData where the alignment and length are determined by the
+     * style.
      *
-     * @param columnData The string to wrap
-     * @param style      The TextStyle to guide the wrapping.
+     * @param columnData
+     *            The string to wrap
+     * @param style
+     *            The TextStyle to guide the wrapping.
      * @return A queue of the string wrapped.
      */
     protected Queue<String> makeColumnQueue(final CharSequence columnData, final TextStyle style) {
@@ -325,11 +341,13 @@ public class TextDocAppendable extends BaseDocAppendable {
     }
 
     /**
-     * For each column in the {@code columnData} apply the associated {@link TextStyle} and generated a queue of strings that are the maximum size of the column
-     * + the left pad.
+     * For each column in the {@code columnData} apply the associated {@link TextStyle} and generated a queue of strings
+     * that are the maximum size of the column + the left pad.
      *
-     * @param columnData The column data to output.
-     * @param styles     the styles to apply.
+     * @param columnData
+     *            The column data to output.
+     * @param styles
+     *            the styles to apply.
      * @return A list of queues of strings that represent each column in the table.
      */
     protected List<Queue<String>> makeColumnQueues(final List<String> columnData, final List<TextStyle> styles) {
@@ -343,8 +361,10 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Prints a queue of text.
      *
-     * @param queue the queue of text to print.
-     * @throws IOException on output error.
+     * @param queue
+     *            the queue of text to print.
+     * @throws IOException
+     *             on output error.
      */
     private void printQueue(final Queue<String> queue) throws IOException {
         for (final String s : queue) {
@@ -355,8 +375,10 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Prints wrapped text using the TextDocAppendable output style.
      *
-     * @param text the text to wrap
-     * @throws IOException on output error.
+     * @param text
+     *            the text to wrap
+     * @throws IOException
+     *             on output error.
      */
     public void printWrapped(final String text) throws IOException {
         printQueue(makeColumnQueue(text, this.textStyleBuilder.get()));
@@ -365,9 +387,12 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Prints wrapped text.
      *
-     * @param text  the text to wrap
-     * @param style the style for the wrapped text.
-     * @throws IOException on output error.
+     * @param text
+     *            the text to wrap
+     * @param style
+     *            the style for the wrapped text.
+     * @throws IOException
+     *             on output error.
      */
     public void printWrapped(final String text, final TextStyle style) throws IOException {
         printQueue(makeColumnQueue(text, style));
@@ -376,8 +401,10 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Resizes an original width based on the fractional size it should be.
      *
-     * @param orig     the original size.
-     * @param fraction the fractional adjustment.
+     * @param orig
+     *            the original size.
+     * @param fraction
+     *            the fractional adjustment.
      * @return the resized value.
      */
     private int resize(final int orig, final double fraction) {
@@ -387,8 +414,10 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Resizes a TextStyle builder based on the fractional size.
      *
-     * @param builder  the builder to adjust.
-     * @param fraction the fractional size (e.g. percentage of the current size) that the builder should be.
+     * @param builder
+     *            the builder to adjust.
+     * @param fraction
+     *            the fractional size (e.g. percentage of the current size) that the builder should be.
      * @return the builder with the maximum width and indent values resized.
      */
     protected TextStyle.Builder resize(final TextStyle.Builder builder, final double fraction) {
@@ -406,7 +435,8 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Sets the indent for the output.
      *
-     * @param indent the indent used for paragraphs.
+     * @param indent
+     *            the indent used for paragraphs.
      */
     public void setIndent(final int indent) {
         textStyleBuilder.setIndent(indent);
@@ -415,7 +445,8 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Sets the left padding: the number of characters from the left edge to start output.
      *
-     * @param leftPad the left padding.
+     * @param leftPad
+     *            the left padding.
      */
     public void setLeftPad(final int leftPad) {
         textStyleBuilder.setLeftPad(leftPad);
@@ -424,21 +455,27 @@ public class TextDocAppendable extends BaseDocAppendable {
     /**
      * Sets the maximum width for the output.
      *
-     * @param maxWidth the maximum width for the output.
+     * @param maxWidth
+     *            the maximum width for the output.
      */
     public void setMaxWidth(final int maxWidth) {
         textStyleBuilder.setMaxWidth(maxWidth);
     }
 
     /**
-     * Writes one line from each of the {@code columnQueues} until all the queues are exhausted. If an exhausted queue is encountered while other queues
-     * continue to have content the exhausted queue will produce empty text for the output width of the column (maximum width + left pad).
+     * Writes one line from each of the {@code columnQueues} until all the queues are exhausted. If an exhausted queue
+     * is encountered while other queues continue to have content the exhausted queue will produce empty text for the
+     * output width of the column (maximum width + left pad).
      *
-     * @param columnQueues the List of queues that represent the columns of data.
-     * @param styles       the TextStyle for each column.
-     * @throws IOException on output error.
+     * @param columnQueues
+     *            the List of queues that represent the columns of data.
+     * @param styles
+     *            the TextStyle for each column.
+     * @throws IOException
+     *             on output error.
      */
-    protected void writeColumnQueues(final List<Queue<String>> columnQueues, final List<TextStyle> styles) throws IOException {
+    protected void writeColumnQueues(final List<Queue<String>> columnQueues, final List<TextStyle> styles)
+            throws IOException {
         boolean moreData = true;
         final String lPad = Util.repeatSpace(textStyleBuilder.get().getLeftPad());
         while (moreData) {

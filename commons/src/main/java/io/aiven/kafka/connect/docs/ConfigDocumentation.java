@@ -1,14 +1,22 @@
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.connect.docs;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Converter;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.text.StringEscapeUtils;
-import org.apache.kafka.common.config.ConfigDef;
+import static java.lang.String.format;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -19,26 +27,39 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static java.lang.String.format;
+import org.apache.kafka.common.config.ConfigDef;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Converter;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.text.StringEscapeUtils;
 
 public class ConfigDocumentation {
 
-    enum Format {XML, TEXT, TABLE, HTML, RST, ENRICHED_RST, YAML};
+    enum Format {
+        XML, TEXT, TABLE, HTML, RST, ENRICHED_RST, YAML
+    };
 
-    private static final Converter<Format, IllegalArgumentException> FORMAT = s -> Format.valueOf(s.toUpperCase(Locale.ROOT));
+    private static final Converter<Format, IllegalArgumentException> FORMAT = s -> Format
+            .valueOf(s.toUpperCase(Locale.ROOT));
     private static final Converter<ConfigDef, IllegalArgumentException> CONFIG_DEF = className -> {
         String errorFmt = "`%s` does not implement a 'public static ConfigDef configDef()' method";
         try {
             Class<?> configClass = Class.forName(className);
             try {
                 Method configDefMethod = configClass.getDeclaredMethod("configDef");
-                if (configDefMethod.getReturnType() != ConfigDef.class || !Modifier.isStatic(configDefMethod.getModifiers()) || !Modifier.isPublic(configDefMethod.getModifiers())) {
+                if (configDefMethod.getReturnType() != ConfigDef.class
+                        || !Modifier.isStatic(configDefMethod.getModifiers())
+                        || !Modifier.isPublic(configDefMethod.getModifiers())) {
                     throw new IllegalArgumentException(format(errorFmt, configClass.getName()));
                 }
                 return (ConfigDef) configDefMethod.invoke(null);
@@ -52,20 +73,31 @@ public class ConfigDocumentation {
         }
     };
 
-    private static Option classOption = Option.builder("c").longOpt("class").desc("The class name of the config file")
-            .required().converter(CONFIG_DEF).hasArg().build();
+    private static Option classOption = Option.builder("c")
+            .longOpt("class")
+            .desc("The class name of the config file")
+            .required()
+            .converter(CONFIG_DEF)
+            .hasArg()
+            .build();
 
-    private static Option formatOption = Option.builder("f").longOpt("format").desc("The output format. (Defaults to TEXT)")
-            .converter(FORMAT).hasArg().build();
-
+    private static Option formatOption = Option.builder("f")
+            .longOpt("format")
+            .desc("The output format. (Defaults to TEXT)")
+            .converter(FORMAT)
+            .hasArg()
+            .build();
 
     private static Options createOptions() {
-        return new Options()
-                .addOption(classOption)
+        return new Options().addOption(classOption)
                 .addOption(Option.builder("?").longOpt("help").desc("Print this message").build())
                 .addOption(formatOption)
-                .addOption(Option.builder("o").longOpt("output").desc("Output file name (Defaults to System.out")
-                        .converter(Converter.FILE).hasArg().build());
+                .addOption(Option.builder("o")
+                        .longOpt("output")
+                        .desc("Output file name (Defaults to System.out")
+                        .converter(Converter.FILE)
+                        .hasArg()
+                        .build());
     }
 
     public static void printHelp() {
@@ -87,28 +119,28 @@ public class ConfigDocumentation {
                 Appendable out = outputFile == null ? System.out : new FileWriter(outputFile);
                 try {
                     switch (format) {
-                        case XML:
+                        case XML :
                             xml(configDef, out);
                             break;
-                        case TEXT:
+                        case TEXT :
                             text(configDef, out);
                             break;
-                        case TABLE:
+                        case TABLE :
                             table(configDef, out);
                             break;
-                        case HTML:
+                        case HTML :
                             html(configDef, out);
                             break;
-                        case RST:
+                        case RST :
                             rst(configDef, out);
                             break;
-                        case ENRICHED_RST:
+                        case ENRICHED_RST :
                             enrichedRst(configDef, out);
                             break;
-                        case YAML:
+                        case YAML :
                             yaml(configDef, out);
                             break;
-                        default:
+                        default :
                             throw new IllegalArgumentException("Unsupported format: " + format);
                     }
                 } finally {
@@ -124,7 +156,7 @@ public class ConfigDocumentation {
     }
 
     public static void table(ConfigDef config, Appendable out) throws IOException {
-        Collection< ConfigDef.ConfigKey> keys = config.configKeys().values();
+        Collection<ConfigDef.ConfigKey> keys = config.configKeys().values();
         int maxColumnWidth = 35;
         int tableWidth = 180;
 
@@ -142,10 +174,8 @@ public class ConfigDocumentation {
         maxName = Math.min(maxName, maxColumnWidth);
         maxValue = Math.min(maxValue, maxColumnWidth);
         int maxDesc = tableWidth - maxName - maxValue;
-        List<TextStyle> styles = Arrays.asList(
-                TextStyle.builder().setMaxWidth(maxName).get(),
-                TextStyle.builder().setMaxWidth(maxValue).get(),
-                TextStyle.builder().setMaxWidth(maxDesc).get());
+        List<TextStyle> styles = Arrays.asList(TextStyle.builder().setMaxWidth(maxName).get(),
+                TextStyle.builder().setMaxWidth(maxValue).get(), TextStyle.builder().setMaxWidth(maxDesc).get());
 
         TableDefinition tableDefinition = TableDefinition.from("", styles, headers, rows.values());
 
@@ -154,7 +184,7 @@ public class ConfigDocumentation {
     }
 
     public static void text(ConfigDef config, Appendable out) throws IOException {
-        Collection< ConfigDef.ConfigKey> keys = config.configKeys().values();
+        Collection<ConfigDef.ConfigKey> keys = config.configKeys().values();
 
         List<String> headers = Arrays.asList("Name", "Default", "Description");
 
@@ -163,15 +193,16 @@ public class ConfigDocumentation {
             sections.put(key.name, key);
         }
 
-        /*        out.append("  <section>\n");
-            out.append("      <name>" + StringEscapeUtils.escapeXml11(section.name) + "</name>\n");
-            out.append("      <documentation>" + StringEscapeUtils.escapeXml11(section.documentation) + "</documentation>\n");
-            out.append("      <type>" + StringEscapeUtils.escapeXml11(section.type.toString()) + "</type>\n");
-            out.append("      <default>" + StringEscapeUtils.escapeXml11(asString(section.defaultValue)) + "</default>\n");
-            out.append("      <validValues>" + StringEscapeUtils.escapeXml11(asString(section.validator)) + "</validValues>\n");
-            out.append("      <importance>" + StringEscapeUtils.escapeXml11(section.importance.toString()) + "</importance>\n");
-            out.append("  </section>\n");
-
+        /*
+         * out.append("  <section>\n"); out.append("      <name>" + StringEscapeUtils.escapeXml11(section.name) +
+         * "</name>\n"); out.append("      <documentation>" + StringEscapeUtils.escapeXml11(section.documentation) +
+         * "</documentation>\n"); out.append("      <type>" + StringEscapeUtils.escapeXml11(section.type.toString()) +
+         * "</type>\n"); out.append("      <default>" + StringEscapeUtils.escapeXml11(asString(section.defaultValue)) +
+         * "</default>\n"); out.append("      <validValues>" +
+         * StringEscapeUtils.escapeXml11(asString(section.validator)) + "</validValues>\n");
+         * out.append("      <importance>" + StringEscapeUtils.escapeXml11(section.importance.toString()) +
+         * "</importance>\n"); out.append("  </section>\n");
+         *
          */
         MarkdownDocAppendable output = new MarkdownDocAppendable(out);
 
@@ -193,7 +224,7 @@ public class ConfigDocumentation {
     }
 
     public static void xml(ConfigDef config, Appendable out) throws IOException {
-        Collection< ConfigDef.ConfigKey> keys = config.configKeys().values();
+        Collection<ConfigDef.ConfigKey> keys = config.configKeys().values();
 
         List<String> headers = Arrays.asList("Name", "Default", "Description");
 
@@ -205,15 +236,18 @@ public class ConfigDocumentation {
         out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         out.append(format("<%s>%n", config.getClass().getSimpleName()));
 
-
         for (ConfigDef.ConfigKey section : sections.values()) {
             out.append("  <section>\n");
             out.append("      <name>" + StringEscapeUtils.escapeXml11(section.name) + "</name>\n");
-            out.append("      <documentation>" + StringEscapeUtils.escapeXml11(section.documentation) + "</documentation>\n");
+            out.append("      <documentation>" + StringEscapeUtils.escapeXml11(section.documentation)
+                    + "</documentation>\n");
             out.append("      <type>" + StringEscapeUtils.escapeXml11(section.type.toString()) + "</type>\n");
-            out.append("      <default>" + StringEscapeUtils.escapeXml11(asString(section.defaultValue)) + "</default>\n");
-            out.append("      <validValues>" + StringEscapeUtils.escapeXml11(asString(section.validator)) + "</validValues>\n");
-            out.append("      <importance>" + StringEscapeUtils.escapeXml11(section.importance.toString()) + "</importance>\n");
+            out.append(
+                    "      <default>" + StringEscapeUtils.escapeXml11(asString(section.defaultValue)) + "</default>\n");
+            out.append("      <validValues>" + StringEscapeUtils.escapeXml11(asString(section.validator))
+                    + "</validValues>\n");
+            out.append("      <importance>" + StringEscapeUtils.escapeXml11(section.importance.toString())
+                    + "</importance>\n");
             out.append("  </section>\n");
         }
         out.append(format("</%s>%n", config.getClass().getSimpleName()));
@@ -232,7 +266,7 @@ public class ConfigDocumentation {
     }
 
     public static void yaml(ConfigDef config, Appendable out) throws IOException {
-        Collection< ConfigDef.ConfigKey> keys = config.configKeys().values();
+        Collection<ConfigDef.ConfigKey> keys = config.configKeys().values();
 
         List<String> headers = Arrays.asList("Name", "Default", "Description");
 
@@ -244,7 +278,7 @@ public class ConfigDocumentation {
         out.append(format("%s:%n", config.getClass().getSimpleName()));
 
         for (ConfigDef.ConfigKey section : sections.values()) {
-            out.append(format("- %n  name: %s%n",  section.name));
+            out.append(format("- %n  name: %s%n", section.name));
             out.append(format("  documentation: %s%n", section.documentation));
             out.append(format("  type: %s%n", section.type));
             out.append(format("  default: %s%n", section.defaultValue));

@@ -1,19 +1,19 @@
 /*
-  Licensed to the Apache Software Foundation (ASF) under one or more
-  contributor license agreements.  See the NOTICE file distributed with
-  this work for additional information regarding copyright ownership.
-  The ASF licenses this file to You under the Apache License, Version 2.0
-  (the "License"); you may not use this file except in compliance with
-  the License.  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package io.aiven.kafka.connect.docs;
 
 import java.util.List;
@@ -25,8 +25,8 @@ import java.util.List;
  * </p>
  * <ul>
  * <li>A caption.</li>
- * <li>A {@link TextStyle} that describes the width of the entry, its offset from the previous column (leftPad) and how much each line after the first should be
- * indented (indent).</li>
+ * <li>A {@link TextStyle} that describes the width of the entry, its offset from the previous column (leftPad) and how
+ * much each line after the first should be indented (indent).</li>
  * <li>A heading (String) is placed at the top of the column</li>
  * <li>A collection of rows</li>
  * </ul>
@@ -38,13 +38,18 @@ public interface TableDefinition {
     /**
      * A helper function to create a table instance from the various components.
      *
-     * @param caption     The caption, may be {@code null}.
-     * @param columnStyle a list of TextStyle elements defining the columns.
-     * @param headers     the list of column headers.
-     * @param rows        a collection of rows.
+     * @param caption
+     *            The caption, may be {@code null}.
+     * @param columnStyle
+     *            a list of TextStyle elements defining the columns.
+     * @param headers
+     *            the list of column headers.
+     * @param rows
+     *            a collection of rows.
      * @return A TableDefinition returning the parameters as appropriate.
      */
-    static TableDefinition from(final String caption, final List<TextStyle> columnStyle, final List<String> headers, final Iterable<List<String>> rows) {
+    static TableDefinition from(final String caption, final List<TextStyle> columnStyle, final List<String> headers,
+            final Iterable<List<String>> rows) {
         return new TableDefinition() {
 
             @Override
