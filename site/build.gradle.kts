@@ -15,91 +15,111 @@ tasks.register<Exec>("execVale") {
     args("run", "--rm", "-v", "${project.rootDir}:/project:Z", "-v", "${project.rootDir}/.github/vale/styles:/styles:Z", "-v", "${project.projectDir}:/site:Z", "-w", "/docs", "jdkato/vale", "--filter=warn.expr", "--config=/project/.vale.ini", "--glob=!**/build/**", ".")
 }
 
-tasks.register<Copy>("processSiteAssets") {
-    group = "Documentation"
-    description = "Copies "
-    outputs.upToDateWhen { false }
-    rootProject.subprojects.filter { s -> s.name != "site" }.forEach { s ->
-        println("Copying from ${s.layout.projectDirectory}/src/site")
-        println("          to ${rootProject.layout.projectDirectory.asFile}/site/build/site")
-        rootProject.copy {
-            includeEmptyDirs = false
-            from(fileTree("${s.layout.projectDirectory}/src/site"))
-            into("${rootProject.layout.projectDirectory.asFile}/site/build/site")
-        }
-
-        println("Copying .md files from ${s.layout.projectDirectory}/src")
-        println("          to ${rootProject.layout.projectDirectory.asFile}/site/build/site/markdown/${s.name}")
-        rootProject.copy {
-            includeEmptyDirs = false
-            from("${s.layout.projectDirectory}/src") {
-                include("**/*.md")
-                exclude("**/site/")
-            }
-            into("${rootProject.layout.projectDirectory.asFile}/site/build/site/markdown/${s.name}")
-        }
-        println("")
-    }
-    println("Copying from ${rootProject.layout.projectDirectory.asFile}/site/src/site")
-    println("          to ${rootProject.layout.projectDirectory.asFile}/site/build/site")
-    rootProject.copy {
-        includeEmptyDirs = false
-        from("${rootProject.layout.projectDirectory.asFile}/site/src/site")
-        into("${rootProject.layout.projectDirectory.asFile}/site/build/site")
-    }
-    println("DONE")
+configurations {
+    resolvable(":s3-source-connector:siteAssets")
 }
 
-tasks.register<Exec>("createSite") {
+tasks.register<Copy>("copySiteAssets") {
+    outputs.upToDateWhen { false }
+    println("Copying projects")
+    rootProject.subprojects
+        .filter { s -> s.name != "site" }
+        .filter { s -> s.tasks.findByName("copySiteAssets") != null }
+        .forEach { s ->
+            println("Project: "+ s.name)
+            dependsOn(s.tasks.getByName("copySiteAssets"))
+                from(s.tasks.getByName("copySiteAssets").outputs.files)
+            }
+    from("${project.layout.projectDirectory}/src/site")
+    into("${project.layout.buildDirectory.asFile.get()}/site")
+}
+
+    tasks.register<Exec>("createSite") {
+        outputs.upToDateWhen { false }
+        mustRunAfter("copySiteAssets")
+        dependsOn("javadoc", "copySiteAssets",)
+        println("Executing ${project.projectDir}/mvnw")
+        executable("${project.projectDir}/mvnw")
+        args("clean", "site:site")
+    }
+
+tasks.register<Copy>("buildSite") {
     group = "Documentation"
     description = "Build site"
     outputs.upToDateWhen { false }
-    dependsOn("processSiteAssets")
-    println("Executing ${project.projectDir}/mvnw")
-    executable("${project.projectDir}/mvnw")
-    args("clean", "site:site")
+    //dependsOn("createSite")
+    //mustRunAfter("createSite")
+    rootProject.subprojects
+        .filter { s -> s.name != "site" }
+        .filter { s -> s.tasks.findByName("copySiteAssets") != null }
+        .forEach { s ->
+            dependsOn(s.tasks.getByName("javadoc"))
+            project.copy {
+                println("Project: " + s.name)
+                println("to: ${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
+                from("${s.layout.buildDirectory.asFile.get()}/docs/javadoc")
+                into("${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
+            }
+        }
 }
 
-tasks.register<Copy>("populateSite") {
-    group = "Documentation"
-    description = "Copies documentation to additional documentation"
-    outputs.upToDateWhen { false }
-    println("copying yml files")
-    project.copy {
-        includeEmptyDirs = false
-        from("${project.layout.projectDirectory.asFile}/build/site")
-        into("${project.layout.projectDirectory.asFile}/target/site")
-        include("**/*.yml")
-    }
-    println("Copying javadoc from subprojects to site")
-    rootProject.subprojects.filter { s -> s.name != "site" }.forEach { s ->
-        println("Copying from ${s.layout.projectDirectory}/build/docs/javadoc")
-        println("          to ${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
-        rootProject.copy {
-            from("${s.layout.projectDirectory}/build/docs/javadoc")
-            into("${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
-        }
-        println("")
-    }
-}
+//tasks.register<Task>("buildSite") {
+//    group = "Documentation"
+//    description = "Build site"
+//    dependsOn("createSite", "processJavadocs")
+//}
 
-tasks.register<Copy>("deploySite") {
-    group = "Documentation"
-    description = "Copies javadocs"
-    outputs.upToDateWhen { false }
-    var rootDirs = arrayOf("/css/", "/fonts/", "/imgages/", "/img", "/js/")
-    println("Copying site to docs ${version} directory")
-    project.copy {
-        from("${project.layout.projectDirectory.asFile}/target/site")
-        into("${rootProject.projectDir}/docs/${version}")
-    }
-    project.copy {
-        from("${project.layout.projectDirectory.asFile}/target/site") {
-            include(rootDirs.asIterable())
-        }
-        into("${rootProject.projectDir}/docs")
-    }
-}
+//    tasks.register<Copy>("populateSite") {
+//        group = "Documentation"
+//        description = "Copies documentation to additional documentation"
+//        outputs.upToDateWhen { false }
+////        rootProject.subprojects
+////            .filter { s -> s.name != "site" }
+////            .filter { s -> s.tasks.findByName("javadoc") != null }
+////            .forEach { s ->
+////                dependsOn(s.tasks.getByName("javadoc"))
+////            }
+//        println("copying yml files")
+//        project.copy {
+//            includeEmptyDirs = false
+//            from("${project.layout.projectDirectory.asFile}/build/site")
+//            into("${project.layout.projectDirectory.asFile}/target/site")
+//            include("**/*.yml")
+//        }
+//        println("Copying javadoc from subprojects to site")
+//        rootProject.subprojects
+//            .filter { s -> s.name != "site" }
+//            .filter { s -> s.tasks.findByName("javadoc") != null }
+//            .forEach { s ->
+//                dependsOn(s.tasks.getByName("javadoc"))
+//                println("Copying from ${s.name}:javadoc.output.files")
+//                println("          to ${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
+//                copy {
+//                    from(s.tasks.getByName("javadoc").outputs.files)
+//                    into("${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
+//                }
+//            }
+//        println("")
+//    }
+
+//    tasks.register<Copy>("deploySite") {
+//        group = "Documentation"
+//        description = "Copies javadocs"
+//        outputs.upToDateWhen { false }
+//        var rootDirs = arrayOf("/css/", "/fonts/", "/imgages/", "/img", "/js/")
+//        println("Copying site to docs ${version} directory")
+//        project.copy {
+//            from("${project.layout.projectDirectory.asFile}/target/site")
+//            into("${rootProject.projectDir}/docs/${version}")
+//        }
+//        project.copy {
+//            from("${project.layout.projectDirectory.asFile}/target/site") {
+//                include(rootDirs.asIterable())
+//            }
+//            into("${rootProject.projectDir}/docs")
+//        }
+//    }
+
 
 
 

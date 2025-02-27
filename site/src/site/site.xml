@@ -23,6 +23,7 @@ under the License.
          xmlns="http://maven.apache.org/DECORATION/1.6.0"
          xsi:schemaLocation="http://maven.apache.org/DECORATION/1.6.0 http://maven.apache.org/xsd/decoration-1.6.0.xsd"
         name="Aiven Kafka Connectors">
+    <poweredBy/>
     <body>
 <!--        <menu name="Overview">-->
 <!--            <item name="Introduction" href="index.html"/>-->
