@@ -218,8 +218,8 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
 
         configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, for example cluster-1/", GROUP_AWS, awsGroupCounter++,
-                ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
+                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, for example cluster-1/", GROUP_AWS,
+                awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
         configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, awsGroupCounter++,
@@ -409,8 +409,8 @@ public final class S3ConfigFragment extends ConfigFragment {
 
         @Override
         public String toString() {
-            return "Bucket name may not be null, may contain only the characters A-Z, a-z, 0-9, '-', '.', '_' must be between 3 and 63 characters long, must not be formatted as an IP Address, must not contain uppercase characters or white space, " +
-                    "must not end with a period or a dash nor contains two adjacent periods, must not contain dashes next to periods nor begin with a dash";
+            return "Bucket name may not be null, may contain only the characters A-Z, a-z, 0-9, '-', '.', '_' must be between 3 and 63 characters long, must not be formatted as an IP Address, must not contain uppercase characters or white space, "
+                    + "must not end with a period or a dash nor contains two adjacent periods, must not contain dashes next to periods nor begin with a dash";
         }
     }
 

@@ -1,27 +1,27 @@
 /*
-  Licensed to the Apache Software Foundation (ASF) under one or more
-  contributor license agreements.  See the NOTICE file distributed with
-  this work for additional information regarding copyright ownership.
-  The ASF licenses this file to You under the Apache License, Version 2.0
-  (the "License"); you may not use this file except in compliance with
-  the License.  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package io.aiven.kafka.connect.docs;
 
 import java.util.function.Supplier;
 
 /**
- * The definition for styling recommendations blocks of text. Most common usage is to style columns in a table, but may also be used to specify default styling
- * for a {@link DocAppendable}. HelpWriters are free to ignore the TextStyle recommendations particularly where they are not supported or contradict common
- * usage.
+ * The definition for styling recommendations blocks of text. Most common usage is to style columns in a table, but may
+ * also be used to specify default styling for a {@link DocAppendable}. HelpWriters are free to ignore the TextStyle
+ * recommendations particularly where they are not supported or contradict common usage.
  *
  * @since 1.10.0
  */
@@ -29,7 +29,7 @@ public final class TextStyle {
 
     /**
      * The alignment possibilities.
-      */
+     */
     public enum Alignment {
 
         /**
@@ -69,7 +69,9 @@ public final class TextStyle {
         /** The subsequent line indentation. */
         private int indent;
 
-        /** The scalable flag. Identifies text blocks that can be made narrower or wider as needed by the DocAppendable. */
+        /**
+         * The scalable flag. Identifies text blocks that can be made narrower or wider as needed by the DocAppendable.
+         */
         private boolean scalable = true;
 
         /** The minimum width. */
@@ -133,7 +135,8 @@ public final class TextStyle {
         }
 
         /**
-         * Specifies if the column can be made wider or to narrower width to fit constraints of the DocAppendable and formatting.
+         * Specifies if the column can be made wider or to narrower width to fit constraints of the DocAppendable and
+         * formatting.
          *
          * @return The currently specified scaling value.
          */
@@ -144,7 +147,8 @@ public final class TextStyle {
         /**
          * Sets the alignment.
          *
-         * @param alignment the desired alignment.
+         * @param alignment
+         *            the desired alignment.
          * @return this
          */
         public Builder setAlignment(final Alignment alignment) {
@@ -155,7 +159,8 @@ public final class TextStyle {
         /**
          * Sets the indent value.
          *
-         * @param indent the new indent value.
+         * @param indent
+         *            the new indent value.
          * @return this
          */
         public Builder setIndent(final int indent) {
@@ -166,7 +171,8 @@ public final class TextStyle {
         /**
          * Sets the left padding.
          *
-         * @param leftPad the new left padding.
+         * @param leftPad
+         *            the new left padding.
          * @return this
          */
         public Builder setLeftPad(final int leftPad) {
@@ -177,7 +183,8 @@ public final class TextStyle {
         /**
          * Sets the currently specified minimum width.
          *
-         * @param maxWidth The currently specified maximum width.
+         * @param maxWidth
+         *            The currently specified maximum width.
          * @return this
          */
         public Builder setMaxWidth(final int maxWidth) {
@@ -188,7 +195,8 @@ public final class TextStyle {
         /**
          * Sets the currently specified minimum width.
          *
-         * @param minWidth The currently specified minimum width.
+         * @param minWidth
+         *            The currently specified minimum width.
          * @return this
          */
         public Builder setMinWidth(final int minWidth) {
@@ -197,9 +205,11 @@ public final class TextStyle {
         }
 
         /**
-         * Sets whether the column can be made wider or to narrower width to fit constraints of the DocAppendable and formatting.
+         * Sets whether the column can be made wider or to narrower width to fit constraints of the DocAppendable and
+         * formatting.
          *
-         * @param scalable Whether the text width can be adjusted.
+         * @param scalable
+         *            Whether the text width can be adjusted.
          * @return this instance.
          */
         public Builder setScalable(final boolean scalable) {
@@ -210,7 +220,8 @@ public final class TextStyle {
         /**
          * Sets all properties from the given text style.
          *
-         * @param style the source text style.
+         * @param style
+         *            the source text style.
          * @return this instance.
          */
         public Builder setTextStyle(final TextStyle style) {
@@ -265,7 +276,8 @@ public final class TextStyle {
     /**
      * Constructs a new instance.
      *
-     * @param builder the builder to build the text style from.
+     * @param builder
+     *            the builder to build the text style from.
      */
     private TextStyle(final Builder builder) {
         this.alignment = builder.alignment;
@@ -322,7 +334,8 @@ public final class TextStyle {
     }
 
     /**
-     * Specifies if the column can be made wider or to narrower width to fit constraints of the DocAppendable and formatting.
+     * Specifies if the column can be made wider or to narrower width to fit constraints of the DocAppendable and
+     * formatting.
      *
      * @return the scaling value.
      */
@@ -337,8 +350,10 @@ public final class TextStyle {
      * <li>Will add the padding based on the alignment.</li>
      * </ul>
      *
-     * @param addIndent if {@code true} account for the indent when padding the string.
-     * @param text      the text to pad.
+     * @param addIndent
+     *            if {@code true} account for the indent when padding the string.
+     * @param text
+     *            the text to pad.
      * @return the padded string.
      */
     public CharSequence pad(final boolean addIndent, final CharSequence text) {
@@ -349,48 +364,48 @@ public final class TextStyle {
         String rest;
         final StringBuilder sb = new StringBuilder();
         switch (alignment) {
-        case CENTER:
-            int padLen;
-            if (maxWidth == UNSET_MAX_WIDTH) {
-                padLen = addIndent ? indent : 0;
-            } else {
-                padLen = maxWidth - text.length();
-            }
-            final int left = padLen / 2;
-            indentPad = Util.repeatSpace(left);
-            rest = Util.repeatSpace(padLen - left);
-            sb.append(indentPad).append(text).append(rest);
-            break;
-        case LEFT:
-        case RIGHT:
-        default: // default should never happen. It is here to keep code coverage happy.
-            if (maxWidth == UNSET_MAX_WIDTH) {
-                indentPad = addIndent ? Util.repeatSpace(indent) : "";
-                rest = "";
-            } else {
-                int restLen = maxWidth - text.length();
-                if (addIndent && restLen > indent) {
-                    indentPad = Util.repeatSpace(indent);
-                    restLen -= indent;
+            case CENTER :
+                int padLen;
+                if (maxWidth == UNSET_MAX_WIDTH) {
+                    padLen = addIndent ? indent : 0;
                 } else {
-                    indentPad = "";
+                    padLen = maxWidth - text.length();
                 }
-                rest = Util.repeatSpace(restLen);
-            }
-
-            if (alignment == Alignment.LEFT) {
+                final int left = padLen / 2;
+                indentPad = Util.repeatSpace(left);
+                rest = Util.repeatSpace(padLen - left);
                 sb.append(indentPad).append(text).append(rest);
-            } else {
-                sb.append(indentPad).append(rest).append(text);
-            }
-            break;
+                break;
+            case LEFT :
+            case RIGHT :
+            default : // default should never happen. It is here to keep code coverage happy.
+                if (maxWidth == UNSET_MAX_WIDTH) {
+                    indentPad = addIndent ? Util.repeatSpace(indent) : "";
+                    rest = "";
+                } else {
+                    int restLen = maxWidth - text.length();
+                    if (addIndent && restLen > indent) {
+                        indentPad = Util.repeatSpace(indent);
+                        restLen -= indent;
+                    } else {
+                        indentPad = "";
+                    }
+                    rest = Util.repeatSpace(restLen);
+                }
+
+                if (alignment == Alignment.LEFT) {
+                    sb.append(indentPad).append(text).append(rest);
+                } else {
+                    sb.append(indentPad).append(rest).append(text);
+                }
+                break;
         }
         return sb.toString();
     }
 
     @Override
     public String toString() {
-        return String.format("TextStyle{%s, l:%s, i:%s, %s, min:%s, max:%s}", alignment, leftPad, indent, scalable, minWidth,
-                maxWidth == UNSET_MAX_WIDTH ? "unset" : maxWidth);
+        return String.format("TextStyle{%s, l:%s, i:%s, %s, min:%s, max:%s}", alignment, leftPad, indent, scalable,
+                minWidth, maxWidth == UNSET_MAX_WIDTH ? "unset" : maxWidth);
     }
 }

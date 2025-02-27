@@ -1,12 +1,28 @@
-package io.aiven.kafka.connect.docs;
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import org.apache.commons.lang3.StringUtils;
+package io.aiven.kafka.connect.docs;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+
+import org.apache.commons.lang3.StringUtils;
 
 public class MarkdownDocAppendable extends BaseDocAppendable {
 
@@ -17,8 +33,9 @@ public class MarkdownDocAppendable extends BaseDocAppendable {
     /**
      * Constructs an appendable filter built on top of the specified underlying appendable.
      *
-     * @param output the underlying appendable to be assigned to the field {@code this.output} for later use, or {@code null} if this instance is to be created
-     *               without an underlying stream.
+     * @param output
+     *            the underlying appendable to be assigned to the field {@code this.output} for later use, or
+     *            {@code null} if this instance is to be created without an underlying stream.
      */
     protected MarkdownDocAppendable(Appendable output) {
         super(output);
@@ -45,7 +62,7 @@ public class MarkdownDocAppendable extends BaseDocAppendable {
     public String escape(CharSequence charSequence) {
         String result = charSequence.toString();
         for (char c : ESCAPED_CHARS.toCharArray()) {
-            result = result.replace(String.valueOf(c), "\\"+c);
+            result = result.replace(String.valueOf(c), "\\" + c);
         }
         return result;
     }
@@ -85,13 +102,13 @@ public class MarkdownDocAppendable extends BaseDocAppendable {
         for (TextStyle style : table.columnTextStyles()) {
             switch (style.getAlignment()) {
 
-                case LEFT:
+                case LEFT :
                     append(":--- ");
                     break;
-                case CENTER:
+                case CENTER :
                     append(":---: ");
                     break;
-                case RIGHT:
+                case RIGHT :
                     append("---: ");
                     break;
             }
@@ -116,6 +133,7 @@ public class MarkdownDocAppendable extends BaseDocAppendable {
     }
 
     public void appendTitleAndSidebar(CharSequence title, CharSequence sidebar) throws IOException {
-        append(String.format("--- %ntitle: %s %nsidebar: %s %n---%n", title, StringUtils.defaultIfEmpty(sidebar, title)));
+        append(String.format("--- %ntitle: %s %nsidebar: %s %n---%n", title,
+                StringUtils.defaultIfEmpty(sidebar, title)));
     }
 }

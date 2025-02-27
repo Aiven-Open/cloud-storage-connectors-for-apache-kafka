@@ -22,7 +22,6 @@ plugins {
   id("aiven-apache-kafka-connectors-all.docs")
 }
 
-
 val s3mockVersion by extra("0.2.6")
 val kafkaVersion by extra("3.3.0")
 
@@ -37,22 +36,22 @@ val integrationTest: SourceSet =
 val integrationTestImplementation: Configuration by
     configurations.getting { extendsFrom(configurations.implementation.get()) }
 
-/**********************************/
+/** ******************************* */
 /* Documentation building section */
-/**********************************/
-
+/** ******************************* */
 tasks.register<Copy>("createIndexMarkdown") {
   group = "Documentation"
   description = "Copies Readme to docs/site"
   outputs.upToDateWhen { false }
-  into(mkdir(layout.buildDirectory.dir("site/site/s3-source-connector/markdown")).resolve("index.md"))
+  into(
+      mkdir(layout.buildDirectory.dir("site/site/s3-source-connector/markdown"))
+          .resolve("index.md"))
   from("src/index.md")
 }
 
-/*********************************/
+/** ****************************** */
 /*  End of documentation section */
-/*********************************/
-
+/** ****************************** */
 tasks.register<Test>("integrationTest") {
   description = "Runs the integration tests."
   group = "verification"
