@@ -61,6 +61,12 @@ under the License.
             <item name="Javadoc" href="s3-source-connector/javadoc/index.html"/>
         </menu>
 
+        <menu name="Design Notes">
+            <item name="Site Documentation" href="design/site.html" />
+            <item name="Source Processing" href="design/source.html"/>
+        </menu>
+
+
     </body>
     <skin>
         <groupId>org.apache.maven.skins</groupId>

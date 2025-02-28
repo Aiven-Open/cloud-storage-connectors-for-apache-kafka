@@ -34,14 +34,14 @@ tasks.register<Copy>("copySiteAssets") {
     into("${project.layout.buildDirectory.asFile.get()}/site")
 }
 
-    tasks.register<Exec>("createSite") {
-        outputs.upToDateWhen { false }
-        mustRunAfter("copySiteAssets")
-        dependsOn("javadoc", "copySiteAssets",)
-        println("Executing ${project.projectDir}/mvnw")
-        executable("${project.projectDir}/mvnw")
-        args("clean", "site:site")
-    }
+tasks.register<Exec>("createSite") {
+    outputs.upToDateWhen { false }
+    mustRunAfter("copySiteAssets")
+    dependsOn("copySiteAssets")
+    println("Executing ${project.projectDir}/mvnw")
+    executable("${project.projectDir}/mvnw")
+    args("clean", "site:site")
+}
 
 tasks.register<Copy>("buildSite") {
     group = "Documentation"
@@ -59,6 +59,11 @@ tasks.register<Copy>("buildSite") {
                 println("to: ${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
                 from("${s.layout.buildDirectory.asFile.get()}/docs/javadoc")
                 into("${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
+            }
+            project.copy {
+                println("to: ${project.layout.projectDirectory.asFile}/target/site/${s.name}")
+                from("${project.layout.buildDirectory.asFile.get()}/site/${s.name}")
+                into("${project.layout.projectDirectory.asFile}/target/site/${s.name}")
             }
         }
 }
