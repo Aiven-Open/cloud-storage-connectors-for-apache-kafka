@@ -27,12 +27,16 @@ import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 
+import com.azure.storage.blob.BlobServiceAsyncClient;
+
 public class AzureBlobSourceConfig extends SourceCommonConfig {
 
     // TODO AzureBlobFragment needs to be extracted from Azure Sink.
     private final FileNameFragment azureBlobFileNameFragment;
+    private final AzureBlobConfigFragment azureBlobConfigFragment;
     public AzureBlobSourceConfig(final Map<?, ?> properties) {
         super(new ConfigDef(), properties);
+        azureBlobConfigFragment = new AzureBlobConfigFragment(this);
         azureBlobFileNameFragment = new FileNameFragment(this);
         validate();
     }
@@ -45,7 +49,7 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
         FileNameFragment.update(configDef);
         TransformerFragment.update(configDef);
         OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
-
+        AzureBlobConfigFragment.update(configDef);
         return configDef;
     }
     private void validate() {
@@ -53,5 +57,20 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
 
     public FileNameFragment getAzureBlobFileNameFragment() {
         return azureBlobFileNameFragment;
+    }
+    public int getAzureFetchPageSize() {
+        return azureBlobConfigFragment.getAzureFetchPageSize();
+    }
+
+    public String getAzurePrefix() {
+        return azureBlobConfigFragment.getAzurePrefix();
+    }
+
+    public BlobServiceAsyncClient getAzureServiceAsyncClient() {
+        return azureBlobConfigFragment.getAzureServiceAsyncClient();
+    }
+
+    public String getAzureContainerName() {
+        return azureBlobConfigFragment.getContainerName();
     }
 }
