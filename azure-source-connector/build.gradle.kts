@@ -61,7 +61,6 @@ dependencies {
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
-  implementation(apache.commons.collection4)
 
   testImplementation(testFixtures(project(":commons")))
   testImplementation(testinglibs.junit.jupiter)
