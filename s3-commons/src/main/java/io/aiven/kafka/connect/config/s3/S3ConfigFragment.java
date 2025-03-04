@@ -374,7 +374,6 @@ public final class S3ConfigFragment extends ConfigFragment {
     protected static class AwsRegionValidator implements ConfigDef.Validator {
         private static final String SUPPORTED_AWS_REGIONS = Arrays.stream(Regions.values())
                 .map(Regions::getName)
-                .sorted()
                 .collect(Collectors.joining(", "));
 
         @Override

@@ -15,10 +15,6 @@ tasks.register<Exec>("execVale") {
     args("run", "--rm", "-v", "${project.rootDir}:/project:Z", "-v", "${project.rootDir}/.github/vale/styles:/styles:Z", "-v", "${project.projectDir}:/site:Z", "-w", "/docs", "jdkato/vale", "--filter=warn.expr", "--config=/project/.vale.ini", "--glob=!**/build/**", ".")
 }
 
-configurations {
-    resolvable(":s3-source-connector:siteAssets")
-}
-
 tasks.register<Copy>("copySiteAssets") {
     outputs.upToDateWhen { false }
     println("Copying projects")
@@ -67,63 +63,6 @@ tasks.register<Copy>("buildSite") {
             }
         }
 }
-
-//tasks.register<Task>("buildSite") {
-//    group = "Documentation"
-//    description = "Build site"
-//    dependsOn("createSite", "processJavadocs")
-//}
-
-//    tasks.register<Copy>("populateSite") {
-//        group = "Documentation"
-//        description = "Copies documentation to additional documentation"
-//        outputs.upToDateWhen { false }
-////        rootProject.subprojects
-////            .filter { s -> s.name != "site" }
-////            .filter { s -> s.tasks.findByName("javadoc") != null }
-////            .forEach { s ->
-////                dependsOn(s.tasks.getByName("javadoc"))
-////            }
-//        println("copying yml files")
-//        project.copy {
-//            includeEmptyDirs = false
-//            from("${project.layout.projectDirectory.asFile}/build/site")
-//            into("${project.layout.projectDirectory.asFile}/target/site")
-//            include("**/*.yml")
-//        }
-//        println("Copying javadoc from subprojects to site")
-//        rootProject.subprojects
-//            .filter { s -> s.name != "site" }
-//            .filter { s -> s.tasks.findByName("javadoc") != null }
-//            .forEach { s ->
-//                dependsOn(s.tasks.getByName("javadoc"))
-//                println("Copying from ${s.name}:javadoc.output.files")
-//                println("          to ${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
-//                copy {
-//                    from(s.tasks.getByName("javadoc").outputs.files)
-//                    into("${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
-//                }
-//            }
-//        println("")
-//    }
-
-//    tasks.register<Copy>("deploySite") {
-//        group = "Documentation"
-//        description = "Copies javadocs"
-//        outputs.upToDateWhen { false }
-//        var rootDirs = arrayOf("/css/", "/fonts/", "/imgages/", "/img", "/js/")
-//        println("Copying site to docs ${version} directory")
-//        project.copy {
-//            from("${project.layout.projectDirectory.asFile}/target/site")
-//            into("${rootProject.projectDir}/docs/${version}")
-//        }
-//        project.copy {
-//            from("${project.layout.projectDirectory.asFile}/target/site") {
-//                include(rootDirs.asIterable())
-//            }
-//            into("${rootProject.projectDir}/docs")
-//        }
-//    }
 
 
 

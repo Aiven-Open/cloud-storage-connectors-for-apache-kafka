@@ -8,7 +8,6 @@ val awaitilityVersion by extra("4.2.1")
 val amazonAwsSdkV2Version by extra("2.29.34")
 val commonsTextVersion by extra("1.11.0")
 val commonsCollections4Version by extra("4.4")
-val commonsClientVersion by extra("1.9.0")
 val commonsIOVersion by extra("2.18.0")
 val hadoopVersion by extra("3.4.0")
 val hamcrestVersion by extra("2.2")
@@ -37,7 +36,6 @@ dependencyResolutionManagement {
       library(
           "commons-collection4",
           "org.apache.commons:commons-collections4:$commonsCollections4Version")
-      library("commons-cli", "commons-cli:commons-cli:$commonsClientVersion")
       library("commons-io", "commons-io:commons-io:$commonsIOVersion")
       library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaVersion")
       library("kafka-connect-json", "org.apache.kafka:connect-json:$kafkaVersion")

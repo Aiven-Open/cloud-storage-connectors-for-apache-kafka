@@ -36,7 +36,6 @@ dependencies {
 
   implementation(apache.commons.text)
   implementation(apache.commons.io)
-  implementation(apache.commons.cli)
 
   implementation(apache.parquet.avro) {
     exclude(group = "org.xerial.snappy", module = "snappy-java")
