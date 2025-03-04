@@ -38,6 +38,7 @@ tasks.register<Copy>("copyMarkdown") {
 
 tasks.register<Copy>("copySiteAssets") {
     group = "Documentation"
+    description = "Copies "
     description = "Copies src/site to build/site"
     dependsOn("copyMarkdown")
     println("Copying from ${project.layout.projectDirectory.asFile}/src/site")
