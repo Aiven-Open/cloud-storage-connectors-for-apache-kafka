@@ -55,10 +55,6 @@ public class SinkCommonConfig extends CommonConfig {
         fileNameFragment.validate();
     }
 
-    protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
-            final OutputFieldType defaultFieldType) {
-        OutputFormatFragment.update(configDef, defaultFieldType);
-    }
 
     public FormatType getFormatType() {
         return outputFormatFragment.getFormatType();

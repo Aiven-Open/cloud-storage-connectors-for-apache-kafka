@@ -44,22 +44,10 @@ final public class S3SourceConfig extends SourceCommonConfig {
     private final S3ConfigFragment s3ConfigFragment;
     private final FileNameFragment s3FileNameFragment;
     public S3SourceConfig(final Map<String, String> properties) {
-        super(configDef(), handleDeprecatedYyyyUppercase(properties));
+        super(new S3SourceConfigDef(), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
         s3FileNameFragment = new FileNameFragment(this);
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
-    }
-
-    public static ConfigDef configDef() {
-
-        final var configDef = new S3SourceConfigDef();
-        S3ConfigFragment.update(configDef);
-        SourceConfigFragment.update(configDef);
-        FileNameFragment.update(configDef);
-        TransformerFragment.update(configDef);
-        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
-
-        return configDef;
     }
 
     private void validate() {
