@@ -66,6 +66,7 @@ idea {
 dependencies {
   compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
   compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
+  compileOnly(project(":tools"))
 
   implementation(apache.commons.collection4)
   implementation(project(":commons"))
@@ -312,3 +313,43 @@ signing {
   }
   signatureTypes = ASCSignatureProvider()
 }
+
+
+/** ******************************* */
+/* Documentation building section */
+/** ******************************* */
+tasks.register<Copy>("createIndexMarkdown") {
+  group = "Documentation"
+  description = "Copies Readme to docs/site"
+  outputs.upToDateWhen { false }
+  into(
+    mkdir(layout.buildDirectory.dir("site/site/s3-source-connector/markdown"))
+      .resolve("index.md"))
+  from("src/index.md")
+}
+
+val toolsJar = project(":tools").task("jar")
+//tasks.register<JavaExec>("configDocs") {
+//  group = "Documentation"
+//  classpath = project(":tools").sourceSets.main.get().compileClasspath.plus(project(":tools").sourceSets.main.get().output.classesDirs).plus(sourceSets.main.get().compileClasspath).plus(sourceSets.main.get().output.classesDirs)//.plus(project(":tools").sourceSets.main.get().output.resourcesDir) // sourceSets.main.get().runtimeClasspath.plus(project(":tools").artifacts.compileClasspath())
+//  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+//  args = listOf("io.aiven.kafka.connect.s3.source.S3SourceConfig", "configDef", "configData.md.vm", "build/S3SourceConfig.md")
+//  println( "Project name: "+project.name )
+//}
+
+tasks.register<JavaExec>("configDocs") {
+  dependsOn(toolsJar)
+  classpath(toolsJar.outputs.files) // Add the Jar to the classpath.
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  args = listOf(
+    "io.aiven.kafka.connect.s3.source.S3SourceConfig",
+    "configDef",
+    "configData.md.vm",
+    "build/S3SourceConfig.md"
+  )
+}
+
+
+/** ****************************** */
+/*  End of documentation section */
+/** ****************************** */
