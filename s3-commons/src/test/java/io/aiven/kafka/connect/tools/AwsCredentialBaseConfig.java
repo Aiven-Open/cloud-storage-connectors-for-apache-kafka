@@ -22,6 +22,7 @@ import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.config.s3.S3SinkBaseConfig;
 
@@ -38,7 +39,7 @@ public class AwsCredentialBaseConfig extends S3SinkBaseConfig {
 
     private static ConfigDef getBaseConfigDefinition() {
         final ConfigDef definition = new ConfigDef();
-        addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
+        OutputFormatFragment.update(definition, OutputFieldType.VALUE);
         definition.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.MEDIUM,
                 "File name template");
         definition.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, CompressionType.NONE.name,

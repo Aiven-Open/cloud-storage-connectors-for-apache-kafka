@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.config;
 
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -25,23 +24,17 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigDef.Importance;
-import org.apache.kafka.common.config.ConfigDef.Type;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.TimestampSource;
-import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
-import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.config.s3.S3CommonConfig;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.config.s3.S3SinkBaseConfig;
-import io.aiven.kafka.connect.s3.S3OutputStream;
 
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;

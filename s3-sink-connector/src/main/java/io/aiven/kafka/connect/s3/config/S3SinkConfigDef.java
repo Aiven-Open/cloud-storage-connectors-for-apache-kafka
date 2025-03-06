@@ -20,17 +20,17 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.ConfigValue;
+
 import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.S3OutputStream;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.common.config.ConfigValue;
 
 public class S3SinkConfigDef extends ConfigDef {
 
@@ -38,10 +38,11 @@ public class S3SinkConfigDef extends ConfigDef {
     private static final String GROUP_FILE = "File";
 
     public S3SinkConfigDef() {
+        super();
         S3ConfigFragment.update(this);
         addS3partSizeConfig(this);
         FileNameFragment.update(this);
-        addOutputFieldsFormatConfigGroup(this, null);
+        OutputFormatFragment.update(this, null);
         addDeprecatedTimestampConfig(this);
     }
 
@@ -93,11 +94,6 @@ public class S3SinkConfigDef extends ConfigDef {
                 new TimestampSourceValidator(), Importance.LOW,
                 "Specifies the the timestamp variable source. Default is wall-clock.", GROUP_FILE,
                 timestampGroupCounter, ConfigDef.Width.SHORT, S3ConfigFragment.TIMESTAMP_SOURCE);
-    }
-
-    protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
-                                                           final OutputFieldType defaultFieldType) {
-        OutputFormatFragment.update(configDef, defaultFieldType);
     }
 
 }

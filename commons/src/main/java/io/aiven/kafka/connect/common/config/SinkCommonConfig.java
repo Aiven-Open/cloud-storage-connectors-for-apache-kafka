@@ -55,7 +55,6 @@ public class SinkCommonConfig extends CommonConfig {
         fileNameFragment.validate();
     }
 
-
     public FormatType getFormatType() {
         return outputFormatFragment.getFormatType();
     }
