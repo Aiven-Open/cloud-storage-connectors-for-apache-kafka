@@ -28,7 +28,7 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfigDef;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
 import org.slf4j.Logger;
@@ -46,7 +46,7 @@ public class S3SourceConnector extends SourceConnector {
 
     @Override
     public ConfigDef config() {
-        return S3SourceConfig.configDef();
+        return new S3SourceConfigDef();
     }
 
     @Override

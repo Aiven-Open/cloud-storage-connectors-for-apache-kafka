@@ -35,6 +35,7 @@ import io.aiven.kafka.connect.common.config.FixedSetRecommender;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
 
@@ -76,8 +77,7 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
         final ConfigDef configDef = new ConfigDef();
         addAzureConfigGroup(configDef);
         addFileConfigGroup(configDef);
-        addOutputFieldsFormatConfigGroup(configDef, OutputFieldType.VALUE);
-        addKafkaBackoffPolicy(configDef);
+        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
         addAzureRetryPolicies(configDef);
         addUserAgentConfig(configDef);
         return configDef;

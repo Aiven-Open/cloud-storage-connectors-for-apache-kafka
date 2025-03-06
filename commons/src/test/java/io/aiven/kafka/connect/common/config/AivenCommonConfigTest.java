@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static io.aiven.kafka.connect.common.config.AivenCommonConfig.addOutputFieldsFormatConfigGroup;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -31,7 +30,7 @@ class AivenCommonConfigTest {
 
     private ConfigDef getBaseConfigDefinition() {
         final ConfigDef definition = new ConfigDef();
-        addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
+        OutputFormatFragment.update(definition, OutputFieldType.VALUE);
 
         definition.define(AivenCommonConfig.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
                 ConfigDef.Importance.MEDIUM, "File name template");
@@ -78,7 +77,7 @@ class AivenCommonConfigTest {
                 "false");
 
         final ConfigDef definition = new ConfigDef();
-        addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
+        OutputFormatFragment.update(definition, OutputFieldType.VALUE);
 
         assertThatThrownBy(() -> new AivenCommonConfig(definition, properties)).isInstanceOf(ConfigException.class)
                 .hasMessage("When format.output.envelope is false, format.output.fields must contain only one field");

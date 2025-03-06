@@ -20,14 +20,8 @@ import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYy
 
 import java.util.Map;
 
-import org.apache.kafka.common.config.ConfigDef;
-
 import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
@@ -44,22 +38,10 @@ final public class S3SourceConfig extends SourceCommonConfig {
     private final S3ConfigFragment s3ConfigFragment;
     private final FileNameFragment s3FileNameFragment;
     public S3SourceConfig(final Map<String, String> properties) {
-        super(configDef(), handleDeprecatedYyyyUppercase(properties));
+        super(new S3SourceConfigDef(), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
         s3FileNameFragment = new FileNameFragment(this);
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
-    }
-
-    public static ConfigDef configDef() {
-
-        final var configDef = new S3SourceConfigDef();
-        S3ConfigFragment.update(configDef);
-        SourceConfigFragment.update(configDef);
-        FileNameFragment.update(configDef);
-        TransformerFragment.update(configDef);
-        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
-
-        return configDef;
     }
 
     private void validate() {
