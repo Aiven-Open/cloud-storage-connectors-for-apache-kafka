@@ -59,8 +59,8 @@ In addition to the file formats above the system will process the documents with
 There are two `site` subproject gradle tasks:
 
  * `:site:createSite` - creates the complete HTML based site in the `/site/target/site` directory.
- * `:site:buildSite` - populates the complete HTML based site with files that were not included in the initial build.  This includes the javadoc for the submodules.
+ * `:site:populateSite` - populates the complete HTML based site with files that were not included in the initial build.  This includes the javadoc for the submodules.
 
 ## GitHub Action
 
-There is a `build_site.yml` GitHub workflow that executes the above-mentioned Gradle tasks and then publishes the resulting `./site/target/site` to the github pages for the project. 
+There is a `build_site.yml` GitHub workflow that executes the above-mentioned Gradle tasks and then publishes the resulting `./site/target/site` to the GitHub pages for the project. 

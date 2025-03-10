@@ -23,35 +23,42 @@ under the License.
          xmlns="http://maven.apache.org/DECORATION/1.6.0"
          xsi:schemaLocation="http://maven.apache.org/DECORATION/1.6.0 http://maven.apache.org/xsd/decoration-1.6.0.xsd"
         name="Aiven Kafka Connectors">
-    <poweredBy/>
+    <poweredBy>
+        <logo href="https://kafka.apache.org/"
+              img="https://kafka.apache.org/logos/kafka_logo--simple.png"/>
+    </poweredBy>
     <body>
-<!--        <menu name="Overview">-->
-<!--            <item name="Introduction" href="index.html"/>-->
-<!--            <item name="Usage" href="usage.html"/>-->
-<!--            <item name="FAQ" href="faq.html"/>-->
-<!--            <item name="History" href="history.html"/>-->
-<!--            &lt;!&ndash; According to https://issues.apache.org/jira/browse/MNGSITE-152 &ndash;&gt;-->
-<!--            <item name="License" href="http://www.apache.org/licenses/"/>-->
-<!--            <item name="Download" href="download.html"/>-->
-<!--        </menu>-->
+        <menu name="Overview">
+            <item name="Introduction" href="index.html"/>
+            <item name="Code of Conduct" href="CODE_OF_CONDUCT.html"/>
+            <item name="Contributing" href="CONTRIBUTING.html"/>
+            <item name="License" href="https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/blob/main/LICENSE"/>
+            <item name="Release Notes" href="RELEASE-NOTES.html"/>
+            <item name="Security" href="SECURITY.html"/>
+        </menu>
 
         <menu name="Azure Sink">
+            <item name="Introduction" href="azure-sink-connector/index.html"/>
             <item name="Javadoc" href="azure-sink-connector/javadoc/index.html"/>
         </menu>
 
         <menu name="Commons Sink">
+            <item name="Introduction" href="commons/index.html"/>
             <item name="Javadoc" href="commons/javadoc/index.html"/>
         </menu>
 
         <menu name="GCS Sink">
+            <item name="Introduction" href="gcs-sink-connector/index.html"/>
             <item name="Javadoc" href="gcs-sink-connector/javadoc/index.html"/>
         </menu>
 
         <menu name="S3 Commons">
+            <item name="Introduction" href="s3-commons/index.html"/>
             <item name="Javadoc" href="s3-commons/javadoc/index.html"/>
         </menu>
 
         <menu name="S3 Sink">
+            <item name="Introduction" href="s3-sink/index.html"/>
             <item name="Javadoc" href="s3-sink/javadoc/index.html"/>
         </menu>
 
@@ -66,11 +73,22 @@ under the License.
             <item name="Source Processing" href="design/source.html"/>
         </menu>
 
-
     </body>
     <skin>
         <groupId>org.apache.maven.skins</groupId>
         <artifactId>maven-fluido-skin</artifactId>
-        <version>1.8</version>
+        <version>2.0.1</version>
     </skin>
+    <custom>
+        <fluidoSkin>
+            <topBarEnabled>false</topBarEnabled>
+            <sideBarEnabled>true</sideBarEnabled>
+            <skipGenerationDate>true</skipGenerationDate>
+            <gitHub>
+                <projectId>aiven-open/cloud-storage-connectors-for-apache-kafka</projectId>
+                <ribbonOrientation>right</ribbonOrientation>
+                <ribbonColor>orange</ribbonColor>
+            </gitHub>
+        </fluidoSkin>
+    </custom>
 </project>

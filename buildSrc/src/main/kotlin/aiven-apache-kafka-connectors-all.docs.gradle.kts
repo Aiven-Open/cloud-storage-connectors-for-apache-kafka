@@ -42,10 +42,30 @@ group = "io.aiven"
 //    )
 //}
 
+tasks.register<Copy>("copyREADME") {
+    group = "Documentation"
+    description = "Copies "
+    println("Copying from ${project.layout.projectDirectory.asFile}/*.md")
+    println("          to ${project.layout.buildDirectory.asFile.get()}/site/markdown")
+    from("${project.layout.projectDirectory}") {
+        include("README.md")
+        rename { fileName ->
+            // a simple way is to remove the "-$version" from the jar filename
+            // but you can customize the filename replacement rule as you wish.
+            fileName.replace("README", "index")
+        }
+    }
+    from("${project.layout.projectDirectory}") {
+        include("*.md")
+    }
+    into("${project.layout.buildDirectory.asFile.get()}/site/markdown/${project.name}")
+    println("")
+}
+
 tasks.register<Copy>("copySiteAssets") {
     group = "Documentation"
     description = "Copies "
-    outputs.upToDateWhen { false }
+    dependsOn("copyREADME")
     println("Copying from ${project.layout.projectDirectory.asFile}/src/site")
     println("          to ${project.layout.buildDirectory.asFile.get()}/site/")
     from("${project.layout.projectDirectory.asFile}/src/site")

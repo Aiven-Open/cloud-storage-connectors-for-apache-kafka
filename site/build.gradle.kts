@@ -28,6 +28,7 @@ tasks.register<Copy>("copySiteAssets") {
             }
     from("${project.layout.projectDirectory}/src/site")
     into("${project.layout.buildDirectory.asFile.get()}/site")
+    println("")
 }
 
 tasks.register<Exec>("createSite") {
@@ -36,7 +37,7 @@ tasks.register<Exec>("createSite") {
     dependsOn("copySiteAssets")
     println("Executing ${project.projectDir}/mvnw")
     executable("${project.projectDir}/mvnw")
-    args("clean", "site:site")
+    args("clean", "versions:set", "site:site", "-DnewVersion=${version}")
 }
 
 tasks.register<Copy>("populateSite") {
