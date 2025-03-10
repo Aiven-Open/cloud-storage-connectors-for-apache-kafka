@@ -37,6 +37,7 @@ under the License.
             <item name="License" href="https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/blob/main/LICENSE"/>
             <item name="Release Notes" href="RELEASE-NOTES.html"/>
             <item name="Security" href="SECURITY.html"/>
+            <item name="Source Code" href="https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka" />
         </menu>
 
         <menu name="Azure Sink">
