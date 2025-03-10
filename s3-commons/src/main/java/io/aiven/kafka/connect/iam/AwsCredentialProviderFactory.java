@@ -18,14 +18,14 @@ package io.aiven.kafka.connect.iam;
 
 import java.util.Objects;
 
-import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+import io.aiven.kafka.connect.config.s3.S3Config;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
+//import com.amazonaws.auth.AWSCredentialsProvider;
+//import com.amazonaws.auth.AWSStaticCredentialsProvider;
+//import com.amazonaws.auth.BasicAWSCredentials;
+//import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
+//import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+//import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -34,37 +34,37 @@ import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 
 public class AwsCredentialProviderFactory {
 
-    public AWSCredentialsProvider getProvider(final S3ConfigFragment config) {
-        if (config.hasAwsStsRole()) {
-            return getStsProvider(config);
-        }
-        final BasicAWSCredentials awsCredentials = config.getAwsCredentials();
-        if (Objects.isNull(awsCredentials)) {
-            return config.getCustomCredentialsProvider();
-        }
-        return new AWSStaticCredentialsProvider(awsCredentials);
-    }
+//    public AWSCredentialsProvider getProvider(final S3Config config) {
+//        if (config.hasAwsStsRole()) {
+//            return getStsProvider(config);
+//        }
+//        final BasicAWSCredentials awsCredentials = config.getAwsCredentials();
+//        if (Objects.isNull(awsCredentials)) {
+//            return config.getCustomCredentialsProvider();
+//        }
+//        return new AWSStaticCredentialsProvider(awsCredentials);
+//    }
 
-    private AWSCredentialsProvider getStsProvider(final S3ConfigFragment config) {
-        final AwsStsRole awsstsRole = config.getStsRole();
-        final AWSSecurityTokenService sts = securityTokenService(config);
-        return new STSAssumeRoleSessionCredentialsProvider.Builder(awsstsRole.getArn(), awsstsRole.getSessionName())
-                .withStsClient(sts)
-                .withExternalId(awsstsRole.getExternalId())
-                .withRoleSessionDurationSeconds(awsstsRole.getSessionDurationSeconds())
-                .build();
-    }
+//    private AWSCredentialsProvider getStsProvider(final S3Config config) {
+//        final AwsStsRole awsstsRole = config.getStsRole();
+//        final AWSSecurityTokenService sts = securityTokenService(config);
+//        return new STSAssumeRoleSessionCredentialsProvider.Builder(awsstsRole.getArn(), awsstsRole.getSessionName())
+//                .withStsClient(sts)
+//                .withExternalId(awsstsRole.getExternalId())
+//                .withRoleSessionDurationSeconds(awsstsRole.getSessionDurationSeconds())
+//                .build();
+//    }
 
-    private AWSSecurityTokenService securityTokenService(final S3ConfigFragment config) {
-        if (config.hasStsEndpointConfig()) {
-            final AWSSecurityTokenServiceClientBuilder stsBuilder = AWSSecurityTokenServiceClientBuilder.standard();
-            stsBuilder.setEndpointConfiguration(config.getAwsEndpointConfiguration());
-            return stsBuilder.build();
-        }
-        return AWSSecurityTokenServiceClientBuilder.defaultClient();
-    }
+//    private AWSSecurityTokenService securityTokenService(final S3Config config) {
+//        if (config.hasStsEndpointConfig()) {
+//            final AWSSecurityTokenServiceClientBuilder stsBuilder = AWSSecurityTokenServiceClientBuilder.standard();
+//            stsBuilder.setEndpointConfiguration(config.getAwsEndpointConfiguration());
+//            return stsBuilder.build();
+//        }
+//        return AWSSecurityTokenServiceClientBuilder.defaultClient();
+//    }
 
-    public AwsCredentialsProvider getAwsV2Provider(final S3ConfigFragment config) {
+    public AwsCredentialsProvider getAwsV2Provider(final S3Config config) {
 
         if (config.hasAwsStsRole()) {
             return getV2StsProvider(config);
@@ -77,7 +77,7 @@ public class AwsCredentialProviderFactory {
 
     }
 
-    private StsAssumeRoleCredentialsProvider getV2StsProvider(final S3ConfigFragment config) {
+    private StsAssumeRoleCredentialsProvider getV2StsProvider(final S3Config config) {
         if (config.hasAwsStsRole()) {
             return StsAssumeRoleCredentialsProvider.builder()
                     .refreshRequest(() -> AssumeRoleRequest.builder()

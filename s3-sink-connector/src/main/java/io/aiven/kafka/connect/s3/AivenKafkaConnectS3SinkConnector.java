@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.aiven.kafka.connect.s3.config.S3SinkConfigDef;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.sink.SinkConnector;
@@ -38,7 +39,7 @@ public class AivenKafkaConnectS3SinkConnector extends SinkConnector {
 
     @Override
     public ConfigDef config() {
-        return S3SinkConfig.configDef();
+        return new S3SinkConfigDef();
     }
 
     @Override

@@ -16,64 +16,60 @@
 
 package io.aiven.kafka.connect.s3;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+//import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.aiven.kafka.connect.config.s3.S3Config;
+import io.aiven.kafka.connect.s3.config.S3SinkConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.ChecksumAlgorithm;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 public class S3OutputStream extends OutputStream {
 
-    private final Logger logger = LoggerFactory.getLogger(S3OutputStream.class);
-
-    public static final int DEFAULT_PART_SIZE = 5 * 1024 * 1024;
-
-    private final AmazonS3 client;
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3OutputStream.class);
 
     private final ByteBuffer byteBuffer;
 
-    private final String bucketName;
+    private final MultipartUpload multipartUpload;
 
-    private final String key;
+    private volatile boolean closed;
 
-    private MultipartUpload multipartUpload;
 
-    private final int partSize;
-
-    private final String serverSideEncryptionAlgorithm;
-
-    private boolean closed;
-
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "AmazonS3 client is mutable")
-    public S3OutputStream(final String bucketName, final String key, final int partSize, final AmazonS3 client) {
-        this(bucketName, key, partSize, client, null);
+    //@SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "AmazonS3 client is mutable")
+    public S3OutputStream(final S3SinkConfig config, final String key, final S3Client client) {
+        this(config.getAwsS3PartSize(), new MultipartUpload(config, key, client));
     }
 
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "AmazonS3 client is mutable")
-    public S3OutputStream(final String bucketName, final String key, final int partSize, final AmazonS3 client,
-            final String serverSideEncryptionAlgorithm) {
+    /* package private for testing */
+    S3OutputStream(final int partSize, MultipartUpload multipartUpload) {
         super();
-        this.bucketName = bucketName;
-        this.key = key;
-        this.client = client;
-        this.partSize = partSize;
         this.byteBuffer = ByteBuffer.allocate(partSize);
-        this.serverSideEncryptionAlgorithm = serverSideEncryptionAlgorithm;
+        this.multipartUpload = multipartUpload;
+        closed = multipartUpload == null;
     }
+
+    private void ensureOpen() throws IOException {
+        if (closed ) {
+            throw new IOException("Stream closed");
+        }
+    }
+
 
     @Override
     public void write(final int singleByte) throws IOException {
@@ -82,100 +78,105 @@ public class S3OutputStream extends OutputStream {
 
     @Override
     public void write(final byte[] bytes, final int off, final int len) throws IOException {
+        ensureOpen();
         if (Objects.isNull(bytes) || bytes.length == 0) {
             return;
         }
-        if (Objects.isNull(multipartUpload)) {
-            multipartUpload = newMultipartUpload();
-        }
         final var source = ByteBuffer.wrap(bytes, off, len);
         while (source.hasRemaining()) {
-            final var transferred = Math.min(byteBuffer.remaining(), source.remaining());
-            final var offset = source.arrayOffset() + source.position();
+            final int transferred = Math.min(byteBuffer.remaining(), source.remaining());
+            final int offset = source.arrayOffset() + source.position();
             byteBuffer.put(source.array(), offset, transferred);
             source.position(source.position() + transferred);
             if (!byteBuffer.hasRemaining()) {
-                flushBuffer(0, partSize, partSize);
+                flush();
             }
         }
     }
 
-    private MultipartUpload newMultipartUpload() throws IOException {
-        logger.debug("Create new multipart upload request");
-        final var initialRequest = new InitiateMultipartUploadRequest(bucketName, key);
-        initialRequest.setObjectMetadata(this.buildObjectMetadata());
-        final var initiateResult = client.initiateMultipartUpload(initialRequest);
-        logger.debug("Upload ID: {}", initiateResult.getUploadId());
-        return new MultipartUpload(initiateResult.getUploadId());
-    }
-
-    private ObjectMetadata buildObjectMetadata() {
-        final ObjectMetadata metadata = new ObjectMetadata();
-
-        if (this.serverSideEncryptionAlgorithm != null) {
-            metadata.setSSEAlgorithm(this.serverSideEncryptionAlgorithm);
+    @Override
+    public void flush() throws IOException {
+        ensureOpen();
+        if (byteBuffer.position() > 0) {
+            try {
+                multipartUpload.uploadPart(byteBuffer.flip());
+                byteBuffer.clear();
+            } catch (AwsServiceException | SdkClientException exception) {
+                LOGGER.error("Unable to write to S3 -- aborting", exception);
+                abort(exception);
+            }
         }
-
-        return metadata;
     }
+
 
     @Override
     public void close() throws IOException {
         if (closed) {
             return;
         }
-        if (byteBuffer.position() > 0 && Objects.nonNull(multipartUpload)) {
-            flushBuffer(byteBuffer.arrayOffset(), byteBuffer.position(), byteBuffer.position());
-        }
-        if (Objects.nonNull(multipartUpload)) {
+        flush();
+        try {
             multipartUpload.complete();
-            multipartUpload = null; // NOPMD NullAssignment
+        } catch (AwsServiceException | SdkClientException exception) {
+            LOGGER.error("Unable to write to S3 -- aborting", exception);
+            abort(exception);
         }
         closed = true;
         super.close();
     }
 
-    private void flushBuffer(final int offset, final int length, final int partSize) throws IOException {
-        try {
-            multipartUpload.uploadPart(new ByteArrayInputStream(byteBuffer.array(), offset, length), partSize);
-            byteBuffer.clear();
-        } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
-            multipartUpload.abort();
-            multipartUpload = null; // NOPMD NullAssignment
-            throw new IOException(e);
-        }
+    private void abort(RuntimeException exception) throws IOException {
+        multipartUpload.abort();
+        closed = true;
+        throw new IOException(exception);
     }
 
-    private class MultipartUpload {
+    // package private for testing
+    static class MultipartUpload {
+        private final S3Client client;
+        private final CreateMultipartUploadResponse response;
+        private int partCount = 0;
 
-        private final String uploadId;
 
-        private final List<PartETag> partETags = new ArrayList<>();
-
-        public MultipartUpload(final String uploadId) {
-            this.uploadId = uploadId;
+        private MultipartUpload(final S3SinkConfig config, String key, S3Client client) throws software.amazon.awssdk.awscore.exception.AwsServiceException, software.amazon.awssdk.core.exception.SdkClientException {
+            S3OutputStream.LOGGER.debug("Creating new multipart upload request");
+            this.client = client;
+            CreateMultipartUploadRequest createMultipartUploadRequest = CreateMultipartUploadRequest.builder()
+                    .bucket(config.getAwsS3BucketName()).key(key)
+                    .checksumAlgorithm(ChecksumAlgorithm.SHA256)
+                    .serverSideEncryption(config.getServerSideEncryptionAlgorithmName()).build();
+            response = client.createMultipartUpload(createMultipartUploadRequest);
+            LOGGER.debug("Upload ID: {}", response.uploadId());
         }
 
-        public void uploadPart(final InputStream inputStream, final int partSize) throws IOException {
-            final var partNumber = partETags.size() + 1;
-            final var uploadPartRequest = new UploadPartRequest().withBucketName(bucketName)
-                    .withKey(key)
-                    .withUploadId(uploadId)
-                    .withPartSize(partSize)
-                    .withPartNumber(partNumber)
-                    .withInputStream(inputStream);
-            final var uploadResult = client.uploadPart(uploadPartRequest);
-            partETags.add(uploadResult.getPartETag());
+        public UploadPartResponse uploadPart(ByteBuffer byteBuffer) throws software.amazon.awssdk.awscore.exception.AwsServiceException, software.amazon.awssdk.core.exception.SdkClientException {
+            final UploadPartRequest uploadPartRequest = UploadPartRequest.builder().bucket(response.bucket())
+                    .key(response.key())
+                    .uploadId(response.uploadId())
+                    .checksumAlgorithm(response.checksumAlgorithm())
+                    .partNumber(partCount++)
+                    .contentLength( (long) byteBuffer.position())
+                    .build();
+
+            RequestBody body = RequestBody.fromByteBuffer(byteBuffer);
+            return client.uploadPart(uploadPartRequest, body);
         }
 
-        public void complete() {
-            client.completeMultipartUpload(new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags));
+        public CompleteMultipartUploadResponse complete() throws software.amazon.awssdk.awscore.exception.AwsServiceException, software.amazon.awssdk.core.exception.SdkClientException {
+            CompleteMultipartUploadRequest completeMultipartUploadRequest = CompleteMultipartUploadRequest.builder()
+                    .bucket(response.bucket()).key(response.key())
+                    .uploadId(response.uploadId())
+                            .build();
+            return client.completeMultipartUpload(completeMultipartUploadRequest);
         }
 
-        public void abort() {
-            client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+        public AbortMultipartUploadResponse abort() throws software.amazon.awssdk.awscore.exception.AwsServiceException, software.amazon.awssdk.core.exception.SdkClientException {
+            AbortMultipartUploadRequest abortMultipartUploadRequest = AbortMultipartUploadRequest.builder()
+                    .bucket(response.bucket()).key(response.key())
+                    .uploadId(response.uploadId())
+                            .build();
+            return client.abortMultipartUpload(abortMultipartUploadRequest);
         }
-
     }
 
 }
