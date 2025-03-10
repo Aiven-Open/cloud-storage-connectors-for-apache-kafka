@@ -39,6 +39,11 @@ public class SinkCommonConfig extends CommonConfig {
      * OutputFormatFragment to handle Output format base configuration queries.
      */
     protected final OutputFormatFragment outputFormatFragment;
+    /**
+     * CompressionFragment to handle compression options.
+     */
+    protected final CompressionFragment compressionFragment;
+
 
     @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
     public SinkCommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
@@ -46,6 +51,7 @@ public class SinkCommonConfig extends CommonConfig {
         // Construct FileNameFragment
         fileNameFragment = new FileNameFragment(this);
         outputFormatFragment = new OutputFormatFragment(this);
+        compressionFragment = new CompressionFragment(this);
         // TODO: calls getOutputFields, can be overridden in subclasses.
         validate(); // NOPMD ConstructorCallsOverridableMethod
     }
@@ -55,6 +61,12 @@ public class SinkCommonConfig extends CommonConfig {
         fileNameFragment.validate();
     }
 
+    /**
+     * @deprecated use {@link OutputFormatFragment#update(ConfigDef, OutputFieldType)}
+     * @param configDef the configuration to update
+     * @param defaultFieldType the default field type
+     */
+    @Deprecated
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
             final OutputFieldType defaultFieldType) {
         OutputFormatFragment.update(configDef, defaultFieldType);
@@ -70,7 +82,7 @@ public class SinkCommonConfig extends CommonConfig {
     }
 
     public CompressionType getCompressionType() {
-        return new CompressionFragment(this).getCompressionType();
+        return compressionFragment.getCompressionType();
     }
 
     public Boolean envelopeEnabled() {

@@ -18,14 +18,8 @@ package io.aiven.kafka.connect.iam;
 
 import java.util.Objects;
 
-import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 
 public final class AwsStsRole {
-
-    // AssumeRole request limit details here:
-    // https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
-    public static final int MIN_SESSION_DURATION = STSAssumeRoleSessionCredentialsProvider.DEFAULT_DURATION_SECONDS;
-    public static final int MAX_SESSION_DURATION = 43_200;
 
     private final String arn;
     private final String externalId;

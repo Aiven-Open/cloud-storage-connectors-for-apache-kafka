@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.config;
+package io.aiven.kafka.connect.config.s3;
 
 import java.net.URI;
 import java.time.Duration;
@@ -33,7 +33,7 @@ public class S3ClientFactory {
 
     private final AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
 
-    public S3Client createAmazonS3Client(final S3SourceConfig config) {
+    public S3Client createAmazonS3Client(final S3Config config) {
 
         final ExponentialDelayWithJitter backoffStrategy = new ExponentialDelayWithJitter(Random::new,
                 Duration.ofMillis(Math.toIntExact(config.getS3RetryBackoffDelayMs())),
@@ -47,15 +47,15 @@ public class S3ClientFactory {
                     .overrideConfiguration(clientOverrideConfiguration)
                     .overrideConfiguration(o -> o.retryStrategy(
                             r -> r.backoffStrategy(backoffStrategy).maxAttempts(config.getS3RetryBackoffMaxRetries())))
-                    .region(config.getAwsS3Region())
-                    .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                    .region(config.getAwsS3RegionV2())
+                    .credentialsProvider(credentialFactory.getAwsV2Provider(config))
                     .build();
         } else {
             // TODO This is definitely used for testing but not sure if customers use it.
             return S3Client.builder()
                     .overrideConfiguration(clientOverrideConfiguration)
-                    .region(config.getAwsS3Region())
-                    .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                    .region(config.getAwsS3RegionV2())
+                    .credentialsProvider(credentialFactory.getAwsV2Provider(config))
                     .endpointOverride(URI.create(config.getAwsS3EndPoint()))
                     .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
                     .build();

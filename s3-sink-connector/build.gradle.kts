@@ -21,8 +21,6 @@ plugins {
   id("java-test-fixtures")
 }
 
-val amazonS3Version by extra("1.12.777")
-val amazonSTSVersion by extra("1.12.777")
 val s3mockVersion by extra("0.2.6")
 
 val integrationTest: SourceSet =
@@ -81,8 +79,8 @@ dependencies {
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
-  implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
-  implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
+  implementation(amazonawssdk.s3)
+  implementation(amazonawssdk.sts)
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)

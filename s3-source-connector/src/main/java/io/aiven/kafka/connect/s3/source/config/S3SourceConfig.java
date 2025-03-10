@@ -20,6 +20,7 @@ import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYy
 
 import java.util.Map;
 
+import io.aiven.kafka.connect.config.s3.S3Config;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.FileNameFragment;
@@ -35,9 +36,10 @@ import io.aiven.kafka.connect.iam.AwsStsRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 
-final public class S3SourceConfig extends SourceCommonConfig {
+final public class S3SourceConfig extends SourceCommonConfig implements S3Config {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConfig.class);
 
@@ -79,6 +81,16 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.hasAwsStsRole();
     }
 
+    @Override
+    public AwsBasicCredentials getAwsCredentialsV2() {
+       return s3ConfigFragment.getAwsCredentialsV2();
+    }
+
+    @Override
+    public AwsCredentialsProvider getCustomCredentialsProviderV2() {
+        return s3ConfigFragment.getCustomCredentialsProviderV2();
+    }
+
     public boolean hasStsEndpointConfig() {
         return s3ConfigFragment.hasStsEndpointConfig();
     }
@@ -95,6 +107,11 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getAwsS3EndPoint();
     }
 
+    @Override
+    public Region getAwsS3RegionV2() {
+        return s3ConfigFragment.getAwsS3RegionV2();
+    }
+
     public Region getAwsS3Region() {
         return s3ConfigFragment.getAwsS3RegionV2();
     }
@@ -109,10 +126,6 @@ final public class S3SourceConfig extends SourceCommonConfig {
 
     public String getAwsS3Prefix() {
         return s3ConfigFragment.getAwsS3Prefix();
-    }
-
-    public int getAwsS3PartSize() {
-        return s3ConfigFragment.getAwsS3PartSize();
     }
 
     public long getS3RetryBackoffDelayMs() {
