@@ -55,10 +55,8 @@ public final class CompressionFragment extends ConfigFragment {
                 Objects.isNull(defaultCompressionType) ? CompressionType.NONE.name : defaultCompressionType.name, // NOPMD
                                                                                                                   // NullAssignment
                 new FileCompressionTypeValidator(), ConfigDef.Importance.MEDIUM,
-                "The compression type used for files put on GCS. " + "The supported values are: "
-                        + CompressionType.SUPPORTED_COMPRESSION_TYPES + ".",
-                GROUP_COMPRESSION, 1, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
-                FixedSetRecommender.ofSupportedValues(CompressionType.names()));
+                "The compression type used for files put on GCS.", GROUP_COMPRESSION, 1, ConfigDef.Width.NONE,
+                FILE_COMPRESSION_TYPE_CONFIG, FixedSetRecommender.ofSupportedValues(CompressionType.names()));
         return configDef;
     }
 

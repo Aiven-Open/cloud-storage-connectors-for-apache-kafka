@@ -19,3 +19,5 @@ gradle-wrapper.properties
 # Build files
 build/
 /azure-sink-connector/.jqwik-database
+*/out/
+**/*.patch

@@ -19,6 +19,7 @@ import com.github.spotbugs.snom.SpotBugsTask
 plugins {
   id("aiven-apache-kafka-connectors-all.java-conventions")
   id("java-test-fixtures")
+  id("aiven-apache-kafka-connectors-all.docs")
 }
 
 val amazonS3Version by extra("1.12.777")

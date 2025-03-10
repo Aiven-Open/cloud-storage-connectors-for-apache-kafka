@@ -30,8 +30,13 @@ public class OutputTypeValidator implements ConfigDef.Validator {
         if (Objects.nonNull(value)) {
             final String valueStr = (String) value;
             if (!FormatType.names().contains(valueStr)) {
-                throw new ConfigException(name, valueStr, "supported values are: " + FormatType.SUPPORTED_FORMAT_TYPES);
+                throw new ConfigException(name, valueStr, toString());
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        return "Supported values are: " + FormatType.SUPPORTED_FORMAT_TYPES;
     }
 }

@@ -695,7 +695,7 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "format.output.type", "unknown");
 
         final var expectedErrorMessage = "Invalid value unknown for configuration format.output.type: "
-                + "supported values are: 'avro', 'csv', 'json', 'jsonl', 'parquet'";
+                + "Supported values are: 'avro', 'csv', 'json', 'jsonl', 'parquet'";
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "format.output.type", expectedErrorMessage);
