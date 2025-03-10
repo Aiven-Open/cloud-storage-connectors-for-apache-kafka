@@ -26,6 +26,8 @@ under the License.
     <poweredBy>
         <logo href="https://kafka.apache.org/"
               img="https://kafka.apache.org/logos/kafka_logo--simple.png"/>
+        <logo href="https://aiven.io/"
+              img="https://aiven.io/assets/logo-aiven-DLhBz3IO.svg" />
     </poweredBy>
     <body>
         <menu name="Overview">
