@@ -30,8 +30,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Build
         run: |
-          ./gradlew createSite
-          ./gradlew buildSite
+          ./gradlew createSite javadoc
+          ./gradlew populateSite
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -39,17 +39,15 @@ tasks.register<Exec>("createSite") {
     args("clean", "site:site")
 }
 
-tasks.register<Copy>("buildSite") {
+tasks.register<Copy>("populateSite") {
     group = "Documentation"
     description = "Build site"
     outputs.upToDateWhen { false }
-    //dependsOn("createSite")
-    //mustRunAfter("createSite")
+
     rootProject.subprojects
         .filter { s -> s.name != "site" }
         .filter { s -> s.tasks.findByName("copySiteAssets") != null }
         .forEach { s ->
-            dependsOn(s.tasks.getByName("javadoc"))
             project.copy {
                 println("Project: " + s.name)
                 println("to: ${project.layout.projectDirectory.asFile}/target/site/${s.name}/javadoc")
