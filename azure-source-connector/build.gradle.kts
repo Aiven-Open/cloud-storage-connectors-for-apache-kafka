@@ -53,8 +53,10 @@ idea {
 dependencies {
   compileOnly(apache.kafka.connect.api)
 
+  implementation("commons-io:commons-io:2.18.0")
+  implementation("org.apache.commons:commons-lang3:3.17.0")
   implementation(project(":commons"))
-
+  implementation(apache.commons.collection4)
   implementation("com.azure:azure-storage-blob:12.29.0")
 
   implementation(tools.spotbugs.annotations)
