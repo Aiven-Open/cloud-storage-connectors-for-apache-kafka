@@ -58,8 +58,8 @@ under the License.
         </menu>
 
         <menu name="S3 Sink">
-            <item name="Introduction" href="s3-sink/index.html"/>
-            <item name="Javadoc" href="s3-sink/javadoc/index.html"/>
+            <item name="Introduction" href="s3-sink-connector/index.html"/>
+            <item name="Javadoc" href="s3-sink-connector/javadoc/index.html"/>
         </menu>
 
         <menu name="S3 Source">
