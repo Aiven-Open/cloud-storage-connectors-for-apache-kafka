@@ -6,8 +6,8 @@ We release patches for security vulnerabilities. Which versions are eligible
 receiving such patches depend on the CVSS v3.0 Rating:
 
 | CVSS v3.0 | Supported Versions                        |
-| --------- | ----------------------------------------- |
-| 4.0-10.0  | Most recent release                       |
+|-----------| ----------------------------------------- |
+| 3.2.0     | Most recent release                       |
 
 ## Reporting a Vulnerability
 
