@@ -37,7 +37,7 @@ public class NonEmptyPassword implements ConfigDef.Validator {
 
     @Override
     public String toString() {
-        return "null, or a non empty String.";
+        return "A null, or a non empty String.";
     }
 
 }
