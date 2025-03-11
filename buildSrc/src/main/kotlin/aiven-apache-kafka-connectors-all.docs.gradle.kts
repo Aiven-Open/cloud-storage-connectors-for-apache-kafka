@@ -42,7 +42,7 @@ group = "io.aiven"
 //    )
 //}
 
-tasks.register<Copy>("copyREADME") {
+tasks.register<Copy>("copyMarkdown") {
     group = "Documentation"
     description = "Copies "
     println("Copying from ${project.layout.projectDirectory.asFile}/*.md")
@@ -65,7 +65,7 @@ tasks.register<Copy>("copyREADME") {
 tasks.register<Copy>("copySiteAssets") {
     group = "Documentation"
     description = "Copies "
-    dependsOn("copyREADME")
+    dependsOn("copyMarkdown")
     println("Copying from ${project.layout.projectDirectory.asFile}/src/site")
     println("          to ${project.layout.buildDirectory.asFile.get()}/site/")
     from("${project.layout.projectDirectory.asFile}/src/site")
