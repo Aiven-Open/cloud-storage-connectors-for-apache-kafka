@@ -1,0 +1,5 @@
+# S3 Source Configuration
+
+The complete S3 source configurtion file
+
+#include( "S3SourceConfig.txt" )
