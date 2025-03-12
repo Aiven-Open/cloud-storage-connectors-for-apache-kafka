@@ -66,7 +66,10 @@ idea {
 dependencies {
   compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
   compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
-  compileOnly(project(":tools"))
+  compileOnly(project(":site"))
+
+  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
+  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
   implementation(apache.commons.collection4)
   implementation(project(":commons"))
@@ -318,36 +321,35 @@ signing {
 /** ******************************* */
 /* Documentation building section */
 /** ******************************* */
-tasks.register<Copy>("createIndexMarkdown") {
-  group = "Documentation"
-  description = "Copies Readme to docs/site"
-  outputs.upToDateWhen { false }
-  into(
-    mkdir(layout.buildDirectory.dir("site/site/s3-source-connector/markdown"))
-      .resolve("index.md"))
-  from("src/index.md")
+
+
+tasks.register("buildDocs") {
+  dependsOn("buildConfigMd")
+  dependsOn("buildConfigYml")
 }
 
-val toolsJar = project(":tools").task("jar")
-//tasks.register<JavaExec>("configDocs") {
-//  group = "Documentation"
-//  classpath = project(":tools").sourceSets.main.get().compileClasspath.plus(project(":tools").sourceSets.main.get().output.classesDirs).plus(sourceSets.main.get().compileClasspath).plus(sourceSets.main.get().output.classesDirs)//.plus(project(":tools").sourceSets.main.get().output.resourcesDir) // sourceSets.main.get().runtimeClasspath.plus(project(":tools").artifacts.compileClasspath())
-//  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
-//  args = listOf("io.aiven.kafka.connect.s3.source.S3SourceConfig", "configDef", "configData.md.vm", "build/S3SourceConfig.md")
-//  println( "Project name: "+project.name )
-//}
-
-tasks.register<JavaExec>("configDocs") {
-  dependsOn(toolsJar)
-  classpath(toolsJar.outputs.files) // Add the Jar to the classpath.
+tasks.register<JavaExec>("buildConfigMd") {
   mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath = sourceSets.main.get().compileClasspath.plus(files(tasks.jar)).plus(sourceSets.main.get().runtimeClasspath)
   args = listOf(
-    "io.aiven.kafka.connect.s3.source.S3SourceConfig",
+    "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
     "configDef",
-    "configData.md.vm",
-    "build/S3SourceConfig.md"
+    "src/templates/configData.md.vm",
+    "build/site/markdown/s3-source-connector/S3SourceConfig.md"
   )
 }
+
+tasks.register<JavaExec>("buildConfigYml") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath = sourceSets.main.get().compileClasspath.plus(files(tasks.jar)).plus(sourceSets.main.get().runtimeClasspath)
+  args = listOf(
+    "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
+    "configDef",
+    "src/templates/configData.yml.vm",
+    "build/site/s3-source-connector/S3SourceConfig.yml"
+  )
+}
+
 
 
 /** ****************************** */
