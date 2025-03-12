@@ -1,4 +1,7 @@
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+    id("aiven-apache-kafka-connectors-all.java-conventions")
+}
+
 
 copy {
     println("Copying from ${rootProject.layout.projectDirectory.asFile}/*.md")
