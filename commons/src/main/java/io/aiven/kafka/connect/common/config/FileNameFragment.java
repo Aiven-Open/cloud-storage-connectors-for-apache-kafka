@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.common.config;
 
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
@@ -184,5 +185,55 @@ public final class FileNameFragment extends ConfigFragment {
     public int getMaxRecordsPerFile() {
         return cfg.getInt(FILE_MAX_RECORDS);
     }
+
+    public static class Setter {
+        Map<String, String> data;
+
+        public Setter(final Map<String, String> data) {
+            this.data = data;
+        }
+
+
+        /**
+         * Returns the text of the filename template. May throw {@link ConfigException} if the property
+         * {@link #FILE_NAME_TEMPLATE_CONFIG} is not set.
+         *
+         * @return the text of the filename template.
+         */
+        public void setFilenameTemplate(String fileNameTemplate) {
+            data.put(FILE_NAME_TEMPLATE_CONFIG, fileNameTemplate);
+        }
+
+        /**
+         * Gets the filename timezone
+         *
+         * @return The timezone specified for filenames.
+         */
+        public void setFilenameTimezone(ZoneId timezone) {
+            data.put(FILE_NAME_TIMESTAMP_TIMEZONE, timezone.getId());
+        }
+
+        /**
+         * Gets the timestamp source for the file name.
+         *
+         * @return the timestamp source for the file name.
+         */
+        public void setFilenameTimestampSource(TimestampSource timestampSource) {
+            data.put(FILE_NAME_TIMESTAMP_SOURCE, timestampSource.type().name());
+        }
+
+        public void setFilenameTimestampSource(TimestampSource.Type timestampType) {
+            data.put(FILE_NAME_TIMESTAMP_SOURCE, timestampType.name());
+        }
+
+        /**
+         * Gets the maximum number of records allowed in a file.
+         *
+         * @return the maximum number of records allowed in a file.
+         */
+        public void setMaxRecordsPerFile(int maxRecordsPerFile) {
+            data.put(FILE_MAX_RECORDS, Integer.toString(maxRecordsPerFile));
+        }
+   }
 
 }

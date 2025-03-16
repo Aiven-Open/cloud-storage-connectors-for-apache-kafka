@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.config;
 
 import java.util.Locale;
+import java.util.Map;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -94,6 +95,32 @@ public final class TransformerFragment extends ConfigFragment {
             }
 
         }
+    }
+
+    public static class Setter {
+        private Map<String, String> data;
+
+        public Setter(Map<String, String> data) {
+            this.data = data;
+        }
+
+        public void setInputFormat(InputFormat inputFormat) {
+            data.put(INPUT_FORMAT_KEY, inputFormat.name());
+        }
+
+        public void setSchemaRegistryUrl(String schemaRegistryUrl) {
+            data.put(SCHEMA_REGISTRY_URL, schemaRegistryUrl);
+        }
+
+        public void setAvroValueSerializer(Class<?> clazz) {
+            data.put(AVRO_VALUE_SERIALIZER, clazz.getCanonicalName());
+        }
+
+        public void setTransformerMaxBufferSize(int maxBufferSize) {
+            data.put(TRANSFORMER_MAX_BUFFER_SIZE, Integer.toString(maxBufferSize));
+        }
+
+
     }
 
 }

@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.common.config;
 
 import java.util.Map;
 
+import io.aiven.kafka.connect.common.templating.Template;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
@@ -81,6 +82,10 @@ public class SourceCommonConfig extends CommonConfig {
 
     public int getTransformerMaxBufferSize() {
         return transformerFragment.getTransformerMaxBufferSize();
+    }
+
+    public Template getFilenameTemplate() {
+        return fileNameFragment.getFilenameTemplate();
     }
 
 }

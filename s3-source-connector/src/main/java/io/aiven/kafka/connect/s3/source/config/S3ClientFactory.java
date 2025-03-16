@@ -48,14 +48,14 @@ public class S3ClientFactory {
                     .overrideConfiguration(o -> o.retryStrategy(
                             r -> r.backoffStrategy(backoffStrategy).maxAttempts(config.getS3RetryBackoffMaxRetries())))
                     .region(config.getAwsS3Region())
-                    .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                    .credentialsProvider(config.getAwsV2Provider())
                     .build();
         } else {
             // TODO This is definitely used for testing but not sure if customers use it.
             return S3Client.builder()
                     .overrideConfiguration(clientOverrideConfiguration)
                     .region(config.getAwsS3Region())
-                    .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                    .credentialsProvider(config.getAwsV2Provider())
                     .endpointOverride(URI.create(config.getAwsS3EndPoint()))
                     .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
                     .build();

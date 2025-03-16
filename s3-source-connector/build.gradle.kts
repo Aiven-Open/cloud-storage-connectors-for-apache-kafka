@@ -75,6 +75,8 @@ dependencies {
   implementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
+
+  testImplementation(testFixtures(project(":commons")))
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(testinglibs.awaitility)

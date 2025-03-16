@@ -111,7 +111,7 @@ final class S3SourceTaskTest {
                 .region(config.getAwsS3Region())
                 .endpointOverride(URI.create(config.getAwsS3EndPoint()))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
-                .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                .credentialsProvider(config.getAwsV2Provider())
                 .build();
     }
 

@@ -139,7 +139,7 @@ final class OffsetManagerTest {
                 OffsetManager.OffsetManagerEntry<TestingOffsetManagerEntry> {
         public Map<String, Object> data;
 
-        public int recordCount;
+        private int recordCount;
 
         public TestingOffsetManagerEntry(final String one, final String two, final String three) {
             this();
@@ -189,6 +189,11 @@ final class OffsetManagerTest {
         @Override
         public void incrementRecordCount() {
             recordCount++;
+        }
+
+        @Override
+        public long getRecordCount() {
+            return recordCount;
         }
 
         @Override
