@@ -126,8 +126,9 @@ public final class AzureOffsetManagerEntry implements OffsetManager.OffsetManage
     /**
      * Gets the umber of records extracted from data returned from Azure Blob.
      *
-     * @return the umber of records extracted from data returned from Azure Blob.
+     * @return the number of records extracted from data returned from Azure Blob.
      */
+    @Override
     public long getRecordCount() {
         return recordCount;
     }

@@ -16,11 +16,11 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class RingBufferTest {
 
@@ -30,7 +30,7 @@ class RingBufferTest {
     @CsvSource({ "2", "10", "19", "24" })
     void testRingBufferReturnsOldestEntryAndRemovesOldestEntry(final int size) {
 
-        final RingBuffer<String> buffer = new RingBuffer<>(size);
+        final RingBuffer<String> buffer = new RingBuffer(size);
         for (int i = 0; i < size; i++) {
             buffer.enqueue(OBJECT_KEY + i);
         }
@@ -44,7 +44,7 @@ class RingBufferTest {
     @CsvSource({ "2", "10", "19", "24" })
     void testRingBufferOnlyAddsEachItemOnce(final int size) {
 
-        final RingBuffer<String> buffer = new RingBuffer<>(size);
+        final RingBuffer<String> buffer = new RingBuffer(size);
         for (int i = 0; i < size; i++) {
             // add the same objectKey every time, it should onl have one entry.
             buffer.enqueue(OBJECT_KEY);
@@ -58,7 +58,7 @@ class RingBufferTest {
     @Test
     void testRingBufferOfSizeOneOnlyRetainsOneEntry() {
 
-        final RingBuffer<String> buffer = new RingBuffer<>(1);
+        final RingBuffer<String> buffer = new RingBuffer(1);
         buffer.enqueue(OBJECT_KEY + 0);
         assertThat(buffer.getOldest()).isEqualTo(OBJECT_KEY + 0);
         buffer.enqueue(OBJECT_KEY + 1);

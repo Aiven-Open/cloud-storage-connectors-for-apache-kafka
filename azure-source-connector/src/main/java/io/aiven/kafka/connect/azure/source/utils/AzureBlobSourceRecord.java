@@ -16,125 +16,44 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
-import org.apache.kafka.connect.data.SchemaAndValue;
-import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.errors.DataException;
-import org.apache.kafka.connect.source.SourceRecord;
-
-import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
-import io.aiven.kafka.connect.common.source.OffsetManager;
-import io.aiven.kafka.connect.common.source.task.Context;
+import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 
 import com.azure.storage.blob.models.BlobItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AzureBlobSourceRecord {
+public class AzureBlobSourceRecord
+        extends
+            AbstractSourceRecord<BlobItem, String, AzureOffsetManagerEntry, AzureBlobSourceRecord> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceRecord.class);
-    private SchemaAndValue keyData;
-    private SchemaAndValue valueData;
-    /** The AzureOffsetManagerEntry for this source record */
-    private AzureOffsetManagerEntry offsetManagerEntry;
-    private Context<String> context;
-    private final BlobItem blobItem;
 
     public AzureBlobSourceRecord(final BlobItem blobItem) {
-        this.blobItem = blobItem;
-    }
+        super(LOGGER, new NativeInfo<BlobItem, String>() {
 
-    public AzureBlobSourceRecord(final AzureBlobSourceRecord azureBlobSourceRecord) {
-        this(azureBlobSourceRecord.blobItem);
-        this.offsetManagerEntry = azureBlobSourceRecord.offsetManagerEntry
-                .fromProperties(azureBlobSourceRecord.getOffsetManagerEntry().getProperties());
-        this.keyData = azureBlobSourceRecord.keyData;
-        this.valueData = azureBlobSourceRecord.valueData;
-        this.context = azureBlobSourceRecord.context;
-    }
-
-    public void setOffsetManagerEntry(final AzureOffsetManagerEntry offsetManagerEntry) {
-        this.offsetManagerEntry = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
-    }
-
-    public long getRecordCount() {
-        return offsetManagerEntry == null ? 0 : offsetManagerEntry.getRecordCount();
-    }
-
-    public void setKeyData(final SchemaAndValue keyData) {
-        this.keyData = keyData;
-    }
-
-    public void incrementRecordCount() {
-        this.offsetManagerEntry.incrementRecordCount();
-    }
-
-    public void setValueData(final SchemaAndValue valueData) {
-        this.valueData = valueData;
-    }
-
-    public String getTopic() {
-        return context.getTopic().orElse(null);
-    }
-
-    public Integer getPartition() {
-        return context.getPartition().orElse(null);
-    }
-
-    public String getBlobName() {
-        return blobItem.getName();
-    }
-
-    public SchemaAndValue getKey() {
-        return new SchemaAndValue(keyData.schema(), keyData.value());
-    }
-
-    public SchemaAndValue getValue() {
-        return new SchemaAndValue(valueData.schema(), valueData.value());
-    }
-
-    public AzureOffsetManagerEntry getOffsetManagerEntry() {
-        return offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties()); // return a defensive copy
-    }
-
-    public long getAzureBlobSize() {
-        return blobItem.getProperties().getContentLength();
-    }
-
-    public Context<String> getContext() {
-        return new Context<>(context) {
-        };
-
-    }
-    public void setContext(final Context<String> context) {
-        this.context = new Context<>(context) {
-        };
-    }
-
-    /**
-     * Creates a SourceRecord that can be returned to a Kafka topic
-     *
-     * @return A kafka {@link SourceRecord SourceRecord} This can return null if error tolerance is set to 'All'
-     */
-    public SourceRecord getSourceRecord(final ErrorsTolerance tolerance,
-            final OffsetManager<AzureOffsetManagerEntry> offsetManager) {
-        try {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Source Record: {} for Topic: {} , Partition: {}, recordCount: {}", getBlobName(),
-                        getTopic(), getPartition(), getRecordCount());
+            @Override
+            public BlobItem getNativeItem() {
+                return blobItem;
             }
-            offsetManager.addEntry(offsetManagerEntry);
-            return new SourceRecord(offsetManagerEntry.getManagerKey().getPartitionMap(),
-                    offsetManagerEntry.getProperties(), getTopic(), getPartition(), keyData.schema(), keyData.value(),
-                    valueData.schema(), valueData.value());
-        } catch (DataException e) {
-            if (ErrorsTolerance.NONE.equals(tolerance)) {
-                throw new ConnectException("Data Exception caught during S3 record to source record transformation", e);
-            } else {
-                LOGGER.warn(
-                        "Data Exception caught during S3 record to source record transformation {} . errors.tolerance set to 'all', logging warning and continuing to process.",
-                        e.getMessage(), e);
-                return null;
+
+            @Override
+            public String getNativeKey() {
+                return blobItem.getName();
             }
-        }
+
+            @Override
+            public long getNativeItemSize() {
+                return blobItem.getProperties().getContentLength();
+            }
+        });
+    }
+
+    private AzureBlobSourceRecord(final AzureBlobSourceRecord azureBlobSourceRecord) {
+        super(azureBlobSourceRecord);
+    }
+
+    @Override
+    public AzureBlobSourceRecord duplicate() {
+        return new AzureBlobSourceRecord(this);
     }
 
 }

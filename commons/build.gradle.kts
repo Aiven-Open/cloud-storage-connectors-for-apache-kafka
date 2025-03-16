@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.provider.inClassPathMode
+
 /*
  * Copyright 2023 Aiven Oy
  *

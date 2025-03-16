@@ -26,6 +26,7 @@ import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.slf4j.Logger;
 
+
 /**
  * An abstract source record as retrieved from the storage layer.
  *
@@ -39,28 +40,21 @@ import org.slf4j.Logger;
  *            the implementation class for AbstractSourceRecord.
  */
 public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, E extends AbstractSourceRecord<N, K, O, E>> {
-    /** The logger from the implementation class */
     private final Logger logger;
-    /** the key for the source record */
     private SchemaAndValue keyData;
-    /** The value for the source record. */
     private SchemaAndValue valueData;
-    /** The offset manager entry for this record */
     private O offsetManagerEntry;
-    /** The context associated with this record */
     private Context<K> context;
-    /** The native info for this record. */
-    private final NativeInfo<N, K> nativeInfo;
+    private final NativeInfo<N,K> nativeInfo;
+
 
     /**
      * Construct a source record from a native item.
      *
-     * @param logger
-     *            The logger for the implementation class.
      * @param nativeInfo
-     *            the native information for the native that his record represents.
+     *            the native item to extract the source record from.
      */
-    public AbstractSourceRecord(final Logger logger, final NativeInfo<N, K> nativeInfo) {
+    public AbstractSourceRecord(final Logger logger, final NativeInfo<N,K> nativeInfo) {
         this.logger = logger;
         this.nativeInfo = nativeInfo;
     }
@@ -85,18 +79,14 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
      *
      * @return The key for the native object.
      */
-    final public K getNativeKey() {
-        return nativeInfo.getNativeKey();
-    }
+    final public K getNativeKey() { return nativeInfo.getNativeKey(); }
 
     /**
      * Gets the number of bytes in the input stream extracted from the native object.
      *
      * @return The number of bytes in the input stream extracted from the native object.
      */
-    final public long getNativeItemSize() {
-        return nativeInfo.getNativeItemSize();
-    }
+    final public long getNativeItemSize() { return nativeInfo.getNativeItemSize(); };
 
     /**
      * Makes a duplicate of this AbstractSourceRecord. This is similar to the Java {@code clone} method but without the
@@ -104,14 +94,14 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
      *
      * @return A duplicate of this AbstractSourceRecord
      */
-    abstract public E duplicate();
+    abstract public  E duplicate();
 
     /**
      * Gets the native item that this source record is working with.
      *
      * @return The native item that this source record is working with.
      */
-    final public N getNativeItem() {
+    protected N getNativeItem() {
         return nativeInfo.getNativeItem();
     }
 
@@ -147,7 +137,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
     /**
      * Gets the key data for this source record. Makes a defensive copy.
      *
-     * @return A copy of the key data for this source record.
+     * @return The key data for this source record.
      */
     final public SchemaAndValue getKey() {
         return new SchemaAndValue(keyData.schema(), keyData.value());
@@ -166,7 +156,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
     /**
      * Gets the value data for this source record. Makes a defensive copy.
      *
-     * @return A copy of the key data for this source record.
+     * @return The key data for this source record.
      */
     final public SchemaAndValue getValue() {
         return new SchemaAndValue(valueData.schema(), valueData.value());
@@ -175,7 +165,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
     /**
      * Gets the topic for the source record.
      *
-     * @return The topic for the source record or {@code null} if it is not set in the context.
+     * @return The topic for the source record.
      */
     final public String getTopic() {
         return context.getTopic().orElse(null);
@@ -184,7 +174,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
     /**
      * Gets the partition for the source record.
      *
-     * @return The partition for the source record or {@code null} if it is not set in the context.
+     * @return The partition for the source record.
      */
     final public Integer getPartition() {
         return context.getPartition().orElse(null);
@@ -203,7 +193,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
     /**
      * Gets the offset manager entry for this source record. Makes a defensive copy.
      *
-     * @return A copy of the offset manager entry for this source record.
+     * @return The offset manager entry for this source record.
      */
     final public O getOffsetManagerEntry() {
         return offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties()); // return a defensive copy
@@ -212,7 +202,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
     /**
      * Gets the Context for this source record. Makes a defensive copy.
      *
-     * @return A copy of the Context for this source record.
+     * @return The Context for this source record.
      */
     final public Context<K> getContext() {
         return new Context<>(context) {
@@ -233,10 +223,6 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
     /**
      * Creates a SourceRecord that can be returned to a Kafka topic
      *
-     * @param tolerance
-     *            The error tolerance for the record processing.
-     * @param offsetManager
-     *            The offset manager for the offset entry.
      * @return A kafka {@link SourceRecord SourceRecord} This can return null if error tolerance is set to 'All'
      */
     final public SourceRecord getSourceRecord(final ErrorsTolerance tolerance, final OffsetManager<O> offsetManager) {
@@ -261,34 +247,11 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
         }
     }
 
-    /**
-     * Information about the Native object.
-     *
-     * @param <N>
-     *            The native object type.
-     * @param <K>
-     *            the native key type
-     */
-    public interface NativeInfo<N, K> {
-        /**
-         * Gets the native item.
-         *
-         * @return The native item.
-         */
+    public interface NativeInfo<N,K> {
         N getNativeItem();
 
-        /**
-         * Gets the native key
-         *
-         * @return The Native key.
-         */
         K getNativeKey();
 
-        /**
-         * Gets the number of bytes in the input stream extracted from the native object.
-         *
-         * @return The number of bytes in the input stream extracted from the native object.
-         */
-        long getNativeItemSize();
+       long getNativeItemSize();
     }
 }

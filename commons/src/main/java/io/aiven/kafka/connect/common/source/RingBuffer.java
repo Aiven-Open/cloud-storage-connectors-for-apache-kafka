@@ -19,7 +19,7 @@ package io.aiven.kafka.connect.common.source;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.commons.collections4.queue.SynchronizedQueue;
 
-public final class RingBuffer<K> extends SynchronizedQueue<K> {
+public class RingBuffer<K> extends SynchronizedQueue<K> {
 
     /**
      * Create a Ring Buffer of a maximum Size
