@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 public class AzureBlobSourceRecord
         extends
-            AbstractSourceRecord<BlobItem, String, AzureOffsetManagerEntry, AzureBlobSourceRecord> {
+            AbstractSourceRecord<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceRecord.class);
 
     public AzureBlobSourceRecord(final BlobItem blobItem) {

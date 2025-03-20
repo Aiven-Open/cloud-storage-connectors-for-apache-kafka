@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.common.config;
 import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
@@ -126,33 +125,4 @@ public final class SourceConfigFragment extends ConfigFragment {
             }
         }
     }
-
-    public static class Setter {
-        Map<String, String> data;
-
-        public Setter(Map<String, String> data) {
-            this.data = data;
-        }
-
-        public void setTargetTopic(String targetTopic) {
-            data.put(TARGET_TOPIC, targetTopic);
-        }
-
-        public void setMaxPollRecords(int maxPollRecords) {
-            data.put(MAX_POLL_RECORDS, Integer.toString(maxPollRecords));
-        }
-
-        public void setExpectedMaxMessageBytes(int maxMessageBytes) {
-            data.put(EXPECTED_MAX_MESSAGE_BYTES, Integer.toString(maxMessageBytes));
-        }
-
-        public void setErrorsTolerance(ErrorsTolerance errorsTolerance) {
-            data.put(ERRORS_TOLERANCE, errorsTolerance.name());
-        }
-
-        public void setDistributionType(DistributionType distributionType) {
-            data.put(DISTRIBUTION_TYPE, distributionType.name());
-        }
-    }
-
 }

@@ -17,22 +17,25 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordTest;
+
 import software.amazon.awssdk.services.s3.model.S3Object;
 
-class S3SourceRecordTest extends AbstractSourceRecordTest<S3Object, String, S3OffsetManagerEntry, S3SourceRecord> {
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
+final class S3SourceRecordTest
+        extends
+            AbstractSourceRecordTest<S3Object, String, S3OffsetManagerEntry, S3SourceRecord> {
     @Override
-    protected String createKFrom(String key) {
+    protected String createKFrom(final String key) {
         return key;
     }
 
     @Override
-    protected S3OffsetManagerEntry createOffsetManagerEntry(String key) {
+    protected S3OffsetManagerEntry createOffsetManagerEntry(final String key) {
         return new S3OffsetManagerEntry("bucket1", key);
     }
 
     @Override
     protected S3SourceRecord createSourceRecord() {
-        S3Object object = S3Object.builder().key("key").size(5L).build();
-        return new S3SourceRecord(object);
+        return new S3SourceRecord(S3Object.builder().key("key").size(5L).build());
     }
 }

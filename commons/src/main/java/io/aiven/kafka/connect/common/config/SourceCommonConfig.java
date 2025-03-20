@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.common.config;
 
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.templating.Template;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
