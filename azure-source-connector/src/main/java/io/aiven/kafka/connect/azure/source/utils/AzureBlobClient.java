@@ -57,9 +57,8 @@ public class AzureBlobClient {
      *
      */
     public Stream<BlobItem> getAzureBlobStream() {
-        final ListBlobsOptions options = new ListBlobsOptions();
-        options.setPrefix(config.getAzurePrefix());
-        options.setMaxResultsPerPage(config.getAzureFetchPageSize());
+        final ListBlobsOptions options = new ListBlobsOptions().setPrefix(config.getAzurePrefix())
+                .setMaxResultsPerPage(config.getAzureFetchPageSize());
         return containerAsyncClient.listBlobs(options).toStream().filter(filterPredicate);
     }
 

@@ -32,7 +32,7 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
+public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     /** The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(OffsetManager.class);
 

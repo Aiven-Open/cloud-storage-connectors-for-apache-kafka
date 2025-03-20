@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.common.config;
 
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.templating.Template;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
@@ -26,6 +25,7 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
+import io.aiven.kafka.connect.common.templating.Template;
 
 public class SourceCommonConfig extends CommonConfig {
 

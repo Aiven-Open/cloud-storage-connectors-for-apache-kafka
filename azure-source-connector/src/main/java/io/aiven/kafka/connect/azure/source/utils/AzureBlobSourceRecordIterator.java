@@ -17,20 +17,16 @@
 package io.aiven.kafka.connect.azure.source.utils;
 
 import java.io.InputStream;
-import java.util.Optional;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
 
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
-import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
 
 import com.azure.storage.blob.models.BlobItem;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -40,12 +36,9 @@ import org.slf4j.LoggerFactory;
  * Iterator that processes Azure Blob files and creates Kafka source records. Supports different output formats (Avro,
  * JSON, Parquet).
  */
-public final class SourceRecordIterator
+public final class AzureBlobSourceRecordIterator
         extends
-            AbstractSourceRecordIterator<BlobItem, String, AzureOffsetManagerEntry, AzureBlobSourceRecord> {
-
-    /** The configuration for this Azure blob source */
-    private final AzureBlobSourceConfig azureBlobSourceConfig;
+            AbstractSourceRecordIterator<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
 
     /** The azure blob client that provides the blobItems */
     private final AzureBlobClient azureBlobClient;
@@ -53,21 +46,19 @@ public final class SourceRecordIterator
     /** The Azure container we are processing */
     private final String container;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SourceRecordIterator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceRecordIterator.class);
 
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
-    public SourceRecordIterator(final AzureBlobSourceConfig azureBlobSourceConfig,
-            final OffsetManager<AzureOffsetManagerEntry> offsetManager, final Transformer transformer,
+    public AzureBlobSourceRecordIterator(final AzureBlobSourceConfig azureBlobSourceConfig,
+            final OffsetManager<AzureBlobOffsetManagerEntry> offsetManager, final Transformer transformer,
             final AzureBlobClient azureBlobClient) {
         super(azureBlobSourceConfig, offsetManager, transformer, 0);
-        this.azureBlobSourceConfig = azureBlobSourceConfig;
         this.azureBlobClient = azureBlobClient;
         this.container = azureBlobSourceConfig.getAzureContainerName();
     }
 
     @Override
-    protected Stream<AzureBlobSourceRecord> getSourceRecordStream(final String offset) {
-        return azureBlobClient.getAzureBlobStream().map(fileMatching).filter(taskAssignment).map(Optional::get);
+    protected Stream<BlobItem> getNativeItemStream(final String offset) {
+        return azureBlobClient.getAzureBlobStream();
     }
 
     @Override
@@ -81,13 +72,7 @@ public final class SourceRecordIterator
     }
 
     @Override
-    protected FilePatternUtils getFilePatternUtils(final SourceCommonConfig commonConfig) {
-        AzureBlobSourceConfig azureBlobSourceConfig = (AzureBlobSourceConfig) commonConfig;
-        return new FilePatternUtils(azureBlobSourceConfig.getAzureBlobFileNameFragment().getFilenameTemplate().toString());
-    }
-
-    @Override
-    protected String getName(BlobItem nativeObject) {
+    protected String getNativeKey(final BlobItem nativeObject) {
         return nativeObject.getName();
     }
 
@@ -97,12 +82,12 @@ public final class SourceRecordIterator
     }
 
     @Override
-    protected AzureOffsetManagerEntry createOffsetManagerEntry(final BlobItem nativeObject) {
-        return new AzureOffsetManagerEntry(container, getName(nativeObject));
+    protected AzureBlobOffsetManagerEntry createOffsetManagerEntry(final BlobItem nativeObject) {
+        return new AzureBlobOffsetManagerEntry(container, getNativeKey(nativeObject));
     }
 
     @Override
-    protected OffsetManager.OffsetManagerKey getOffsetManagerKey() {
-        return AzureOffsetManagerEntry.asKey(container, StringUtils.defaultIfBlank(getLastSeenNativeKey(), ""));
+    protected OffsetManager.OffsetManagerKey getOffsetManagerKey(final String nativeKey) {
+        return AzureBlobOffsetManagerEntry.asKey(container, StringUtils.defaultIfBlank(nativeKey, ""));
     }
 }

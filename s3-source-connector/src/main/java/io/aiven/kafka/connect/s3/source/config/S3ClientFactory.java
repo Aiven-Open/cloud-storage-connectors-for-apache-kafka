@@ -21,8 +21,6 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Random;
 
-import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
-
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.retries.api.internal.backoff.ExponentialDelayWithJitter;
@@ -30,8 +28,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
 public class S3ClientFactory {
-
-    private final AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
 
     public S3Client createAmazonS3Client(final S3SourceConfig config) {
 

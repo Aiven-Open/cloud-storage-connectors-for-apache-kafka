@@ -35,7 +35,7 @@ import io.aiven.kafka.connect.common.source.OffsetManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-final class AzureOffsetManagerEntryTest {
+final class AzureBlobOffsetManagerEntryTest {
 
     static final String TEST_CONTAINER = "test-container";
 
@@ -43,7 +43,7 @@ final class AzureOffsetManagerEntryTest {
 
     private SourceTaskContext sourceTaskContext;
 
-    private OffsetManager<AzureOffsetManagerEntry> offsetManager;
+    private OffsetManager<AzureBlobOffsetManagerEntry> offsetManager;
 
     private OffsetStorageReader offsetStorageReader;
 
@@ -57,13 +57,13 @@ final class AzureOffsetManagerEntryTest {
 
     private Map<String, Object> createPartitionMap() {
         final Map<String, Object> partitionKey = new HashMap<>();
-        partitionKey.put(AzureOffsetManagerEntry.CONTAINER, TEST_CONTAINER);
-        partitionKey.put(AzureOffsetManagerEntry.BLOB_NAME, BLOB_NAME);
+        partitionKey.put(AzureBlobOffsetManagerEntry.CONTAINER, TEST_CONTAINER);
+        partitionKey.put(AzureBlobOffsetManagerEntry.BLOB_NAME, BLOB_NAME);
         return partitionKey;
     }
 
-    public static AzureOffsetManagerEntry newEntry() {
-        return new AzureOffsetManagerEntry(TEST_CONTAINER, BLOB_NAME);
+    public static AzureBlobOffsetManagerEntry newEntry() {
+        return new AzureBlobOffsetManagerEntry(TEST_CONTAINER, BLOB_NAME);
     }
 
     @Test
@@ -74,8 +74,8 @@ final class AzureOffsetManagerEntryTest {
 
         when(offsetStorageReader.offset(any())).thenReturn(storedData);
 
-        final AzureOffsetManagerEntry keyEntry = newEntry();
-        final Optional<AzureOffsetManagerEntry> entry = offsetManager.getEntry(keyEntry.getManagerKey(),
+        final AzureBlobOffsetManagerEntry keyEntry = newEntry();
+        final Optional<AzureBlobOffsetManagerEntry> entry = offsetManager.getEntry(keyEntry.getManagerKey(),
                 keyEntry::fromProperties);
         assertThat(entry).isPresent();
         assertThat(entry.get().getContainer()).isEqualTo(TEST_CONTAINER);
@@ -84,7 +84,7 @@ final class AzureOffsetManagerEntryTest {
 
         // verify second read reads from local data
 
-        final Optional<AzureOffsetManagerEntry> entry2 = offsetManager.getEntry(entry.get().getManagerKey(),
+        final Optional<AzureBlobOffsetManagerEntry> entry2 = offsetManager.getEntry(entry.get().getManagerKey(),
                 entry.get()::fromProperties);
         assertThat(entry2).isPresent();
         assertThat(entry2.get().getContainer()).isEqualTo(TEST_CONTAINER);
@@ -94,7 +94,7 @@ final class AzureOffsetManagerEntryTest {
 
     @Test
     void testFromProperties() {
-        final AzureOffsetManagerEntry entry = new AzureOffsetManagerEntry(TEST_CONTAINER, BLOB_NAME);
+        final AzureBlobOffsetManagerEntry entry = new AzureBlobOffsetManagerEntry(TEST_CONTAINER, BLOB_NAME);
         assertThat(entry.getRecordCount()).isEqualTo(0L);
         assertThat(entry.getProperty("random_entry")).isNull();
 
@@ -103,7 +103,7 @@ final class AzureOffsetManagerEntryTest {
         assertThat(entry.getRecordCount()).isEqualTo(1L);
         assertThat(entry.getProperty("random_entry")).isEqualTo(5L);
 
-        final AzureOffsetManagerEntry other = entry.fromProperties(entry.getProperties());
+        final AzureBlobOffsetManagerEntry other = entry.fromProperties(entry.getProperties());
         assertThat(other.getRecordCount()).isEqualTo(1L);
         assertThat(other.getProperty("random_entry")).isEqualTo(5L);
 
