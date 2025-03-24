@@ -38,7 +38,6 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
         super(new ConfigDef(), properties);
         azureBlobConfigFragment = new AzureBlobConfigFragment(this);
         azureBlobFileNameFragment = new FileNameFragment(this);
-        azureBlobConfigFragment = new AzureBlobConfigFragment(this);
         validate();
     }
 
@@ -74,20 +73,5 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
 
     public FileNameFragment getAzureBlobFileNameFragment() {
         return azureBlobFileNameFragment;
-    }
-    public int getAzureFetchPageSize() {
-        return azureBlobConfigFragment.getAzureFetchPageSize();
-    }
-
-    public String getAzurePrefix() {
-        return azureBlobConfigFragment.getAzurePrefix();
-    }
-
-    public BlobServiceAsyncClient getAzureServiceAsyncClient() {
-        return azureBlobConfigFragment.getAzureServiceAsyncClient();
-    }
-
-    public String getAzureContainerName() {
-        return azureBlobConfigFragment.getContainerName();
     }
 }
