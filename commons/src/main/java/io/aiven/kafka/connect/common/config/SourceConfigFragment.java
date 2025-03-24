@@ -125,5 +125,4 @@ public final class SourceConfigFragment extends ConfigFragment {
             }
         }
     }
-
 }

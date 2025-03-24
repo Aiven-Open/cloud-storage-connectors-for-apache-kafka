@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.utils;
+package io.aiven.kafka.connect.common.source;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,7 +30,7 @@ class RingBufferTest {
     @CsvSource({ "2", "10", "19", "24" })
     void testRingBufferReturnsOldestEntryAndRemovesOldestEntry(final int size) {
 
-        final RingBuffer buffer = new RingBuffer(size);
+        final RingBuffer<String> buffer = new RingBuffer<>(size);
         for (int i = 0; i < size; i++) {
             buffer.enqueue(OBJECT_KEY + i);
         }
@@ -44,25 +44,24 @@ class RingBufferTest {
     @CsvSource({ "2", "10", "19", "24" })
     void testRingBufferOnlyAddsEachItemOnce(final int size) {
 
-        final RingBuffer buffer = new RingBuffer(size);
+        final RingBuffer<String> buffer = new RingBuffer<>(size);
         for (int i = 0; i < size; i++) {
             // add the same objectKey every time, it should onl have one entry.
             buffer.enqueue(OBJECT_KEY);
         }
         // Buffer not filled so should return null
         assertThat(buffer.getOldest()).isEqualTo(null);
-        assertThat(buffer.get()).isEqualTo(OBJECT_KEY);
+        assertThat(buffer.peek()).isEqualTo(OBJECT_KEY);
         assertThat(buffer.contains(OBJECT_KEY)).isTrue();
     }
 
     @Test
     void testRingBufferOfSizeOneOnlyRetainsOneEntry() {
 
-        final RingBuffer buffer = new RingBuffer(1);
+        final RingBuffer<String> buffer = new RingBuffer<>(1);
         buffer.enqueue(OBJECT_KEY + 0);
         assertThat(buffer.getOldest()).isEqualTo(OBJECT_KEY + 0);
         buffer.enqueue(OBJECT_KEY + 1);
         assertThat(buffer.getOldest()).isEqualTo(OBJECT_KEY + 1);
-
     }
 }

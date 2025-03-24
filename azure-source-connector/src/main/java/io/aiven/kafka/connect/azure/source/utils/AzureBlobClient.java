@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.azure.source.utils;
 
 import java.nio.ByteBuffer;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
@@ -35,6 +36,7 @@ public class AzureBlobClient {
 
     private final AzureBlobSourceConfig config;
     private final BlobContainerAsyncClient containerAsyncClient;
+    private final Predicate<BlobItem> filterPredicate = blobItem -> blobItem.getProperties().getContentLength() > 0;
 
     /**
      *
@@ -55,10 +57,9 @@ public class AzureBlobClient {
      *
      */
     public Stream<BlobItem> getAzureBlobStream() {
-        final ListBlobsOptions options = new ListBlobsOptions();
-        options.setPrefix(config.getAzurePrefix());
-        options.setMaxResultsPerPage(config.getAzureFetchPageSize());
-        return containerAsyncClient.listBlobs(options).toStream();
+        final ListBlobsOptions options = new ListBlobsOptions().setPrefix(config.getAzurePrefix())
+                .setMaxResultsPerPage(config.getAzureFetchPageSize());
+        return containerAsyncClient.listBlobs(options).toStream().filter(filterPredicate);
     }
 
     /**

@@ -27,14 +27,15 @@ dependencies {
   implementation(confluent.kafka.connect.avro.data) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
-  implementation("commons-io:commons-io:2.18.0")
   implementation(tools.spotbugs.annotations)
   implementation(compressionlibs.snappy)
   implementation(compressionlibs.zstd.jni)
 
   implementation(logginglibs.slf4j)
 
+  implementation(apache.commons.io)
   implementation(apache.commons.text)
+  implementation(apache.commons.collection4)
 
   implementation(apache.parquet.avro) {
     exclude(group = "org.xerial.snappy", module = "snappy-java")
@@ -80,6 +81,12 @@ dependencies {
   }
 
   testFixturesImplementation(apache.kafka.connect.api)
+  testFixturesImplementation(testinglibs.junit.jupiter)
+  testFixturesImplementation(testinglibs.mockito.core)
+  testFixturesImplementation(testinglibs.assertj.core)
+  testFixturesImplementation(apache.commons.lang3)
+  testFixturesImplementation(apache.avro)
+  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
 
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)

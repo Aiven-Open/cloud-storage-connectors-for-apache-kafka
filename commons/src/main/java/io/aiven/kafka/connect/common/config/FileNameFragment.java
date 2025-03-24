@@ -184,5 +184,4 @@ public final class FileNameFragment extends ConfigFragment {
     public int getMaxRecordsPerFile() {
         return cfg.getInt(FILE_MAX_RECORDS);
     }
-
 }

@@ -130,6 +130,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      *
      * @return the umber of records extracted from data returned from S3.
      */
+    @Override
     public long getRecordCount() {
         return recordCount;
     }
@@ -190,7 +191,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         if (this == other) { // NOPMD comparing instance
             return 0;
         }
-        int result = ((String) getProperty(BUCKET)).compareTo((String) other.getProperty(BUCKET));
+        int result = getBucket().compareTo(other.getBucket());
         if (result == 0) {
             result = getKey().compareTo(other.getKey());
             if (result == 0) {
