@@ -150,5 +150,4 @@ public final class SourceConfigFragment extends ConfigFragment {
                     + Arrays.stream(DistributionType.values()).map(DistributionType::name).collect(Collectors.toList());
         }
     }
-
 }

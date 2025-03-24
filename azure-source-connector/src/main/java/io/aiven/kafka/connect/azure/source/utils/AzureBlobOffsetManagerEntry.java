@@ -23,7 +23,9 @@ import java.util.Objects;
 
 import io.aiven.kafka.connect.common.source.OffsetManager;
 
-public final class AzureOffsetManagerEntry implements OffsetManager.OffsetManagerEntry<AzureOffsetManagerEntry> {
+public final class AzureBlobOffsetManagerEntry
+        implements
+            OffsetManager.OffsetManagerEntry<AzureBlobOffsetManagerEntry> {
 
     public static final String CONTAINER = "container";
     public static final String BLOB_NAME = "blobName";
@@ -49,7 +51,7 @@ public final class AzureOffsetManagerEntry implements OffsetManager.OffsetManage
      * @param blobName
      *            the blob name.
      */
-    public AzureOffsetManagerEntry(final String container, final String blobName) {
+    public AzureBlobOffsetManagerEntry(final String container, final String blobName) {
         this.container = container;
         this.blobName = blobName;
         data = new HashMap<>();
@@ -62,7 +64,7 @@ public final class AzureOffsetManagerEntry implements OffsetManager.OffsetManage
      * @param properties
      *            the property map.
      */
-    private AzureOffsetManagerEntry(final String container, final String blobName,
+    private AzureBlobOffsetManagerEntry(final String container, final String blobName,
             final Map<String, Object> properties) {
         this(container, blobName);
         data.putAll(properties);
@@ -94,11 +96,11 @@ public final class AzureOffsetManagerEntry implements OffsetManager.OffsetManage
      *             if one of the {@link #RESTRICTED_KEYS} is missing.
      */
     @Override
-    public AzureOffsetManagerEntry fromProperties(final Map<String, Object> properties) {
+    public AzureBlobOffsetManagerEntry fromProperties(final Map<String, Object> properties) {
         if (properties == null) {
             return null;
         }
-        return new AzureOffsetManagerEntry(container, blobName, properties);
+        return new AzureBlobOffsetManagerEntry(container, blobName, properties);
     }
 
     @Override
@@ -126,8 +128,9 @@ public final class AzureOffsetManagerEntry implements OffsetManager.OffsetManage
     /**
      * Gets the umber of records extracted from data returned from Azure Blob.
      *
-     * @return the umber of records extracted from data returned from Azure Blob.
+     * @return the number of records extracted from data returned from Azure Blob.
      */
+    @Override
     public long getRecordCount() {
         return recordCount;
     }
@@ -172,8 +175,8 @@ public final class AzureOffsetManagerEntry implements OffsetManager.OffsetManage
 
     @Override
     public boolean equals(final Object other) {
-        if (other instanceof AzureOffsetManagerEntry) {
-            return compareTo((AzureOffsetManagerEntry) other) == 0;
+        if (other instanceof AzureBlobOffsetManagerEntry) {
+            return compareTo((AzureBlobOffsetManagerEntry) other) == 0;
         }
         return false;
     }
@@ -184,11 +187,11 @@ public final class AzureOffsetManagerEntry implements OffsetManager.OffsetManage
     }
 
     @Override
-    public int compareTo(final AzureOffsetManagerEntry other) {
+    public int compareTo(final AzureBlobOffsetManagerEntry other) {
         if (this == other) { // NOPMD comparing instance
             return 0;
         }
-        int result = ((String) getProperty(CONTAINER)).compareTo((String) other.getProperty(CONTAINER));
+        int result = getContainer().compareTo(other.getContainer());
         if (result == 0) {
             result = getKey().compareTo(other.getKey());
             if (result == 0) {

@@ -14,43 +14,46 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.utils;
+package io.aiven.kafka.connect.azure.source.utils;
 
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 
+import com.azure.storage.blob.models.BlobItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.s3.model.S3Object;
 
-public class S3SourceRecord extends AbstractSourceRecord<S3Object, String, S3OffsetManagerEntry, S3SourceRecord> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceRecord.class);
+public class AzureBlobSourceRecord
+        extends
+            AbstractSourceRecord<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceRecord.class);
 
-    public S3SourceRecord(final S3Object s3Object) {
-        super(LOGGER, new NativeInfo<S3Object, String>() {
+    public AzureBlobSourceRecord(final BlobItem blobItem) {
+        super(LOGGER, new NativeInfo<BlobItem, String>() {
+
             @Override
-            public S3Object getNativeItem() {
-                return s3Object;
+            public BlobItem getNativeItem() {
+                return blobItem;
             }
 
             @Override
             public String getNativeKey() {
-                return s3Object.key();
+                return blobItem.getName();
             }
 
             @Override
             public long getNativeItemSize() {
-                return s3Object.size();
+                return blobItem.getProperties().getContentLength();
             }
         });
     }
 
-    private S3SourceRecord(final S3SourceRecord azureBlobSourceRecord) {
+    private AzureBlobSourceRecord(final AzureBlobSourceRecord azureBlobSourceRecord) {
         super(azureBlobSourceRecord);
     }
 
     @Override
-    public S3SourceRecord duplicate() {
-        return new S3SourceRecord(this);
+    public AzureBlobSourceRecord duplicate() {
+        return new AzureBlobSourceRecord(this);
     }
 
 }

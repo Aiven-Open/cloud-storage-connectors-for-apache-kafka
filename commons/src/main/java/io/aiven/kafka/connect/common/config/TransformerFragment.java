@@ -95,5 +95,4 @@ public final class TransformerFragment extends ConfigFragment {
 
         }
     }
-
 }

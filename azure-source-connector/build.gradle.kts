@@ -63,6 +63,7 @@ dependencies {
   implementation(logginglibs.slf4j)
   implementation(apache.commons.collection4)
 
+  testImplementation(testFixtures(project(":commons")))
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.hamcrest)
   testImplementation(testinglibs.assertj.core)

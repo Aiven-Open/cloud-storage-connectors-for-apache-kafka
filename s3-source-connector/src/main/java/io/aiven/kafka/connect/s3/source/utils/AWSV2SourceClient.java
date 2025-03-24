@@ -36,7 +36,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
  * Called AWSV2SourceClient as this source client implements the V2 version of the aws client library. Handles all calls
- * and authentication to AWS and returns useable objects to the SourceRecordIterator.
+ * and authentication to AWS and returns useable objects to the AbstractSourceRecordIterator.
  */
 public class AWSV2SourceClient {
 
@@ -78,8 +78,8 @@ public class AWSV2SourceClient {
     public Stream<S3Object> getS3ObjectStream(final String startToken) {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
-                .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize())
-                .prefix(StringUtils.defaultIfBlank(s3SourceConfig.getAwsS3Prefix(), null))
+                .maxKeys(s3SourceConfig.getFetchPageSize())
+                .prefix(s3SourceConfig.getAwsS3Prefix())
                 .startAfter(StringUtils.defaultIfBlank(startToken, null))
                 .build();
 
@@ -88,7 +88,7 @@ public class AWSV2SourceClient {
             if (response.isTruncated()) {
                 return s3Client.listObjectsV2(ListObjectsV2Request.builder()
                         .bucket(bucketName)
-                        .maxKeys(s3SourceConfig.getS3ConfigFragment().getFetchPageSize())
+                        .maxKeys(s3SourceConfig.getFetchPageSize())
                         .continuationToken(response.nextContinuationToken())
                         .build());
             } else {

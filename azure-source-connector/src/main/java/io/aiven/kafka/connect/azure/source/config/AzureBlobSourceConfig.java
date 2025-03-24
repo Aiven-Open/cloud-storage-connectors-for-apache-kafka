@@ -32,12 +32,10 @@ import com.azure.storage.blob.BlobServiceAsyncClient;
 public class AzureBlobSourceConfig extends SourceCommonConfig {
 
     // TODO AzureBlobFragment needs to be extracted from Azure Sink.
-    private final FileNameFragment azureBlobFileNameFragment;
     private final AzureBlobConfigFragment azureBlobConfigFragment;
     public AzureBlobSourceConfig(final Map<?, ?> properties) {
         super(new ConfigDef(), properties);
         azureBlobConfigFragment = new AzureBlobConfigFragment(this);
-        azureBlobFileNameFragment = new FileNameFragment(this);
         validate();
     }
 
@@ -55,9 +53,6 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
     private void validate() {
     }
 
-    public FileNameFragment getAzureBlobFileNameFragment() {
-        return azureBlobFileNameFragment;
-    }
     public int getAzureFetchPageSize() {
         return azureBlobConfigFragment.getAzureFetchPageSize();
     }

@@ -37,6 +37,7 @@ import com.azure.storage.blob.BlobAsyncClient;
 import com.azure.storage.blob.BlobContainerAsyncClient;
 import com.azure.storage.blob.BlobServiceAsyncClient;
 import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobItemProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -113,9 +114,11 @@ class AzureBlobClientTest {
 
     private static Stream<BlobItem> createListOfBlobs(final int numberOfItems) {
         final List<BlobItem> items = new ArrayList<>();
+        final BlobItemProperties props = new BlobItemProperties().setContentLength(10_000L);
         for (int i = 0; i < numberOfItems; i++) {
             final BlobItem item = new BlobItem();// NOPMD avoid creating new instances in a loop
             item.setName(String.valueOf(i));
+            item.setProperties(props);
             items.add(item);
         }
         return items.stream();

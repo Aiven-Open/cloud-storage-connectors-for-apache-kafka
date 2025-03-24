@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source.utils;
+package io.aiven.kafka.connect.common.source;
 
-import java.util.Collection;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
+import org.apache.commons.collections4.queue.SynchronizedQueue;
 
-import org.apache.commons.collections.Buffer;
-import org.apache.commons.collections.BufferUtils;
-import org.apache.commons.collections.buffer.CircularFifoBuffer;
-
-public class RingBuffer extends CircularFifoBuffer {
-    final private Buffer fifoBuffer;
+public final class RingBuffer<K> extends SynchronizedQueue<K> {
 
     /**
      * Create a Ring Buffer of a maximum Size
@@ -32,19 +28,7 @@ public class RingBuffer extends CircularFifoBuffer {
      *            The size that the linked list should be.
      */
     public RingBuffer(final int size) {
-        super(size);
-        this.fifoBuffer = BufferUtils.synchronizedBuffer(this);
-    }
-
-    /**
-     * Create a Ring Buffer from an existing collection
-     *
-     * @param collection
-     *            An existing collection of values
-     */
-    public RingBuffer(final Collection<Object> collection) {
-        super(collection);
-        this.fifoBuffer = BufferUtils.synchronizedBuffer(this);
+        super(new CircularFifoQueue<>(size));
     }
 
     /**
@@ -54,11 +38,10 @@ public class RingBuffer extends CircularFifoBuffer {
      * @param item
      *            Item T which is to be added to the Queue
      */
-    public void enqueue(final Object item) {
+    public void enqueue(final K item) {
         if (item != null && !contains(item)) {
-            fifoBuffer.add(item);
+            add(item);
         }
-
     }
 
     /**
@@ -66,7 +49,7 @@ public class RingBuffer extends CircularFifoBuffer {
      *
      * @return A value T from the last place in the list, returns null if list is not full.
      */
-    public String getOldest() {
-        return fifoBuffer.size() == maxSize() ? (String) fifoBuffer.get() : null;
+    public K getOldest() {
+        return ((CircularFifoQueue<K>) decorated()).isAtFullCapacity() ? poll() : null;
     }
 }
