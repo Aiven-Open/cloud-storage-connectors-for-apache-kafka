@@ -16,13 +16,13 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import java.util.Locale;
-
+import io.aiven.kafka.connect.common.source.input.InputFormat;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.connect.common.source.input.InputFormat;
+import java.util.Locale;
+import java.util.Map;
 
 public final class TransformerFragment extends ConfigFragment {
     private static final String TRANSFORMER_GROUP = "Transformer group";
@@ -33,6 +33,11 @@ public final class TransformerFragment extends ConfigFragment {
     public static final String SCHEMAS_ENABLE = "schemas.enable";
     public static final String TRANSFORMER_MAX_BUFFER_SIZE = "transformer.max.buffer.size";
     private static final int DEFAULT_MAX_BUFFER_SIZE = 4096;
+
+
+    public static Setter setter(Map<String, String> data) {
+        return new Setter(data);
+    }
 
     /**
      * Construct the ConfigFragment..
@@ -95,4 +100,30 @@ public final class TransformerFragment extends ConfigFragment {
 
         }
     }
+
+    public final static class Setter extends AbstractFragmentSetter<Setter> {
+        private Setter(Map<String, String> data) {
+            super(data);
+        }
+
+        public Setter schemaRegistry(final String schemaRegistryUrl) {
+            return setValue(SCHEMA_REGISTRY_URL, schemaRegistryUrl);
+        }
+
+        public Setter valueConverterSchemaRegistry(final String valueConverterSchemaRegistryUrl) {
+            return setValue(VALUE_CONVERTER_SCHEMA_REGISTRY_URL, valueConverterSchemaRegistryUrl);
+        }
+
+        public Setter inputFormat(final InputFormat inputFormat) {
+            return setValue(INPUT_FORMAT_KEY, inputFormat.name());
+        }
+
+        public Setter maxBufferSize(final int maxBufferSize) {
+            return setValue(TRANSFORMER_MAX_BUFFER_SIZE, maxBufferSize);
+        }
+
+        public Setter avroValueSerializer(final Class<?> avroValueSerializer) {
+            return setValue(AVRO_VALUE_SERIALIZER, avroValueSerializer);
+        }
+     }
 }

@@ -16,14 +16,32 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
-import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.source.AbstractSourceTask;
+import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.task.Context;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
+import io.findify.s3mock.S3Mock;
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.retry.RetryMode;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -37,34 +55,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaAndValue;
-import org.apache.kafka.connect.source.SourceRecord;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
-
-import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.source.AbstractSourceTask;
-import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
-import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.task.Context;
-import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
-
-import io.findify.s3mock.S3Mock;
-import org.apache.commons.lang3.time.StopWatch;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
-import software.amazon.awssdk.core.retry.RetryMode;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.S3Object;
+import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
+import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 final class S3SourceTaskTest {
 
@@ -313,7 +311,7 @@ final class S3SourceTaskTest {
     @Test
     void testPollsWithExcessRecords() {
         // test that multiple polls to get all records succeeds.
-        properties.put(SourceConfigFragment.MAX_POLL_RECORDS, "2");
+        SourceConfigFragment.setter(properties).maxPollRecords(2);
 
         final List<S3SourceRecord> lst = createS3SourceRecords(3);
 

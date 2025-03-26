@@ -16,22 +16,6 @@
 
 package io.aiven.kafka.connect.config.s3;
 
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
-
-import io.aiven.kafka.connect.common.config.ConfigFragment;
-import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
-import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
-import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
-import io.aiven.kafka.connect.common.config.validators.UrlValidator;
-import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
-import io.aiven.kafka.connect.iam.AwsStsRole;
-
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
@@ -39,10 +23,28 @@ import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.internal.BucketNameUtils;
+import io.aiven.kafka.connect.common.config.AbstractFragmentSetter;
+import io.aiven.kafka.connect.common.config.ConfigFragment;
+import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
+import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
+import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
+import io.aiven.kafka.connect.common.config.validators.UrlValidator;
+import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
+import io.aiven.kafka.connect.iam.AwsStsRole;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+
+import java.net.URI;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * The configuration fragment that defines the S3 specific characteristics.
@@ -153,6 +155,10 @@ public final class S3ConfigFragment extends ConfigFragment {
         addDeprecatedConfiguration(configDef);
         addS3RetryPolicies(configDef);
         return configDef;
+    }
+
+    public static Setter setter(Map<String, String> configData) {
+        return new Setter(configData);
     }
 
     static void addS3RetryPolicies(final ConfigDef configDef) {
@@ -545,4 +551,99 @@ public final class S3ConfigFragment extends ConfigFragment {
         return cfg.getInt(AWS_S3_FETCH_BUFFER_SIZE);
     }
 
+    public final static class Setter extends AbstractFragmentSetter<Setter> {
+
+        private Setter(final Map<String, String> data) {
+            super(data);
+        }
+
+
+        public Setter accessKeyId(final String accessKeyId) {
+            return setValue(AWS_ACCESS_KEY_ID_CONFIG, accessKeyId);
+        }
+
+        public Setter accessKeySecret(final String accessKeySecret) {
+            return setValue(AWS_SECRET_ACCESS_KEY_CONFIG, accessKeySecret);
+        }
+
+        public Setter bucketName(final String bucketName) {
+            return setValue(AWS_S3_BUCKET_NAME_CONFIG, bucketName);
+        }
+
+        public Setter credentialsProvider(final Class<? extends AwsCredentialsProvider> credentialsProvider) {
+            return setValue(AWS_CREDENTIALS_PROVIDER_CONFIG, credentialsProvider.getCanonicalName());
+        }
+
+        public Setter credentialsProvider(final String credentialsProvider) {
+            return setValue(AWS_CREDENTIALS_PROVIDER_CONFIG, credentialsProvider);
+        }
+
+        public Setter endpoint(final URI endpoint) {
+            return setValue(AWS_S3_ENDPOINT_CONFIG, endpoint);
+        }
+
+        public Setter endpoint(final String endpoint) {
+            return setValue(AWS_S3_ENDPOINT_CONFIG, endpoint);
+        }
+
+        public Setter fetchBufferSize(final int fetchSize) {
+            return setValue(AWS_S3_FETCH_BUFFER_SIZE, fetchSize);
+        }
+
+        public Setter fetchPageSize(final int fetchPageSize) {
+            return setValue(FETCH_PAGE_SIZE, fetchPageSize);
+        }
+
+        public Setter partSize(final int partSize) {
+            return setValue(AWS_S3_PART_SIZE, partSize);
+        }
+
+        public Setter prefix(final String prefix) {
+            return setValue(AWS_S3_PREFIX_CONFIG, prefix);
+        }
+
+        public Setter region(final String region) {
+            return setValue(AWS_S3_REGION_CONFIG, region);
+        }
+
+        public Setter region(final Region region) {
+            return setValue(AWS_S3_REGION_CONFIG, region.toString());
+        }
+
+        public Setter retryBackoffDelay(final Duration duration) {
+            return setValue(AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, duration.toMillis());
+        }
+
+        public Setter retryBackoffMaxDelay(final Duration duration) {
+            return setValue(AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, duration.toMillis());
+        }
+
+        public Setter retryBackoffMaxRetries(final int retries) {
+            return setValue(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, retries);
+        }
+
+        public Setter sseAlgorithm(final String sseAlgorithm) {
+            return setValue(AWS_S3_SSE_ALGORITHM_CONFIG, sseAlgorithm);
+        }
+
+        public Setter stsEndpoint(final String stsEndpoint) {
+            return setValue(AWS_STS_CONFIG_ENDPOINT, stsEndpoint);
+        }
+
+        public Setter stsRoleArn(final String stsRoleArn) {
+            return setValue(AWS_STS_ROLE_ARN, stsRoleArn);
+        }
+
+        public Setter stsRoleExternalId(final String stsRoleExternalId) {
+            return setValue(AWS_STS_ROLE_EXTERNAL_ID, stsRoleExternalId);
+        }
+
+        public Setter stsRoleSessionName(final String stsRoleSessionName) {
+            return setValue(AWS_STS_ROLE_SESSION_NAME, stsRoleSessionName);
+        }
+
+        public Setter stsRoleSessionDuration(final Duration stsRoleSessionDuration) {
+            return setValue(AWS_STS_ROLE_SESSION_DURATION, stsRoleSessionDuration.toSeconds());
+        }
+    }
 }

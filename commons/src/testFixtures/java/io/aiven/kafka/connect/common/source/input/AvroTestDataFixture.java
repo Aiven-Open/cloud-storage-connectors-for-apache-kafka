@@ -16,11 +16,6 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericData;
@@ -28,10 +23,38 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * A testing fixture to generate Avro test data.
  */
 public final class AvroTestDataFixture {
+
+    /** The Json string used to create the {@link #DEFAULT_SCHEMA} */
+    public static String SCHEMA_JSON = "{\n" + "  \"type\": \"record\",\n" + "  \"name\": \"TestRecord\",\n"
+            + "  \"fields\": [\n" + "    {\"name\": \"message\", \"type\": \"string\"},\n"
+            + "    {\"name\": \"id\", \"type\": \"int\"}\n" + "  ]\n" + "}";
+
+    /** The schema used for most testing.  Created from {@link #SCHEMA_JSON}. */
+    public static Schema DEFAULT_SCHEMA = new Schema.Parser().parse(SCHEMA_JSON);
+
+    /**
+     * Generates a byte array containing the specified number of records.
+     *
+     * @param messageId the messageId to start with.
+     * @param numRecs
+     *            the numer of records to generate
+     * @return A byte array containing the specified number of records.
+     * @throws IOException
+     *             if the Avro records can not be generated.
+     */
+    public static byte[] generateMockAvroData(final int messageId, final int numRecs) throws IOException {
+        return generateMockAvroData(messageId, DEFAULT_SCHEMA, numRecs);
+    }
+
     /**
      * Generates a byte array containing the specified number of records.
      *
@@ -42,18 +65,13 @@ public final class AvroTestDataFixture {
      *             if the Avro records can not be generated.
      */
     public static byte[] generateMockAvroData(final int numRecs) throws IOException {
-        final String schemaJson = "{\n" + "  \"type\": \"record\",\n" + "  \"name\": \"TestRecord\",\n"
-                + "  \"fields\": [\n" + "    {\"name\": \"message\", \"type\": \"string\"},\n"
-                + "    {\"name\": \"id\", \"type\": \"int\"}\n" + "  ]\n" + "}";
-        final Schema.Parser parser = new Schema.Parser();
-        final Schema schema = parser.parse(schemaJson);
-
-        return getAvroRecords(schema, numRecs);
+        return generateMockAvroData(0, DEFAULT_SCHEMA, numRecs);
     }
 
     /**
-     * creates and serialzes the specified number of records with the specified schema.
+     * creates and serializes the specified number of records with the specified schema.
      *
+     * @param messageId the messageId to start with.
      * @param schema
      *            the schema to serialize with.
      * @param numOfRecs
@@ -63,10 +81,11 @@ public final class AvroTestDataFixture {
      *             if the Avro records can not be generated.
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    private static byte[] getAvroRecords(final Schema schema, final int numOfRecs) throws IOException {
+    public static byte[] generateMockAvroData(final int messageId, final Schema schema, final int numOfRecs) throws IOException {
         // Create Avro records
         final List<GenericRecord> avroRecords = new ArrayList<>();
-        for (int i = 0; i < numOfRecs; i++) {
+        int limit = messageId + numOfRecs;
+        for (int i = messageId; i < limit; i++) {
             final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD AvoidInstantiatingObjectsInLoops
             avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + i);
             avroRecord.put("id", i);

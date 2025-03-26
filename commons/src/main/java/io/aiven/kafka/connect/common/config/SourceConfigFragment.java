@@ -16,18 +16,17 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
-
-import java.util.Arrays;
-import java.util.stream.Collectors;
-
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
-import io.aiven.kafka.connect.common.source.task.DistributionType;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
+import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
 
 public final class SourceConfigFragment extends ConfigFragment {
     private static final String GROUP_OTHER = "OTHER_CFG";
@@ -35,8 +34,11 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static final String EXPECTED_MAX_MESSAGE_BYTES = "expected.max.message.bytes";
     public static final String TARGET_TOPIC = "topic";
     public static final String ERRORS_TOLERANCE = "errors.tolerance";
-
     public static final String DISTRIBUTION_TYPE = "distribution.type";
+
+    public static Setter setter(Map<String, String> data) {
+        return new Setter(data);
+    }
 
     /**
      * Construct the ConfigFragment..
@@ -123,6 +125,41 @@ public final class SourceConfigFragment extends ConfigFragment {
                 // This will throw an Exception if not a valid value.
                 DistributionType.forName(objectDistributionStrategy);
             }
+        }
+    }
+
+    public static class Setter extends AbstractFragmentSetter<Setter> {
+
+        protected Setter(Map<String, String> data) {
+            super(data);
+        }
+
+        public Setter maxPollRecords(final int maxPollRecords) {
+            return setValue(MAX_POLL_RECORDS, maxPollRecords);
+        }
+
+        public Setter expectedMaxMessageBytes(final int expectedMaxMessageBytes) {
+            return setValue(EXPECTED_MAX_MESSAGE_BYTES, expectedMaxMessageBytes);
+        }
+
+        public Setter errorsTolerance(final String errorsTolerance) {
+            return setValue(ERRORS_TOLERANCE, errorsTolerance);
+        }
+
+        public Setter errorsTolerance(ErrorsTolerance tolerance) {
+            return setValue(ERRORS_TOLERANCE, tolerance.name());
+        }
+
+        public Setter targetTopic(final String targetTopic) {
+            return setValue(TARGET_TOPIC, targetTopic);
+        }
+
+        public Setter distributionType(final String distributionType) {
+            return setValue(DISTRIBUTION_TYPE, distributionType);
+        }
+
+        public Setter distributionType(DistributionType distributionType) {
+            return setValue(DISTRIBUTION_TYPE, distributionType.name());
         }
     }
 }

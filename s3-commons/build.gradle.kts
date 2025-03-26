@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+  id("aiven-apache-kafka-connectors-all.java-conventions")
+  id("java-test-fixtures")
+}
 
+val kafkaVersion by extra("3.3.0")
 val amazonS3Version by extra("1.12.777")
 val amazonSTSVersion by extra("1.12.777")
 
@@ -99,6 +103,23 @@ dependencies {
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
+
+  testFixturesImplementation(testcontainers.kafka)
+
+  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
+  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
+  testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
+  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
+  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  testFixturesImplementation(testFixtures(project(":commons")))
+//  testFixturesImplementation(apache.kafka.connect.api)
+//  testFixturesImplementation(testinglibs.junit.jupiter
+//  testFixturesImplementation(testinglibs.mockito.junit.jupiter)
+//  testFixturesImplementation(testinglibs.mockito.core)
+//  testFixturesImplementation(testinglibs.assertj.core)
+//  testFixturesImplementation(apache.commons.lang3)
+//  testFixturesImplementation(apache.avro)
+//  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
 }
 
 tasks.withType<Jar> { archiveBaseName.set(project.name + "-for-apache-kafka-connect") }

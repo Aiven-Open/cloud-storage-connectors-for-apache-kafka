@@ -16,20 +16,29 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 public abstract class CommonConfigFragment extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";
     protected static final String GROUP_FORMAT = "Format";
 
+    public static final String TASK_ID = "task.id";
+    public static final String MAX_TASKS = "tasks.max";
+
+
+
     private static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
     public static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
+
+    public static Setter setter(Map<String, String> data) {
+        return new Setter(data);
+    }
 
     public CommonConfigFragment(ConfigDef definition, Map<?, ?> originals) { // NOPMD
         super(definition, originals);
@@ -66,4 +75,18 @@ public abstract class CommonConfigFragment extends AbstractConfig {
         return getLong(KAFKA_RETRY_BACKOFF_MS_CONFIG);
     }
 
+
+    public static class Setter extends AbstractFragmentSetter<Setter> {
+        private Setter(Map<String, String> data) {
+            super(data);
+        }
+
+        public Setter taskId(final int taskId) {
+            return setValue(TASK_ID, taskId);
+        }
+
+        public Setter maxTasks(final int maxTasks) {
+            return setValue(MAX_TASKS, maxTasks);
+        }
+    }
 }

@@ -16,23 +16,22 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
-import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 final class ConnectRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectRunner.class);
 
     private EmbeddedConnectCluster connectCluster;
 
-    private final int offsetFlushIntervalMs;
+    private final long offsetFlushIntervalMs;
 
-    public ConnectRunner(final int offsetFlushIntervalMs) {
+    public ConnectRunner(final long offsetFlushIntervalMs) {
         this.offsetFlushIntervalMs = offsetFlushIntervalMs;
     }
 
@@ -76,7 +75,7 @@ final class ConnectRunner {
     public Map<String, String> getWorkerProperties() {
         final Map<String, String> workerProps = new HashMap<>();
 
-        workerProps.put("offset.flush.interval.ms", Integer.toString(offsetFlushIntervalMs));
+        workerProps.put("offset.flush.interval.ms", Long.toString(offsetFlushIntervalMs));
 
         // These don't matter much (each connector sets its own converters), but need to be filled with valid classes.
         workerProps.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");

@@ -16,6 +16,26 @@
 
 package io.aiven.kafka.connect.s3.source.testutils;
 
+import com.github.luben.zstd.ZstdInputStream;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.source.NativeInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xerial.snappy.SnappyInputStream;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,24 +50,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
-import io.aiven.kafka.connect.common.config.CompressionType;
-
-import com.github.luben.zstd.ZstdInputStream;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyInputStream;
-import software.amazon.awssdk.core.exception.SdkException;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.Delete;
-import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.services.s3.model.S3Object;
+import static org.assertj.core.api.Assertions.fail;
 
 public class BucketAccessor {
 
@@ -63,7 +66,10 @@ public class BucketAccessor {
     }
 
     public final void createBucket() {
-        s3Client.createBucket(builder -> builder.bucket(bucketName).build());
+        CreateBucketResponse response = s3Client.createBucket(builder -> builder.bucket(bucketName).build());
+        if (!response.sdkHttpResponse().isSuccessful()) {
+            fail("Can not create bucket: "+bucketName);
+        }
     }
 
     public final void removeBucket() {
@@ -152,6 +158,14 @@ public class BucketAccessor {
                 .collect(Collectors.toList());
     }
 
+    public final List<S3NativeInfo> getNativeStorage() {
+        return s3Client.listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build())
+                .contents()
+                .stream()
+                .map(S3NativeInfo::new)
+                .collect(Collectors.toList());
+    }
+
     private InputStream getDecompressedStream(final InputStream inputStream, final String compression)
             throws IOException {
         Objects.requireNonNull(inputStream, "inputStream cannot be null");
@@ -185,5 +199,28 @@ public class BucketAccessor {
         Objects.requireNonNull(value, "value cannot be null");
 
         return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
+    }
+
+    public static class S3NativeInfo implements NativeInfo<S3Object, String> {
+        private S3Object s3Object;
+
+        S3NativeInfo(S3Object s3Object) {
+            this.s3Object = s3Object;
+        }
+
+        @Override
+        public S3Object getNativeItem() {
+            return s3Object;
+        }
+
+        @Override
+        public String getNativeKey() {
+            return s3Object.key();
+        }
+
+        @Override
+        public long getNativeItemSize() {
+            return s3Object.size();
+        }
     }
 }

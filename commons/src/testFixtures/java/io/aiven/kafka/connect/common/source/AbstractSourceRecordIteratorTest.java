@@ -16,12 +16,23 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
+import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
+import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.TransformerFactory;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
+import io.aiven.kafka.connect.common.templating.Template;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,25 +47,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
-
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.Transformer;
-import io.aiven.kafka.connect.common.source.input.TransformerFactory;
-import io.aiven.kafka.connect.common.source.task.DistributionType;
-import io.aiven.kafka.connect.common.templating.Template;
-
-import org.apache.commons.lang3.tuple.Pair;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * A testing fixture that tests an {@link AbstractSourceRecordIterator} implementation.
@@ -76,7 +74,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
     /** The file name for testing */
     private final static String FILE_NAME = "topic-00001-1741965423180.txt";
     /** The file pattern for the file name */
-    private final static String FILE_PATTERN = "{{topic}}-{{partition}}-{{start_offset}}";
+    public final static String FILE_PATTERN = "{{topic}}-{{partition}}-{{start_offset}}";
 
     // The abstract methods that must be implemented
 

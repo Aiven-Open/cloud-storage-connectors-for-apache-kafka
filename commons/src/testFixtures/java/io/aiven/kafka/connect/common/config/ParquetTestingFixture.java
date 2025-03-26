@@ -16,23 +16,24 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static org.apache.kafka.connect.data.Schema.INT32_SCHEMA;
-import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
+import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
+import org.apache.kafka.common.record.TimestampType;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.sink.SinkRecord;
+import org.testcontainers.shaded.org.apache.commons.io.function.IOSupplier;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.kafka.common.record.TimestampType;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.sink.SinkRecord;
-
-import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
+import static org.apache.kafka.connect.data.Schema.INT32_SCHEMA;
+import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
 
 /**
  * Test fixture to generate standard parquet file.
@@ -105,5 +106,47 @@ public class ParquetTestingFixture {
             parquetWriter.writeRecords(sinkRecords);
         }
         return outputFilePath;
+    }
+
+    /**
+     * Writes the specified number of parquet records to the file specified using the default schema. The topic
+     * "some-topic" will be used for each record. "some-key-#" will be used for each key.
+     *
+     * @param outputSupplier
+     *            Supplies the output to writhe te data to.
+     * @param name
+     *            the name used for each record. The record number will be appended to the name.
+     * @param numOfRecords
+     *            the number of records to write.
+     * @throws IOException
+     *             on output error.
+     */
+    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    public static void writeParquetFile(final IOSupplier<OutputStream> outputSupplier, final String name, final int numOfRecords)
+            throws IOException {
+        Schema schema = testSchema();
+        final List<Struct> allParquetRecords = new ArrayList<>();
+        // Write records to the Parquet file
+        for (int i = 0; i < numOfRecords; i++) {
+            allParquetRecords.add(new Struct(schema).put("name", name + i).put("age", 30).put("email", name + "@test"));
+        }
+
+        try (OutputStream outputStream = outputSupplier.get()) {
+        // Create a Parquet writer
+
+             var parquetWriter = new ParquetOutputWriter(
+                     List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
+                     Collections.emptyMap(), false);
+            int counter = 0;
+            final var sinkRecords = new ArrayList<SinkRecord>();
+            for (final var r : allParquetRecords) {
+                final var sinkRecord = new SinkRecord( // NOPMD AvoidInstantiatingObjectsInLoops
+                        "some-topic", 1, STRING_SCHEMA, "some-key-" + counter, schema, r, 100L, 1000L + counter,
+                        TimestampType.CREATE_TIME, null);
+                sinkRecords.add(sinkRecord);
+                counter++;
+            }
+            parquetWriter.writeRecords(sinkRecords);
+        }
     }
 }

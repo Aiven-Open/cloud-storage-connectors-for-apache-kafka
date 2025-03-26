@@ -16,20 +16,20 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.stream.Collectors;
-
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
-
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.templating.Template;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
+
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Fragment to handle all file name extraction operations. Requires {@link OutputFormatFragment} and (@link
@@ -48,6 +48,10 @@ public final class FileNameFragment extends ConfigFragment {
 
     public static final String FILE_PATH_PREFIX_TEMPLATE_CONFIG = "file.prefix.template";
     static final String DEFAULT_FILE_PATH_PREFIX_TEMPLATE = "topics/{{topic}}/partition={{partition}}/";
+
+    public static Setter setter(Map<String, String> data) {
+        return new Setter(data);
+    }
 
     public FileNameFragment(final AbstractConfig cfg) {
         super(cfg);
@@ -183,5 +187,40 @@ public final class FileNameFragment extends ConfigFragment {
      */
     public int getMaxRecordsPerFile() {
         return cfg.getInt(FILE_MAX_RECORDS);
+    }
+
+    public static final class Setter extends AbstractFragmentSetter<Setter> {
+
+        private Setter(Map<String, String> data) {
+            super(data);
+        }
+
+        public Setter fileCompression(final CompressionType compressionType) {
+            return setValue(FILE_COMPRESSION_TYPE_CONFIG, compressionType.name());
+        }
+
+        public Setter maxRecordsPerFile(final int maxRecordsPerFile) {
+            return setValue(FILE_MAX_RECORDS, maxRecordsPerFile);
+        }
+
+        public Setter timestampSource(final TimestampSource timestampSource) {
+            return setValue(FILE_NAME_TIMESTAMP_SOURCE, timestampSource.type().name());
+        }
+
+        public Setter timestampSource(final TimestampSource.Type type) {
+            return setValue(FILE_NAME_TIMESTAMP_SOURCE, type.name());
+        }
+
+        public Setter timestampTimeZone(final ZoneId timeZone) {
+            return setValue(FILE_NAME_TIMESTAMP_TIMEZONE, timeZone.toString());
+        }
+
+        public Setter template(final String prefixTemplate) {
+            return setValue(FILE_NAME_TEMPLATE_CONFIG, prefixTemplate);
+        }
+
+        public Setter prefixTemplate(final String prefixTemplate) {
+            return setValue(FILE_PATH_PREFIX_TEMPLATE_CONFIG, prefixTemplate);
+        }
     }
 }

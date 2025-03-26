@@ -18,6 +18,7 @@ plugins {
   id("aiven-apache-kafka-connectors-all.java-conventions")
   id("java-test-fixtures")
 }
+val kafkaVersion by extra("3.3.0")
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
@@ -81,17 +82,37 @@ dependencies {
   }
 
   testFixturesImplementation(apache.kafka.connect.api)
+
+  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
+  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
+  testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
+  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
+  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  testFixturesImplementation(confluent.kafka.connect.avro.converter) {
+    exclude(group = "org.apache.kafka", module = "kafka-clients")
+  }
+
   testFixturesImplementation(testinglibs.junit.jupiter)
+  testFixturesImplementation(testinglibs.junit.jupiter.params)
+  testFixturesImplementation(testinglibs.junit.jupiter.api)
+
   testFixturesImplementation(testinglibs.mockito.core)
   testFixturesImplementation(testinglibs.assertj.core)
+  testFixturesImplementation(testinglibs.mockito.junit.jupiter)
+  testFixturesImplementation(testinglibs.awaitility)
+
   testFixturesImplementation(apache.commons.lang3)
   testFixturesImplementation(apache.avro)
-  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
+  testFixturesImplementation(testcontainers.junit.jupiter)
+  testFixturesImplementation(testcontainers.kafka) // this is not Kafka version
+  testFixturesImplementation(testcontainers.localstack)
 
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
   testImplementation(testinglibs.junit.jupiter)
+  testImplementation(testinglibs.mockito.junit.jupiter)
+
   testImplementation(jackson.databind)
   testImplementation(testinglibs.mockito.core)
   testImplementation(testinglibs.assertj.core)
@@ -100,7 +121,6 @@ dependencies {
   testImplementation(testinglibs.woodstox.stax2.api)
   testImplementation(apache.hadoop.mapreduce.client.core)
   testImplementation(confluent.kafka.connect.avro.converter)
-  testImplementation("org.mockito:mockito-junit-jupiter:5.15.2")
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)

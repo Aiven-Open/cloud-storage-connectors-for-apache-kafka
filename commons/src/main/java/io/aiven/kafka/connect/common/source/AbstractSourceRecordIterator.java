@@ -16,8 +16,18 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import javax.validation.constraints.NotNull;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.Context;
+import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
+import org.apache.commons.io.function.IOSupplier;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.slf4j.Logger;
 
+import javax.validation.constraints.NotNull;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Iterator;
@@ -25,19 +35,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
-import org.apache.kafka.connect.data.SchemaAndValue;
-
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.source.input.Transformer;
-import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
-import io.aiven.kafka.connect.common.source.task.Context;
-import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
-import io.aiven.kafka.connect.common.source.task.DistributionType;
-
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.io.function.IOSupplier;
-import org.slf4j.Logger;
 
 /**
  * Iterator that processes cloud storage items and creates Kafka source records. Supports multiple output formats.
@@ -77,8 +74,8 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
     private Iterator<T> outer;
     /** The topic(s) which have been configured with the 'topics' configuration */
     private final Optional<String> targetTopics;
-    /** Check if the native item key is part of the 'target' files configured to be extracted from Azure */
-    protected final FileMatching fileMatching;
+    /** FileMatcher to match the name of the native item and extract the Context from it. */
+    private final FileMatching fileMatching;
     /** The predicate which will determine if an native item should be assigned to this task for processing */
     protected final Predicate<Optional<T>> taskAssignment;
     /**
