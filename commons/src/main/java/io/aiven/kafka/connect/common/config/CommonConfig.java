@@ -16,10 +16,11 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import java.util.Map;
-
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.runtime.ConnectorConfig;
+
+import java.util.Map;
 
 /**
  * The base configuration or all connectors.
@@ -28,7 +29,15 @@ public class CommonConfig extends AbstractConfig {
     protected static final String GROUP_COMPRESSION = "File Compression";
     protected static final String GROUP_FORMAT = "Format";
     public static final String TASK_ID = "task.id";
-    public static final String MAX_TASKS = "tasks.max";
+
+    private final CommonConfigFragment commonConfigFragment;
+
+    private final BackoffPolicyConfig backoffPolicyConfig;
+    /**
+     * @deprecated Use {@link ConnectorConfig#TASKS_MAX_CONFIG}
+     */
+    @Deprecated
+    public static final String MAX_TASKS = ConnectorConfig.TASKS_MAX_CONFIG;
 
     /**
      * @deprecated No longer needed.
@@ -39,6 +48,11 @@ public class CommonConfig extends AbstractConfig {
         // Common Config.
     }
 
+    private static ConfigDef update(ConfigDef configDef) {
+        CommonConfigFragment.update(configDef);
+        BackoffPolicyConfig.update(configDef);
+        return configDef;
+    }
     /**
      * Constructs the CommonConfig with the backoff policy.
      *
@@ -48,7 +62,9 @@ public class CommonConfig extends AbstractConfig {
      *            The properties to construct the configuration with.
      */
     protected CommonConfig(ConfigDef definition, Map<?, ?> props) { // NOPMD
-        super(BackoffPolicyConfig.update(definition), props);
+        super(update(definition), props);
+        commonConfigFragment = new CommonConfigFragment(this);
+        backoffPolicyConfig = new BackoffPolicyConfig(this);
     }
 
     /**
@@ -56,8 +72,8 @@ public class CommonConfig extends AbstractConfig {
      *
      * @return The Kafka retry backoff time in MS.
      */
-    public Long getKafkaRetryBackoffMs() {
-        return new BackoffPolicyConfig(this).getKafkaRetryBackoffMs();
+    public final Long getKafkaRetryBackoffMs() {
+        return backoffPolicyConfig.getKafkaRetryBackoffMs();
     }
 
     /**
@@ -67,18 +83,18 @@ public class CommonConfig extends AbstractConfig {
      *
      * @return The maximum number of tasks that should be run by this connector configuration
      */
-    public int getMaxTasks() {
-        // TODO when Connect framework is upgraded it will be possible to retrieve this information from the configDef
-        // as tasksMax
-        return Integer.parseInt(this.originalsStrings().get(MAX_TASKS));
+    public final int getMaxTasks() {
+        return commonConfigFragment.getMaxTasks();
     }
+
+
     /**
      * Get the task id for this configuration
      *
      * @return The task id for this configuration
      */
-    public int getTaskId() {
-        return Integer.parseInt(this.originalsStrings().get(TASK_ID));
+    public final  int getTaskId() {
+        return commonConfigFragment.getTaskId();
     }
 
 }

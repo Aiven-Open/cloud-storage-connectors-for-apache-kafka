@@ -40,16 +40,26 @@ public final class RingBuffer<K> extends SynchronizedQueue<K> {
      */
     public void enqueue(final K item) {
         if (item != null && !contains(item)) {
+            if (isFull()) {
+                poll();
+            }
             add(item);
         }
     }
 
+    /**
+     * Returns {@code true} if the buffer is full.
+     * @return {@code true} if the buffer is full.
+     */
+    public boolean isFull() {
+        return ((CircularFifoQueue<K>) decorated()).isAtFullCapacity();
+    }
     /**
      * Get the last value in the Ring buffer
      *
      * @return A value T from the last place in the list, returns null if list is not full.
      */
     public K getOldest() {
-        return ((CircularFifoQueue<K>) decorated()).isAtFullCapacity() ? poll() : null;
+        return isFull() ? peek() : null;
     }
 }

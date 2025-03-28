@@ -19,19 +19,17 @@ package io.aiven.kafka.connect.common.config;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.connect.runtime.ConnectorConfig;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-public abstract class CommonConfigFragment extends AbstractConfig {
-    protected static final String GROUP_COMPRESSION = "File Compression";
-    protected static final String GROUP_FORMAT = "Format";
+import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
+
+public class CommonConfigFragment extends ConfigFragment {
 
     public static final String TASK_ID = "task.id";
-    public static final String MAX_TASKS = "tasks.max";
-
-
 
     private static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
     public static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
@@ -40,8 +38,17 @@ public abstract class CommonConfigFragment extends AbstractConfig {
         return new Setter(data);
     }
 
-    public CommonConfigFragment(ConfigDef definition, Map<?, ?> originals) { // NOPMD
-        super(definition, originals);
+    public static ConfigDef update(ConfigDef configDef) {
+        int orderInGroup = 0;
+        String COMMON_GROUP = "commons";
+
+        return configDef
+                .define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH, "Maximum number of tasks to use for this connector.", COMMON_GROUP, ++orderInGroup, ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG)
+                .define(TASK_ID, ConfigDef.Type.INT, 1, atLeast(0), ConfigDef.Importance.HIGH, "The task ID that this connector is working with.", COMMON_GROUP, ++orderInGroup, ConfigDef.Width.SHORT, TASK_ID);
+    }
+
+    public CommonConfigFragment(AbstractConfig cfg) { // NOPMD
+        super(cfg);
     }
 
     public static void addKafkaBackoffPolicy(final ConfigDef configDef) {
@@ -72,7 +79,15 @@ public abstract class CommonConfigFragment extends AbstractConfig {
     }
 
     public Long getKafkaRetryBackoffMs() {
-        return getLong(KAFKA_RETRY_BACKOFF_MS_CONFIG);
+        return cfg.getLong(KAFKA_RETRY_BACKOFF_MS_CONFIG);
+    }
+
+    public Integer getTaskId() {
+        return cfg.getInt(TASK_ID);
+    }
+
+    public Integer getMaxTasks() {
+        return cfg.getInt(ConnectorConfig.TASKS_MAX_CONFIG);
     }
 
 
@@ -86,7 +101,7 @@ public abstract class CommonConfigFragment extends AbstractConfig {
         }
 
         public Setter maxTasks(final int maxTasks) {
-            return setValue(MAX_TASKS, maxTasks);
+            return setValue(ConnectorConfig.TASKS_MAX_CONFIG, maxTasks);
         }
     }
 }

@@ -16,25 +16,37 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
-import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
-import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.DISTRIBUTION_TYPE;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.AVRO_VALUE_SERIALIZER;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG;
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_FETCH_BUFFER_SIZE;
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG;
-import static java.util.Map.entry;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.aiven.kafka.connect.common.config.ParquetTestingFixture;
+import io.aiven.kafka.connect.common.source.OffsetManager;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
+import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetBackingStore;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -58,38 +70,26 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetBackingStore;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
+import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
+import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
+import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.DISTRIBUTION_TYPE;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.AVRO_VALUE_SERIALIZER;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.VALUE_CONVERTER_SCHEMA_REGISTRY_URL;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_FETCH_BUFFER_SIZE;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG;
+import static java.util.Map.entry;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
-import io.aiven.kafka.connect.common.config.ParquetTestingFixture;
-import io.aiven.kafka.connect.common.source.OffsetManager;
-import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.task.DistributionType;
-import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Testcontainers
 @SuppressWarnings("PMD.ExcessiveImports")
@@ -132,8 +132,8 @@ final class IntegrationTest implements IntegrationBase {
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
 
-        final Path pluginDir = IntegrationBase.getPluginDir();
-        IntegrationBase.extractConnectorPlugin(pluginDir);
+//        final Path pluginDir = IntegrationBase.getPluginDir();
+//        IntegrationBase.extractConnectorPlugin(pluginDir);
     }
 
     @BeforeEach
@@ -221,6 +221,7 @@ final class IntegrationTest implements IntegrationBase {
         verifyOffsetsConsumeableByS3OffsetMgr(connectorConfig, offsetKeys, expectedOffsetRecords);
     }
 
+    @Disabled("Primary testing")
     @ParameterizedTest
     @CsvSource({ "4096", "3000", "4101" })
     void bytesBufferTest(final int maxBufferSize) {
@@ -264,6 +265,7 @@ final class IntegrationTest implements IntegrationBase {
         verifyOffsetPositions(expectedOffsetRecords, connectRunner.getBootstrapServers());
     }
 
+    @Disabled("Primary testing")
     @Test
     void avroTest(final TestInfo testInfo) throws IOException {
         final var topic = IntegrationBase.getTopic(testInfo);

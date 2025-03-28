@@ -192,7 +192,8 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
             offsetManager.removeEntry(getOffsetManagerKey(lastSeenNativeKey));
         }
         if (!inner.hasNext() && !outer.hasNext()) {
-            inner = getNativeItemStream(ringBuffer.getOldest()).map(fileMatching)
+            inner = getNativeItemStream(ringBuffer.getOldest())
+                    .map(fileMatching)
                     .filter(taskAssignment)
                     .filter(Optional::isPresent)
                     .map(Optional::get)

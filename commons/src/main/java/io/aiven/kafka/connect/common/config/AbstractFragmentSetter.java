@@ -11,6 +11,10 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
         this.data = data;
     }
 
+    final public Map<String, String> data() {
+        return data;
+    }
+
     final protected T setValue(final String key, final String value) {
         data.put(key, value);
         return (T) this;

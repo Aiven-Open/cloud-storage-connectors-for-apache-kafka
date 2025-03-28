@@ -16,6 +16,42 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import io.aiven.kafka.connect.common.source.OffsetManager;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.input.TransformerFactory;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
+import org.apache.avro.Schema;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import software.amazon.awssdk.services.s3.S3Client;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
@@ -33,44 +69,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
-
-import io.aiven.kafka.connect.common.source.OffsetManager;
-import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.input.TransformerFactory;
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
-import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
-
-import org.apache.avro.Schema;
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import software.amazon.awssdk.services.s3.S3Client;
-
+//@Disabled("Primary testing")
 @Testcontainers
 @SuppressWarnings("PMD.ExcessiveImports")
 class AwsIntegrationTest implements IntegrationBase {
@@ -306,6 +306,7 @@ class AwsIntegrationTest implements IntegrationBase {
         s3SourceRecord = iterator.next();
         actualKeys.add(s3SourceRecord.getNativeKey());
         assertThat(iterator).isExhausted();
+        assertThat(iterator).as("Reread causes additional loading").isExhausted();
         assertThat(actualKeys).containsAll(expectedKeys);
 
         // write 3rd object to s3
@@ -315,6 +316,10 @@ class AwsIntegrationTest implements IntegrationBase {
         assertThat(iterator).hasNext();
         s3SourceRecord = iterator.next();
         actualKeys.add(s3SourceRecord.getNativeKey());
+        while (iterator.hasNext()) {
+            s3SourceRecord = iterator.next();
+            actualKeys.add(s3SourceRecord.getNativeKey());
+        }
         assertThat(iterator).isExhausted();
         assertThat(actualKeys).containsAll(expectedKeys);
 

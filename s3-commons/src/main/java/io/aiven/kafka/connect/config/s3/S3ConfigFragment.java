@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.config.s3;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
@@ -31,13 +32,16 @@ import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
 import io.aiven.kafka.connect.common.config.validators.UrlValidator;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
+import org.apache.kafka.common.Configurable;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
 
 import java.net.URI;
 import java.time.Duration;
@@ -96,7 +100,7 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     public static final String AWS_CREDENTIALS_PROVIDER_CONFIG = "aws.credentials.provider";
-    public static final String AWS_CREDENTIAL_PROVIDER_DEFAULT = "com.amazonaws.auth.DefaultAWSCredentialsProviderChain";
+    //public static final String AWS_CREDENTIAL_PROVIDER_DEFAULT = DefaultAWSCredentialsProviderChain.class.getCanonicalName();
     public static final String AWS_S3_BUCKET_NAME_CONFIG = "aws.s3.bucket.name";
     public static final String AWS_S3_SSE_ALGORITHM_CONFIG = "aws.s3.sse.algorithm";
     public static final String AWS_S3_ENDPOINT_CONFIG = "aws.s3.endpoint";
@@ -195,12 +199,11 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM, "AWS Secret Access Key", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, AWS_SECRET_ACCESS_KEY_CONFIG);
 
-        configDef.define(AWS_CREDENTIALS_PROVIDER_CONFIG, ConfigDef.Type.CLASS, AWS_CREDENTIAL_PROVIDER_DEFAULT,
+        configDef.define(AWS_CREDENTIALS_PROVIDER_CONFIG, ConfigDef.Type.CLASS, null,
                 ConfigDef.Importance.MEDIUM,
-                "When you initialize a new " + "service client without supplying any arguments, "
+                "When you initialize a new service client without supplying any arguments, "
                         + "the AWS SDK for Java attempts to find temporary "
-                        + "credentials by using the default credential " + "provider chain implemented by the "
-                        + "DefaultAWSCredentialsProviderChain class.",
+                        + "credentials by using the default credential provider chain.",
 
                 GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE, AWS_CREDENTIALS_PROVIDER_CONFIG);
 
@@ -268,12 +271,22 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ConfigDef.Width.NONE, AWS_STS_CONFIG_ENDPOINT);
     }
 
+    private static void logDeprecated(String old, String replacement) {
+        LOGGER.info("{} property is deprecated please use {}.", old, replacement);
+    }
+
+    private static void logDeprecated(String old) {
+        LOGGER.info("{} property is deprecated please read documentation for the new name.", old);
+    }
+
     static void addDeprecatedConfiguration(final ConfigDef configDef) {
 
         configDef.define(AWS_ACCESS_KEY_ID, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword() {
             @Override
             public void ensureValid(final String name, final Object value) {
-                LOGGER.info(AWS_ACCESS_KEY_ID + " property is deprecated please read documentation for the new name");
+                if (Objects.nonNull(value)) {
+                    logDeprecated(AWS_ACCESS_KEY_ID, AWS_ACCESS_KEY_ID_CONFIG);
+                }
                 super.ensureValid(name, value);
             }
         }, ConfigDef.Importance.MEDIUM, "AWS Access Key ID");
@@ -281,51 +294,62 @@ public final class S3ConfigFragment extends ConfigFragment {
         configDef.define(AWS_SECRET_ACCESS_KEY, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword() {
             @Override
             public void ensureValid(final String name, final Object value) {
-                LOGGER.info(
-                        AWS_SECRET_ACCESS_KEY + " property is deprecated please read documentation for the new name");
+                if (Objects.nonNull(value)) {
+                    logDeprecated(AWS_SECRET_ACCESS_KEY, AWS_SECRET_ACCESS_KEY_CONFIG);
+                }
                 super.ensureValid(name, value);
             }
         }, ConfigDef.Importance.MEDIUM, "AWS Secret Access Key");
 
         configDef.define(AWS_S3_BUCKET, ConfigDef.Type.STRING, null, new BucketNameValidator() {
             @Override
-            public void ensureValid(final String name, final Object object) {
-                LOGGER.info(AWS_S3_BUCKET + " property is deprecated please read documentation for the new name");
-                super.ensureValid(name, object);
+            public void ensureValid(final String name, final Object value) {
+                if (Objects.nonNull(value)) {
+                    logDeprecated(AWS_S3_BUCKET, AWS_S3_BUCKET_NAME_CONFIG);
+                }
+                super.ensureValid(name, value);
             }
         }, ConfigDef.Importance.MEDIUM, "AWS S3 Bucket name");
 
         configDef.define(AWS_S3_ENDPOINT, ConfigDef.Type.STRING, null, new UrlValidator() {
             @Override
-            public void ensureValid(final String name, final Object object) {
-                LOGGER.info(AWS_S3_ENDPOINT + " property is deprecated please read documentation for the new name");
-                super.ensureValid(name, object);
+            public void ensureValid(final String name, final Object value) {
+                if (Objects.nonNull(value)) {
+                    logDeprecated(AWS_S3_ENDPOINT, AWS_S3_ENDPOINT_CONFIG);
+                }
+                super.ensureValid(name, value);
             }
         }, ConfigDef.Importance.LOW, "Explicit AWS S3 Endpoint Address, mainly for testing");
 
         configDef.define(AWS_S3_REGION, ConfigDef.Type.STRING, null, new AwsRegionValidator() {
             @Override
-            public void ensureValid(final String name, final Object object) {
-                LOGGER.info(AWS_S3_REGION + " property is deprecated please read documentation for the new name");
-                super.ensureValid(name, object);
+            public void ensureValid(final String name, final Object value) {
+                if (Objects.nonNull(value)) {
+                    logDeprecated(AWS_S3_REGION, AWS_S3_REGION_CONFIG);
+                }
+                super.ensureValid(name, value);
             }
         }, ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1");
 
         configDef.define(AWS_S3_PREFIX, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString() {
             @Override
-            public void ensureValid(final String name, final Object object) {
-                LOGGER.info(AWS_S3_PREFIX + " property is deprecated please read documentation for the new name");
-                super.ensureValid(name, object);
+            public void ensureValid(final String name, final Object value) {
+                if (Objects.nonNull(value)) {
+                    logDeprecated(AWS_S3_PREFIX, AWS_S3_PREFIX_CONFIG);
+                }
+                super.ensureValid(name, value);
             }
         }, ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/");
 
         configDef.define(OUTPUT_FIELDS, ConfigDef.Type.LIST, null, new OutputFieldsValidator() {
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                LOGGER.info(OUTPUT_FIELDS + " property is deprecated please read documentation for the new name");
-                super.ensureValid(name, value);
-            }
-        }, ConfigDef.Importance.MEDIUM,
+                    @Override
+                    public void ensureValid(final String name, final Object value) {
+                        if (Objects.nonNull(value)) {
+                            logDeprecated(OUTPUT_FIELDS);
+                        }
+                        super.ensureValid(name, value);
+                    }
+                }, ConfigDef.Importance.MEDIUM,
                 "Output fields. A comma separated list of one or more: " + OUTPUT_FIELD_NAME_KEY + ", "
                         + OUTPUT_FIELD_NAME_OFFSET + ", " + OUTPUT_FIELD_NAME_TIMESTAMP + ", " + OUTPUT_FIELD_NAME_VALUE
                         + ", " + OUTPUT_FIELD_NAME_HEADERS);
@@ -333,7 +357,9 @@ public final class S3ConfigFragment extends ConfigFragment {
         configDef.define(OUTPUT_COMPRESSION, ConfigDef.Type.STRING, null, new FileCompressionTypeValidator() {
             @Override
             public void ensureValid(final String name, final Object value) {
-                LOGGER.info(OUTPUT_COMPRESSION + " property is deprecated please read documentation for the new name");
+                if (Objects.nonNull(value)) {
+                    logDeprecated(OUTPUT_COMPRESSION);
+                }
                 super.ensureValid(name, value);
             }
         }, ConfigDef.Importance.MEDIUM, "Output compression. Valid values are: " + OUTPUT_COMPRESSION_TYPE_GZIP
@@ -536,11 +562,25 @@ public final class S3ConfigFragment extends ConfigFragment {
     }
 
     public AWSCredentialsProvider getCustomCredentialsProvider() {
-        return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
+        Class<?> clazz = cfg.getClass(AWS_CREDENTIALS_PROVIDER_CONFIG);
+        if (Objects.nonNull(clazz)  && AWSCredentialsProvider.class.isAssignableFrom(clazz)) {
+            return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
+        } else {
+            Object o = Utils.newInstance(DefaultAWSCredentialsProviderChain.class);
+            if (o instanceof Configurable) {
+                ((Configurable) o).configure(cfg.originals());
+            }
+            return (AWSCredentialsProvider) o;
+        }
     }
 
     public AwsCredentialsProvider getCustomCredentialsProviderV2() {
-        return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AwsCredentialsProvider.class);
+        Class<?> clazz = cfg.getClass(AWS_CREDENTIALS_PROVIDER_CONFIG);
+        if (Objects.nonNull(clazz)  && AwsCredentialsProvider.class.isAssignableFrom(clazz)) {
+            return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AwsCredentialsProvider.class);
+        } else {
+            return AwsCredentialsProviderChain.builder().build();
+        }
     }
 
     public int getFetchPageSize() {

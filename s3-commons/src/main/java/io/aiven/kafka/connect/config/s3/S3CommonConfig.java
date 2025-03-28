@@ -16,15 +16,15 @@
 
 package io.aiven.kafka.connect.config.s3;
 
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
 
 /**
  * This common config handles a specific deprecated date format and is extensible to allow other common configuration
@@ -47,19 +47,21 @@ public final class S3CommonConfig {
         for (final var prop : List.of(AWS_S3_PREFIX_CONFIG)) {
             if (properties.containsKey(prop)) {
                 String template = properties.get(prop);
-                final String originalTemplate = template;
+                if (template != null) {
+                    final String originalTemplate = template;
 
-                final var unitYyyyPattern = Pattern.compile("\\{\\{\\s*timestamp\\s*:\\s*unit\\s*=\\s*YYYY\\s*}}");
-                template = unitYyyyPattern.matcher(template)
-                        .replaceAll(matchResult -> matchResult.group().replace("YYYY", "yyyy"));
+                    final var unitYyyyPattern = Pattern.compile("\\{\\{\\s*timestamp\\s*:\\s*unit\\s*=\\s*YYYY\\s*}}");
+                    template = unitYyyyPattern.matcher(template)
+                            .replaceAll(matchResult -> matchResult.group().replace("YYYY", "yyyy"));
 
-                if (!template.equals(originalTemplate)) {
-                    LOGGER.warn("{{timestamp:unit=YYYY}} is no longer supported, "
-                            + "please use {{timestamp:unit=yyyy}} instead. " + "It was automatically replaced: {}",
-                            template);
+                    if (!template.equals(originalTemplate)) {
+                        LOGGER.warn("{{timestamp:unit=YYYY}} is no longer supported, "
+                                        + "please use {{timestamp:unit=yyyy}} instead. " + "It was automatically replaced: {}",
+                                template);
+                    }
+
+                    result.put(prop, template);
                 }
-
-                result.put(prop, template);
             }
         }
         return result;

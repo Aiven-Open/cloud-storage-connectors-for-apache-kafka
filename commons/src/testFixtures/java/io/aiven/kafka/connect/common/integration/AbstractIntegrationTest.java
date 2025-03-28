@@ -24,9 +24,6 @@ import io.aiven.kafka.connect.common.source.NativeInfo;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -46,14 +43,15 @@ import org.apache.kafka.connect.util.KafkaBasedLog;
 import org.apache.kafka.connect.util.LoggingContext;
 import org.apache.kafka.connect.util.TopicAdmin;
 import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.Logger;
 import org.testcontainers.containers.Container;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -89,11 +87,12 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
     @TempDir
     protected static Path tempDir;
 
-    /**
-     * Gets the prefix for the key.  May return an empty string but not {@code null}.
-     * @return The prefix for the key.
-     */
-    abstract protected String getPrefix();
+    protected TestInfo testInfo;
+
+    private static ThreadLocal<KafkaManager> kafkaManagerThreadLocal = new ThreadLocal<>();
+    //private KafkaManager kafkaManager;
+
+    abstract protected Logger getLogger();
 
     /**
      * Creates the native key.
@@ -116,8 +115,64 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
 
     abstract protected List<? extends NativeInfo<?, K>> getNativeStorage();
 
-    abstract protected String bootstrapServers();
+    protected abstract String getConnectorName();
 
+    /**
+     * Creates the configuration data for the connector.
+     * Must include result of call to {@link io.aiven.kafka.connect.common.config.KafkaFragment.Setter#connector(Class)} to define the connector to run.
+     * @return the configuration data for the Connector class under test.
+     */
+    protected abstract Map<String, String> createConnectorConfig(String localPrefix);
+
+    protected Duration getOffsetFlushInterval() {
+        return Duration.ofSeconds(5);
+    }
+
+    @BeforeEach
+    void captureTestInfo(final TestInfo testInfo) throws IOException, ExecutionException, InterruptedException {
+        this.testInfo = testInfo;
+    }
+
+    protected KafkaManager setupKafka(Map<String, String> connectorProperties) throws IOException, ExecutionException, InterruptedException {
+        return setupKafka(false, connectorProperties);
+    }
+
+    protected KafkaManager setupKafka(boolean forceRestart, Map<String, String> connectorProperties) throws IOException, ExecutionException, InterruptedException {
+        KafkaManager kafkaManager = kafkaManagerThreadLocal.get();
+        if (kafkaManager != null) {
+            if (forceRestart) {
+                tearDownKafka();
+            }
+        }
+        kafkaManager = kafkaManagerThreadLocal.get();
+        if (kafkaManager == null) {
+            kafkaManager = new KafkaManager(testInfo.getTestClass().get().getName(), getOffsetFlushInterval(), connectorProperties);
+            kafkaManagerThreadLocal.set(kafkaManager);
+        }
+        return kafkaManager;
+    }
+
+    protected void tearDownKafka()  {
+        KafkaManager kafkaManager = kafkaManagerThreadLocal.get();
+        if (kafkaManager != null) {
+            kafkaManager.stop();
+            kafkaManagerThreadLocal.remove();
+            //kafkaManager = null;
+        }
+    }
+
+    protected KafkaManager getKafkaManager() {
+        KafkaManager kafkaManager = kafkaManagerThreadLocal.get();
+        if (kafkaManager == null) {
+            throw new IllegalStateException("KafkaManager not initialized");
+        }
+        return kafkaManager;
+    }
+
+    @AfterAll
+    static void removeKafkaManager() {
+        kafkaManagerThreadLocal.remove();
+    }
     /**
      * Returns a BiFunction that converts OffsetManager key and data into an OffsetManagerEntry for this system.
      * <p>
@@ -135,12 +190,12 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
     }
 
     protected final ConsumerPropertiesBuilder consumerPropertiesBuilder() {
-        return new ConsumerPropertiesBuilder(bootstrapServers());
+        return new ConsumerPropertiesBuilder(getKafkaManager().bootstrapServers());
     }
 
 
     /**
-     * Writes to storage. Uses the result of {@link #getPrefix()} for the key prefix.
+     * Writes to storage. Does not use a prefix
      *
      * @param topic
      *            the topic for the file.
@@ -148,10 +203,10 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
      *            the data.
      * @param partition
      *            the partition id fo the file.
-     * @return the key prefixed by {@link #getPrefix()}.
+     * @return the WriteResult.
      */
-    final WriteResult write(final String topic, final byte[] testDataBytes, final int partition) {
-        return write(topic, testDataBytes, partition, getPrefix());
+    protected final WriteResult write(final String topic, final byte[] testDataBytes, final int partition) {
+        return write(topic, testDataBytes, partition, null);
     }
 
     /**
@@ -164,84 +219,21 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
      * @param partition
      *            the partition id.
      * @param prefix the prefix for the key.
-     * @return the native key.
+     * @return the WriteResult
      */
-    final WriteResult write(final String topic, final byte[] testDataBytes, final int partition, final String prefix) {
+    protected final WriteResult write(final String topic, final byte[] testDataBytes, final int partition, final String prefix) {
         final K objectKey = createKey(prefix, topic, partition);
         return writeWithKey(objectKey, testDataBytes);
     }
 
     /**
-     * Creates a kafka AdminClient.
-     * @param bootstrapServers the bootstrap servers to use.
-     * @return tne Ad k  c.ke t
-     */
-    public static AdminClient newAdminClient(final String bootstrapServers) {
-        final Properties adminClientConfig = new Properties();
-        adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        return AdminClient.create(adminClientConfig);
-    }
-
-    /**
-     * Extracts the connector plugin.
-     * Uses the System property {@code integration-test.distribution.file.path} to locate the archive file.
-     * @param pluginDir The directory to extract the connector plugin to.
-     * @throws IOException on IO error.
-     * @throws InterruptedException if extraction is interrupted.
-     */
-    public static void extractConnectorPlugin(Path pluginDir) throws IOException, InterruptedException {
-        final File distFile = new File(System.getProperty("integration-test.distribution.file.path"));
-        assertThat(distFile).exists();
-
-        final String cmd = String.format("tar -xf %s --strip-components=1 -C %s", distFile, pluginDir.toString());
-        final Process process = Runtime.getRuntime().exec(cmd);
-        assert process.waitFor() == 0;
-    }
-
-    /**
-     * Creates the plugin directory.
-     * Creates a directory under {@code tempDir/plugins"} for the plugin.
-     * @param pluginDirectoryName the nmae of the plugin directory.
-     * @return the full path to the plugin directory.
-     * @throws IOException if the directory can not be created.
-     */
-    public static Path getPluginDir(String pluginDirectoryName)  throws IOException {
-        return Files.createDirectories(tempDir.resolve("plugins/"+pluginDirectoryName));
-    }
-
-    /**
      * Get the topic from the TestInfo.
-     * @param testInfo
-     * @return
+     * @return The topic extracted from the testInfo object.
      */
-    public static String getTopic(final TestInfo testInfo) {
+    public String getTopic() {
         return testInfo.getTestMethod().get().getName();
     }
 
-    /**
-     * Creates topics on the admin client.  Uses a partition count of 4, and a replication factor of 1.
-     * @param adminClient the admin client to use.
-     * @param topics the list of topics to create.
-     * @throws ExecutionException on topic creation error.
-     * @throws InterruptedException if operation is interrupted.
-     */
-    public static void createTopics(final AdminClient adminClient, final List<String> topics)
-            throws ExecutionException, InterruptedException {
-        createTopics(adminClient, topics, 4, (short) 1);
-    }
-
-    /**
-     * Creates topics on the admin client.
-     * @param adminClient the admin client to use.
-     * @param topics the list of topics to create.
-     * @throws ExecutionException on topic creation error.
-     * @throws InterruptedException if operation is interrupted.
-     */
-    public static void createTopics(final AdminClient adminClient, final List<String> topics, final int partitions, final short replicationFactor)
-            throws ExecutionException, InterruptedException {
-        final var newTopics = topics.stream().map(s -> new NewTopic(s, partitions, replicationFactor)).collect(Collectors.toList());
-        adminClient.createTopics(newTopics).all().get();
-    }
 
     /**
      * Wait for a container to start.  Waits 1 minute.
@@ -259,22 +251,6 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
     public static void waitForRunningContainer(final Container<?> container, Duration timeout) {
         await().atMost(timeout).until(container::isRunning);
     }
-
-//    public static S3Client createS3Client(final LocalStackContainer localStackContainer) {
-//        return S3Client.builder()
-//                .endpointOverride(
-//                        URI.create(localStackContainer.getEndpointOverride(LocalStackContainer.Service.S3).toString()))
-//                .region(Region.of(localStackContainer.getRegion()))
-//                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials
-//                        .create(localStackContainer.getAccessKey(), localStackContainer.getSecretKey())))
-//                .build();
-//    }
-
-//
-//    public static LocalStackContainer createS3Container() {
-//        return new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
-//                .withServices(LocalStackContainer.Service.S3);
-//    }
 
     /**
      * Finds 2 simultaneously free port for Kafka listeners

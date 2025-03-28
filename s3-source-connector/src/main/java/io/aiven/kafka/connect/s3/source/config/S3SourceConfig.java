@@ -16,12 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.config;
 
-import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYyyyUppercase;
-
-import java.util.Map;
-
-import org.apache.kafka.common.config.ConfigDef;
-
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
@@ -31,11 +25,14 @@ import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
-
-import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.common.config.ConfigDef;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
+
+import java.util.Map;
+
+import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYyyyUppercase;
 
 final public class S3SourceConfig extends SourceCommonConfig {
 
@@ -108,7 +105,7 @@ final public class S3SourceConfig extends SourceCommonConfig {
     }
 
     public String getAwsS3Prefix() {
-        return StringUtils.defaultIfBlank(s3ConfigFragment.getAwsS3Prefix(), null);
+        return s3ConfigFragment.getAwsS3Prefix();
     }
 
     public int getAwsS3PartSize() {

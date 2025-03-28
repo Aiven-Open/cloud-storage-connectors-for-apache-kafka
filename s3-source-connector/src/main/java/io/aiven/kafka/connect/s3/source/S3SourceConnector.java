@@ -16,7 +16,13 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.utils.Version;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.connector.Task;
+import org.apache.kafka.connect.source.SourceConnector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,15 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.connect.connector.Task;
-import org.apache.kafka.connect.source.SourceConnector;
-
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.Version;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
 
 /**
  * S3SourceConnector is a Kafka Connect Connector implementation that watches a S3 bucket and generates tasks to ingest
@@ -44,6 +42,9 @@ public class S3SourceConnector extends SourceConnector {
 
     private Map<String, String> configProperties;
 
+    public S3SourceConnector() {
+        super();
+    }
     @Override
     public ConfigDef config() {
         return S3SourceConfig.configDef();
