@@ -1,6 +1,5 @@
 package io.aiven.kafka.connect.s3.source;
 
-import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.integration.AbstractSourceIntegrationTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
@@ -11,6 +10,7 @@ import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.connect.connector.Connector;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
@@ -42,7 +42,7 @@ public final class S3IntegrationTest extends AbstractSourceIntegrationTest<Strin
     private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-AWS-test-";
     private static final String S3_ACCESS_KEY_ID = "test-key-id";
     private static final String S3_SECRET_ACCESS_KEY = "test_secret_key";
-    private static final String CONNECTOR_NAME = "s3-source-connector";
+    //private static final String CONNECTOR_NAME = "s3-source-connector";
 
     @Container
     static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
@@ -103,6 +103,11 @@ public final class S3IntegrationTest extends AbstractSourceIntegrationTest<Strin
     }
 
     @Override
+    protected Class<? extends Connector> getConnectorClass() {
+        return S3SourceConnector.class;
+    }
+
+    @Override
     protected BiFunction<Map<String, Object>, Map<String, Object>, S3OffsetManagerEntry> offsetManagerEntryFactory() {
         return this::getOffsetManagerEntry;
     }
@@ -123,16 +128,8 @@ public final class S3IntegrationTest extends AbstractSourceIntegrationTest<Strin
     }
 
     @Override
-    protected String getConnectorName() {
-        return CONNECTOR_NAME;
-    }
-
-    @Override
     protected Map<String, String> createConnectorConfig(String localPrefix) {
         Map<String, String> data = new HashMap<>();
-
-        KafkaFragment.setter(data)
-                .connector(S3SourceConnector.class);
 
         return S3ConfigFragment.setter(data)
                 .bucketName(BUCKET_NAME)
@@ -142,17 +139,6 @@ public final class S3IntegrationTest extends AbstractSourceIntegrationTest<Strin
                 .prefix(StringUtils.defaultIfBlank(localPrefix, null))
                 .fetchBufferSize(10)
                 .data();
-
-                      /*
-                config.put("connector.class", S3SourceConnector.class.getName());
-        config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
-        config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
-        config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);
-        config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
-        if (addPrefix) {
-            config.put(AWS_S3_PREFIX_CONFIG, s3Prefix);
-        }
-                 */
     }
 
 

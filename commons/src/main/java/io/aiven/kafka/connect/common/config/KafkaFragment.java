@@ -88,6 +88,11 @@ public class KafkaFragment {
         }
 
 
+        /**
+         * Globally unique name to use for this connector.
+         * @param name Globally unique name to use for this connector.
+         * @return this
+         */
         public Setter name(String name) {
             return setValue(ConnectorConfig.NAME_CONFIG, name);
         }

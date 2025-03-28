@@ -39,9 +39,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.json.JsonConverter;
-import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
 import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetBackingStore;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -116,6 +114,10 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
 
     private Map<String, String> createConfig(String localPrefix, final String topic, final int taskId, final int maxTasks, final InputFormat inputFormat) {
         final Map<String, String> configData = createConnectorConfig(localPrefix);
+
+        KafkaFragment.setter(configData)
+                .connector(getConnectorClass());
+
         SourceConfigFragment.setter(configData).targetTopic(topic);
 
         CommonConfigFragment.Setter setter = CommonConfigFragment.setter(configData).maxTasks(maxTasks);
@@ -317,7 +319,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
         }
 
         try {
-            KafkaManager kafkaManager = setupKafka(connectorConfig);
+            KafkaManager kafkaManager = setupKafka(true, connectorConfig);
             kafkaManager.createTopic(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
@@ -331,17 +333,17 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
             assertThat(records).containsOnly(testData1, testData2);
 
 //            // Verify offset positions
-//            verifyOffsetPositions(expectedOffsetRecords, Duration.ofSeconds(120));
+            verifyOffsetPositions(expectedOffsetRecords, Duration.ofSeconds(120));
 //
 //
 //            // add keys we haven't processed before
-//            offsetKeys.add(createOffsetManagerKey(createKey("", "not-seen-topic", 1)));
-//            offsetKeys.add(createOffsetManagerKey(createKey("topic-one", "not-seen-topic", 1)));
-//            verifyOffsetsConsumeableByOffsetManager(connectorConfig, offsetKeys, expectedOffsetRecords);
+            offsetKeys.add(createOffsetManagerKey(createKey("", "not-seen-topic", 1)));
+            offsetKeys.add(createOffsetManagerKey(createKey("topic-one", "not-seen-topic", 1)));
+            verifyOffsetsConsumeableByOffsetManager(connectorConfig, offsetKeys, expectedOffsetRecords);
         } catch (Exception e) {
             fail(e.getMessage(), e);
         } finally {
-            getKafkaManager().deleteConnector(getConnectorName());
+            deleteConnector();
         }
     }
 
@@ -605,44 +607,15 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
         }
     }
 
-//    private Map<String, String> getConfig(final String connectorName, final String topics, final int maxTasks,
-//                                          final DistributionType taskDistributionConfig, final boolean addPrefix, final String s3Prefix,
-//                                          final String prefixPattern, final String fileNameSeparator) {
-//        final Map<String, String> config = new HashMap<>(basicS3ConnectorConfig(addPrefix, s3Prefix));
-//        config.put("name", connectorName);
-//        config.put(TARGET_TOPIC, topics);
-//        config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-//        config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
-//        config.put(MAX_TASKS, String.valueOf(maxTasks));
-//        config.put(DISTRIBUTION_TYPE, taskDistributionConfig.value());
-//        config.put(FILE_NAME_TEMPLATE_CONFIG,
-//                "{{topic}}" + fileNameSeparator + "{{partition}}" + fileNameSeparator + "{{start_offset}}");
-//        if (addPrefix) {
-//            config.put(FILE_PATH_PREFIX_TEMPLATE_CONFIG, prefixPattern);
-//        }
-//        return config;
-//    }
-
-//    private static Map<String, String> basicS3ConnectorConfig(final boolean addPrefix, final String s3Prefix) {
-//        final Map<String, String> config = new HashMap<>();
-//        config.put("connector.class", S3SourceConnector.class.getName());
-//        config.put(AWS_ACCESS_KEY_ID_CONFIG, S3_ACCESS_KEY_ID);
-//        config.put(AWS_SECRET_ACCESS_KEY_CONFIG, S3_SECRET_ACCESS_KEY);
-//        config.put(AWS_S3_ENDPOINT_CONFIG, s3Endpoint);
-//        config.put(AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET_NAME);
-//        if (addPrefix) {
-//            config.put(AWS_S3_PREFIX_CONFIG, s3Prefix);
-//        }
-//        return config;
-//    }
 
     protected void verifyOffsetPositions(final Map<OffsetManager.OffsetManagerKey, Long> expectedRecords, Duration timeLimit) {
         final Properties consumerProperties = consumerPropertiesBuilder().keyDeserializer(ByteArrayDeserializer.class)
                 .valueDeserializer(ByteArrayDeserializer.class).build();
         MessageConsumer messageConsumer = messageConsumer();
+        KafkaManager kafkaManager = getKafkaManager();
         final Map<OffsetManager.OffsetManagerKey, Long> offsetRecs = new HashMap<>();
         try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProperties)) {
-            consumer.subscribe(Collections.singletonList(CONNECT_OFFSET_TOPIC_PREFIX + getConnectorName()));
+            consumer.subscribe(Collections.singletonList(kafkaManager.getOffsetTopic()));
             await().atMost(timeLimit).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
                 messageConsumer.consumeOffsetMessages(consumer).forEach( o -> offsetRecs.put(o.getManagerKey(), o.getRecordCount()));
                 assertThat(offsetRecs).containsExactlyInAnyOrderEntriesOf(expectedRecords);
@@ -652,26 +625,16 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
 
     private void verifyOffsetsConsumeableByOffsetManager(final Map<String, String> connectorConfig,
                                                          final Collection<OffsetManager.OffsetManagerKey> offsetKeys, final Map<OffsetManager.OffsetManagerKey, Long> expectedKeys) {
-
-        final OffsetBackingStore backingStore = getConnectorOffsetBackingStore(
-                getKafkaManager().bootstrapServers(), connectorConfig, getKafkaManager().getWorkerProperties(connectorConfig),
-                getConnectorName());
-        final OffsetStorageReader reader = getOffsetReader(backingStore, getConnectorName());
-
-        final WorkerSourceTaskContext sourceTask = getWorkerSourceTaskContext(reader);
-
-        final OffsetManager<O> manager = new OffsetManager<>(sourceTask);
-
+        final OffsetManager<O> manager = createOffsetManager(connectorConfig);
         manager.populateOffsetManager(offsetKeys);
 
         for (final OffsetManager.OffsetManagerKey offsetManagerKey : offsetKeys) {
-//            final String key = (String) offsetManagerKey.getPartitionMap().get("objectKey");
             final Optional<O> actualEntry = manager.getEntry(offsetManagerKey, getOffsetManagerEntryCreator(offsetManagerKey));
 
             if (expectedKeys.containsKey(offsetManagerKey)) {
                 assertThat(actualEntry).isPresent();
                 assertThat(actualEntry.get().getRecordCount()).isEqualTo(expectedKeys.get(offsetManagerKey));
-                assertThat(actualEntry.get().getManagerKey().getPartitionMap()).isEqualTo(offsetManagerKey.getPartitionMap());
+                assertThat(actualEntry.get().getManagerKey()).isEqualTo(offsetManagerKey);
             } else {
                 // unprocessed keys should be empty
                 assertThat(actualEntry).isEmpty();

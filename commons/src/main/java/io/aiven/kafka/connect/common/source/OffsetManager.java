@@ -16,21 +16,25 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import static java.util.stream.Collectors.toList;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import org.apache.kafka.connect.source.SourceRecord;
-import org.apache.kafka.connect.source.SourceTaskContext;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static java.util.stream.Collectors.toList;
 
 public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     /** The logger to write to */
@@ -255,21 +259,57 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
     /**
      * The OffsetManager Key. Must override hashCode() and equals().
      */
-    @FunctionalInterface
-    public interface OffsetManagerKey {
-        /**
-         * Gets the partition map used by Kafka to identify this Offset entry.
-         * <p>
-         * Kafka stores all numbers as longs and so all keys based off integers should be created as longs in the
-         * manager key.
-         * </p>
-         * <p>
-         * This method should make a copy of the internal data and return that to prevent any accidental updates to the
-         * internal data.
-         * </p>
-         *
-         * @return The partition map used by Kafka to identify this Offset entry.
-         */
-        Map<String, Object> getPartitionMap();
+    public static final class OffsetManagerKey {
+        private final SortedMap<String, Object> data;
+        private final int hashCode;
+
+        public OffsetManagerKey(Map<String, Object> data) {
+            this.data = new TreeMap<>(data);
+            HashCodeBuilder builder = new HashCodeBuilder();
+            for (final Object value : this.data.values()) {
+                builder.append(value);
+            }
+            hashCode = builder.toHashCode();
+        }
+
+        public Map<String, Object> getPartitionMap() {
+            return data;
+        }
+
+        @Override
+        public String toString() {
+            return data.toString();
+        }
+
+        @Override
+        public int hashCode() {
+            return hashCode;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            EqualsBuilder builder = new EqualsBuilder();
+            if (other instanceof OffsetManager.OffsetManagerKey) {
+                Map<String, Object> lhs = data;
+                Map<String, Object> rhs = ((OffsetManager.OffsetManagerKey) other).data;
+                if (lhs.size() != rhs.size()) {
+                    return false;
+                }
+                Iterator<Map.Entry<String, Object>> lhsIterator = lhs.entrySet().iterator();
+                Iterator<Map.Entry<String, Object>> rhsIterator = rhs.entrySet().iterator();
+                while (lhsIterator.hasNext() && rhsIterator.hasNext()) {
+                    Map.Entry<String, Object> lhsEntry = lhsIterator.next();
+                    Map.Entry<String, Object> rhsEntry = rhsIterator.next();
+                    if (!(lhsEntry.getKey().equals(rhsEntry.getKey()) && lhsEntry.getValue().equals(rhsEntry.getValue()))) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
     }
 }

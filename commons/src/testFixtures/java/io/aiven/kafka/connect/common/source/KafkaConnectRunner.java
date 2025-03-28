@@ -42,6 +42,7 @@ public final class KafkaConnectRunner {
 
     private int containerListenerPort;
 
+    private String clusterName;
 
     /**
      * Finds 2 simultaneously free port for Kafka listeners
@@ -58,17 +59,37 @@ public final class KafkaConnectRunner {
         }
     }
 
-
     public KafkaConnectRunner(final Duration offsetFlushInterval) {
         this.offsetFlushInterval = offsetFlushInterval;
     }
 
-    public void startConnectCluster(final String connectorName, Map<String, String> workerProperties) throws IOException {
-        final List<Integer> ports =findListenerPorts();
-        startConnectCluster(connectorName, ports.get(0), ports.get(1), workerProperties);
+    public String getClusterName() {
+        return clusterName;
     }
 
-    public void startConnectCluster(final String connectorName, final int localPort, final int containerPort, Map<String, String> workerProperties) {
+    public String getOffsetTopic() {
+        return "connect-offset-topic-" + clusterName;
+    }
+
+    public String getConfigTopic() {
+        return "connect-config-topic-" + clusterName;
+    }
+
+    public String getStorageTopic() {
+        return "connect-storage-topic-" + clusterName;
+    }
+
+    public String getGroupId() {
+        return "connect-integration-test-" + clusterName;
+    }
+
+    public void startConnectCluster(final String clusterName, Map<String, String> workerProperties) throws IOException {
+        final List<Integer> ports =findListenerPorts();
+        startConnectCluster(clusterName, ports.get(0), ports.get(1), workerProperties);
+    }
+
+    public void startConnectCluster(final String clusterName, final int localPort, final int containerPort, Map<String, String> workerProperties) {
+        this.clusterName = clusterName;
         this.containerListenerPort = containerPort;
         final Properties brokerProperties = new Properties();
         brokerProperties.put("advertised.listeners", "PLAINTEXT://localhost:" + localPort
@@ -77,12 +98,12 @@ public final class KafkaConnectRunner {
                 "PLAINTEXT://localhost:" + localPort + ",TESTCONTAINERS://localhost:" + containerPort);
         brokerProperties.put("listener.security.protocol.map", "PLAINTEXT:PLAINTEXT,TESTCONTAINERS:PLAINTEXT");
 
-        connectCluster = new EmbeddedConnectCluster.Builder().name(connectorName)
+        connectCluster = new EmbeddedConnectCluster.Builder().name(clusterName)
                 .brokerProps(brokerProperties)
                 .workerProps(getWorkerProperties(workerProperties))
                 .build();
         connectCluster.start();
-        LOGGER.info("connectCluster started");
+        LOGGER.info("connectCluster {} started", clusterName);
     }
 
     public int getContainerPort() {

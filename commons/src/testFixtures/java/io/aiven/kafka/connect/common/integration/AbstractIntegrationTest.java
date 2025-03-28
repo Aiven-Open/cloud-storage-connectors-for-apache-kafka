@@ -22,27 +22,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.NativeInfo;
 import io.aiven.kafka.connect.common.source.OffsetManager;
+import io.aiven.kafka.connect.common.utils.CasedString;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.apache.kafka.common.utils.Time;
-import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.json.JsonDeserializer;
-import org.apache.kafka.connect.runtime.WorkerConfig;
 import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
-import org.apache.kafka.connect.storage.ConnectorOffsetBackingStore;
-import org.apache.kafka.connect.storage.KafkaOffsetBackingStore;
-import org.apache.kafka.connect.storage.OffsetBackingStore;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
-import org.apache.kafka.connect.storage.OffsetStorageReaderImpl;
-import org.apache.kafka.connect.util.KafkaBasedLog;
-import org.apache.kafka.connect.util.LoggingContext;
-import org.apache.kafka.connect.util.TopicAdmin;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
@@ -51,16 +41,15 @@ import org.slf4j.Logger;
 import org.testcontainers.containers.Container;
 
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -90,7 +79,8 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
     protected TestInfo testInfo;
 
     private static ThreadLocal<KafkaManager> kafkaManagerThreadLocal = new ThreadLocal<>();
-    //private KafkaManager kafkaManager;
+
+    private static ThreadLocal<String> connectorNameThreadLocal = new ThreadLocal<>() {};
 
     abstract protected Logger getLogger();
 
@@ -115,11 +105,19 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
 
     abstract protected List<? extends NativeInfo<?, K>> getNativeStorage();
 
-    protected abstract String getConnectorName();
+    protected abstract Class<? extends Connector> getConnectorClass();
+
+    final protected String getConnectorName() {
+        String result = connectorNameThreadLocal.get();
+        if (result == null) {
+            result = new CasedString(CasedString.StringCase.CAMEL, getConnectorClass().getSimpleName()).toCase(CasedString.StringCase.KEBAB).toLowerCase(Locale.ROOT) + "-" + UUID.randomUUID();
+            connectorNameThreadLocal.set(result);
+        }
+        return result;
+    }
 
     /**
      * Creates the configuration data for the connector.
-     * Must include result of call to {@link io.aiven.kafka.connect.common.config.KafkaFragment.Setter#connector(Class)} to define the connector to run.
      * @return the configuration data for the Connector class under test.
      */
     protected abstract Map<String, String> createConnectorConfig(String localPrefix);
@@ -133,11 +131,11 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
         this.testInfo = testInfo;
     }
 
-    protected KafkaManager setupKafka(Map<String, String> connectorProperties) throws IOException, ExecutionException, InterruptedException {
+    final protected KafkaManager setupKafka(Map<String, String> connectorProperties) throws IOException, ExecutionException, InterruptedException {
         return setupKafka(false, connectorProperties);
     }
 
-    protected KafkaManager setupKafka(boolean forceRestart, Map<String, String> connectorProperties) throws IOException, ExecutionException, InterruptedException {
+    final protected KafkaManager setupKafka(boolean forceRestart, Map<String, String> connectorProperties) throws IOException, ExecutionException, InterruptedException {
         KafkaManager kafkaManager = kafkaManagerThreadLocal.get();
         if (kafkaManager != null) {
             if (forceRestart) {
@@ -146,13 +144,14 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
         }
         kafkaManager = kafkaManagerThreadLocal.get();
         if (kafkaManager == null) {
-            kafkaManager = new KafkaManager(testInfo.getTestClass().get().getName(), getOffsetFlushInterval(), connectorProperties);
+            String clusterName = new CasedString(CasedString.StringCase.CAMEL, testInfo.getTestClass().get().getSimpleName()).toCase(CasedString.StringCase.KEBAB).toLowerCase(Locale.ROOT);
+            kafkaManager = new KafkaManager(clusterName, getOffsetFlushInterval(), connectorProperties);
             kafkaManagerThreadLocal.set(kafkaManager);
         }
         return kafkaManager;
     }
 
-    protected void tearDownKafka()  {
+    final protected void tearDownKafka()  {
         KafkaManager kafkaManager = kafkaManagerThreadLocal.get();
         if (kafkaManager != null) {
             kafkaManager.stop();
@@ -161,7 +160,13 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
         }
     }
 
-    protected KafkaManager getKafkaManager() {
+    final protected void deleteConnector() {
+        KafkaManager kafkaManager = kafkaManagerThreadLocal.get();
+        if (kafkaManager != null) {
+            kafkaManager.deleteConnector(getConnectorName());
+        }
+    }
+    final protected KafkaManager getKafkaManager() {
         KafkaManager kafkaManager = kafkaManagerThreadLocal.get();
         if (kafkaManager == null) {
             throw new IllegalStateException("KafkaManager not initialized");
@@ -252,135 +257,15 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
         await().atMost(timeout).until(container::isRunning);
     }
 
-    /**
-     * Finds 2 simultaneously free port for Kafka listeners
-     *
-     * @return list of 2 ports
-     * @throws IOException
-     *             when port allocation failure happens
-     */
-    static List<Integer> getKafkaListenerPorts() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0); ServerSocket socket2 = new ServerSocket(0)) {
-            return Arrays.asList(socket.getLocalPort(), socket2.getLocalPort());
-        } catch (IOException e) {
-            throw new IOException("Failed to allocate port for test", e);
-        }
-    }
 
-
-
-    // Create OffsetReader to read back in offsets
-
-    /**
-     * Create an offsetReader that is configured to use a preconfigured OffsetBackingStore and configures the
-     * JsonConverters correctly.
-     *
-     * @param backingStore
-     *            OffsetBackingStore implementation which will read from the kafka offset topic
-     * @param connectorName
-     *            The name of the connector.
-     * @return Configured OffsetStorageReader
-     */
-    static OffsetStorageReader getOffsetReader(final OffsetBackingStore backingStore, final String connectorName) {
-        final JsonConverter keyConverter = new JsonConverter(); // NOPMD close resource after use
-        final JsonConverter valueConverter = new JsonConverter(); // NOPMD close resource after use
-        keyConverter.configure(Map.of("schemas.enable", "false", "converter.type", "key"));
-        valueConverter.configure(Map.of("schemas.enable", "false", "converter.type", "value"));
-        return new OffsetStorageReaderImpl(backingStore, connectorName, keyConverter, valueConverter);
-    }
-
-    /**
-     *
-     * @param bootstrapServers
-     *            The bootstrap servers for the Kafka cluster to attach to
-     * @param topicAdminConfig
-     *            Internal Connector Config for creating and modifying topics
-     * @param workerProperties
-     *            The worker properties from the Kafka Connect Instance
-     * @param connectorName
-     *            The name of the connector
-     * @return Configured ConnectorOffsetBackingStore
-     */
-
-    static ConnectorOffsetBackingStore getConnectorOffsetBackingStore(final String bootstrapServers,
-                                                                      final Map<String, String> topicAdminConfig, final Map<String, String> workerProperties,
-                                                                      final String connectorName) {
-        final Properties consumerProperties = new ConsumerPropertiesBuilder(bootstrapServers).keyDeserializer(ByteArrayDeserializer.class).valueDeserializer(ByteArrayDeserializer.class).build();
-
-        consumerProperties.forEach((key, value) -> topicAdminConfig.putIfAbsent(key.toString(), (String) value));
-        // Add config def
-        final ConfigDef def = getRequiredConfigDefSettings();
-
-        consumerProperties.put("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
-        consumerProperties.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
-
-        // create connector store
-        final KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProperties); // NOPMD close resource
-        // after use
-        // Create Topic Admin
-        final TopicAdmin topicAdmin = new TopicAdmin(new HashMap<>(topicAdminConfig)); // NOPMD close resource after use
-
-        final KafkaOffsetBackingStore kafkaBackingStore = createKafkaOffsetBackingStore(topicAdmin,
-                CONNECT_OFFSET_TOPIC_PREFIX + connectorName, consumer);
-        kafkaBackingStore.configure(new WorkerConfig(def, workerProperties));
-        return ConnectorOffsetBackingStore.withOnlyWorkerStore(() -> LoggingContext.forConnector("source-connector"),
-                kafkaBackingStore, CONNECT_OFFSET_TOPIC_PREFIX + connectorName);
-
-    }
-
-    /**
-     * Returns the WorkerConfig ConfigDef with the must have configurations set.
-     *
-     * @return A configured ConfigDef
-     */
-    private static @NotNull ConfigDef getRequiredConfigDefSettings() {
-        final ConfigDef def = new ConfigDef();
-        def.define("offset.storage.partitions", ConfigDef.Type.INT, 25, ConfigDef.Importance.MEDIUM, "partitions");
-        def.define("offset.storage.replication.factor", ConfigDef.Type.SHORT, Short.valueOf("2"),
-                ConfigDef.Importance.MEDIUM, "partitions");
-        return def;
-    }
-
-    /**
-     *
-     * @param topicAdmin
-     *            An administrative instance with the power to create topics when they do not exist
-     * @param topic
-     *            The name of the offset topic
-     * @param consumer
-     *            A configured consumer that has not been assigned or subscribed to any topic
-     * @return A configured KafkaOffsetBackingStore which can be used as a WorkerStore
-     */
-    static KafkaOffsetBackingStore createKafkaOffsetBackingStore(final TopicAdmin topicAdmin, final String topic,
-                                                                 KafkaConsumer<byte[], byte[]> consumer) {
-        return new KafkaOffsetBackingStore(() -> topicAdmin) {
-            @Override
-            public void configure(final WorkerConfig config) {
-                this.exactlyOnce = config.exactlyOnceSourceEnabled();
-                this.offsetLog = KafkaBasedLog.withExistingClients(topic, consumer, null, topicAdmin, consumedCallback,
-                        Time.SYSTEM, topicAdmin1 -> {
-                        });
-
-                this.offsetLog.start();
-
-            }
-        };
-    }
-
-    /**
-     * Configure a WorkerSourceTaskContext to return the offsetReader when called
-     *
-     * @param offsetReader
-     *            An instantiated configured offsetReader
-     * @return A mock WorkerSourceTaskContext
-     */
-    static WorkerSourceTaskContext getWorkerSourceTaskContext(final OffsetStorageReader offsetReader) {
-
+    public OffsetManager<O> createOffsetManager(final Map<String, String> connectorConfig) {
         final WorkerSourceTaskContext context = mock(WorkerSourceTaskContext.class);
-        when(context.offsetStorageReader()).thenReturn(offsetReader);
-
-        return context;
+        final OffsetStorageReader reader = getKafkaManager().getOffsetReader(connectorConfig, getConnectorName());
+        when(context.offsetStorageReader()).thenReturn(reader);
+        return new OffsetManager<O>(context);
     }
+
+
 
 //    private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-AWS-test-";
 //
@@ -510,6 +395,7 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
             final List<O> messages = new ArrayList<>();
             final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(1));
             for (final ConsumerRecord<byte[], byte[]> record : records) {
+                System.out.println(">>>>>>>>> RECORDS");
                 final Map<String, Object> data = objectMapper.readValue(record.value(), new TypeReference<>() { // NOPMD
                 });
                 // the key has the format
@@ -517,8 +403,17 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
                 // key[1] = Map<String, Object> partition map.
                 final List<Object> key = objectMapper.readValue(record.key(), new TypeReference<>() { // NOPMD
                 });
-                messages.add(converter.apply(data, (Map<String, Object>) key.get(1)));
+                key.forEach(System.out::println);
+                data.forEach((k, v) -> {System.out.println(k + "=" + v);});
+                Map<String, Object> managerEntryKey = (Map<String, Object>) key.get(1);
+                messages.add(converter.apply(managerEntryKey, data));
+                System.out.println("<<<<<<<<< RECORDS");
+
             }
+            System.out.println(">>>>>>>>> MESSAGES");
+            messages.forEach(System.out::println);
+            System.out.println("<<<<<<<<< MESSAGES");
+
             return messages;
         }
     }
