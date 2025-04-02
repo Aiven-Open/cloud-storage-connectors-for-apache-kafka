@@ -16,13 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
-
-import org.apache.kafka.connect.source.SourceRecord;
-
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
@@ -32,11 +27,15 @@ import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
-
 import org.apache.commons.collections4.IteratorUtils;
+import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkException;
+
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
@@ -46,7 +45,7 @@ public class S3SourceTask extends AbstractSourceTask {
     /** The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
 
-    /** An iterator or S3SourceRecords */
+    /** An iterator of S3SourceRecords */
     private Iterator<S3SourceRecord> s3SourceRecordIterator;
     /**
      * The transformer that we are using TODO move this to AbstractSourceTask

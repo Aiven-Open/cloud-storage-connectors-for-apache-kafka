@@ -180,8 +180,8 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
             assertThat(records).containsOnly(testData1, testData2);
 
             // write new data
-            expectedOffsetRecords.put(write(topic, testData3.getBytes(StandardCharsets.UTF_8), 0).getOffsetManagerKey(), 1L);
             expectedOffsetRecords.put(write(topic, testData3.getBytes(StandardCharsets.UTF_8), 1).getOffsetManagerKey(), 1L);
+            expectedOffsetRecords.put(write(topic, testData3.getBytes(StandardCharsets.UTF_8), 2).getOffsetManagerKey(), 1L);
 
             kafkaManager.restartConnector(getConnectorName());
 
@@ -246,8 +246,8 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
             kafkaManager.restartConnector(getConnectorName());
 
             // write new data
-            expectedOffsetRecords.put(write(topic, testData3.getBytes(StandardCharsets.UTF_8), 0).getOffsetManagerKey(), 1L);
             expectedOffsetRecords.put(write(topic, testData3.getBytes(StandardCharsets.UTF_8), 1).getOffsetManagerKey(), 1L);
+            expectedOffsetRecords.put(write(topic, testData3.getBytes(StandardCharsets.UTF_8), 2).getOffsetManagerKey(), 1L);
 
             records = messageConsumer().consumeByteMessages(topic, 2, Duration.ofSeconds(20));
             assertThat(records).containsOnly(testData3);

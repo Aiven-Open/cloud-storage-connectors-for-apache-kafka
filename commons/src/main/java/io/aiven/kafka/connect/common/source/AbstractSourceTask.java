@@ -231,7 +231,7 @@ public abstract class AbstractSourceTask extends SourceTask {
 
     @Override
     public final void stop() {
-        logger.debug("Stopping");
+        logger.info("Stop requested");
         connectorStopped.set(true);
     }
 

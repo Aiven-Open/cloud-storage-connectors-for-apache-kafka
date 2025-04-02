@@ -29,7 +29,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
@@ -195,6 +194,10 @@ public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends
         return new MessageConsumer();
     }
 
+    /**
+     * Creates a ConsumerPropertiesBuilder on our bootstrap server.
+     * @return a ConsumerPropertiesBuilder on out bootstrap server.
+     */
     protected final ConsumerPropertiesBuilder consumerPropertiesBuilder() {
         return new ConsumerPropertiesBuilder(getKafkaManager().bootstrapServers());
     }
@@ -332,40 +335,36 @@ public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends
         //  Duration.ofSeconds(120)
         public List<String> consumeByteMessages(final String topic, final int expectedMessageCount, Duration timeout) {
             final Properties consumerProperties = consumerPropertiesBuilder().keyDeserializer(ByteArrayDeserializer.class).valueDeserializer(ByteArrayDeserializer.class).build();
-
-            final List<byte[]> objects = consumeMessages(topic, consumerProperties, expectedMessageCount, timeout);
-            return objects.stream().map(String::new).collect(Collectors.toList());
+            List<ConsumerRecord<byte[], byte[]>> lst = consumeMessages(topic, consumerProperties, expectedMessageCount, timeout);
+            return lst.stream().map(cr -> new String(cr.value())).collect(Collectors.toList());
         }
 
         // Duration.ofSeconds(60),
         public List<byte[]> consumeRawByteMessages(final String topic, final int expectedMessageCount, Duration timeout) {
             final Properties consumerProperties = consumerPropertiesBuilder().keyDeserializer(ByteArrayDeserializer.class).valueDeserializer(ByteArrayDeserializer.class).build();
-            final List<byte[]> objects = consumeMessages(topic, consumerProperties, expectedMessageCount,  timeout);
-            return objects.stream().map(obj -> {
-                final byte[] byteArray = new byte[obj.length];
-                System.arraycopy(obj, 0, byteArray, 0, obj.length);
-                return byteArray;
-            }).collect(Collectors.toList());
-
+            List<ConsumerRecord<byte[], byte[]>> lst = consumeMessages(topic, consumerProperties, expectedMessageCount, timeout);
+            return lst.stream().map(ConsumerRecord::value).collect(Collectors.toList());
         }
 
         public List<GenericRecord> consumeAvroMessages(final String topic, final int expectedMessageCount, final String schemaRegistryUrl, final Duration timeout) {
             final Properties consumerProperties = consumerPropertiesBuilder().valueDeserializer(KafkaAvroDeserializer.class).schemaRegistry(schemaRegistryUrl).build();
-            return consumeMessages(topic, consumerProperties, expectedMessageCount, timeout);
+            List<ConsumerRecord<String, GenericRecord>> lst = consumeMessages(topic, consumerProperties, expectedMessageCount, timeout);
+            return lst.stream().map(ConsumerRecord::value).collect(Collectors.toList());
         }
 
         // Duration.ofSeconds(60)
         public List<JsonNode> consumeJsonMessages(final String topic, final int expectedMessageCount, final Duration timeout) {
-            final Properties consumerProperties = consumerPropertiesBuilder().keyDeserializer(StringDeserializer.class).valueDeserializer(JsonDeserializer.class).build();
-            return consumeMessages(topic, consumerProperties, expectedMessageCount, timeout);
+            final Properties consumerProperties = consumerPropertiesBuilder().valueDeserializer(JsonDeserializer.class).build();
+            List<ConsumerRecord<String, JsonNode>> lst = consumeMessages(topic, consumerProperties, expectedMessageCount, timeout);
+            return lst.stream().map(ConsumerRecord::value).collect(Collectors.toList());
         }
 
-        public <V> List<V> consumeMessages(final String topic, final Properties consumerProperties, final int expectedMessageCount,
+        public <X, V> List<ConsumerRecord<X, V>> consumeMessages(final String topic, final Properties consumerProperties, final int expectedMessageCount,
                                            final Duration expectedMaxDuration) {
-            try (KafkaConsumer<?, V> consumer = new KafkaConsumer<>(consumerProperties)) {
+            try (KafkaConsumer<X, V> consumer = new KafkaConsumer<>(consumerProperties)) {
                 consumer.subscribe(Collections.singletonList(topic));
 
-                final List<V> recordValues = new ArrayList<>();
+                final List<ConsumerRecord<X, V>> recordValues = new ArrayList<>();
                 await().atMost(expectedMaxDuration).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
                     assertThat(consumeRecordsInProgress(consumer, recordValues)).hasSize(expectedMessageCount);
                 });
@@ -373,21 +372,18 @@ public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends
             }
         }
 
-        private <V> List<V> consumeRecordsInProgress(KafkaConsumer<?, V> consumer, List<V> recordValues) {
+        private <X, V> List<ConsumerRecord<X, V>> consumeRecordsInProgress(KafkaConsumer<X, V> consumer, List<ConsumerRecord<X, V>> recordValues) {
             int recordsRetrieved;
             do {
-                final ConsumerRecords<?, V> records = consumer.poll(Duration.ofMillis(500L));
+                final ConsumerRecords<X, V> records = consumer.poll(Duration.ofMillis(500L));
                 recordsRetrieved = records.count();
-                records.forEach(record -> {
-                    System.out.format( ">>>>>>>>>>>>>> %s %s %s%n", record, new String((byte[])record.key()), new String((byte[])record.value()));
-                recordValues.add(record.value());});
+                records.forEach(recordValues::add);
                 // Choosing 10 records as it allows for integration tests with a smaller max poll to be added
                 // while maintaining efficiency, a slightly larger number could be added but this is slightly more efficient
                 // than larger numbers.
             } while (recordsRetrieved > 10);
             return recordValues;
         }
-
 
         public List<O> consumeOffsetMessages(KafkaConsumer<byte[], byte[]> consumer) throws IOException {
             // Poll messages from the topic
@@ -396,6 +392,7 @@ public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends
             final ObjectMapper objectMapper = new ObjectMapper();
             final List<O> messages = new ArrayList<>();
             final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(1));
+// TODO there is probably a way to clean this up by using the internal data types from Kafka.
             for (final ConsumerRecord<byte[], byte[]> record : records) {
                 System.out.println(">>>>>>>>> RECORDS");
                 final Map<String, Object> data = objectMapper.readValue(record.value(), new TypeReference<>() { // NOPMD
