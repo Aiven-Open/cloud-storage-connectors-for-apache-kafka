@@ -73,7 +73,7 @@ public class S3SourceConnector extends SourceConnector {
 
     @Override
     public void start(final Map<String, String> properties) {
-        Objects.requireNonNull(properties, "properties haven't been set");
+        Objects.requireNonNull(properties, "properties may not be null");
         configProperties = Map.copyOf(properties);
         LOGGER.info("Start S3 Source connector");
     }

@@ -28,6 +28,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.connect.runtime.ConnectorConfig;
 import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetBackingStore;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
@@ -70,7 +71,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.DISTRIBUTION_TYPE;
@@ -427,7 +427,7 @@ final class IntegrationTest implements IntegrationBase {
         config.put(TARGET_TOPIC, topics);
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put(MAX_TASKS, String.valueOf(maxTasks));
+        config.put(ConnectorConfig.TASKS_MAX_CONFIG, String.valueOf(maxTasks));
         config.put(DISTRIBUTION_TYPE, taskDistributionConfig.value());
         config.put(FILE_NAME_TEMPLATE_CONFIG,
                 "{{topic}}" + fileNameSeparator + "{{partition}}" + fileNameSeparator + "{{start_offset}}");

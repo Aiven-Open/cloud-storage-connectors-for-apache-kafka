@@ -17,9 +17,10 @@
 package io.aiven.kafka.connect.common.source;
 
 import io.aiven.kafka.connect.common.config.KafkaFragment;
+import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
-import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
+import org.apache.kafka.connect.util.clusters.WorkerHandle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 public final class KafkaConnectRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaConnectRunner.class);
@@ -63,6 +65,10 @@ public final class KafkaConnectRunner {
         this.offsetFlushInterval = offsetFlushInterval;
     }
 
+    public Set<WorkerHandle> listWorkers() {
+        return this.connectCluster.workers();
+    }
+
     public String getClusterName() {
         return clusterName;
     }
@@ -83,12 +89,12 @@ public final class KafkaConnectRunner {
         return "connect-integration-test-" + clusterName;
     }
 
-    public void startConnectCluster(final String clusterName, Map<String, String> workerProperties) throws IOException {
+    public void startConnectCluster(final String clusterName, Class<? extends Connector> connectorClass) throws IOException {
         final List<Integer> ports =findListenerPorts();
-        startConnectCluster(clusterName, ports.get(0), ports.get(1), workerProperties);
+        startConnectCluster(clusterName, ports.get(0), ports.get(1), connectorClass);
     }
 
-    public void startConnectCluster(final String clusterName, final int localPort, final int containerPort, Map<String, String> workerProperties) {
+    public void startConnectCluster(final String clusterName, final int localPort, final int containerPort, Class<? extends Connector> connectorClass) {
         this.clusterName = clusterName;
         this.containerListenerPort = containerPort;
         final Properties brokerProperties = new Properties();
@@ -100,7 +106,8 @@ public final class KafkaConnectRunner {
 
         connectCluster = new EmbeddedConnectCluster.Builder().name(clusterName)
                 .brokerProps(brokerProperties)
-                .workerProps(getWorkerProperties(workerProperties))
+                .workerProps(getWorkerProperties(connectorClass))
+                .numWorkers(1)
                 .build();
         connectCluster.start();
         LOGGER.info("connectCluster {} started", clusterName);
@@ -115,7 +122,9 @@ public final class KafkaConnectRunner {
     }
 
     public void deleteConnector(final String connectorName) {
-        connectCluster.deleteConnector(connectorName);
+        if (connectCluster.connectors().contains(connectorName)) {
+            connectCluster.deleteConnector(connectorName);
+        }
     }
 
     public void stopConnectCluster() {
@@ -130,18 +139,24 @@ public final class KafkaConnectRunner {
         return connectCluster.configureConnector(connName, connConfig);
     }
 
-    public Map<String, String> getWorkerProperties(Map<String, String> workerProperties) {
-        final Map<String, String> workerProps = new HashMap<>();
-        KafkaFragment.setter(workerProps)
+    public void restartConnector(final String connectorName) {
+        if (connectCluster != null) {
+            LOGGER.info("Restarting connector {}", connectorName);
+            connectCluster.restartConnector(connectorName);
+            LOGGER.info("Connector {} restarted", connectorName);
+
+        }
+    }
+
+    public Map<String, String> getWorkerProperties(Class<? extends Connector> connectorClass) {
+        KafkaFragment.Setter setter = KafkaFragment.setter(new HashMap<>())
                 .keyConverter(ByteArrayConverter.class)
                 .valueConverter(ByteArrayConverter.class)
-                .internalKeyConverter(JsonConverter.class)
-                .internalKeyConverterSchemaEnable(true)
-                .internalValueConverter(JsonConverter.class)
-                .internalValueConverterSchemaEnable(true)
                 .pluginDiscovery(KafkaFragment.PluginDiscovery.HYBRID_WARN)
                 .offsetFlushInterval(offsetFlushInterval);
-        //workerProps.putAll(workerProperties);
-        return workerProps;
+        if (connectorClass != null) {
+            setter.connector(connectorClass);
+        }
+        return setter.data();
     }
 }

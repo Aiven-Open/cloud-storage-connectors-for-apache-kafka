@@ -16,6 +16,14 @@
 
 package io.aiven.kafka.connect.common.source;
 
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.kafka.connect.errors.ConnectException;
+import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.source.SourceTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -24,16 +32,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.source.SourceRecord;
-import org.apache.kafka.connect.source.SourceTask;
-
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-
-import org.apache.commons.lang3.time.StopWatch;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class handles extracting records from an iterator and returning them to Kafka. It uses an exponential backoff

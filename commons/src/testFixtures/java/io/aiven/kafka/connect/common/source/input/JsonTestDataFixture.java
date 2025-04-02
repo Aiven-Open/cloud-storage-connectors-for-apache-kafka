@@ -17,30 +17,12 @@
 package io.aiven.kafka.connect.common.source.input;
 
 
-import com.fasterxml.jackson.core.io.JsonStringEncoder;
-
 /**
  * A testing fixture to generate JSON data.
  */
 final public class JsonTestDataFixture {
 
-    private static String msgFormat;
-
-    static {
-        JsonStringEncoder encoder = JsonStringEncoder.getInstance();
-        StringBuilder builder = new StringBuilder("{");
-        for (String key : new String[] {"id", "message"}) {
-            encoder.quoteAsString(key, builder);
-            builder.append(" : ");
-            encoder.quoteAsString("%s", builder);
-            builder.append(", ");
-        }
-        encoder.quoteAsString("value", builder);
-        builder.append(" : ");
-        encoder.quoteAsString("value%s", builder);
-        builder.append("}%n");
-        msgFormat = builder.toString();
-    }
+    private final static String msgFormat = "{\"id\" : %s, \"message\" : \"%s\", \"value\" : \"value%s\"}%n";
 
     /**
      * Creates the specified number of JSON records encoded into a string.

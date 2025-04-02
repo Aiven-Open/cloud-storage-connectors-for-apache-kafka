@@ -62,23 +62,6 @@ public class KafkaFragment {
             return setValue(ConnectorConfig.HEADER_CONVERTER_CLASS_CONFIG, header);
         }
 
-        public Setter internalValueConverter(Class<? extends Converter> converter) {
-            return setValue(WorkerConfig.INTERNAL_VALUE_CONVERTER_CLASS_CONFIG, converter);
-        }
-
-        public Setter internalValueConverterSchemaEnable(boolean state) {
-            return setValue(INTERNAL_VALUE_CONVERTER_SCHEMA_ENABLE, state);
-        }
-
-
-        public Setter internalKeyConverter(Class<? extends Converter> converter) {
-            return setValue(WorkerConfig.INTERNAL_KEY_CONVERTER_CLASS_CONFIG, converter);
-        }
-
-        public Setter internalKeyConverterSchemaEnable(boolean state) {
-            return setValue(INTERNAL_KEY_CONVERTER_SCHEMA_ENABLE, state);
-        }
-
         public Setter offsetFlushInterval(Duration interval) {
             return setValue(WorkerConfig.OFFSET_COMMIT_INTERVAL_MS_CONFIG, interval.toMillis());
         }

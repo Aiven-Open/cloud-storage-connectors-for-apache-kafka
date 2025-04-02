@@ -29,6 +29,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
@@ -65,7 +66,7 @@ import static org.mockito.Mockito.when;
  * @param <K> the native key type.
  */
 //@SuppressWarnings("PMD.ExcessiveImports")
-abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>,
+public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>,
         I extends AbstractSourceRecordIterator<?, K, O, ?>> {
 
     protected final static String CONNECT_OFFSET_TOPIC_PREFIX = "connect-offset-topic-";
@@ -101,7 +102,7 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
      * @param testDataBytes
      *            the data.
      */
-    abstract protected WriteResult writeWithKey(final K nativeKey, final byte[] testDataBytes);
+    abstract protected WriteResult<K> writeWithKey(final K nativeKey, final byte[] testDataBytes);
 
     abstract protected List<? extends NativeInfo<?, K>> getNativeStorage();
 
@@ -131,11 +132,11 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
         this.testInfo = testInfo;
     }
 
-    final protected KafkaManager setupKafka(Map<String, String> connectorProperties) throws IOException, ExecutionException, InterruptedException {
-        return setupKafka(false, connectorProperties);
+    final protected KafkaManager setupKafka() throws IOException, ExecutionException, InterruptedException {
+        return setupKafka(false);
     }
 
-    final protected KafkaManager setupKafka(boolean forceRestart, Map<String, String> connectorProperties) throws IOException, ExecutionException, InterruptedException {
+    final protected KafkaManager setupKafka(boolean forceRestart) throws IOException, ExecutionException, InterruptedException {
         KafkaManager kafkaManager = kafkaManagerThreadLocal.get();
         if (kafkaManager != null) {
             if (forceRestart) {
@@ -145,7 +146,7 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
         kafkaManager = kafkaManagerThreadLocal.get();
         if (kafkaManager == null) {
             String clusterName = new CasedString(CasedString.StringCase.CAMEL, testInfo.getTestClass().get().getSimpleName()).toCase(CasedString.StringCase.KEBAB).toLowerCase(Locale.ROOT);
-            kafkaManager = new KafkaManager(clusterName, getOffsetFlushInterval(), connectorProperties);
+            kafkaManager = new KafkaManager(clusterName, getOffsetFlushInterval(), getConnectorClass());
             kafkaManagerThreadLocal.set(kafkaManager);
         }
         return kafkaManager;
@@ -156,7 +157,6 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
         if (kafkaManager != null) {
             kafkaManager.stop();
             kafkaManagerThreadLocal.remove();
-            //kafkaManager = null;
         }
     }
 
@@ -165,6 +165,7 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
         if (kafkaManager != null) {
             kafkaManager.deleteConnector(getConnectorName());
         }
+        connectorNameThreadLocal.remove();
     }
     final protected KafkaManager getKafkaManager() {
         KafkaManager kafkaManager = kafkaManagerThreadLocal.get();
@@ -210,7 +211,7 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
      *            the partition id fo the file.
      * @return the WriteResult.
      */
-    protected final WriteResult write(final String topic, final byte[] testDataBytes, final int partition) {
+    protected final WriteResult<K> write(final String topic, final byte[] testDataBytes, final int partition) {
         return write(topic, testDataBytes, partition, null);
     }
 
@@ -226,7 +227,7 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
      * @param prefix the prefix for the key.
      * @return the WriteResult
      */
-    protected final WriteResult write(final String topic, final byte[] testDataBytes, final int partition, final String prefix) {
+    protected final WriteResult<K> write(final String topic, final byte[] testDataBytes, final int partition, final String prefix) {
         final K objectKey = createKey(prefix, topic, partition);
         return writeWithKey(objectKey, testDataBytes);
     }
@@ -256,7 +257,6 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
     public static void waitForRunningContainer(final Container<?> container, Duration timeout) {
         await().atMost(timeout).until(container::isRunning);
     }
-
 
     public OffsetManager<O> createOffsetManager(final Map<String, String> connectorConfig) {
         final WorkerSourceTaskContext context = mock(WorkerSourceTaskContext.class);
@@ -356,7 +356,7 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
 
         // Duration.ofSeconds(60)
         public List<JsonNode> consumeJsonMessages(final String topic, final int expectedMessageCount, final Duration timeout) {
-            final Properties consumerProperties = consumerPropertiesBuilder().valueDeserializer(JsonDeserializer.class).build();
+            final Properties consumerProperties = consumerPropertiesBuilder().keyDeserializer(StringDeserializer.class).valueDeserializer(JsonDeserializer.class).build();
             return consumeMessages(topic, consumerProperties, expectedMessageCount, timeout);
         }
 
@@ -378,7 +378,9 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
             do {
                 final ConsumerRecords<?, V> records = consumer.poll(Duration.ofMillis(500L));
                 recordsRetrieved = records.count();
-                records.forEach(record -> {recordValues.add(record.value());});
+                records.forEach(record -> {
+                    System.out.format( ">>>>>>>>>>>>>> %s %s %s%n", record, new String((byte[])record.key()), new String((byte[])record.value()));
+                recordValues.add(record.value());});
                 // Choosing 10 records as it allows for integration tests with a smaller max poll to be added
                 // while maintaining efficiency, a slightly larger number could be added but this is slightly more efficient
                 // than larger numbers.
@@ -418,7 +420,7 @@ abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends Offset
         }
     }
 
-    public final class WriteResult {
+    public static final class WriteResult<K extends Comparable<K>> {
         private final OffsetManager.OffsetManagerKey offsetKey;
         private final K nativeKey;
         public WriteResult(final OffsetManager.OffsetManagerKey offsetKey, final K nativeKey) {

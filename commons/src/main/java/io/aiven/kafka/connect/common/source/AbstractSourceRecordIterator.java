@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
@@ -102,7 +101,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      * @param bufferSize
      *            the size of the ring buffer.
      */
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
+    //@SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
     public AbstractSourceRecordIterator(final SourceCommonConfig sourceConfig, final OffsetManager<O> offsetManager,
             final Transformer transformer, final int bufferSize) {
         super();
@@ -161,7 +160,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      *
      * @param nativeObject
      *            the native object to get the AbstractSourceRecord for.
-     * @return the AbstractSourceRecord for the natvie object.
+     * @return the AbstractSourceRecord for the native object.
      */
     abstract protected T createSourceRecord(N nativeObject);
 
@@ -227,7 +226,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
                 .setKeyData(transformer.getKeyData(sourceRecord.getNativeKey(), sourceRecord.getTopic(), sourceConfig));
 
         lastSeenNativeKey = sourceRecord.getNativeKey();
-
+        getLogger().info("Processing record: {} skipping {} already read internal records", lastSeenNativeKey, sourceRecord.getRecordCount());
         return transformer
                 .getRecords(getInputStream(sourceRecord), sourceRecord.getNativeItemSize(), sourceRecord.getContext(),
                         sourceConfig, sourceRecord.getRecordCount())
@@ -321,6 +320,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
         public Optional<T> apply(final N nativeItem) {
             final K itemName = getNativeKey(nativeItem);
             final Optional<Context<K>> optionalContext = utils.process(itemName);
+            getLogger().info("testing {} ", itemName);
             if (optionalContext.isPresent() && !ringBuffer.contains(itemName)) {
                 final T sourceRecord = createSourceRecord(nativeItem);
                 final Context<K> context = optionalContext.get();
@@ -331,8 +331,10 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
                         .getEntry(offsetManagerEntry.getManagerKey(), offsetManagerEntry::fromProperties)
                         .orElse(offsetManagerEntry);
                 sourceRecord.setOffsetManagerEntry(offsetManagerEntry);
+                getLogger().info("returning {} ", itemName);
                 return Optional.of(sourceRecord);
             }
+            getLogger().info("skipping {} ", itemName);
             return Optional.empty();
         }
 

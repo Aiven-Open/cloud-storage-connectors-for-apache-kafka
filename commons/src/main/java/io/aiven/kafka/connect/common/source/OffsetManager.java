@@ -115,7 +115,6 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
                 .forEach(entry -> matchingOffsets.put(entry.getKey(), entry.getValue()));
         // offsets is multithreaded batching in matchingOffsets is faster
         offsets.putAll(matchingOffsets);
-
     }
 
     /**

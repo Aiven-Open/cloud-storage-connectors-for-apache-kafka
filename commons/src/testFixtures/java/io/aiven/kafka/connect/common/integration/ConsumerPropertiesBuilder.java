@@ -14,9 +14,8 @@ public class ConsumerPropertiesBuilder {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put("specific.avro.reader", "false");
+        valueDeserializer(StringDeserializer.class);
+        keyDeserializer(StringDeserializer.class);
     }
 
     public ConsumerPropertiesBuilder keyDeserializer(final Class<? extends Deserializer<?>> keyDeserializer) {
