@@ -29,6 +29,7 @@ import io.findify.s3mock.S3Mock;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.runtime.ConnectorConfig;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
@@ -55,7 +56,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
@@ -176,7 +176,7 @@ final class S3SourceTaskTest {
         properties.putIfAbsent("name", "test_source_connector");
         properties.putIfAbsent("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         properties.putIfAbsent("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        properties.putIfAbsent(MAX_TASKS, "1");
+        properties.putIfAbsent(ConnectorConfig.TASKS_MAX_CONFIG, "1");
         properties.put(TASK_ID, "1");
         properties.putIfAbsent("connector.class", S3SourceConnector.class.getName());
         properties.putIfAbsent(TARGET_TOPIC, "testtopic");

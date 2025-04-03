@@ -32,8 +32,6 @@ import software.amazon.awssdk.regions.Region;
 
 import java.util.Map;
 
-import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYyyyUppercase;
-
 final public class S3SourceConfig extends SourceCommonConfig {
 
     private final S3ConfigFragment s3ConfigFragment;
@@ -41,7 +39,7 @@ final public class S3SourceConfig extends SourceCommonConfig {
     private final AwsCredentialProviderFactory awsCredentialsProviderFactory;
 
     public S3SourceConfig(final Map<String, String> properties) {
-        super(configDef(), handleDeprecatedYyyyUppercase(properties));
+        super(configDef(), S3ConfigFragment.handleDeprecations(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
         awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
 
@@ -124,8 +122,13 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
     }
 
+    /**
+     * @deprecated use {@link #getRingBufferSize()}
+     * @return the size of the ring buffer
+     */
+    @Deprecated
     public int getS3FetchBufferSize() {
-        return s3ConfigFragment.getS3FetchBufferSize();
+        return getRingBufferSize();
     }
 
     public int getFetchPageSize() {

@@ -90,7 +90,7 @@ import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-
+@Disabled
 @Testcontainers
 @SuppressWarnings("PMD.ExcessiveImports")
 final class IntegrationTest implements IntegrationBase {

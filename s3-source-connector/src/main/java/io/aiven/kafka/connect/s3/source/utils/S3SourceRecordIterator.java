@@ -16,20 +16,19 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import java.io.InputStream;
-import java.util.stream.Stream;
-
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;
+
+import java.io.InputStream;
+import java.util.stream.Stream;
 
 /**
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,
@@ -56,7 +55,7 @@ public final class S3SourceRecordIterator
             final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer,
             final AWSV2SourceClient sourceClient) {
 
-        super(s3SourceConfig, offsetManager, transformer, s3SourceConfig.getS3FetchBufferSize());
+        super(s3SourceConfig, offsetManager, transformer);
         this.bucket = s3SourceConfig.getAwsS3BucketName();
         this.sourceClient = sourceClient;
     }

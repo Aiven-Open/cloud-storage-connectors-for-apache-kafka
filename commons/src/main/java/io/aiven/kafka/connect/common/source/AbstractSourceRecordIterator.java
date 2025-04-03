@@ -98,12 +98,10 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      *            the Offset manager to use.
      * @param transformer
      *            the transformer to use.
-     * @param bufferSize
-     *            the size of the ring buffer.
      */
     //@SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
     public AbstractSourceRecordIterator(final SourceCommonConfig sourceConfig, final OffsetManager<O> offsetManager,
-            final Transformer transformer, final int bufferSize) {
+            final Transformer transformer) {
         super();
 
         final DistributionType distributionType = sourceConfig.getDistributionType();
@@ -118,7 +116,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
         this.fileMatching = new FileMatching(new FilePatternUtils(sourceConfig.getFilenameTemplate().toString()));
         this.inner = Collections.emptyIterator();
         this.outer = Collections.emptyIterator();
-        this.ringBuffer = new RingBuffer<>(Math.max(1, bufferSize));
+        this.ringBuffer = new RingBuffer<>(sourceConfig.getRingBufferSize());
     }
 
     /**
@@ -320,7 +318,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
         public Optional<T> apply(final N nativeItem) {
             final K itemName = getNativeKey(nativeItem);
             final Optional<Context<K>> optionalContext = utils.process(itemName);
-            getLogger().info("testing {} ", itemName);
+            getLogger().debug("testing {} ", itemName);
             if (optionalContext.isPresent() && !ringBuffer.contains(itemName)) {
                 final T sourceRecord = createSourceRecord(nativeItem);
                 final Context<K> context = optionalContext.get();
@@ -331,10 +329,10 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
                         .getEntry(offsetManagerEntry.getManagerKey(), offsetManagerEntry::fromProperties)
                         .orElse(offsetManagerEntry);
                 sourceRecord.setOffsetManagerEntry(offsetManagerEntry);
-                getLogger().info("returning {} ", itemName);
+                getLogger().debug("returning {} ", itemName);
                 return Optional.of(sourceRecord);
             }
-            getLogger().info("skipping {} ", itemName);
+            getLogger().debug("skipping {} ", itemName);
             return Optional.empty();
         }
 

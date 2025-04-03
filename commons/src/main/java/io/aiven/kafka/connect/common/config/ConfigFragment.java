@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.config;
 
 import org.apache.kafka.common.config.AbstractConfig;
+import org.slf4j.Logger;
 
 /**
  * Config fragments encapsulate logical fragments of configuration that may be used across multiple Connectors or across
@@ -36,6 +37,15 @@ import org.apache.kafka.common.config.AbstractConfig;
  * validate} methods on the dependant fragments during validation.
  */
 public class ConfigFragment {
+
+    public static void logDeprecated(Logger logger, String old, String replacement) {
+        logger.warn("{} property is deprecated please use {}.", old, replacement);
+    }
+
+    public static void logDeprecated(Logger logger, String old) {
+        logger.warn("{} property is deprecated please read documentation for the new name.", old);
+    }
+
     /** The configuration that this fragment is associated with */
     protected final AbstractConfig cfg;
 
@@ -48,6 +58,7 @@ public class ConfigFragment {
     protected ConfigFragment(final AbstractConfig cfg) {
         this.cfg = cfg;
     }
+
 
     /**
      * Validate that the data in the configuration matches any restrictions. Default implementation does nothing.

@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.source;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
@@ -26,9 +27,11 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -78,6 +81,8 @@ public abstract class AbstractSourceTask extends SourceTask {
      * The transfer queue from concrete implementation to Kafka
      */
     private LinkedBlockingQueue<SourceRecord> queue;
+
+    private CircularFifoQueue<SourceRecord> deduplicateQueue;
 
     /**
      * The thread that is running the polling of the implementation.
@@ -171,8 +176,72 @@ public abstract class AbstractSourceTask extends SourceTask {
         final SourceCommonConfig config = configure(props);
         maxPollRecords = config.getMaxPollRecords();
         queue = new LinkedBlockingQueue<>(maxPollRecords * 2);
+        deduplicateQueue = new CircularFifoQueue<>(maxPollRecords * 2);
         sourceRecordIterator = getIterator(backoffConfig);
         implemtationPollingThread.start();
+    }
+
+    private boolean arrayEquality(final Object o1, final Object o2) {
+        Class<?> o1Class = o1.getClass();
+        Class<?> o2Class = o2.getClass();
+        if (o1Class.getComponentType() != o2Class.getComponentType()) {
+            return false;
+        }
+
+        if (o1Class.getComponentType().equals(byte.class)) {
+            return Arrays.equals((byte[]) o1, (byte[]) o2);
+        } else if (o1Class.getComponentType().equals(short.class)) {
+            return Arrays.equals((short[]) o1, (short[]) o2);
+        } else if (o1Class.getComponentType().equals(char.class)) {
+            return Arrays.equals((char[]) o1, (char[]) o2);
+        } else if (o1Class.getComponentType().equals(int.class)) {
+            return Arrays.equals((int[]) o1, (int[]) o2);
+        } else if (o1Class.getComponentType().equals(long.class)) {
+            return Arrays.equals((long[]) o1, (long[]) o2);
+        } else if (o1Class.getComponentType().equals(float.class)) {
+            return Arrays.equals((float[]) o1, (float[]) o2);
+        } else if (o1Class.getComponentType().equals(double.class)) {
+            return Arrays.equals((double[]) o1, (double[]) o2);
+        }
+        return Arrays.equals((Object[]) o1, (Object[]) o2);
+    }
+
+    private boolean equalsNullCheck(final Object o1, final Object o2) {
+        boolean result = false;
+        if (o1 != null) {
+            if (o1 instanceof Map && o2 instanceof Map) {
+                Map<?, ?> o1Map = (Map<?, ?>) o1;
+                Map<?, ?> o2Map = (Map<?, ?>) o2;
+                result =  Objects.deepEquals(o1Map.keySet().toArray(), o2Map.keySet().toArray()) && Objects.deepEquals(o1Map.values().toArray(), o2Map.values().toArray());
+            } else {
+                result = Objects.deepEquals(o1, o2);
+            }
+        } else result = o2 == null;
+        return result;
+    }
+
+    /**
+     * Equivalent to SourceRecord.equals() without the timestamp check.
+     * @param record
+     * @return
+     */
+    private boolean detectDuplicate(SourceRecord record) {
+        for (SourceRecord queuedRecord : deduplicateQueue) {
+           if (equalsNullCheck(record.kafkaPartition(), queuedRecord.kafkaPartition())
+                    && equalsNullCheck(record.topic(), queuedRecord.topic())
+                    && equalsNullCheck(record.keySchema(), queuedRecord.keySchema())
+                    && equalsNullCheck(record.key(), queuedRecord.key())
+                    && equalsNullCheck(record.valueSchema(), queuedRecord.valueSchema())
+                    && equalsNullCheck(record.value(), queuedRecord.value())
+                    && equalsNullCheck(record.headers(), queuedRecord.headers())
+                    && equalsNullCheck(record.sourcePartition(), queuedRecord.sourcePartition())
+                    && equalsNullCheck(record.sourceOffset(), queuedRecord.sourceOffset())
+            ) {
+                return true;
+            }
+        }
+        deduplicateQueue.add(record);
+        return false;
     }
 
     /**
@@ -185,15 +254,17 @@ public abstract class AbstractSourceTask extends SourceTask {
             if (sourceRecordIterator.hasNext()) {
                 backoff.reset();
                 final SourceRecord sourceRecord = sourceRecordIterator.next();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("tryAdd() : read record {}", sourceRecord.sourceOffset());
+                if (detectDuplicate(sourceRecord)) {
+                    logger.debug("tryAdd() : duplicate queue entry");
+                    return false;
                 }
                 queue.put(sourceRecord);
+                logger.debug("tryAdd() : enqueued record {} {} {}", sourceRecord, sourceRecord.sourceOffset(), sourceRecord.sourcePartition());
                 return true;
             }
-            logger.info("No records found in tryAdd call");
+            logger.debug("No records found in tryAdd call");
         } else {
-            logger.info("No space in queue");
+            logger.debug("No space in queue");
         }
         return false;
     }

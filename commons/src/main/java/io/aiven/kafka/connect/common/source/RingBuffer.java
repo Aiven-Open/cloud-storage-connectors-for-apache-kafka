@@ -23,6 +23,11 @@ import org.slf4j.LoggerFactory;
 
 public final class RingBuffer<K> extends SynchronizedQueue<K> {
     private static final Logger LOGGER = LoggerFactory.getLogger(RingBuffer.class);
+
+    /**
+     * Flag to indicate ring buffer should alwasy be empty.
+     */
+    private final boolean isEmpty;
     /**
      * Create a Ring Buffer of a maximum Size
      *
@@ -30,7 +35,8 @@ public final class RingBuffer<K> extends SynchronizedQueue<K> {
      *            The size that the linked list should be.
      */
     public RingBuffer(final int size) {
-        super(new CircularFifoQueue<>(size));
+        super(new CircularFifoQueue<>(size > 0 ? size : 1));
+        isEmpty = size == 0;
     }
 
     /**
@@ -41,13 +47,15 @@ public final class RingBuffer<K> extends SynchronizedQueue<K> {
      *            Item T which is to be added to the Queue
      */
     public void enqueue(final K item) {
-        if (item != null && !contains(item)) {
-            if (isFull()) {
-                LOGGER.info(">>>>>>>>> Ring buffer is full");
-                poll();
+        if (!isEmpty) {
+            if (item != null && !contains(item)) {
+                if (isFull()) {
+                    LOGGER.debug("Ring buffer is full");
+                    poll();
+                }
+                add(item);
+                LOGGER.debug("Ring buffer added item {} record count {}", item, size());
             }
-            add(item);
-            LOGGER.info(">>>>>>>>> Ring buffer added item {} record count {}", item, size());
         }
     }
 
@@ -65,7 +73,7 @@ public final class RingBuffer<K> extends SynchronizedQueue<K> {
      */
     public K getOldest() {
         K oldest = isFull() ? peek() : null;;
-        LOGGER.info(">>>>>>>>> Ring buffer getOldest {}", oldest);
+        LOGGER.debug("Ring buffer getOldest {}", oldest);
         return oldest;
     }
 }

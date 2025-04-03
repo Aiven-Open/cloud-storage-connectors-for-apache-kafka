@@ -1,5 +1,6 @@
 package io.aiven.kafka.connect.s3.source.testdata;
 
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.integration.AbstractIntegrationTest.WriteResult;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.S3SourceConnector;
@@ -75,12 +76,14 @@ public class AWSIntegrationTestData {
     public Map<String, String> createConnectorConfig(String localPrefix) {
         Map<String, String> data = new HashMap<>();
 
+        SourceConfigFragment.setter(data)
+                .ringBufferSize(10);
+
         S3ConfigFragment.Setter setter =  S3ConfigFragment.setter(data)
                 .bucketName(BUCKET_NAME)
                 .endpoint(container.getEndpoint())
                 .accessKeyId(S3_ACCESS_KEY_ID)
-                .accessKeySecret(S3_SECRET_ACCESS_KEY)
-                .fetchBufferSize(1);
+                .accessKeySecret(S3_SECRET_ACCESS_KEY);
         if (localPrefix != null) {
             setter.prefix(localPrefix);
         }

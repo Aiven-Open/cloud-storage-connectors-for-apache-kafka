@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.KafkaFragment;
-import io.aiven.kafka.connect.common.config.ParquetTestingFixture;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
@@ -28,6 +27,7 @@ import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
+import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.confluent.connect.avro.AvroConverter;
@@ -40,13 +40,11 @@ import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -136,7 +134,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
      * Verify that the offset manager can read the data and skip already read messages.
      */
     @Test
-    void endToEndOffsetManagerTestWriteBeforeRestart() {
+    void writeBeforeRestartReadsNewRecordsTest() {
         final String topic = getTopic();
         final int partitionId = 0;
         final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
@@ -199,7 +197,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
      * Verify that the offset manager can read the data and skip already read messages.
      */
     @Test
-    void endToEndOffsetManagerTestWriteAfterRestart() {
+    void writeAfterRestartReadsNewRecordsTest() {
         final String topic = getTopic();
         final int partitionId = 0;
         final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
@@ -261,7 +259,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
 
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
-    void endToEndBytesTest(boolean addPrefix) throws IOException, ExecutionException, InterruptedException {
+    void bytesTest(boolean addPrefix) throws IOException, ExecutionException, InterruptedException {
         final String topic = getTopic();
         final int partitionId = 0;
         final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
@@ -272,20 +270,11 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
 
         final Map<OffsetManager.OffsetManagerKey, Long> expectedOffsetRecords = new HashMap<>();
         // write 5 objects
-        WriteResult writeResult = write(topic, testData1.getBytes(StandardCharsets.UTF_8), 0, localPrefix);
-        expectedOffsetRecords.put(writeResult.getOffsetManagerKey(), 1L);
-
-        writeResult = write(topic, testData2.getBytes(StandardCharsets.UTF_8), 0, localPrefix);
-        expectedOffsetRecords.put(writeResult.getOffsetManagerKey(), 1L);
-
-        writeResult = write(topic, testData1.getBytes(StandardCharsets.UTF_8), 1, localPrefix);
-        expectedOffsetRecords.put(writeResult.getOffsetManagerKey(), 1L);
-
-        writeResult = write(topic, testData2.getBytes(StandardCharsets.UTF_8), 1, localPrefix);
-        expectedOffsetRecords.put(writeResult.getOffsetManagerKey(), 1L);
-
-        final List<OffsetManager.OffsetManagerKey> offsetKeys = new ArrayList<>(expectedOffsetRecords.keySet());
-        offsetKeys.add(write(topic, new byte[0], 3).getOffsetManagerKey());
+        expectedOffsetRecords.put(write(topic, testData1.getBytes(StandardCharsets.UTF_8), 0, localPrefix).getOffsetManagerKey(), 1L);
+        expectedOffsetRecords.put(write(topic, testData2.getBytes(StandardCharsets.UTF_8), 0, localPrefix).getOffsetManagerKey(), 1L);
+        expectedOffsetRecords.put(write(topic, testData1.getBytes(StandardCharsets.UTF_8), 1, localPrefix).getOffsetManagerKey(), 1L);
+        expectedOffsetRecords.put(write(topic, testData2.getBytes(StandardCharsets.UTF_8), 1, localPrefix).getOffsetManagerKey(), 1L);
+        write(topic, new byte[0], 3);
 
         try {
             // Start the Connector
@@ -322,10 +311,9 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
         }
     }
 
-
     @ParameterizedTest
     @CsvSource({ "4096", "3000", "4101" })
-    void endToEndByteBufferSizeTest(final int maxBufferSize) throws IOException, ExecutionException, InterruptedException {
+    void bytesBufferSizeTest(final int maxBufferSize) throws IOException, ExecutionException, InterruptedException {
         final String topic = getTopic();
 
         final int byteArraySize = 6000;
@@ -374,7 +362,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
     }
 
     @Test
-    void endToEndAvroTest() throws IOException, ExecutionException, InterruptedException {
+    void avroTest() throws IOException, ExecutionException, InterruptedException {
         final var topic = getTopic();
 
         final int numOfRecsFactor = 5000;
@@ -442,7 +430,6 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
         }
     }
 
-    @Disabled("not functioning")
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
     void parquetTest(final boolean addPrefix) throws IOException, ExecutionException, InterruptedException {
@@ -454,34 +441,16 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
 
         // write the avro messages
         final K objectKey = createKey(prefix, topic, partition);
-        //final Path parquetFileDir = Files.createTempDirectory("parquet_tests");
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            ParquetTestingFixture.writeParquetFile(() -> baos, name, 100);
-            baos.flush();
-            writeWithKey(objectKey, baos.toByteArray());
-        }
+        writeWithKey(objectKey, ParquetTestDataFixture.generateMockParquetData(name, 100));
 
-//        String localS3Prefix = "";
-//        if (addPrefix) {
-//            localS3Prefix = "bucket/topics/" + topic + "/partition/" + partition + "/";
-//        }
+        assertThat(getNativeStorage()).hasSize(1);
 
-//        final String fileName = prefix + topic + "-" + partition + "-" + System.currentTimeMillis() + ".txt";
-
-
-
-//        final Map<String, String> connectorConfig = getAvroConfig(topic, InputFormat.PARQUET, addPrefix, localS3Prefix,
-//                prefixPattern, DistributionType.PARTITION);
-
-        final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 4, InputFormat.AVRO);
+        final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 4, InputFormat.PARQUET);
         KafkaFragment.setter(connectorConfig)
                 .name(getConnectorName())
                 .keyConverter(ByteArrayConverter.class)
                 .valueConverter(AvroConverter.class);
 
-        TransformerFragment.setter(connectorConfig).valueConverterSchemaRegistry(getKafkaManager().getSchemaRegistryUrl())
-                .schemaRegistry(getKafkaManager().getSchemaRegistryUrl())
-                .avroValueSerializer(KafkaAvroSerializer.class);
 
         SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.PARTITION);
 
@@ -491,25 +460,16 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
 
         try {
             KafkaManager kafkaManager = setupKafka();
+
+            TransformerFragment.setter(connectorConfig).valueConverterSchemaRegistry(getKafkaManager().getSchemaRegistryUrl())
+                    .schemaRegistry(getKafkaManager().getSchemaRegistryUrl())
+                    .avroValueSerializer(KafkaAvroSerializer.class);
+
+
             kafkaManager.createTopic(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
-//
-//        final Path parquetFileDir = tempDir.resolve("parquet_tests/user.parquet");
-//        Files.createDirectories(parquetFileDir);
-//        final Path path = ParquetTestingFixture.writeParquetFile(parquetFileDir, name, 100);
-//
-//        write(topic, )
-//        try {
-//            s3Client.putObject(PutObjectRequest.builder().bucket(TEST_BUCKET_NAME).key(fileName).build(), path);
-//        } catch (final Exception e) { // NOPMD broad exception caught
-//            LOGGER.error("Error in reading file {}", e.getMessage(), e);
-//        } finally {
-//            Files.delete(path);
-//        }
-
-            // Waiting for a small number of messages so using a smaller Duration of a minute
-            final List<GenericRecord> records = messageConsumer().consumeAvroMessages(topic, 100, getKafkaManager().getSchemaRegistryUrl(), Duration.ofSeconds(60));
+            final List<GenericRecord> records = messageConsumer().consumeAvroMessages(topic, 100, getKafkaManager().getSchemaRegistryUrl(), Duration.ofSeconds(20));
             final List<String> expectedRecordNames = IntStream.range(0, 100)
                     .mapToObj(i -> name + i)
                     .collect(Collectors.toList());
@@ -524,7 +484,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
     }
 
     @Test
-    void endToEndJsonTest() throws IOException, ExecutionException, InterruptedException {
+    void jsonlTest() throws IOException, ExecutionException, InterruptedException {
 
         final var topic = getTopic();
 

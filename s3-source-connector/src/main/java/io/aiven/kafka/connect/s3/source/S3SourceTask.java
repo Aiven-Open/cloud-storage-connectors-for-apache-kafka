@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.source;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
@@ -92,8 +91,6 @@ public class S3SourceTask extends AbstractSourceTask {
                                 throw exception;
                             }
                         } else {
-                            // TODO validate that the iterator does not lose an S3Object. Add test to
-                            // S3ObjectIterator.
                             throw exception;
                         }
                     }
@@ -112,7 +109,7 @@ public class S3SourceTask extends AbstractSourceTask {
 
     @Override
     protected SourceCommonConfig configure(final Map<String, String> props) {
-        LOGGER.info("S3 Source task started.");
+        LOGGER.info("Configuring S3 Source task.");
         this.s3SourceConfig = new S3SourceConfig(props);
         this.transformer = s3SourceConfig.getTransformer();
         offsetManager = new OffsetManager<>(context);

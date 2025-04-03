@@ -26,6 +26,7 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.internal.BucketNameUtils;
 import io.aiven.kafka.connect.common.config.AbstractFragmentSetter;
 import io.aiven.kafka.connect.common.config.ConfigFragment;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
 import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
@@ -46,8 +47,11 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -119,6 +123,8 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG = "aws.s3.backoff.max.retries";
 
     public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
+    /** @deprecated use SourceConfigFragment.RING_BUFFER_SIZE */
+    @Deprecated
     public static final String AWS_S3_FETCH_BUFFER_SIZE = "aws.s3.fetch.buffer.size";
 
     private static final String GROUP_AWS = "AWS";
@@ -230,11 +236,28 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
-        configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
+        configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10,
+                ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, FETCH_PAGE_SIZE);
 
-        configDef.define(AWS_S3_FETCH_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(1),
+        configDef.define(AWS_S3_FETCH_BUFFER_SIZE, ConfigDef.Type.INT, 1000,
+                new ConfigDef.Validator() {
+                    ConfigDef.Range range = ConfigDef.Range.atLeast(1);
+
+                    @Override
+                    public void ensureValid(String name, Object value) {
+                        if (Objects.nonNull(value)) {
+                            logDeprecated(LOGGER, AWS_S3_FETCH_BUFFER_SIZE, SourceConfigFragment.RING_BUFFER_SIZE);
+                        }
+                        range.ensureValid(name, value);
+                    }
+
+                    @Override
+                    public String toString() {
+                        return range.toString();
+                    }
+                },
                 ConfigDef.Importance.MEDIUM,
                 "AWS S3 Fetch buffer size, this is the number of s3object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
                 GROUP_AWS, awsGroupCounter++, // NOPMD
@@ -271,21 +294,13 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ConfigDef.Width.NONE, AWS_STS_CONFIG_ENDPOINT);
     }
 
-    private static void logDeprecated(String old, String replacement) {
-        LOGGER.info("{} property is deprecated please use {}.", old, replacement);
-    }
-
-    private static void logDeprecated(String old) {
-        LOGGER.info("{} property is deprecated please read documentation for the new name.", old);
-    }
-
     static void addDeprecatedConfiguration(final ConfigDef configDef) {
 
         configDef.define(AWS_ACCESS_KEY_ID, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword() {
             @Override
             public void ensureValid(final String name, final Object value) {
                 if (Objects.nonNull(value)) {
-                    logDeprecated(AWS_ACCESS_KEY_ID, AWS_ACCESS_KEY_ID_CONFIG);
+                    logDeprecated(LOGGER, AWS_ACCESS_KEY_ID, AWS_ACCESS_KEY_ID_CONFIG);
                 }
                 super.ensureValid(name, value);
             }
@@ -295,7 +310,7 @@ public final class S3ConfigFragment extends ConfigFragment {
             @Override
             public void ensureValid(final String name, final Object value) {
                 if (Objects.nonNull(value)) {
-                    logDeprecated(AWS_SECRET_ACCESS_KEY, AWS_SECRET_ACCESS_KEY_CONFIG);
+                    logDeprecated(LOGGER, AWS_SECRET_ACCESS_KEY, AWS_SECRET_ACCESS_KEY_CONFIG);
                 }
                 super.ensureValid(name, value);
             }
@@ -305,7 +320,7 @@ public final class S3ConfigFragment extends ConfigFragment {
             @Override
             public void ensureValid(final String name, final Object value) {
                 if (Objects.nonNull(value)) {
-                    logDeprecated(AWS_S3_BUCKET, AWS_S3_BUCKET_NAME_CONFIG);
+                    logDeprecated(LOGGER, AWS_S3_BUCKET, AWS_S3_BUCKET_NAME_CONFIG);
                 }
                 super.ensureValid(name, value);
             }
@@ -315,7 +330,7 @@ public final class S3ConfigFragment extends ConfigFragment {
             @Override
             public void ensureValid(final String name, final Object value) {
                 if (Objects.nonNull(value)) {
-                    logDeprecated(AWS_S3_ENDPOINT, AWS_S3_ENDPOINT_CONFIG);
+                    logDeprecated(LOGGER, AWS_S3_ENDPOINT, AWS_S3_ENDPOINT_CONFIG);
                 }
                 super.ensureValid(name, value);
             }
@@ -325,7 +340,7 @@ public final class S3ConfigFragment extends ConfigFragment {
             @Override
             public void ensureValid(final String name, final Object value) {
                 if (Objects.nonNull(value)) {
-                    logDeprecated(AWS_S3_REGION, AWS_S3_REGION_CONFIG);
+                    logDeprecated(LOGGER, AWS_S3_REGION, AWS_S3_REGION_CONFIG);
                 }
                 super.ensureValid(name, value);
             }
@@ -335,7 +350,7 @@ public final class S3ConfigFragment extends ConfigFragment {
             @Override
             public void ensureValid(final String name, final Object value) {
                 if (Objects.nonNull(value)) {
-                    logDeprecated(AWS_S3_PREFIX, AWS_S3_PREFIX_CONFIG);
+                    logDeprecated(LOGGER, AWS_S3_PREFIX, AWS_S3_PREFIX_CONFIG);
                 }
                 super.ensureValid(name, value);
             }
@@ -345,7 +360,7 @@ public final class S3ConfigFragment extends ConfigFragment {
                     @Override
                     public void ensureValid(final String name, final Object value) {
                         if (Objects.nonNull(value)) {
-                            logDeprecated(OUTPUT_FIELDS);
+                            logDeprecated(LOGGER, OUTPUT_FIELDS);
                         }
                         super.ensureValid(name, value);
                     }
@@ -358,12 +373,51 @@ public final class S3ConfigFragment extends ConfigFragment {
             @Override
             public void ensureValid(final String name, final Object value) {
                 if (Objects.nonNull(value)) {
-                    logDeprecated(OUTPUT_COMPRESSION);
+                    logDeprecated(LOGGER, OUTPUT_COMPRESSION);
                 }
                 super.ensureValid(name, value);
             }
         }, ConfigDef.Importance.MEDIUM, "Output compression. Valid values are: " + OUTPUT_COMPRESSION_TYPE_GZIP
                 + " and " + OUTPUT_COMPRESSION_TYPE_NONE);
+    }
+
+    public static Map<String, String> handleDeprecations(final Map<String, String> properties) {
+        handleDeprecatedYyyyUppercase(properties);
+        if (properties.containsKey(AWS_S3_FETCH_BUFFER_SIZE)) {
+            SourceConfigFragment.setter(properties)
+                            .ringBufferSize(Integer.parseInt(properties.get(AWS_S3_FETCH_BUFFER_SIZE)));
+            properties.remove(AWS_S3_FETCH_BUFFER_SIZE);
+        }
+        return properties;
+    }
+
+    public static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
+        if (!properties.containsKey(AWS_S3_PREFIX_CONFIG)) {
+            return properties;
+        }
+
+        final var result = new HashMap<>(properties);
+        for (final var prop : List.of(AWS_S3_PREFIX_CONFIG)) {
+            if (properties.containsKey(prop)) {
+                String template = properties.get(prop);
+                if (template != null) {
+                    final String originalTemplate = template;
+
+                    final var unitYyyyPattern = Pattern.compile("\\{\\{\\s*timestamp\\s*:\\s*unit\\s*=\\s*YYYY\\s*}}");
+                    template = unitYyyyPattern.matcher(template)
+                            .replaceAll(matchResult -> matchResult.group().replace("YYYY", "yyyy"));
+
+                    if (!template.equals(originalTemplate)) {
+                        LOGGER.warn("{{timestamp:unit=YYYY}} is no longer supported, "
+                                        + "please use {{timestamp:unit=yyyy}} instead. " + "It was automatically replaced: {}",
+                                template);
+                    }
+
+                    result.put(prop, template);
+                }
+            }
+        }
+        return result;
     }
 
     @Override
@@ -587,10 +641,6 @@ public final class S3ConfigFragment extends ConfigFragment {
         return cfg.getInt(FETCH_PAGE_SIZE);
     }
 
-    public int getS3FetchBufferSize() {
-        return cfg.getInt(AWS_S3_FETCH_BUFFER_SIZE);
-    }
-
     public final static class Setter extends AbstractFragmentSetter<Setter> {
 
         private Setter(final Map<String, String> data) {
@@ -624,10 +674,6 @@ public final class S3ConfigFragment extends ConfigFragment {
 
         public Setter endpoint(final String endpoint) {
             return setValue(AWS_S3_ENDPOINT_CONFIG, endpoint);
-        }
-
-        public Setter fetchBufferSize(final int fetchSize) {
-            return setValue(AWS_S3_FETCH_BUFFER_SIZE, fetchSize);
         }
 
         public Setter fetchPageSize(final int fetchPageSize) {

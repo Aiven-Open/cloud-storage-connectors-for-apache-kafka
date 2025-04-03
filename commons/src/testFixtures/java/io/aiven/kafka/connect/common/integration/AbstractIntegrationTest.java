@@ -394,7 +394,6 @@ public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends
             final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(1));
 // TODO there is probably a way to clean this up by using the internal data types from Kafka.
             for (final ConsumerRecord<byte[], byte[]> record : records) {
-                System.out.println(">>>>>>>>> RECORDS");
                 final Map<String, Object> data = objectMapper.readValue(record.value(), new TypeReference<>() { // NOPMD
                 });
                 // the key has the format
@@ -402,17 +401,9 @@ public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends
                 // key[1] = Map<String, Object> partition map.
                 final List<Object> key = objectMapper.readValue(record.key(), new TypeReference<>() { // NOPMD
                 });
-                key.forEach(System.out::println);
-                data.forEach((k, v) -> {System.out.println(k + "=" + v);});
                 Map<String, Object> managerEntryKey = (Map<String, Object>) key.get(1);
                 messages.add(converter.apply(managerEntryKey, data));
-                System.out.println("<<<<<<<<< RECORDS");
-
             }
-            System.out.println(">>>>>>>>> MESSAGES");
-            messages.forEach(System.out::println);
-            System.out.println("<<<<<<<<< MESSAGES");
-
             return messages;
         }
     }
