@@ -21,10 +21,11 @@ import io.aiven.kafka.connect.common.source.AbstractSourceRecordTest;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
 
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
 final class AzureBlobSourceRecordTest
         extends
-            AbstractSourceRecordTest<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> { // NOPMD
-    // TestClassWithoutTestCases
+            AbstractSourceRecordTest<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
+
     public static final String TEST_BLOB_NAME_TXT = "topic-00001-1741965423180.txt";
     public static final String CONTAINER = "container1";
 

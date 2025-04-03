@@ -94,11 +94,6 @@ dependencyResolutionManagement {
       library("mockito-junit-jupiter", "org.mockito:mockito-junit-jupiter:$mockitoVersion")
       library("wiremock", "com.github.tomakehurst:wiremock-jre8:$wireMockVersion")
       library("woodstox-stax2-api", "org.codehaus.woodstox:stax2-api:$stax2ApiVersion")
-      //library("kafka-connect-runtime-test","org.apache.kafka:connect-runtime:${kafkaVersion}:test")
-      //library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:${kafkaVersion}")
-      //library("kafka-clients", "org.apache.kafka:kafka-clients:${kafkaVersion}")
-      //library( "kafka-test", "org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-      //library( "kafka", "org.apache.kafka:kafka_2.13:${kafkaVersion}")
     }
     create("testcontainers") {
       library("junit-jupiter", "org.testcontainers:junit-jupiter:$testcontainersVersion")

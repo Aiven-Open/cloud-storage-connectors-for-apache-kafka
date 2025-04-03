@@ -16,15 +16,6 @@
 
 package io.aiven.kafka.connect.azure.source.config;
 
-import java.time.Duration;
-
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
-
-import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
-import io.aiven.kafka.connect.common.config.ConfigFragment;
-
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.HttpLogDetailLevel;
 import com.azure.core.http.policy.HttpLogOptions;
@@ -32,6 +23,15 @@ import com.azure.core.http.policy.RetryOptions;
 import com.azure.core.http.policy.UserAgentPolicy;
 import com.azure.storage.blob.BlobServiceAsyncClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
+import io.aiven.kafka.connect.common.config.AbstractFragmentSetter;
+import io.aiven.kafka.connect.common.config.ConfigFragment;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
+
+import java.time.Duration;
+import java.util.Map;
 /**
  * The configuration fragment that defines the Azure specific characteristics.
  */
@@ -81,6 +81,10 @@ public class AzureBlobConfigFragment extends ConfigFragment {
         return configDef;
     }
 
+    public static Setter setter(Map<String, String> data) {
+        return new Setter(data);
+    }
+
     private static void addUserAgentConfig(final ConfigDef configDef) {
         configDef.define(AZURE_USER_AGENT, ConfigDef.Type.STRING, USER_AGENT_HEADER_VALUE, ConfigDef.Importance.LOW,
                 "A custom user agent used while contacting Azure");
@@ -97,7 +101,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                 "The Azure Blob container name to store output files in.", GROUP_AZURE, azureGroupCounter++,
                 ConfigDef.Width.NONE, AZURE_STORAGE_CONTAINER_NAME_CONFIG);
         configDef.define(AZURE_FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AZURE, azureGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "Azure Blob Fetch page size", GROUP_AZURE, azureGroupCounter++,
                 ConfigDef.Width.NONE, AZURE_FETCH_PAGE_SIZE);
         configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AZURE,
@@ -130,9 +134,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
 
     @Override
     public void validate() {
-        final String connectionString = cfg.getString(AZURE_STORAGE_CONNECTION_STRING_CONFIG);
-
-        if (connectionString == null) {
+        if (getConnectionString() == null) {
             throw new ConfigException(
                     String.format("The configuration %s cannot be null.", AZURE_STORAGE_CONNECTION_STRING_CONFIG));
         }
@@ -189,4 +191,41 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                 .buildAsyncClient();
     }
 
+    public static class Setter extends AbstractFragmentSetter<AzureBlobConfigFragment.Setter> {
+        private Setter(Map<String, String> data) {
+            super(data);
+        }
+
+        public Setter prefix(final String prefix) {
+            return setValue(AZURE_PREFIX_CONFIG, prefix);
+        }
+
+        public Setter fetchPageSize(final int fetchPageSize) {
+            return setValue(AZURE_FETCH_PAGE_SIZE, fetchPageSize);
+        }
+
+        public Setter connectionString(final String connectionString) {
+            return setValue(AZURE_STORAGE_CONNECTION_STRING_CONFIG, connectionString);
+        }
+
+        public Setter containerName(final String containerName) {
+            return setValue(AZURE_STORAGE_CONTAINER_NAME_CONFIG, containerName);
+        }
+
+        public Setter userAgent(final String userAgent) {
+            return setValue(AZURE_USER_AGENT, userAgent);
+        }
+
+        public Setter retryBackoffMaxAttempts(final int retryBackoffMaxAttempts) {
+            return setValue(AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG, retryBackoffMaxAttempts);
+        }
+
+        public Setter retryBackoffInitialDelay(final Duration retryBackoffInitialDelay) {
+            return setValue(AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG, retryBackoffInitialDelay.toMillis());
+        }
+
+        public Setter retryBackoffMaxDelay(final Duration retryBackoffInitialDelay) {
+            return setValue(AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG, retryBackoffInitialDelay.toMillis());
+        }
+    }
 }

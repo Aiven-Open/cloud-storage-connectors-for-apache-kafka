@@ -16,28 +16,27 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.nio.ByteBuffer;
-import java.util.stream.Stream;
-
+import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobItemProperties;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
-
-import com.azure.storage.blob.models.BlobItem;
-import com.azure.storage.blob.models.BlobItemProperties;
 import reactor.core.publisher.Flux;
 
+import java.nio.ByteBuffer;
+import java.util.stream.Stream;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
 final public class AzureBlobSourceRecordIteratorTest
         extends
-            AbstractSourceRecordIteratorTest<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> { // NOPMD
-    // TestClassWithoutTestCases
+            AbstractSourceRecordIteratorTest<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
 
     private AzureBlobClient azureBlobClient;
 

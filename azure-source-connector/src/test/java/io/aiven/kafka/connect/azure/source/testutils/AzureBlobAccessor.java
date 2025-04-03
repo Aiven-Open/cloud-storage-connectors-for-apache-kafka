@@ -14,7 +14,16 @@
  * limitations under the License.
  */
 
-package aiven.kafka.connect.azure.source;
+package io.aiven.kafka.connect.azure.source.testutils;
+
+import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.models.BlobItem;
+import com.github.luben.zstd.ZstdInputStream;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.source.NativeInfo;
+import org.xerial.snappy.SnappyInputStream;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -31,15 +40,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
-
-import io.aiven.kafka.connect.common.config.CompressionType;
-
-import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.models.BlobItem;
-import com.github.luben.zstd.ZstdInputStream;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.xerial.snappy.SnappyInputStream;
 
 public final class AzureBlobAccessor {
     private final BlobContainerClient containerClient;
@@ -79,6 +79,13 @@ public final class AzureBlobAccessor {
         } else {
             return getBlobNames0();
         }
+    }
+
+    public List<AzureNativeInfo> getNativeStorage() {
+        return StreamSupport.stream(containerClient.listBlobs().spliterator(), false)
+                .map(AzureNativeInfo::new)
+                .sorted()
+                .collect(Collectors.toList());
     }
 
     public void createBlob(final String blobName, final InputStream contents) {
@@ -231,5 +238,29 @@ public final class AzureBlobAccessor {
         Objects.requireNonNull(value, "value cannot be null");
 
         return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
+    }
+
+    public static class AzureNativeInfo implements NativeInfo<BlobItem, String> {
+        private BlobItem blobItem;
+
+        AzureNativeInfo(BlobItem BlobItem) {
+            this.blobItem = BlobItem;
+        }
+
+        @Override
+        public BlobItem getNativeItem() {
+            return blobItem;
+        }
+
+        @Override
+        public String getNativeKey() {
+            return blobItem.getName();
+        }
+
+        @Override
+        public long getNativeItemSize() {
+            return blobItem.getProperties().getContentLength();
+        }
+
     }
 }

@@ -89,6 +89,4 @@ public class AWSIntegrationTestData {
         }
         return data;
     }
-
-
 }

@@ -16,21 +16,19 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
-import java.io.InputStream;
-import java.util.stream.Stream;
-
-import org.apache.kafka.common.utils.ByteBufferInputStream;
-
+import com.azure.storage.blob.models.BlobItem;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
-
-import com.azure.storage.blob.models.BlobItem;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.kafka.common.utils.ByteBufferInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.InputStream;
+import java.util.stream.Stream;
 
 /**
  * Iterator that processes Azure Blob files and creates Kafka source records. Supports different output formats (Avro,
@@ -51,7 +49,7 @@ public final class AzureBlobSourceRecordIterator
     public AzureBlobSourceRecordIterator(final AzureBlobSourceConfig azureBlobSourceConfig,
             final OffsetManager<AzureBlobOffsetManagerEntry> offsetManager, final Transformer transformer,
             final AzureBlobClient azureBlobClient) {
-        super(azureBlobSourceConfig, offsetManager, transformer, 0);
+        super(azureBlobSourceConfig, offsetManager, transformer);
         this.azureBlobClient = azureBlobClient;
         this.container = azureBlobSourceConfig.getAzureContainerName();
     }

@@ -16,12 +16,12 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
+import io.aiven.kafka.connect.common.source.OffsetManager;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import io.aiven.kafka.connect.common.source.OffsetManager;
 
 public final class AzureBlobOffsetManagerEntry
         implements
@@ -83,7 +83,7 @@ public final class AzureBlobOffsetManagerEntry
      * @return a new instance of OffsetManagerKey
      */
     public static OffsetManager.OffsetManagerKey asKey(final String bucket, final String blobName) {
-        return () -> Map.of(CONTAINER, bucket, BLOB_NAME, blobName);
+        return new OffsetManager.OffsetManagerKey(Map.of(CONTAINER, bucket, BLOB_NAME, blobName));
     }
 
     /**
@@ -170,7 +170,7 @@ public final class AzureBlobOffsetManagerEntry
      */
     @Override
     public OffsetManager.OffsetManagerKey getManagerKey() {
-        return () -> Map.of(CONTAINER, container, BLOB_NAME, blobName);
+        return asKey(container, blobName);
     }
 
     @Override
