@@ -30,7 +30,6 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.confluent.connect.avro.AvroConverter;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
-import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.Test;
@@ -156,7 +155,6 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
 
         final Map<String, String> configData = createConfig(topic, taskId, maxTasks, InputFormat.AVRO);
         KafkaFragment.setter(configData).valueConverter(AvroConverter.class);
-        TransformerFragment.setter(configData).avroValueSerializer(KafkaAvroSerializer.class);
 
         final int numberOfRecords = 5000;
 

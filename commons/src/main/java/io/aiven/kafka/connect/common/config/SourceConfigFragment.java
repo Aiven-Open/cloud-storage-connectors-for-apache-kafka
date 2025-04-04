@@ -28,16 +28,24 @@ import java.util.stream.Collectors;
 
 import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
 
+/**
+ * Defines properties that are shared across all Source implementations.
+ */
 public final class SourceConfigFragment extends ConfigFragment {
     private static final String GROUP_OTHER = "OTHER_CFG";
-    public static final String MAX_POLL_RECORDS = "max.poll.records";
-    public static final String EXPECTED_MAX_MESSAGE_BYTES = "expected.max.message.bytes";
+    private static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String TARGET_TOPIC = "topic";
-    public static final String ERRORS_TOLERANCE = "errors.tolerance";
-    public static final String DISTRIBUTION_TYPE = "distribution.type";
+    private static final String ERRORS_TOLERANCE = "errors.tolerance";
+    private static final String DISTRIBUTION_TYPE = "distribution.type";
+    /* public so that deprecated users can reference it */
     public static final String RING_BUFFER_SIZE = "ring.buffer.size";
 
-    public static Setter setter(Map<String, String> data) {
+    /**
+     * Gets a setter for this fragment.
+     * @param data the data map to modify.
+     * @return the Setter.
+     */
+    public static Setter setter(final Map<String, String> data) {
         return new Setter(data);
     }
 
@@ -55,28 +63,22 @@ public final class SourceConfigFragment extends ConfigFragment {
         int sourcePollingConfigCounter = 0;
 
         configDef.define(RING_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(0),
-                ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.", GROUP_OTHER, sourcePollingConfigCounter++,
+                ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.", GROUP_OTHER, ++sourcePollingConfigCounter,
                 ConfigDef.Width.SHORT, RING_BUFFER_SIZE);
 
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, sourcePollingConfigCounter++,
+                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, ++sourcePollingConfigCounter,
                 ConfigDef.Width.SHORT, MAX_POLL_RECORDS);
         // KIP-298 Error Handling in Connect
         configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, ErrorsTolerance.NONE.name(),
                 new ErrorsToleranceValidator(), ConfigDef.Importance.MEDIUM,
                 "Indicates to the connector what level of exceptions are allowed before the connector stops, supported values : none,all",
-                GROUP_OTHER, sourcePollingConfigCounter++, ConfigDef.Width.SHORT, ERRORS_TOLERANCE);
-
-        configDef.define(EXPECTED_MAX_MESSAGE_BYTES, ConfigDef.Type.INT, 1_048_588, ConfigDef.Importance.MEDIUM,
-                "The largest record batch size allowed by Kafka config max.message.bytes", GROUP_OTHER,
-                sourcePollingConfigCounter++, // NOPMD
-                // UnusedAssignment
-                ConfigDef.Width.SHORT, EXPECTED_MAX_MESSAGE_BYTES);
+                GROUP_OTHER, ++sourcePollingConfigCounter, ConfigDef.Width.SHORT, ERRORS_TOLERANCE);
 
         // Offset Storage config group includes target topics
         int offsetStorageGroupCounter = 0;
         configDef.define(TARGET_TOPIC, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : logging-topic", GROUP_OTHER, offsetStorageGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "eg : logging-topic", GROUP_OTHER, ++offsetStorageGroupCounter,
                 ConfigDef.Width.SHORT, TARGET_TOPIC);
         configDef.define(DISTRIBUTION_TYPE, ConfigDef.Type.STRING, OBJECT_HASH.name(),
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
@@ -85,36 +87,54 @@ public final class SourceConfigFragment extends ConfigFragment {
                         + Arrays.stream(DistributionType.values())
                                 .map(DistributionType::value)
                                 .collect(Collectors.joining(", ")),
-                GROUP_OTHER, offsetStorageGroupCounter++, ConfigDef.Width.SHORT, DISTRIBUTION_TYPE); // NOPMD
-                                                                                                    // UnusedAssignment
+                GROUP_OTHER, ++offsetStorageGroupCounter, ConfigDef.Width.SHORT, DISTRIBUTION_TYPE);
 
         return configDef;
     }
 
+    /**
+     * Gets the target topic.
+     * @return the target topic.
+     */
     public String getTargetTopic() {
         return cfg.getString(TARGET_TOPIC);
     }
 
+    /**
+     * Gets the maximum number of records to poll at one time.
+     * @return The maximum number of records to poll at one time.
+     */
     public int getMaxPollRecords() {
         return cfg.getInt(MAX_POLL_RECORDS);
     }
 
-    public int getExpectedMaxMessageBytes() {
-        return cfg.getInt(EXPECTED_MAX_MESSAGE_BYTES);
-    }
-
+    /**
+     * Gets the errors tolerance.
+     * @return the errors tolerance.
+     */
     public ErrorsTolerance getErrorsTolerance() {
         return ErrorsTolerance.forName(cfg.getString(ERRORS_TOLERANCE));
     }
 
+    /**
+     * Gets the distribution type
+     * @return the distribution type.
+     */
     public DistributionType getDistributionType() {
         return DistributionType.forName(cfg.getString(DISTRIBUTION_TYPE));
     }
 
+    /**
+     * Gets the ring buffer size.
+     * @return the ring buffer size.
+     */
     public int getRingBufferSize() {
         return cfg.getInt(RING_BUFFER_SIZE);
     }
 
+    /**
+     * The errors tolerance validator.
+     */
     private static class ErrorsToleranceValidator implements ConfigDef.Validator {
         @Override
         public void ensureValid(final String name, final Object value) {
@@ -124,8 +144,16 @@ public final class SourceConfigFragment extends ConfigFragment {
                 ErrorsTolerance.forName(errorsTolerance);
             }
         }
+
+        @Override
+        public String toString() {
+            return "One of " + Arrays.toString(ErrorsTolerance.values());
+        }
     }
 
+    /**
+     * The distribution strategy validator.
+     */
     private static class ObjectDistributionStrategyValidator implements ConfigDef.Validator {
         @Override
         public void ensureValid(final String name, final Object value) {
@@ -135,42 +163,66 @@ public final class SourceConfigFragment extends ConfigFragment {
                 DistributionType.forName(objectDistributionStrategy);
             }
         }
+
+        @Override
+        public String toString() {
+            return "One of " + Arrays.toString(DistributionType.values());
+        }
     }
 
+    /**
+     * The SourceConfigFragment setter.
+     */
     public static class Setter extends AbstractFragmentSetter<Setter> {
-
-        protected Setter(Map<String, String> data) {
+        /**
+         * Constructor.
+         * @param data the data to modify.
+         */
+        protected Setter(final Map<String, String> data) {
             super(data);
         }
 
+        /**
+         * Set the maximum poll records.
+         * @param maxPollRecords the maximum number of records to poll.
+         * @return this
+         */
         public Setter maxPollRecords(final int maxPollRecords) {
             return setValue(MAX_POLL_RECORDS, maxPollRecords);
         }
 
-        public Setter expectedMaxMessageBytes(final int expectedMaxMessageBytes) {
-            return setValue(EXPECTED_MAX_MESSAGE_BYTES, expectedMaxMessageBytes);
-        }
-
-        public Setter errorsTolerance(final String errorsTolerance) {
-            return setValue(ERRORS_TOLERANCE, errorsTolerance);
-        }
-
-        public Setter errorsTolerance(ErrorsTolerance tolerance) {
+        /**
+         * Sets the error tolerance.
+         * @param tolerance the error tolerance
+         * @return this.
+         */
+        public Setter errorsTolerance(final ErrorsTolerance tolerance) {
             return setValue(ERRORS_TOLERANCE, tolerance.name());
         }
 
+        /**
+         * Sets the  target topic.
+         * @param targetTopic the target topic.
+         * @return this.
+         */
         public Setter targetTopic(final String targetTopic) {
             return setValue(TARGET_TOPIC, targetTopic);
         }
 
-        public Setter distributionType(final String distributionType) {
-            return setValue(DISTRIBUTION_TYPE, distributionType);
-        }
-
-        public Setter distributionType(DistributionType distributionType) {
+        /**
+         * Sets the distribution type.
+         * @param distributionType the distribution type.
+         * @return this
+         */
+        public Setter distributionType(final DistributionType distributionType) {
             return setValue(DISTRIBUTION_TYPE, distributionType.name());
         }
 
+        /**
+         * Sets the ring buffer size.
+         * @param ringBufferSize the ring buffer size
+         * @return this.
+         */
         public Setter ringBufferSize(final int ringBufferSize) {
             return setValue(RING_BUFFER_SIZE, ringBufferSize);
         }

@@ -16,22 +16,22 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Defines the backoff policy for connectors.
  */
-public class BackoffPolicyConfig extends ConfigFragment {
+public final class BackoffPolicyConfig extends ConfigFragment {
 
     static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
     static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
 
-    protected BackoffPolicyConfig(final AbstractConfig cfg) {
+    public BackoffPolicyConfig(final AbstractConfig cfg) {
         super(cfg);
     }
 

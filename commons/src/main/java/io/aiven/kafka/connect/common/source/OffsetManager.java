@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
@@ -36,6 +35,10 @@ import java.util.function.Function;
 
 import static java.util.stream.Collectors.toList;
 
+/**
+ * Manages the offsets returned from the Kafka SourceTaskContext.
+ * @param <E> the implementation class for the {@link OffsetManager.OffsetManagerEntry}.
+ */
 public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     /** The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(OffsetManager.class);
@@ -143,6 +146,7 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
 
     /**
      * The definition of an entry in the OffsetManager.
+     * Source implementations should define an entry to meet their needs.
      */
     public interface OffsetManagerEntry<T extends OffsetManagerEntry<T>> extends Comparable<T> {
 
@@ -256,21 +260,36 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
     }
 
     /**
-     * The OffsetManager Key. Must override hashCode() and equals().
+     * The OffsetManager Key.
      */
     public static final class OffsetManagerKey {
+        /**
+         * The map of key data items.
+         */
         private final SortedMap<String, Object> data;
-        private final int hashCode;
+        /**
+         * the hash code value for this key.
+         */
+        private final int hashCodeValue;
 
-        public OffsetManagerKey(Map<String, Object> data) {
+        /**
+         * Constructor.
+         * @param data the map of data items.  A defensive copy of the map is created so that subsequent changes
+         *             to the parameter are NOT reflected in the key.
+         */
+        public OffsetManagerKey(final Map<String, Object> data) {
             this.data = new TreeMap<>(data);
-            HashCodeBuilder builder = new HashCodeBuilder();
+            final HashCodeBuilder builder = new HashCodeBuilder();
             for (final Object value : this.data.values()) {
                 builder.append(value);
             }
-            hashCode = builder.toHashCode();
+            hashCodeValue = builder.toHashCode();
         }
 
+        /**
+         * Return the map as the partition map for a {@link SourceRecord}.
+         * @return the data map.
+         */
         public Map<String, Object> getPartitionMap() {
             return data;
         }
@@ -282,26 +301,25 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
 
         @Override
         public int hashCode() {
-            return hashCode;
+            return hashCodeValue;
         }
 
         @Override
-        public boolean equals(Object other) {
+        public boolean equals(final Object other) {
             if (this == other) {
                 return true;
             }
-            EqualsBuilder builder = new EqualsBuilder();
             if (other instanceof OffsetManager.OffsetManagerKey) {
-                Map<String, Object> lhs = data;
-                Map<String, Object> rhs = ((OffsetManager.OffsetManagerKey) other).data;
+                final Map<String, Object> lhs = data;
+                final Map<String, Object> rhs = ((OffsetManager.OffsetManagerKey) other).data;
                 if (lhs.size() != rhs.size()) {
                     return false;
                 }
-                Iterator<Map.Entry<String, Object>> lhsIterator = lhs.entrySet().iterator();
-                Iterator<Map.Entry<String, Object>> rhsIterator = rhs.entrySet().iterator();
+                final Iterator<Map.Entry<String, Object>> lhsIterator = lhs.entrySet().iterator();
+                final Iterator<Map.Entry<String, Object>> rhsIterator = rhs.entrySet().iterator();
                 while (lhsIterator.hasNext() && rhsIterator.hasNext()) {
-                    Map.Entry<String, Object> lhsEntry = lhsIterator.next();
-                    Map.Entry<String, Object> rhsEntry = rhsIterator.next();
+                    final Map.Entry<String, Object> lhsEntry = lhsIterator.next();
+                    final Map.Entry<String, Object> rhsEntry = rhsIterator.next();
                     if (!(lhsEntry.getKey().equals(rhsEntry.getKey()) && lhsEntry.getValue().equals(rhsEntry.getValue()))) {
                         return false;
                     }

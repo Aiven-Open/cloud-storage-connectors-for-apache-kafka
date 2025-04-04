@@ -87,7 +87,7 @@ public final class AvroTestDataFixture {
         int limit = messageId + numOfRecs;
         for (int i = messageId; i < limit; i++) {
             final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD AvoidInstantiatingObjectsInLoops
-            avroRecord.put("message", "Hello, Kafka Connect S3 Source! object " + i);
+            avroRecord.put("message", "Hello, Kafka Connect Abstract Source! object " + i);
             avroRecord.put("id", i);
             avroRecords.add(avroRecord);
         }

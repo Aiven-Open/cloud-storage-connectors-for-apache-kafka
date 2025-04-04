@@ -48,8 +48,6 @@ public abstract class AbstractOffsetManagerIntegrationTest <K extends Comparable
     @Test
     void OffsetManagerRead() {
         final String topic = getTopic();
-        final int partitionId = 0;
-        final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
@@ -114,7 +112,7 @@ public abstract class AbstractOffsetManagerIntegrationTest <K extends Comparable
         return createConfig(null, topic, taskId, maxTasks, inputFormat);
     }
 
-    private Map<String, String> createConfig(String localPrefix, final String topic, final int taskId, final int maxTasks, final InputFormat inputFormat) {
+    private Map<String, String> createConfig(final String localPrefix, final String topic, final int taskId, final int maxTasks, final InputFormat inputFormat) {
         final Map<String, String> configData = createConnectorConfig(localPrefix);
 
         KafkaFragment.setter(configData)

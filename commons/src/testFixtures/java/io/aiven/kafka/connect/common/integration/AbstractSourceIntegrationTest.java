@@ -32,7 +32,6 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.confluent.connect.avro.AvroConverter;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
-import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -82,6 +81,11 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
         I extends AbstractSourceRecordIterator<?, K, O, ?>> extends AbstractIntegrationTest<K, O, I> {
 
     private static final int TASK_NOT_SET = -1;
+
+
+    private static final String testData1 = "Hello, Kafka Connect Abstract Source! object 1";
+    private static final String testData2 = "Hello, Kafka Connect Abstract Source! object 2";
+    private static final String testData3 = "Hello, Kafka Connect Abstract Source! object 3";
 
     protected Duration getOffsetFlushInterval() {
         return Duration.ofMillis(500);
@@ -139,10 +143,6 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
         final int partitionId = 0;
         final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
 
-        final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
-        final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
-        final String testData3 = "Hello, Kafka Connect S3 Source! object 3";
-
         final Map<OffsetManager.OffsetManagerKey, Long> expectedOffsetRecords = new HashMap<>();
         // write 5 objects
         expectedOffsetRecords.put(write(topic, testData1.getBytes(StandardCharsets.UTF_8), 0).getOffsetManagerKey(), 1L);
@@ -199,12 +199,6 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
     @Test
     void writeAfterRestartReadsNewRecordsTest() {
         final String topic = getTopic();
-        final int partitionId = 0;
-        final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
-
-        final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
-        final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
-        final String testData3 = "Hello, Kafka Connect S3 Source! object 3";
 
         final Map<OffsetManager.OffsetManagerKey, Long> expectedOffsetRecords = new HashMap<>();
         // write 5 objects
@@ -265,9 +259,6 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
         final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
         final String localPrefix = addPrefix ? format("topics/%s/partition=%s/", topic, partitionId) : null;
 
-        final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
-        final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
-
         final Map<OffsetManager.OffsetManagerKey, Long> expectedOffsetRecords = new HashMap<>();
         // write 5 objects
         expectedOffsetRecords.put(write(topic, testData1.getBytes(StandardCharsets.UTF_8), 0, localPrefix).getOffsetManagerKey(), 1L);
@@ -317,13 +308,13 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
         final String topic = getTopic();
 
         final int byteArraySize = 6000;
-        final byte[] testData1 = new byte[byteArraySize];
+        final byte[] testData = new byte[byteArraySize];
         for (int i = 0; i < byteArraySize; i++) {
-            testData1[i] = ((Integer) i).byteValue();
+            testData[i] = ((Integer) i).byteValue();
         }
         final Map<OffsetManager.OffsetManagerKey, Long> expectedOffsetRecords = new HashMap<>();
 
-        expectedOffsetRecords.put(write(topic, testData1, 0).getOffsetManagerKey(), 2L);
+        expectedOffsetRecords.put(write(topic, testData, 0).getOffsetManagerKey(), 2L);
 
         assertThat(getNativeStorage()).hasSize(1);
 
@@ -349,10 +340,10 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
             assertThat(records.get(0)).hasSize(maxBufferSize);
             assertThat(records.get(1)).hasSize(byteArraySize - maxBufferSize);
 
-            assertThat(records.get(0)).isEqualTo(Arrays.copyOfRange(testData1, 0, maxBufferSize));
-            assertThat(records.get(1)).isEqualTo(Arrays.copyOfRange(testData1, maxBufferSize, testData1.length));
+            assertThat(records.get(0)).isEqualTo(Arrays.copyOfRange(testData, 0, maxBufferSize));
+            assertThat(records.get(1)).isEqualTo(Arrays.copyOfRange(testData, maxBufferSize, testData.length));
 
-            verifyOffsetPositions(expectedOffsetRecords, Duration.ofSeconds(120));
+            verifyOffsetPositions(expectedOffsetRecords, Duration.ofMinutes(2));
         } catch (Exception e) {
             getLogger().error("Error", e);
             fail(e);
@@ -393,12 +384,12 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
                     .name(getConnectorName())
                     .valueConverter(AvroConverter.class);
 
+
             // start the manager
             KafkaManager kafkaManager = setupKafka();
 
             TransformerFragment.setter(connectorConfig).valueConverterSchemaRegistry(getKafkaManager().getSchemaRegistryUrl())
-                    .schemaRegistry(getKafkaManager().getSchemaRegistryUrl())
-                    .avroValueSerializer(KafkaAvroSerializer.class);
+                    .schemaRegistry(getKafkaManager().getSchemaRegistryUrl());
 
             SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.OBJECT_HASH);
 
@@ -408,18 +399,18 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
 
             // Poll Avro messages from the Kafka topic and deserialize them
             // Waiting for 25k kafka records in this test so a longer Duration is added.
-            final List<GenericRecord> records = messageConsumer().consumeAvroMessages(topic, numOfRecsFactor * 5, getKafkaManager().getSchemaRegistryUrl(), Duration.ofSeconds(30));
+            final List<GenericRecord> records = messageConsumer().consumeAvroMessages(topic, numOfRecsFactor * 5, Duration.ofSeconds(30));
             // Ensure this method deserializes Avro
 
             // Verify that the correct data is read from storage and pushed to Kafka
             assertThat(records).map(record -> entry(record.get("id"), String.valueOf(record.get("message"))))
-                    .contains(entry(1, "Hello, Kafka Connect S3 Source! object 1"),
-                            entry(2, "Hello, Kafka Connect S3 Source! object 2"),
-                            entry(numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + numOfRecsFactor),
-                            entry(2 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (2 * numOfRecsFactor)),
-                            entry(3 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (3 * numOfRecsFactor)),
-                            entry(4 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (4 * numOfRecsFactor)),
-                            entry(5 * numOfRecsFactor, "Hello, Kafka Connect S3 Source! object " + (5 * numOfRecsFactor)));
+                    .contains(entry(1, "Hello, Kafka Connect Abstract Source! object 1"),
+                            entry(2, "Hello, Kafka Connect Abstract Source! object 2"),
+                            entry(numOfRecsFactor, "Hello, Kafka Connect Abstract Source! object " + numOfRecsFactor),
+                            entry(2 * numOfRecsFactor, "Hello, Kafka Connect Abstract Source! object " + (2 * numOfRecsFactor)),
+                            entry(3 * numOfRecsFactor, "Hello, Kafka Connect Abstract Source! object " + (3 * numOfRecsFactor)),
+                            entry(4 * numOfRecsFactor, "Hello, Kafka Connect Abstract Source! object " + (4 * numOfRecsFactor)),
+                            entry(5 * numOfRecsFactor, "Hello, Kafka Connect Abstract Source! object " + (5 * numOfRecsFactor)));
 
             verifyOffsetPositions(expectedOffsetRecords, Duration.ofMinutes(1));
         } catch (Exception e) {
@@ -462,14 +453,13 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
             KafkaManager kafkaManager = setupKafka();
 
             TransformerFragment.setter(connectorConfig).valueConverterSchemaRegistry(getKafkaManager().getSchemaRegistryUrl())
-                    .schemaRegistry(getKafkaManager().getSchemaRegistryUrl())
-                    .avroValueSerializer(KafkaAvroSerializer.class);
+                    .schemaRegistry(getKafkaManager().getSchemaRegistryUrl());
 
 
             kafkaManager.createTopic(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
-            final List<GenericRecord> records = messageConsumer().consumeAvroMessages(topic, 100, getKafkaManager().getSchemaRegistryUrl(), Duration.ofSeconds(20));
+            final List<GenericRecord> records = messageConsumer().consumeAvroMessages(topic, 100, Duration.ofSeconds(20));
             final List<String> expectedRecordNames = IntStream.range(0, 100)
                     .mapToObj(i -> name + i)
                     .collect(Collectors.toList());
@@ -537,5 +527,4 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
             });
         }
     }
-
 }

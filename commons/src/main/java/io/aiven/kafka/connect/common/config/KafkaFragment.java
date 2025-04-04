@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.connect.common.config;
 
 import org.apache.kafka.common.metrics.MetricsReporter;
@@ -11,21 +27,44 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class KafkaFragment {
+/**
+ * Defines the configuration for Kafka.  This fragment only has the Setter and a few constants for Connectors.
+ */
+public final class KafkaFragment {
 
-    public enum PluginDiscovery {ONLY_SCAN, SERVICE_LOAD, HYBRID_WARN, HYBRID_FAIL};
+    /**
+     * Enum for setting discovery.
+     */
+    public enum PluginDiscovery {ONLY_SCAN, SERVICE_LOAD, HYBRID_WARN, HYBRID_FAIL}
 
-
+    /**
+     * The configuration string for plugin discovery.
+     */
     private final static String PLUGIN_DISCOVERY = "plugin.discovery";
-    private final static String INTERNAL_VALUE_CONVERTER_SCHEMA_ENABLE = "internal.value.converter.schema.enable";
-    private final static String INTERNAL_KEY_CONVERTER_SCHEMA_ENABLE = "internal.key.converter.schema.enable";
 
-    public static Setter setter(Map<String, String> data) {
+    private KafkaFragment() {
+        // do not instantiate.
+    }
+
+    /**
+     * Get the setter for this fragment.
+     * @param data The data map for the configuration.
+     * @return the Setter.
+     */
+    public static Setter setter(final Map<String, String> data) {
         return new Setter(data);
     }
 
+    /**
+     * The setter class to set options in a data map for the configuration.
+     */
+    @SuppressWarnings("PMD.TooManyMethods")
     public final static class Setter extends AbstractFragmentSetter<Setter> {
-        private Setter(Map<String, String> data) {
+        /**
+         * Constructor.
+         * @param data the map of data to update.
+         */
+        private Setter(final Map<String, String> data) {
             super(data);
         }
 
@@ -34,140 +73,208 @@ public class KafkaFragment {
          * @param connectorClass the class for the connector.
          * @return this
          */
-        public Setter connector(Class<? extends Connector> connectorClass) {
+        public Setter connector(final Class<? extends Connector> connectorClass) {
             return setValue(ConnectorConfig.CONNECTOR_CLASS_CONFIG, connectorClass);
         }
 
-        public Setter keyConverter(String converter) {
+        /**
+         * Sets the key converter.
+         * @param converter the Key converter class.
+         * @return this
+         */
+        public Setter keyConverter(final Class<? extends Converter> converter) {
             return setValue(ConnectorConfig.KEY_CONVERTER_CLASS_CONFIG, converter);
         }
 
-        public Setter keyConverter(Class<? extends Converter> converter) {
-            return setValue(ConnectorConfig.KEY_CONVERTER_CLASS_CONFIG, converter);
-        }
-
-        public Setter valueConverter(String converter) {
+        /**
+         * Sets the value converter.
+         * @param converter the value converter class.
+         * @return this
+         */
+        public Setter valueConverter(final Class<? extends Converter> converter) {
             return setValue(ConnectorConfig.VALUE_CONVERTER_CLASS_CONFIG, converter);
         }
 
-        public Setter valueConverter(Class<? extends Converter> converter) {
-            return setValue(ConnectorConfig.VALUE_CONVERTER_CLASS_CONFIG, converter);
-        }
-
-        public Setter headerConverter(String header) {
+        /**
+         * Sets the header converter.
+         * @param header the header converter class.
+         * @return this.
+         */
+        public Setter headerConverter(final Class<? extends Converter> header) {
             return setValue(ConnectorConfig.HEADER_CONVERTER_CLASS_CONFIG, header);
         }
 
-        public Setter headerConverter(Class<? extends Converter> header) {
-            return setValue(ConnectorConfig.HEADER_CONVERTER_CLASS_CONFIG, header);
-        }
-
-        public Setter offsetFlushInterval(Duration interval) {
+        /**
+         * Sets the offset commit flush interval.
+         * @param interval the interval between flushes.
+         * @return this.
+         */
+        public Setter offsetFlushInterval(final Duration interval) {
             return setValue(WorkerConfig.OFFSET_COMMIT_INTERVAL_MS_CONFIG, interval.toMillis());
         }
 
-        public Setter offsetTimeout(Duration interval) {
+        /**
+         * Sets the offset commit timeout.
+         * @param interval the interval between commit timeouts.
+         * @return this.
+         */
+        public Setter offsetTimeout(final Duration interval) {
             return setValue(WorkerConfig.OFFSET_COMMIT_TIMEOUT_MS_CONFIG, interval.toMillis());
         }
-
 
         /**
          * Globally unique name to use for this connector.
          * @param name Globally unique name to use for this connector.
          * @return this
          */
-        public Setter name(String name) {
+        public Setter name(final String name) {
             return setValue(ConnectorConfig.NAME_CONFIG, name);
         }
 
-        public Setter pluginDiscovery(PluginDiscovery pluginDiscovery) {
+        /**
+         * Sets the plugin discovery strategy.
+         * @param pluginDiscovery the plugin discovery strategy.
+         * @return this
+         */
+        public Setter pluginDiscovery(final PluginDiscovery pluginDiscovery) {
             return setValue(PLUGIN_DISCOVERY, pluginDiscovery.name());
         }
 
-        public Setter tasksMax(int tasksMax) {
+        /**
+         * Sets the maximum number of tasks for the connector.
+         * @param tasksMax the maximum number of tasks.
+         * @return this
+         */
+        public Setter tasksMax(final int tasksMax) {
             return setValue(ConnectorConfig.TASKS_MAX_CONFIG, tasksMax);
         }
 
-        public Setter transforms(String transforms) {
+        /**
+         * Sets the list of transforms
+         * @param transforms a comma separated list of transforms.
+         * @return this
+         */
+        public Setter transforms(final String transforms) {
             return setValue(ConnectorConfig.TRANSFORMS_CONFIG, transforms);
         }
 
-        public Setter bootstrapServers(String bootstrapServers) {
+        /**
+         * Sets the bootstrap servers.
+         * @param bootstrapServers the bootstrap servers.
+         * @return this
+         */
+        public Setter bootstrapServers(final String bootstrapServers) {
             return setValue(WorkerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         }
 
-        public Setter taskShutdownTimeout(Duration timeout) {
+        /**
+         * Sets the task shutdown timeout.
+         * @param timeout the timeout.
+         * @return this
+         */
+        public Setter taskShutdownTimeout(final Duration timeout) {
             return setValue(WorkerConfig.TASK_SHUTDOWN_GRACEFUL_TIMEOUT_MS_CONFIG, timeout.toMillis());
         }
 
-        public Setter listeners(String listeners) {
+        /**
+         * Sets the configuration listeners.
+         * @param listeners a comma separated string of configuration listeners.
+         * @return this
+         */
+        public Setter listeners(final String listeners) {
             return setValue(WorkerConfig.LISTENERS_CONFIG, listeners);
         }
 
-        public Setter listeners(String... listeners) {
+        /**
+         * Sets the configuration listeners.
+         * @param listeners an array of configuration listeners.
+         * @return this
+         */
+        public Setter listeners(final String... listeners) {
             return setValue(WorkerConfig.LISTENERS_CONFIG, String.join(", ", listeners));
         }
 
-        public Setter advertisedHostName(String hostName) {
+        /**
+         * Sets the advertised host name.
+         * @param hostName the advertised host name
+         * @return this
+         */
+        public Setter advertisedHostName(final String hostName) {
             return setValue(WorkerConfig.REST_ADVERTISED_HOST_NAME_CONFIG, hostName);
         }
 
-        public Setter advertisedHostPort(int port) {
+        /**
+         * Sets the advertised host port.
+         * @param port the advertised host port.
+         * @return
+         */
+        public Setter advertisedHostPort(final int port) {
             return setValue(WorkerConfig.REST_ADVERTISED_PORT_CONFIG, port);
         }
 
         /**
-         * Sets the advertised listener protocal
-         *
+         * Sets the advertised listener protocol.
          * @param protocol HTTP or HTTPS
          * @return this
          */
-        public Setter advertisedListenerProtocol(String protocol) {
+        public Setter advertisedListenerProtocol(final String protocol) {
             return setValue(WorkerConfig.REST_ADVERTISED_LISTENER_CONFIG, protocol);
         }
 
-        public Setter accessControlAllowOrigin(String origin) {
+        /**
+         * Sets the aAccess-Control-Allow-Origin header to for REST API requests.
+         * To enable cross-origin access, set this to the domain of the application that should be permitted to access the API,
+         * or '*' to allow access from any domain. The default value only allows access from the domain of the REST API.
+         * @param origin the orgin to allow
+         * @return this
+         */
+        public Setter accessControlAllowOrigin(final String origin) {
             return setValue(WorkerConfig.ACCESS_CONTROL_ALLOW_ORIGIN_CONFIG, origin);
         }
 
         /**
-         *  Sets the methods supported for cross origin requests by setting the Access-Control-Allow-Methods header.
-         *  The default value of the Access-Control-Allow-Methods header allows cross origin requests for GET, POST and HEAD.
+         * Sets the methods supported for cross origin requests by setting the Access-Control-Allow-Methods header.
+         * The default value of the Access-Control-Allow-Methods header allows cross-origin requests for GET, POST and HEAD.
          * @param methods A list of methods to allow.
          * @return this
          */
-        public Setter accessControlAllowMethods(String methods) {
+        public Setter accessControlAllowMethods(final String methods) {
             return setValue(WorkerConfig.ACCESS_CONTROL_ALLOW_METHODS_CONFIG, methods);
         }
 
         /**
-         * List of paths separated by commas (,) that contain plugins (connectors, converters, transformations).
+         * Sets the list of paths separated by commas (,) that contain plugins (connectors, converters, transformations).
          * Example: "/usr/local/share/java,/usr/local/share/kafka/plugins,/opt/connectors"
          * @param pluginPath the list of paths.
          * @return this
          * @see #pluginPath(String...)
          */
-        public Setter pluginPath(String pluginPath) {
+        public Setter pluginPath(final String pluginPath) {
             return setValue(WorkerConfig.PLUGIN_PATH_CONFIG, pluginPath);
         }
 
         /**
-         * List of paths that contain plugins (connectors, converters, transformations). The list should consist
+         * Sets the list of paths that contain plugins (connectors, converters, transformations). The list should consist
          * of top level directories that include any combination of:
          * <ul>
-         * <li>directories immediately containing jars with plugins and their dependencies</li>>
+         * <li>directories immediately containing jars with plugins and their dependencies</li>
          *             <li>uber-jars with plugins and their dependencies</li>
-         *             <li>directories immediately containing the package directory structure of classes of plugins and their dependencies</li>>
+         *             <li>directories immediately containing the package directory structure of classes of plugins and their dependencies</li>
          *             </ul>
          * <p>Note: symlinks will be followed to discover dependencies or plugins.</p>
          * @param pluginPath the list of paths to to search,.
          * @return this.
          */
-        public Setter pluginPath(String... pluginPath) {
+        public Setter pluginPath(final String... pluginPath) {
             return setValue(WorkerConfig.PLUGIN_PATH_CONFIG, String.join(", ", pluginPath));
         }
 
-        public Setter metricsSampleWindow(Duration window) {
+        /**
+         * Sets the metrics sample window size.
+         * @param window the time for each window.
+         * @return this
+         */
+        public Setter metricsSampleWindow(final Duration window) {
             return setValue(WorkerConfig.METRICS_SAMPLE_WINDOW_MS_CONFIG, window.toMillis());
         }
 
@@ -176,7 +283,7 @@ public class KafkaFragment {
          * @param count the number of samples.
          * @return this.
          */
-        public Setter metricsSampleCount(int count) {
+        public Setter metricsSampleCount(final int count) {
             return setValue(WorkerConfig.METRICS_NUM_SAMPLES_CONFIG, count);
         }
 
@@ -185,7 +292,7 @@ public class KafkaFragment {
          * @param level the recording level
          * @return this.
          */
-        public Setter metricsRecordingLevel(int level) {
+        public Setter metricsRecordingLevel(final int level) {
             return setValue(WorkerConfig.METRICS_RECORDING_LEVEL_CONFIG, level);
         }
 
@@ -195,9 +302,8 @@ public class KafkaFragment {
          * @param reporterClasses the classes to use.
          * @return this
          */
-        public Setter metricReporterClasses(Class<? extends MetricsReporter>... reporterClasses ) {
+        public Setter metricReporterClasses(final Class<? extends MetricsReporter>... reporterClasses ) {
             return setValue(WorkerConfig.METRIC_REPORTER_CLASSES_CONFIG, Arrays.stream(reporterClasses).map(Class::getName).collect(Collectors.joining(", ")));
         }
     }
-
 }

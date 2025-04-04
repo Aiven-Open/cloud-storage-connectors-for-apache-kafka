@@ -16,16 +16,19 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.awaitility.Awaitility.await;
+import org.apache.commons.lang3.time.StopWatch;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.lang3.time.StopWatch;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.awaitility.Awaitility.await;
 
+/**
+ * Tests the AbstractSourceTask.
+ */
 class AbstractSourceTaskTest {
 
     /**

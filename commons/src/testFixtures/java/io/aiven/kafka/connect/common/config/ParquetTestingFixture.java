@@ -38,13 +38,17 @@ import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
 /**
  * Test fixture to generate standard parquet file.
  */
-public class ParquetTestingFixture {
+public final class ParquetTestingFixture {
+
+    private ParquetTestingFixture() {
+        // do int instantiate
+    }
     /**
      * Gets the schema used for the test cases.
      *
      * @return The schema used for the test cases.
      */
-    public static Schema testSchema() {
+    public static Schema getTestSchema() {
         return SchemaBuilder.struct()
                 .field("name", STRING_SCHEMA)
                 .field("age", INT32_SCHEMA)
@@ -82,7 +86,7 @@ public class ParquetTestingFixture {
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public static Path writeParquetFile(final Path outputFilePath, final String name, final int numOfRecords)
             throws IOException {
-        Schema schema = testSchema();
+        final Schema schema = getTestSchema();
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
@@ -90,8 +94,8 @@ public class ParquetTestingFixture {
         }
 
         // Create a Parquet writer
-        try (var outputStream = Files.newOutputStream(outputFilePath.toAbsolutePath());
-                var parquetWriter = new ParquetOutputWriter(
+        try (OutputStream outputStream = Files.newOutputStream(outputFilePath.toAbsolutePath());
+                ParquetOutputWriter parquetWriter = new ParquetOutputWriter(
                         List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
                         Collections.emptyMap(), false)) {
             int counter = 0;
@@ -124,19 +128,18 @@ public class ParquetTestingFixture {
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public static void writeParquetFile(final IOSupplier<OutputStream> outputSupplier, final String name, final int numOfRecords)
             throws IOException {
-        Schema schema = testSchema();
+        final Schema schema = getTestSchema();
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
             allParquetRecords.add(new Struct(schema).put("name", name + i).put("age", 30).put("email", name + "@test"));
         }
 
-        try (OutputStream outputStream = outputSupplier.get()) {
-        // Create a Parquet writer
-
-             var parquetWriter = new ParquetOutputWriter(
+        try (OutputStream outputStream = outputSupplier.get();
+             ParquetOutputWriter parquetWriter = new ParquetOutputWriter(
                      List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
                      Collections.emptyMap(), false);
+        ) {
             int counter = 0;
             final var sinkRecords = new ArrayList<SinkRecord>();
             for (final var r : allParquetRecords) {

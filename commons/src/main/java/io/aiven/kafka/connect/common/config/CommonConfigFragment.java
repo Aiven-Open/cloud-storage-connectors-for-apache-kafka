@@ -18,88 +18,92 @@ package io.aiven.kafka.connect.common.config;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
 
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
 
+/**
+ * The common configuration fragment.
+ */
 public class CommonConfigFragment extends ConfigFragment {
+    /** The task id configuration option */
+    private static final String TASK_ID = "task.id";
 
-    public static final String TASK_ID = "task.id";
-
-    private static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
-    public static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
-
-    public static Setter setter(Map<String, String> data) {
+    /**
+     * Gets a setter for this fragment.
+     * @param data the data to modify.
+     * @return The setter.
+     */
+    public static Setter setter(final Map<String, String> data) {
         return new Setter(data);
     }
 
-    public static ConfigDef update(ConfigDef configDef) {
+    /**
+     * Update the ConfigDef with the values from the fragment.
+     * @param configDef the configuraiton def to update.
+     * @return the updated configuration def.
+     */
+    public static ConfigDef update(final ConfigDef configDef) {
         int orderInGroup = 0;
-        String COMMON_GROUP = "commons";
+        final String commonGroup = "commons";
 
         return configDef
-                .define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH, "Maximum number of tasks to use for this connector.", COMMON_GROUP, ++orderInGroup, ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG)
-                .define(TASK_ID, ConfigDef.Type.INT, 1, atLeast(0), ConfigDef.Importance.HIGH, "The task ID that this connector is working with.", COMMON_GROUP, ++orderInGroup, ConfigDef.Width.SHORT, TASK_ID);
+                .define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH, "Maximum number of tasks to use for this connector.", commonGroup, ++orderInGroup, ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG)
+                .define(TASK_ID, ConfigDef.Type.INT, 1, atLeast(0), ConfigDef.Importance.HIGH, "The task ID that this connector is working with.", commonGroup, ++orderInGroup, ConfigDef.Width.SHORT, TASK_ID);
     }
 
-    public CommonConfigFragment(AbstractConfig cfg) { // NOPMD
+    /**
+     * Create a fragment instance from an AbstractConfig.
+     * @param cfg the AbstractConfig to retrieve data from.
+     */
+    public CommonConfigFragment(final AbstractConfig cfg) { // NOPMD
         super(cfg);
     }
 
-    public static void addKafkaBackoffPolicy(final ConfigDef configDef) {
-        configDef.define(KAFKA_RETRY_BACKOFF_MS_CONFIG, ConfigDef.Type.LONG, null, new ConfigDef.Validator() {
-
-            final long maximumBackoffPolicy = TimeUnit.HOURS.toMillis(24);
-
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                if (Objects.isNull(value)) {
-                    return;
-                }
-                assert value instanceof Long;
-                final var longValue = (Long) value;
-                if (longValue < 0) {
-                    throw new ConfigException(name, value, "Value must be at least 0");
-                } else if (longValue > maximumBackoffPolicy) {
-                    throw new ConfigException(name, value,
-                            "Value must be no more than " + maximumBackoffPolicy + " (24 hours)");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM,
-                "The retry backoff in milliseconds. "
-                        + "This config is used to notify Kafka Connect to retry delivering a message batch or "
-                        + "performing recovery in case of transient exceptions. Maximum value is "
-                        + TimeUnit.HOURS.toMillis(24) + " (24 hours).",
-                GROUP_RETRY_BACKOFF_POLICY, 1, ConfigDef.Width.NONE, KAFKA_RETRY_BACKOFF_MS_CONFIG);
-    }
-
-    public Long getKafkaRetryBackoffMs() {
-        return cfg.getLong(KAFKA_RETRY_BACKOFF_MS_CONFIG);
-    }
-
+    /**
+     * Get the task Id.
+     * @return the  task Id.
+     */
     public Integer getTaskId() {
         return cfg.getInt(TASK_ID);
     }
 
+    /**
+     * Get the maximum number of tasks.
+     * @return  the maximum number of tasks.
+     */
     public Integer getMaxTasks() {
         return cfg.getInt(ConnectorConfig.TASKS_MAX_CONFIG);
     }
 
-
+    /**
+     * Setter to programmatically set values in the configuraiotn.
+     */
     public static class Setter extends AbstractFragmentSetter<Setter> {
-        private Setter(Map<String, String> data) {
+        /**
+         * Creates the setter.
+         * @param data the map of data to update.
+         */
+        private Setter(final Map<String, String> data) {
             super(data);
         }
 
+        /**
+         * Sets the task ID value.
+         * @param taskId the task Id value.
+         * @return this
+         */
         public Setter taskId(final int taskId) {
             return setValue(TASK_ID, taskId);
         }
 
+        /**
+         * Sets the max tasks value.
+         * @param maxTasks the maximum number of tasks for this connector to run.
+         * @return this
+         */
         public Setter maxTasks(final int maxTasks) {
             return setValue(ConnectorConfig.TASKS_MAX_CONFIG, maxTasks);
         }

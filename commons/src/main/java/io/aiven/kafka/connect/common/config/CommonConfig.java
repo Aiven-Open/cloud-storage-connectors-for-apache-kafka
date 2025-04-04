@@ -48,7 +48,7 @@ public class CommonConfig extends AbstractConfig {
         // Common Config.
     }
 
-    private static ConfigDef update(ConfigDef configDef) {
+    private static ConfigDef update(final ConfigDef configDef) {
         CommonConfigFragment.update(configDef);
         BackoffPolicyConfig.update(configDef);
         return configDef;

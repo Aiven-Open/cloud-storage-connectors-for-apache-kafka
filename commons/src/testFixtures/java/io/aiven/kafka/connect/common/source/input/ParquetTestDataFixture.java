@@ -53,7 +53,7 @@ public class ParquetTestDataFixture {
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public static byte[] generateMockParquetData(final String name, final int numOfRecords) throws IOException {
-        Schema schema = ParquetTestingFixture.testSchema();
+        Schema schema = ParquetTestingFixture.getTestSchema();
 
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file

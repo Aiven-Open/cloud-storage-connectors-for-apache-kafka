@@ -16,11 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+/*
+ * Copied from Apache RAT code base.
+ */
 package io.aiven.kafka.connect.common.utils;
 
 import org.apache.commons.text.WordUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
@@ -40,12 +45,12 @@ public class CasedString {
      * A method to join camel string fragments together.
      */
     private static final Function<String[], String> CAMEL_JOINER = a -> {
-        StringBuilder sb = new StringBuilder(a[0].toLowerCase(Locale.ROOT));
+        final StringBuilder builder = new StringBuilder(a[0].toLowerCase(Locale.ROOT));
 
         for (int i = 1; i < a.length; i++) {
-            sb.append(WordUtils.capitalize(a[i].toLowerCase(Locale.ROOT)));
+            builder.append(WordUtils.capitalize(a[i].toLowerCase(Locale.ROOT)));
         }
-        return sb.toString();
+        return builder.toString();
     };
 
     /**
@@ -128,25 +133,25 @@ public class CasedString {
                 return NULL_SEGMENT;
             }
             if (string.isEmpty()) {
-                return EMPTY_SEGMENT;
+                return Arrays.copyOf(EMPTY_SEGMENT, 1);
             }
-            List<String> lst = new ArrayList<>();
-            StringBuilder sb = new StringBuilder();
-            for (char c : string.toCharArray()) {
+            final List<String> lst = new ArrayList<>();
+            final StringBuilder builder = new StringBuilder();
+            for (final char c : string.toCharArray()) {
                 if (splitter.test(c)) {
-                    if (sb.length() > 0) {
-                        lst.add(sb.toString());
-                        sb.setLength(0);
+                    if (builder.length() > 0) {
+                        lst.add(builder.toString());
+                        builder.setLength(0);
                     }
                     if (preserveSplit) {
-                        sb.append(c);
+                        builder.append(c);
                     }
                 } else {
-                    sb.append(c);
+                    builder.append(c);
                 }
             }
-            if (sb.length() > 0) {
-                lst.add(sb.toString());
+            if (builder.length() > 0) {
+                lst.add(builder.toString());
             }
             return lst.toArray(new String[0]);
         }

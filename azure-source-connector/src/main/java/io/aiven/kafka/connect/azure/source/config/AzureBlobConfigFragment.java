@@ -35,7 +35,7 @@ import java.util.Map;
 /**
  * The configuration fragment that defines the Azure specific characteristics.
  */
-public class AzureBlobConfigFragment extends ConfigFragment {
+public final class AzureBlobConfigFragment extends ConfigFragment {
 
     public static final String AZURE_PREFIX_CONFIG = "azure.blob.prefix";
     public static final String AZURE_FETCH_PAGE_SIZE = "azure.blob.fetch.page.size";
@@ -63,7 +63,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
      * @param cfg
      *            the configuration that this fragment is associated with.
      */
-    protected AzureBlobConfigFragment(final AbstractConfig cfg) {
+    public AzureBlobConfigFragment(final AbstractConfig cfg) {
         super(cfg);
     }
 

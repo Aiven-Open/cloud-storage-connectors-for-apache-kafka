@@ -39,14 +39,32 @@ import java.util.stream.Stream;
  * Iterator that processes cloud storage items and creates Kafka source records. Supports multiple output formats.
  *
  * @param <N>
- *            the native object type.
+ *            the native object type.  This is the class that represents a file or stream in the underlying data store.
  * @param <K>
- *            the key type for the native object.
+ *            the key type for the native object.  This is the class that uniquely identifies a native object.
  * @param <O>
- *            the OffsetManagerEntry for the iterator.
+ *            the OffsetManagerEntry for the iterator.  The implementation of OffsetManagerEntry for the underlying storage.
  * @param <T>
- *            The source record for the client type.
+ *            the implementation class for AbstractSourceRecord.
  *
+ * <p>This implementation handles converting from the data stored on the underlying storage to an AbstractSourceRecord.  It handles all the
+ * transformation and Kafka tracking tasks so that the developer cna focus on how to read the data from the underlying store.
+ * </p>
+ * <p>
+ *     The general process is
+ * </p>
+ * <ul>
+ *     <li>An inner iterator is created from a call to {@link #getNativeItemStream}.  The stream is filtered to remove any files
+ *     that do not match the expected pattern or that are not assigned to this task.  It is also converted to an instance of {@code T}
+ *     via a call to {@link #createSourceRecord}.  An instance of {@code O} is created via a call to {@link #createOffsetManagerEntry}
+ *     and added to the instance of {@code T} created earlier.
+ *     </li>
+ *     <li>An outer iterator is created for each element in the inner iterator.  The instances of {@code T} returned by the inner iterator
+ *     are processed by calling {@link #getInputStream(AbstractSourceRecord)} and passing the result to the specified {@link Transformer} instance
+ *     to retrieve all the records stored in the native item.  Each of the records is used to create a new instance of {@code T} that contains the
+ *     record number as well as the Kafka Connector defined keyValue and dataValue objects.
+ *     </li>
+ * </ul>
  */
 public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>>
         implements
@@ -128,15 +146,20 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
 
     /**
      * Get a stream of Native object from the underlying storage layer.
+     * The implementation must return the native objects in a repeatable order based on the key.
+     * In addition, the underlying storage must be able to start streaming from a specific previously returned key.
      *
      * @param offset
-     *            the native key to start from. May be {@code null}.
-     * @return A stream of natvie objects. May be empty but not {@code null}.
+     *            the native key to start from. May be {@code null} ot indicate start at the beginning.
+     * @return A stream of native objects. May be empty but not {@code null}.
      */
     abstract protected Stream<N> getNativeItemStream(K offset);
 
     /**
      * Gets an IOSupplier for the specific source record.
+     *
+     * The implementation should accept an AbstractSourceRecord created from a sourceRecord returned from a
+     * previous call to {@link #createSourceRecord}.
      *
      * @param sourceRecord
      *            the source record to get the input stream from.
@@ -145,16 +168,17 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
     abstract protected IOSupplier<InputStream> getInputStream(T sourceRecord);
 
     /**
-     * Gets the native key for the native object.
+     * Retrieves the native key for the underlying storage that is associated with the native object.
      *
      * @param nativeObject
-     *            the native object ot retrieve the native key for.
+     *            the native object to retrieve the native key for.
      * @return The native key for the native object.
      */
     abstract protected K getNativeKey(N nativeObject);
 
     /**
-     * Gets the AbstractSourceRecord implementation for the native object.
+     * Creates an instance of the concrete implementation of AbstractSourceRecord for the native object.  The SAbstractSourceRecord need only
+     * contain the {@link NativeInfo} instance.
      *
      * @param nativeObject
      *            the native object to get the AbstractSourceRecord for.

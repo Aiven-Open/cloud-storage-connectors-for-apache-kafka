@@ -16,7 +16,6 @@
 
 plugins {
   id("aiven-apache-kafka-connectors-all.java-conventions")
-  id("java-test-fixtures")
 }
 val kafkaVersion by extra("3.3.0")
 

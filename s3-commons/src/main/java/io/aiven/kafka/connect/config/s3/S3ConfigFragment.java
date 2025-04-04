@@ -177,20 +177,20 @@ public final class S3ConfigFragment extends ConfigFragment {
                 AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT, ConfigDef.Range.atLeast(1L), ConfigDef.Importance.MEDIUM,
                 "S3 default base sleep time for non-throttled exceptions in milliseconds. " + "Default is "
                         + AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT + ".",
-                GROUP_S3_RETRY_BACKOFF_POLICY, retryPolicyGroupCounter++, // NOPMD UnusedAssignment
+                GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, 
                 ConfigDef.Width.NONE, AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG);
         configDef.define(AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
                 AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT, ConfigDef.Range.atLeast(1L), ConfigDef.Importance.MEDIUM,
                 "S3 maximum back-off time before retrying a request in milliseconds. " + "Default is "
                         + AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT + ".",
-                GROUP_S3_RETRY_BACKOFF_POLICY, retryPolicyGroupCounter++, // NOPMD UnusedAssignment
+                GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, 
                 ConfigDef.Width.NONE, AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG);
         configDef.define(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, ConfigDef.Type.INT,
                 S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT, ConfigDef.Range.between(1L, 30), ConfigDef.Importance.MEDIUM,
                 "Maximum retry limit " + "(if the value is greater than 30, "
                         + "there can be integer overflow issues during delay calculation). " + "Default is "
                         + S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT + ".",
-                GROUP_S3_RETRY_BACKOFF_POLICY, retryPolicyGroupCounter++, // NOPMD UnusedAssignment
+                GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, 
                 ConfigDef.Width.NONE, AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
     }
 
@@ -198,11 +198,11 @@ public final class S3ConfigFragment extends ConfigFragment {
         int awsGroupCounter = 0;
 
         configDef.define(AWS_ACCESS_KEY_ID_CONFIG, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword(),
-                ConfigDef.Importance.MEDIUM, "AWS Access Key ID", GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE,
+                ConfigDef.Importance.MEDIUM, "AWS Access Key ID", GROUP_AWS, ++awsGroupCounter, ConfigDef.Width.NONE,
                 AWS_ACCESS_KEY_ID_CONFIG);
 
         configDef.define(AWS_SECRET_ACCESS_KEY_CONFIG, ConfigDef.Type.PASSWORD, null, new NonEmptyPassword(),
-                ConfigDef.Importance.MEDIUM, "AWS Secret Access Key", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "AWS Secret Access Key", GROUP_AWS, ++awsGroupCounter,
                 ConfigDef.Width.NONE, AWS_SECRET_ACCESS_KEY_CONFIG);
 
         configDef.define(AWS_CREDENTIALS_PROVIDER_CONFIG, ConfigDef.Type.CLASS, null,
@@ -211,10 +211,10 @@ public final class S3ConfigFragment extends ConfigFragment {
                         + "the AWS SDK for Java attempts to find temporary "
                         + "credentials by using the default credential provider chain.",
 
-                GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE, AWS_CREDENTIALS_PROVIDER_CONFIG);
+                GROUP_AWS, ++awsGroupCounter, ConfigDef.Width.NONE, AWS_CREDENTIALS_PROVIDER_CONFIG);
 
         configDef.define(AWS_S3_BUCKET_NAME_CONFIG, ConfigDef.Type.STRING, null, new BucketNameValidator(),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Bucket name", GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE,
+                ConfigDef.Importance.MEDIUM, "AWS S3 Bucket name", GROUP_AWS, ++awsGroupCounter, ConfigDef.Width.NONE,
                 AWS_S3_BUCKET_NAME_CONFIG);
 
         // AWS S3 Server Side Encryption Algorithm configuration
@@ -222,23 +222,23 @@ public final class S3ConfigFragment extends ConfigFragment {
         configDef.define(AWS_S3_SSE_ALGORITHM_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM,
                 "AWS S3 Server Side Encryption Algorithm. Example values: 'AES256', 'aws:kms'.", GROUP_AWS,
-                awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_SSE_ALGORITHM_CONFIG);
+                ++awsGroupCounter, ConfigDef.Width.NONE, AWS_S3_SSE_ALGORITHM_CONFIG);
 
         configDef.define(AWS_S3_ENDPOINT_CONFIG, ConfigDef.Type.STRING, null, new UrlValidator(),
                 ConfigDef.Importance.LOW, "Explicit AWS S3 Endpoint Address, mainly for testing", GROUP_AWS,
-                awsGroupCounter++, ConfigDef.Width.NONE, AWS_S3_ENDPOINT_CONFIG);
+                ++awsGroupCounter, ConfigDef.Width.NONE, AWS_S3_ENDPOINT_CONFIG);
 
         configDef.define(AWS_S3_REGION_CONFIG, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, ++awsGroupCounter,
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
 
         configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AWS, ++awsGroupCounter,
                 ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
         configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10,
                 ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, awsGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, ++awsGroupCounter,
                 ConfigDef.Width.NONE, FETCH_PAGE_SIZE);
 
         configDef.define(AWS_S3_FETCH_BUFFER_SIZE, ConfigDef.Type.INT, 1000,
@@ -260,37 +260,32 @@ public final class S3ConfigFragment extends ConfigFragment {
                 },
                 ConfigDef.Importance.MEDIUM,
                 "AWS S3 Fetch buffer size, this is the number of s3object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
-                GROUP_AWS, awsGroupCounter++, // NOPMD
-                // UnusedAssignment
+                GROUP_AWS, ++awsGroupCounter, 
                 ConfigDef.Width.NONE, AWS_S3_FETCH_BUFFER_SIZE);
     }
 
     static void addAwsStsConfigGroup(final ConfigDef configDef) {
         int awsStsGroupCounter = 0;
         configDef.define(AWS_STS_ROLE_ARN, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "AWS STS Role", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
-                // UnusedAssignment
+                ConfigDef.Importance.MEDIUM, "AWS STS Role", GROUP_AWS_STS, ++awsStsGroupCounter,
                 ConfigDef.Width.NONE, AWS_STS_ROLE_ARN);
 
         configDef.define(AWS_STS_ROLE_SESSION_NAME, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "AWS STS Session name", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
-                // UnusedAssignment
+                ConfigDef.Importance.MEDIUM, "AWS STS Session name", GROUP_AWS_STS, ++awsStsGroupCounter,
                 ConfigDef.Width.NONE, AWS_STS_ROLE_SESSION_NAME);
 
         configDef.define(AWS_STS_ROLE_SESSION_DURATION, ConfigDef.Type.INT, 3600,
                 ConfigDef.Range.between(AwsStsRole.MIN_SESSION_DURATION, AwsStsRole.MAX_SESSION_DURATION),
-                ConfigDef.Importance.MEDIUM, "AWS STS Session duration", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
-                // UnusedAssignment
+                ConfigDef.Importance.MEDIUM, "AWS STS Session duration", GROUP_AWS_STS, ++awsStsGroupCounter,
                 ConfigDef.Width.NONE, AWS_STS_ROLE_SESSION_DURATION);
 
         configDef.define(AWS_STS_ROLE_EXTERNAL_ID, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "AWS STS External Id", GROUP_AWS_STS, awsStsGroupCounter++, // NOPMD
-                // UnusedAssignment
+                ConfigDef.Importance.MEDIUM, "AWS STS External Id", GROUP_AWS_STS, ++awsStsGroupCounter,
                 ConfigDef.Width.NONE, AWS_STS_ROLE_EXTERNAL_ID);
 
         configDef.define(AWS_STS_CONFIG_ENDPOINT, ConfigDef.Type.STRING, AwsStsEndpointConfig.AWS_STS_GLOBAL_ENDPOINT,
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "AWS STS Config Endpoint", GROUP_AWS_STS,
-                awsStsGroupCounter++, // NOPMD UnusedAssignment
+                ++awsStsGroupCounter,
                 ConfigDef.Width.NONE, AWS_STS_CONFIG_ENDPOINT);
     }
 

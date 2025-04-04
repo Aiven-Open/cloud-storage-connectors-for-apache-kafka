@@ -16,8 +16,13 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -28,14 +33,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class FileNameFragmentTest {// NOPMD
 
@@ -104,20 +103,20 @@ public class FileNameFragmentTest {// NOPMD
         final List<Arguments> args = new ArrayList<>();
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, true,
-                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 0, ConfigDef.Width.LONG, false));
+                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 1, ConfigDef.Width.LONG, false));
 
         args.add(Arguments.of(FileNameArgs.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
-                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 1, ConfigDef.Width.NONE, true));
+                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 2, ConfigDef.Width.NONE, true));
 
         args.add(Arguments.of(FileNameArgs.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM,
-                FileNameArgs.GROUP_FILE.key(), 2, ConfigDef.Width.SHORT, false));
+                FileNameArgs.GROUP_FILE.key(), 3, ConfigDef.Width.SHORT, false));
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
-                ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 3,
+                ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 4,
                 ConfigDef.Width.SHORT, false));
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING,
-                TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 4,
+                TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 5,
                 ConfigDef.Width.SHORT, false));
 
         return args.stream();

@@ -133,7 +133,7 @@ final class OffsetManagerTest {
     }
 
     @Test
-    public void testKeyEqualityAndHashCode() {
+    void testKeyEqualityAndHashCode() {
         final OffsetManager.OffsetManagerKey key1 = new OffsetManager.OffsetManagerKey(Map.of("one", "uno", "two", "dos"));
         final OffsetManager.OffsetManagerKey key2 = new OffsetManager.OffsetManagerKey(Map.of("one", "uno", "two", "dos"));
         final OffsetManager.OffsetManagerKey key3 = new OffsetManager.OffsetManagerKey(Map.of("one", "aon", "two", "dó"));

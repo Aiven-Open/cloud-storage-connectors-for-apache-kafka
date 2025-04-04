@@ -37,20 +37,31 @@ import org.slf4j.Logger;
  * validate} methods on the dependant fragments during validation.
  */
 public class ConfigFragment {
-
-    public static void logDeprecated(Logger logger, String old, String replacement) {
-        logger.warn("{} property is deprecated please use {}.", old, replacement);
-    }
-
-    public static void logDeprecated(Logger logger, String old) {
-        logger.warn("{} property is deprecated please read documentation for the new name.", old);
-    }
-
     /** The configuration that this fragment is associated with */
     protected final AbstractConfig cfg;
 
     /**
-     * Construct the ConfigFragment..
+     * Logs a deprecated message for a deprecated configuration key.
+     * @param logger the logger to log to.
+     * @param old the deprecated configuration key.
+     * @param replacement the replacement configuration key.
+     */
+    public static void logDeprecated(final Logger logger, final String old, final String replacement) {
+        logger.warn("{} property is deprecated please use {}.", old, replacement);
+    }
+
+    /**
+     * Logs a deprecated message for a deprecated configuration key.  This method should only be
+     * used when the key does not have a replacement and the documentation describes what to do.
+     * @param logger the logger to log to.
+     * @param old the deprecated configuration key.
+     */
+    public static void logDeprecated(final Logger logger, final String old) {
+        logger.warn("{} property is deprecated please read documentation for the new name.", old);
+    }
+
+    /**
+     * Construct the ConfigFragment.
      *
      * @param cfg
      *            the configuration that this fragment is associated with.

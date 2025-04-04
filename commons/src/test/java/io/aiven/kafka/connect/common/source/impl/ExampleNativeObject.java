@@ -16,9 +16,9 @@
 
 package io.aiven.kafka.connect.common.source.impl;
 
-import java.nio.ByteBuffer;
-
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
+import java.nio.ByteBuffer;
 
 /**
  * A "native" object for testing.
@@ -40,5 +40,13 @@ public class ExampleNativeObject {
     public ExampleNativeObject(final String key, final ByteBuffer data) {
         this.key = key;
         this.data = data;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public ByteBuffer getData() {
+        return data;
     }
 }
