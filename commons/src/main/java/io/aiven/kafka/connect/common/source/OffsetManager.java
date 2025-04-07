@@ -16,11 +16,7 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.kafka.connect.source.SourceRecord;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static java.util.stream.Collectors.toList;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -33,11 +29,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 
-import static java.util.stream.Collectors.toList;
+import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.source.SourceTaskContext;
+
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages the offsets returned from the Kafka SourceTaskContext.
- * @param <E> the implementation class for the {@link OffsetManager.OffsetManagerEntry}.
+ *
+ * @param <E>
+ *            the implementation class for the {@link OffsetManager.OffsetManagerEntry}.
  */
 public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     /** The logger to write to */
@@ -133,20 +136,8 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
     }
 
     /**
-     * Removes the specified entry from the in memory table. Does not impact the records stored in the
-     * {@link SourceTaskContext}.
-     *
-     * @param sourceRecord
-     *            the SourceRecord that contains the key to be removed.
-     */
-    public void removeEntry(final SourceRecord sourceRecord) {
-        LOGGER.debug("Removing: {}", sourceRecord.sourcePartition());
-        offsets.remove(sourceRecord.sourcePartition());
-    }
-
-    /**
-     * The definition of an entry in the OffsetManager.
-     * Source implementations should define an entry to meet their needs.
+     * The definition of an entry in the OffsetManager. Source implementations should define an entry to meet their
+     * needs.
      */
     public interface OffsetManagerEntry<T extends OffsetManagerEntry<T>> extends Comparable<T> {
 
@@ -274,8 +265,10 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
 
         /**
          * Constructor.
-         * @param data the map of data items.  A defensive copy of the map is created so that subsequent changes
-         *             to the parameter are NOT reflected in the key.
+         *
+         * @param data
+         *            the map of data items. A defensive copy of the map is created so that subsequent changes to the
+         *            parameter are NOT reflected in the key.
          */
         public OffsetManagerKey(final Map<String, Object> data) {
             this.data = new TreeMap<>(data);
@@ -288,10 +281,11 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
 
         /**
          * Return the map as the partition map for a {@link SourceRecord}.
+         *
          * @return the data map.
          */
         public Map<String, Object> getPartitionMap() {
-            return data;
+            return new TreeMap<>(data);
         }
 
         @Override
@@ -320,7 +314,8 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
                 while (lhsIterator.hasNext() && rhsIterator.hasNext()) {
                     final Map.Entry<String, Object> lhsEntry = lhsIterator.next();
                     final Map.Entry<String, Object> rhsEntry = rhsIterator.next();
-                    if (!(lhsEntry.getKey().equals(rhsEntry.getKey()) && lhsEntry.getValue().equals(rhsEntry.getValue()))) {
+                    if (!(lhsEntry.getKey().equals(rhsEntry.getKey())
+                            && lhsEntry.getValue().equals(rhsEntry.getValue()))) {
                         return false;
                     }
                 }

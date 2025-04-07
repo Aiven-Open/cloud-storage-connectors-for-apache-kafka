@@ -16,11 +16,12 @@
 
 package io.aiven.kafka.connect.common.source.impl;
 
-import com.google.common.base.Objects;
-import io.aiven.kafka.connect.common.source.OffsetManager;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import io.aiven.kafka.connect.common.source.OffsetManager;
+
+import com.google.common.base.Objects;
 
 /**
  * An implementation of OffsetManagerEntry. This entry has 3 values stored in the map.

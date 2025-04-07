@@ -19,8 +19,10 @@ package io.aiven.kafka.connect.common.source;
 /**
  * Information about the Native object.
  *
- * @param <N> The native object type.
- * @param <K> the native key type
+ * @param <N>
+ *            The native object type.
+ * @param <K>
+ *            the native key type
  */
 public interface NativeInfo<N, K> {
     /**

@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.config;
 
 import org.apache.kafka.common.config.AbstractConfig;
+
 import org.slf4j.Logger;
 
 /**
@@ -42,19 +43,26 @@ public class ConfigFragment {
 
     /**
      * Logs a deprecated message for a deprecated configuration key.
-     * @param logger the logger to log to.
-     * @param old the deprecated configuration key.
-     * @param replacement the replacement configuration key.
+     *
+     * @param logger
+     *            the logger to log to.
+     * @param old
+     *            the deprecated configuration key.
+     * @param replacement
+     *            the replacement configuration key.
      */
     public static void logDeprecated(final Logger logger, final String old, final String replacement) {
         logger.warn("{} property is deprecated please use {}.", old, replacement);
     }
 
     /**
-     * Logs a deprecated message for a deprecated configuration key.  This method should only be
-     * used when the key does not have a replacement and the documentation describes what to do.
-     * @param logger the logger to log to.
-     * @param old the deprecated configuration key.
+     * Logs a deprecated message for a deprecated configuration key. This method should only be used when the key does
+     * not have a replacement and the documentation describes what to do.
+     *
+     * @param logger
+     *            the logger to log to.
+     * @param old
+     *            the deprecated configuration key.
      */
     public static void logDeprecated(final Logger logger, final String old) {
         logger.warn("{} property is deprecated please read documentation for the new name.", old);
@@ -69,7 +77,6 @@ public class ConfigFragment {
     protected ConfigFragment(final AbstractConfig cfg) {
         this.cfg = cfg;
     }
-
 
     /**
      * Validate that the data in the configuration matches any restrictions. Default implementation does nothing.

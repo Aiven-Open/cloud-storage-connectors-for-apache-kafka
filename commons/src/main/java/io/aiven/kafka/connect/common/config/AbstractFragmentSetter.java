@@ -13,14 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.aiven.kafka.connect.common.config;
 
 import java.net.URI;
 import java.util.Map;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * An abstract class that is the bases for programmatic configuration easier.
- * @param <T> the concrete class.
+ *
+ * @param <T>
+ *            the concrete class.
  */
 @SuppressWarnings("PMD.LinguisticNaming")
 public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
@@ -29,7 +34,9 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
 
     /**
      * Constructor.
-     * @param data the map of data items being set.
+     *
+     * @param data
+     *            the map of data items being set.
      */
     protected AbstractFragmentSetter(final Map<String, String> data) {
         this.dataMap = data;
@@ -37,16 +44,21 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
 
     /**
      * Gets the data map.
+     *
      * @return the data map.
      */
+    @SuppressFBWarnings(value = { "EI_EXPOSE_REP", "EI_EXPOSE_REP2" }, justification = "returning data as modified")
     final public Map<String, String> data() {
         return dataMap;
     }
 
     /**
      * Sets the value.
-     * @param key the key to set the value for.
-     * @param value the value to set.
+     *
+     * @param key
+     *            the key to set the value for.
+     * @param value
+     *            the value to set.
      * @return this.
      */
     final protected T setValue(final String key, final String value) {
@@ -56,8 +68,11 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
 
     /**
      * Sets the value.
-     * @param key the key to set the value for.
-     * @param value the value to set.
+     *
+     * @param key
+     *            the key to set the value for.
+     * @param value
+     *            the value to set.
      * @return this.
      */
     final protected T setValue(final String key, final int value) {
@@ -66,8 +81,11 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
 
     /**
      * Sets the value.
-     * @param key the key to set the value for.
-     * @param value the value to set.
+     *
+     * @param key
+     *            the key to set the value for.
+     * @param value
+     *            the value to set.
      * @return this.
      */
     final protected T setValue(final String key, final long value) {
@@ -76,8 +94,11 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
 
     /**
      * Sets the value.
-     * @param key the key to set the value for.
-     * @param value the value to set.
+     *
+     * @param key
+     *            the key to set the value for.
+     * @param value
+     *            the value to set.
      * @return this.
      */
     final protected T setValue(final String key, final Class<?> value) {
@@ -86,8 +107,11 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
 
     /**
      * Sets the value.
-     * @param key the key to set the value for.
-     * @param value the value to set.
+     *
+     * @param key
+     *            the key to set the value for.
+     * @param value
+     *            the value to set.
      * @return this.
      */
     final protected T setValue(final String key, final URI value) {
@@ -96,8 +120,11 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
 
     /**
      * Sets the value.
-     * @param key the key to set the value for.
-     * @param state the value to set.
+     *
+     * @param key
+     *            the key to set the value for.
+     * @param state
+     *            the value to set.
      * @return this.
      */
     final protected T setValue(final String key, final boolean state) {

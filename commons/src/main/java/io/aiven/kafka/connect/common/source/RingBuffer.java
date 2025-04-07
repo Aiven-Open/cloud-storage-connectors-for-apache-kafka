@@ -23,7 +23,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Implements a ring buffer of items.
- * @param <K> the type of item in the queue.  Must support equality check.
+ *
+ * @param <K>
+ *            the type of item in the queue. Must support equality check.
  */
 public final class RingBuffer<K> extends SynchronizedQueue<K> {
     private static final Logger LOGGER = LoggerFactory.getLogger(RingBuffer.class);
@@ -34,8 +36,7 @@ public final class RingBuffer<K> extends SynchronizedQueue<K> {
     private final boolean isEmpty;
 
     /**
-     * Create a Ring Buffer of a maximum Size.
-     * If the size is less than or equal to 0 then the buffer is always empty.
+     * Create a Ring Buffer of a maximum Size. If the size is less than or equal to 0 then the buffer is always empty.
      *
      * @param size
      *            The size that the linked list should be.
@@ -49,9 +50,9 @@ public final class RingBuffer<K> extends SynchronizedQueue<K> {
     /**
      * Adds a new item if it is not already present.
      * <ul>
-     *     <li>If the buffer is always empty the item is ignored and not enqueued.</li>
-     *     <li>If the buffer already contains the item it is ignored and not enqueued.</li>
-     *     <li>If the buffer is full the oldest entry in the list is removed.</li>
+     * <li>If the buffer is always empty the item is ignored and not enqueued.</li>
+     * <li>If the buffer already contains the item it is ignored and not enqueued.</li>
+     * <li>If the buffer is full the oldest entry in the list is removed.</li>
      * </ul>
      *
      * @param item
@@ -70,6 +71,7 @@ public final class RingBuffer<K> extends SynchronizedQueue<K> {
 
     /**
      * Returns {@code true} if the buffer is full.
+     *
      * @return {@code true} if the buffer is full.
      */
     public boolean isFull() {
@@ -84,5 +86,19 @@ public final class RingBuffer<K> extends SynchronizedQueue<K> {
         final K oldest = isFull() ? peek() : null;
         LOGGER.debug("Ring buffer getOldest {}", oldest);
         return oldest;
+    }
+
+    @Override
+    public boolean equals(final Object object) {
+        if (object == this) {
+            return true;
+        }
+        return super.equals(object);
+    }
+
+    @SuppressWarnings("PMD.UselessOverridingMethod")
+    @Override
+    public int hashCode() {
+        return super.hashCode();
     }
 }

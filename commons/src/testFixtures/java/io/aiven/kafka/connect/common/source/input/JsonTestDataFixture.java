@@ -16,14 +16,16 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
-
 /**
  * A testing fixture to generate JSON data.
  */
 final public class JsonTestDataFixture {
 
-    private final static String msgFormat = "{\"id\" : %s, \"message\" : \"%s\", \"value\" : \"value%s\"}%n";
+    private final static String MSG_FORMAT = "{\"id\" : %s, \"message\" : \"%s\", \"value\" : \"value%s\"}%n";
 
+    private JsonTestDataFixture() {
+        // do not instantiate
+    }
     /**
      * Creates the specified number of JSON records encoded into a string.
      *
@@ -31,14 +33,23 @@ final public class JsonTestDataFixture {
      *            the number of records to generate.
      * @return The specified number of JSON records encoded into a string.
      */
-    public static String getJsonRecs(final int recordCount) {
-        return getJsonRecs(recordCount, "test message");
+    public static String generateJsonRecs(final int recordCount) {
+        return generateJsonRecs(recordCount, "test message");
     }
 
-    public static String getJsonRecs(final int recordCount, String testMessage) {
+    /**
+     * Creates Json test data.
+     *
+     * @param recordCount
+     *            the number of records to create.
+     * @param testMessage
+     *            the message for the records.
+     * @return
+     */
+    public static String generateJsonRecs(final int recordCount, final String testMessage) {
         final StringBuilder jsonRecords = new StringBuilder();
-        for (int i = 0; i < 500; i++) {
-            jsonRecords.append(String.format(msgFormat, i, testMessage, i));
+        for (int i = 0; i < recordCount; i++) {
+            jsonRecords.append(String.format(MSG_FORMAT, i, testMessage, i));
         }
         return jsonRecords.toString();
     }

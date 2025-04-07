@@ -16,26 +16,28 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.apache.kafka.common.metrics.MetricsReporter;
 import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
 import org.apache.kafka.connect.runtime.WorkerConfig;
 import org.apache.kafka.connect.storage.Converter;
 
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 /**
- * Defines the configuration for Kafka.  This fragment only has the Setter and a few constants for Connectors.
+ * Defines the configuration for Kafka. This fragment only has the Setter and a few constants for Connectors.
  */
 public final class KafkaFragment {
 
     /**
      * Enum for setting discovery.
      */
-    public enum PluginDiscovery {ONLY_SCAN, SERVICE_LOAD, HYBRID_WARN, HYBRID_FAIL}
+    public enum PluginDiscovery {
+        ONLY_SCAN, SERVICE_LOAD, HYBRID_WARN, HYBRID_FAIL
+    }
 
     /**
      * The configuration string for plugin discovery.
@@ -48,7 +50,9 @@ public final class KafkaFragment {
 
     /**
      * Get the setter for this fragment.
-     * @param data The data map for the configuration.
+     *
+     * @param data
+     *            The data map for the configuration.
      * @return the Setter.
      */
     public static Setter setter(final Map<String, String> data) {
@@ -62,7 +66,9 @@ public final class KafkaFragment {
     public final static class Setter extends AbstractFragmentSetter<Setter> {
         /**
          * Constructor.
-         * @param data the map of data to update.
+         *
+         * @param data
+         *            the map of data to update.
          */
         private Setter(final Map<String, String> data) {
             super(data);
@@ -70,7 +76,9 @@ public final class KafkaFragment {
 
         /**
          * THe class for the connector.
-         * @param connectorClass the class for the connector.
+         *
+         * @param connectorClass
+         *            the class for the connector.
          * @return this
          */
         public Setter connector(final Class<? extends Connector> connectorClass) {
@@ -79,7 +87,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the key converter.
-         * @param converter the Key converter class.
+         *
+         * @param converter
+         *            the Key converter class.
          * @return this
          */
         public Setter keyConverter(final Class<? extends Converter> converter) {
@@ -88,7 +98,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the value converter.
-         * @param converter the value converter class.
+         *
+         * @param converter
+         *            the value converter class.
          * @return this
          */
         public Setter valueConverter(final Class<? extends Converter> converter) {
@@ -97,7 +109,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the header converter.
-         * @param header the header converter class.
+         *
+         * @param header
+         *            the header converter class.
          * @return this.
          */
         public Setter headerConverter(final Class<? extends Converter> header) {
@@ -106,7 +120,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the offset commit flush interval.
-         * @param interval the interval between flushes.
+         *
+         * @param interval
+         *            the interval between flushes.
          * @return this.
          */
         public Setter offsetFlushInterval(final Duration interval) {
@@ -115,7 +131,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the offset commit timeout.
-         * @param interval the interval between commit timeouts.
+         *
+         * @param interval
+         *            the interval between commit timeouts.
          * @return this.
          */
         public Setter offsetTimeout(final Duration interval) {
@@ -124,7 +142,9 @@ public final class KafkaFragment {
 
         /**
          * Globally unique name to use for this connector.
-         * @param name Globally unique name to use for this connector.
+         *
+         * @param name
+         *            Globally unique name to use for this connector.
          * @return this
          */
         public Setter name(final String name) {
@@ -133,7 +153,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the plugin discovery strategy.
-         * @param pluginDiscovery the plugin discovery strategy.
+         *
+         * @param pluginDiscovery
+         *            the plugin discovery strategy.
          * @return this
          */
         public Setter pluginDiscovery(final PluginDiscovery pluginDiscovery) {
@@ -142,7 +164,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the maximum number of tasks for the connector.
-         * @param tasksMax the maximum number of tasks.
+         *
+         * @param tasksMax
+         *            the maximum number of tasks.
          * @return this
          */
         public Setter tasksMax(final int tasksMax) {
@@ -151,7 +175,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the list of transforms
-         * @param transforms a comma separated list of transforms.
+         *
+         * @param transforms
+         *            a comma separated list of transforms.
          * @return this
          */
         public Setter transforms(final String transforms) {
@@ -160,7 +186,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the bootstrap servers.
-         * @param bootstrapServers the bootstrap servers.
+         *
+         * @param bootstrapServers
+         *            the bootstrap servers.
          * @return this
          */
         public Setter bootstrapServers(final String bootstrapServers) {
@@ -169,7 +197,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the task shutdown timeout.
-         * @param timeout the timeout.
+         *
+         * @param timeout
+         *            the timeout.
          * @return this
          */
         public Setter taskShutdownTimeout(final Duration timeout) {
@@ -178,7 +208,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the configuration listeners.
-         * @param listeners a comma separated string of configuration listeners.
+         *
+         * @param listeners
+         *            a comma separated string of configuration listeners.
          * @return this
          */
         public Setter listeners(final String listeners) {
@@ -187,7 +219,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the configuration listeners.
-         * @param listeners an array of configuration listeners.
+         *
+         * @param listeners
+         *            an array of configuration listeners.
          * @return this
          */
         public Setter listeners(final String... listeners) {
@@ -196,7 +230,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the advertised host name.
-         * @param hostName the advertised host name
+         *
+         * @param hostName
+         *            the advertised host name
          * @return this
          */
         public Setter advertisedHostName(final String hostName) {
@@ -205,7 +241,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the advertised host port.
-         * @param port the advertised host port.
+         *
+         * @param port
+         *            the advertised host port.
          * @return
          */
         public Setter advertisedHostPort(final int port) {
@@ -214,7 +252,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the advertised listener protocol.
-         * @param protocol HTTP or HTTPS
+         *
+         * @param protocol
+         *            HTTP or HTTPS
          * @return this
          */
         public Setter advertisedListenerProtocol(final String protocol) {
@@ -222,10 +262,12 @@ public final class KafkaFragment {
         }
 
         /**
-         * Sets the aAccess-Control-Allow-Origin header to for REST API requests.
-         * To enable cross-origin access, set this to the domain of the application that should be permitted to access the API,
-         * or '*' to allow access from any domain. The default value only allows access from the domain of the REST API.
-         * @param origin the orgin to allow
+         * Sets the aAccess-Control-Allow-Origin header to for REST API requests. To enable cross-origin access, set
+         * this to the domain of the application that should be permitted to access the API, or '*' to allow access from
+         * any domain. The default value only allows access from the domain of the REST API.
+         *
+         * @param origin
+         *            the orgin to allow
          * @return this
          */
         public Setter accessControlAllowOrigin(final String origin) {
@@ -233,9 +275,11 @@ public final class KafkaFragment {
         }
 
         /**
-         * Sets the methods supported for cross origin requests by setting the Access-Control-Allow-Methods header.
-         * The default value of the Access-Control-Allow-Methods header allows cross-origin requests for GET, POST and HEAD.
-         * @param methods A list of methods to allow.
+         * Sets the methods supported for cross origin requests by setting the Access-Control-Allow-Methods header. The
+         * default value of the Access-Control-Allow-Methods header allows cross-origin requests for GET, POST and HEAD.
+         *
+         * @param methods
+         *            A list of methods to allow.
          * @return this
          */
         public Setter accessControlAllowMethods(final String methods) {
@@ -243,9 +287,11 @@ public final class KafkaFragment {
         }
 
         /**
-         * Sets the list of paths separated by commas (,) that contain plugins (connectors, converters, transformations).
-         * Example: "/usr/local/share/java,/usr/local/share/kafka/plugins,/opt/connectors"
-         * @param pluginPath the list of paths.
+         * Sets the list of paths separated by commas (,) that contain plugins (connectors, converters,
+         * transformations). Example: "/usr/local/share/java,/usr/local/share/kafka/plugins,/opt/connectors"
+         *
+         * @param pluginPath
+         *            the list of paths.
          * @return this
          * @see #pluginPath(String...)
          */
@@ -254,15 +300,20 @@ public final class KafkaFragment {
         }
 
         /**
-         * Sets the list of paths that contain plugins (connectors, converters, transformations). The list should consist
-         * of top level directories that include any combination of:
+         * Sets the list of paths that contain plugins (connectors, converters, transformations). The list should
+         * consist of top level directories that include any combination of:
          * <ul>
          * <li>directories immediately containing jars with plugins and their dependencies</li>
-         *             <li>uber-jars with plugins and their dependencies</li>
-         *             <li>directories immediately containing the package directory structure of classes of plugins and their dependencies</li>
-         *             </ul>
-         * <p>Note: symlinks will be followed to discover dependencies or plugins.</p>
-         * @param pluginPath the list of paths to to search,.
+         * <li>uber-jars with plugins and their dependencies</li>
+         * <li>directories immediately containing the package directory structure of classes of plugins and their
+         * dependencies</li>
+         * </ul>
+         * <p>
+         * Note: symlinks will be followed to discover dependencies or plugins.
+         * </p>
+         *
+         * @param pluginPath
+         *            the list of paths to to search,.
          * @return this.
          */
         public Setter pluginPath(final String... pluginPath) {
@@ -271,7 +322,9 @@ public final class KafkaFragment {
 
         /**
          * Sets the metrics sample window size.
-         * @param window the time for each window.
+         *
+         * @param window
+         *            the time for each window.
          * @return this
          */
         public Setter metricsSampleWindow(final Duration window) {
@@ -280,7 +333,9 @@ public final class KafkaFragment {
 
         /**
          * The number of samples maintained to compute metrics.
-         * @param count the number of samples.
+         *
+         * @param count
+         *            the number of samples.
          * @return this.
          */
         public Setter metricsSampleCount(final int count) {
@@ -289,7 +344,9 @@ public final class KafkaFragment {
 
         /**
          * The highest recording level for metrics.
-         * @param level the recording level
+         *
+         * @param level
+         *            the recording level
          * @return this.
          */
         public Setter metricsRecordingLevel(final int level) {
@@ -297,13 +354,17 @@ public final class KafkaFragment {
         }
 
         /**
-         * A list of classes to use as metrics reporters. Implementing the {@link org.apache.kafka.common.metrics.MetricsReporter} interface allows plugging in classes that will be notified of new metric creation.
-         * The JmxReporter is always included to register JMX statistics.
-         * @param reporterClasses the classes to use.
+         * A list of classes to use as metrics reporters. Implementing the
+         * {@link org.apache.kafka.common.metrics.MetricsReporter} interface allows plugging in classes that will be
+         * notified of new metric creation. The JmxReporter is always included to register JMX statistics.
+         *
+         * @param reporterClasses
+         *            the classes to use.
          * @return this
          */
-        public Setter metricReporterClasses(final Class<? extends MetricsReporter>... reporterClasses ) {
-            return setValue(WorkerConfig.METRIC_REPORTER_CLASSES_CONFIG, Arrays.stream(reporterClasses).map(Class::getName).collect(Collectors.joining(", ")));
+        public Setter metricReporterClasses(final Class<? extends MetricsReporter>... reporterClasses) {
+            return setValue(WorkerConfig.METRIC_REPORTER_CLASSES_CONFIG,
+                    Arrays.stream(reporterClasses).map(Class::getName).collect(Collectors.joining(", ")));
         }
     }
 }

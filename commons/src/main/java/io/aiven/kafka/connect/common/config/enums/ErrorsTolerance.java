@@ -16,10 +16,10 @@
 
 package io.aiven.kafka.connect.common.config.enums;
 
-import org.apache.kafka.common.config.ConfigException;
-
 import java.util.Arrays;
 import java.util.Objects;
+
+import org.apache.kafka.common.config.ConfigException;
 
 public enum ErrorsTolerance {
 

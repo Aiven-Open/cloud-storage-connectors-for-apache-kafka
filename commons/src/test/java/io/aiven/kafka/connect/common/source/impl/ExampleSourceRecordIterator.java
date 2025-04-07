@@ -16,17 +16,18 @@
 
 package io.aiven.kafka.connect.common.source.impl;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.util.stream.Stream;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
+
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.util.stream.Stream;
 
 /**
  * An AbstractSourceRecordIterator implementation for the AbstractSourceRecord implementation.

@@ -16,6 +16,15 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;
@@ -25,14 +34,7 @@ import io.aiven.kafka.connect.common.source.impl.ExampleOffsetManagerEntry;
 import io.aiven.kafka.connect.common.source.impl.ExampleSourceRecord;
 import io.aiven.kafka.connect.common.source.impl.ExampleSourceRecordIterator;
 
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Test to verify AbstraactSourceRecordIterator works.
@@ -65,7 +67,7 @@ public class ExampleSourceRecordIteratorTest
         return mock(SourceCommonConfig.class);
     }
 
-    //@SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
+    @SuppressFBWarnings({ "EI_EXPOSE_REP", "EI_EXPOSE_REP2" })
     public final class Mutator extends ClientMutator<ExampleNativeObject, String, Mutator> {
 
         @Override
@@ -82,7 +84,9 @@ public class ExampleSourceRecordIteratorTest
             // Dequeue a block. Sets the objects.
             dequeueBlock();
             final boolean matches = offset == null;
-            return objects.stream().filter( o -> matches || o.getKey().compareTo(offset) >= 0).collect(Collectors.toList());
+            return objects.stream()
+                    .filter(o -> matches || o.getKey().compareTo(offset) >= 0)
+                    .collect(Collectors.toList());
         }
 
         @Override

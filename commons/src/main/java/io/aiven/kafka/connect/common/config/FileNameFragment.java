@@ -16,20 +16,21 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
+
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.templating.Template;
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
-
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Fragment to handle all file name extraction operations. Requires {@link OutputFormatFragment} and (@link
@@ -50,7 +51,9 @@ public final class FileNameFragment extends ConfigFragment {
 
     /**
      * Gets a setter for this properties in this fragment.
-     * @param data the data to update.
+     *
+     * @param data
+     *            the data to update.
      * @return the Setter.
      */
     public static Setter setter(final Map<String, String> data) {
@@ -59,7 +62,9 @@ public final class FileNameFragment extends ConfigFragment {
 
     /**
      * Create an instance of this fragment wrapping the specified config.
-     * @param cfg the configuration to read from.
+     *
+     * @param cfg
+     *            the configuration to read from.
      */
     public FileNameFragment(final AbstractConfig cfg) {
         super(cfg);
@@ -115,8 +120,7 @@ public final class FileNameFragment extends ConfigFragment {
                 new TimeZoneValidator(), ConfigDef.Importance.LOW,
                 "Specifies the timezone in which the dates and time for the timestamp variable will be treated. "
                         + "Use standard shot and long names. Default is UTC",
-                GROUP_FILE, ++fileGroupCounter, 
-                ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_TIMEZONE);
+                GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_TIMEZONE);
 
         configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
                 new TimestampSourceValidator(), ConfigDef.Importance.LOW,
@@ -202,7 +206,9 @@ public final class FileNameFragment extends ConfigFragment {
     public static final class Setter extends AbstractFragmentSetter<Setter> {
         /**
          * Constructs the Setter.
-         * @param data the data to update.
+         *
+         * @param data
+         *            the data to update.
          */
         private Setter(final Map<String, String> data) {
             super(data);
@@ -210,7 +216,9 @@ public final class FileNameFragment extends ConfigFragment {
 
         /**
          * Sets the file compression type.
-         * @param compressionType the compression type.
+         *
+         * @param compressionType
+         *            the compression type.
          * @return this
          */
         public Setter fileCompression(final CompressionType compressionType) {
@@ -219,7 +227,9 @@ public final class FileNameFragment extends ConfigFragment {
 
         /**
          * Sets the maximum records per file.
-         * @param maxRecordsPerFile the maximum records per file.
+         *
+         * @param maxRecordsPerFile
+         *            the maximum records per file.
          * @return this.
          */
         public Setter maxRecordsPerFile(final int maxRecordsPerFile) {
@@ -228,7 +238,9 @@ public final class FileNameFragment extends ConfigFragment {
 
         /**
          * Sets the time stamp source.
-         * @param timestampSource the time stamp source.
+         *
+         * @param timestampSource
+         *            the time stamp source.
          * @return this.
          */
         public Setter timestampSource(final TimestampSource timestampSource) {
@@ -237,7 +249,9 @@ public final class FileNameFragment extends ConfigFragment {
 
         /**
          * Sets the timestamp source from a type.
-         * @param type the type to set the timestamp source to.
+         *
+         * @param type
+         *            the type to set the timestamp source to.
          * @return this.
          */
         public Setter timestampSource(final TimestampSource.Type type) {
@@ -246,7 +260,9 @@ public final class FileNameFragment extends ConfigFragment {
 
         /**
          * Sets the timestamp timezone.
-         * @param timeZone the timezone to se.t
+         *
+         * @param timeZone
+         *            the timezone to se.t
          * @return this
          */
         public Setter timestampTimeZone(final ZoneId timeZone) {
@@ -255,7 +271,9 @@ public final class FileNameFragment extends ConfigFragment {
 
         /**
          * Sets the file name template.
-         * @param template the prefix template to use.
+         *
+         * @param template
+         *            the prefix template to use.
          * @return this.
          */
         public Setter template(final String template) {
@@ -264,7 +282,9 @@ public final class FileNameFragment extends ConfigFragment {
 
         /**
          * Sets the file name prefix template.
-         * @param prefixTemplate the prefix template to use.
+         *
+         * @param prefixTemplate
+         *            the prefix template to use.
          * @return this
          */
         public Setter prefixTemplate(final String prefixTemplate) {

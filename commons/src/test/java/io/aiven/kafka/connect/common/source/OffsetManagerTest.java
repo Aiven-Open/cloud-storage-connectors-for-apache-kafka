@@ -16,18 +16,6 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import io.aiven.kafka.connect.common.source.impl.ExampleOffsetManagerEntry;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -36,6 +24,20 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+
+import io.aiven.kafka.connect.common.source.impl.ExampleOffsetManagerEntry;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 final class OffsetManagerTest {
 
@@ -61,8 +63,8 @@ final class OffsetManagerTest {
         offsetValue.put("object_key_file", 5L);
         when(offsetStorageReader.offset(partitionKey)).thenReturn(offsetValue);
 
-        final Optional<ExampleOffsetManagerEntry> result = offsetManager.getEntry(new OffsetManager.OffsetManagerKey(partitionKey),
-                ExampleOffsetManagerEntry::new);
+        final Optional<ExampleOffsetManagerEntry> result = offsetManager
+                .getEntry(new OffsetManager.OffsetManagerKey(partitionKey), ExampleOffsetManagerEntry::new);
         assertThat(result).isPresent();
         assertThat(result.get().data).isEqualTo(offsetValue);
     }
@@ -75,8 +77,8 @@ final class OffsetManagerTest {
         partitionKey.put("segment3", "something else");
         when(offsetStorageReader.offset(partitionKey)).thenReturn(new HashMap<>());
 
-        final Optional<ExampleOffsetManagerEntry> result = offsetManager.getEntry(new OffsetManager.OffsetManagerKey(partitionKey),
-                ExampleOffsetManagerEntry::new);
+        final Optional<ExampleOffsetManagerEntry> result = offsetManager
+                .getEntry(new OffsetManager.OffsetManagerKey(partitionKey), ExampleOffsetManagerEntry::new);
         assertThat(result).isNotPresent();
     }
 
@@ -97,8 +99,9 @@ final class OffsetManagerTest {
         verify(offsetStorageReader, times(1)).offsets(anyList());
 
         // No Existing entries so we expect nothing to exist and for it to try check the offsets again.
-        final Optional<ExampleOffsetManagerEntry> result = offsetManager
-                .getEntry(new OffsetManager.OffsetManagerKey(partitionMaps.get(0).getPartitionMap()), ExampleOffsetManagerEntry::new);
+        final Optional<ExampleOffsetManagerEntry> result = offsetManager.getEntry(
+                new OffsetManager.OffsetManagerKey(partitionMaps.get(0).getPartitionMap()),
+                ExampleOffsetManagerEntry::new);
         assertThat(result).isEmpty();
         verify(offsetStorageReader, times(1)).offset(eq(partitionMaps.get(0).getPartitionMap()));
 
@@ -125,8 +128,9 @@ final class OffsetManagerTest {
         verify(offsetStorageReader, times(1)).offsets(anyList());
 
         // No Existing entries so we expect nothing to exist and for it to try check the offsets again.
-        final Optional<ExampleOffsetManagerEntry> result = offsetManager
-                .getEntry(new OffsetManager.OffsetManagerKey(partitionMaps.get(0).getPartitionMap()), ExampleOffsetManagerEntry::new);
+        final Optional<ExampleOffsetManagerEntry> result = offsetManager.getEntry(
+                new OffsetManager.OffsetManagerKey(partitionMaps.get(0).getPartitionMap()),
+                ExampleOffsetManagerEntry::new);
         assertThat(result).isPresent();
         verify(offsetStorageReader, times(0)).offset(eq(partitionMaps.get(0).getPartitionMap()));
 
@@ -134,9 +138,12 @@ final class OffsetManagerTest {
 
     @Test
     void testKeyEqualityAndHashCode() {
-        final OffsetManager.OffsetManagerKey key1 = new OffsetManager.OffsetManagerKey(Map.of("one", "uno", "two", "dos"));
-        final OffsetManager.OffsetManagerKey key2 = new OffsetManager.OffsetManagerKey(Map.of("one", "uno", "two", "dos"));
-        final OffsetManager.OffsetManagerKey key3 = new OffsetManager.OffsetManagerKey(Map.of("one", "aon", "two", "dó"));
+        final OffsetManager.OffsetManagerKey key1 = new OffsetManager.OffsetManagerKey(
+                Map.of("one", "uno", "two", "dos"));
+        final OffsetManager.OffsetManagerKey key2 = new OffsetManager.OffsetManagerKey(
+                Map.of("one", "uno", "two", "dos"));
+        final OffsetManager.OffsetManagerKey key3 = new OffsetManager.OffsetManagerKey(
+                Map.of("one", "aon", "two", "dó"));
 
         assertThat(key1).isEqualTo(key2);
         assertThat(key1.hashCode()).isEqualTo(key2.hashCode());

@@ -16,12 +16,13 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import io.aiven.kafka.connect.common.source.input.InputFormat;
+import java.util.Locale;
+import java.util.Map;
+
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-import java.util.Locale;
-import java.util.Map;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
 
 /**
  * Fragment to manage transformer configuration.
@@ -37,7 +38,9 @@ public final class TransformerFragment extends ConfigFragment {
 
     /**
      * Creates a Setter for this fragment.
-     * @param data the data map to modify.
+     *
+     * @param data
+     *            the data map to modify.
      * @return the Setter
      */
     public static Setter setter(final Map<String, String> data) {
@@ -56,7 +59,9 @@ public final class TransformerFragment extends ConfigFragment {
 
     /**
      * Update the configuration definition with the properties for this fragment.
-     * @param configDef the configuration definition to update.
+     *
+     * @param configDef
+     *            the configuration definition to update.
      * @return the updated configuration definition.
      */
     public static ConfigDef update(final ConfigDef configDef) {
@@ -71,7 +76,8 @@ public final class TransformerFragment extends ConfigFragment {
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM,
                 "Input format of messages read from source avro/json/parquet/bytes", TRANSFORMER_GROUP,
                 ++transformerCounter, ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
-        configDef.define(TRANSFORMER_MAX_BUFFER_SIZE, ConfigDef.Type.INT, DEFAULT_MAX_BUFFER_SIZE, ConfigDef.Range.between(1, Integer.MAX_VALUE), ConfigDef.Importance.MEDIUM,
+        configDef.define(TRANSFORMER_MAX_BUFFER_SIZE, ConfigDef.Type.INT, DEFAULT_MAX_BUFFER_SIZE,
+                ConfigDef.Range.between(1, Integer.MAX_VALUE), ConfigDef.Importance.MEDIUM,
                 "Max Size of the byte buffer when using the BYTE Transformer", TRANSFORMER_GROUP, ++transformerCounter,
                 ConfigDef.Width.NONE, TRANSFORMER_MAX_BUFFER_SIZE);
 
@@ -80,6 +86,7 @@ public final class TransformerFragment extends ConfigFragment {
 
     /**
      * Gets the input format for the transformer.
+     *
      * @return the Input format for the
      */
     public InputFormat getInputFormat() {
@@ -88,6 +95,7 @@ public final class TransformerFragment extends ConfigFragment {
 
     /**
      * Get the schema registry URL.
+     *
      * @return the schema registry URL
      */
     public String getSchemaRegistryUrl() {
@@ -96,6 +104,7 @@ public final class TransformerFragment extends ConfigFragment {
 
     /**
      * Gets the maximum buffer size for the BYTE input.
+     *
      * @return the maximum buffer size fo the BYTE input.
      */
     public int getTransformerMaxBufferSize() {
@@ -108,7 +117,9 @@ public final class TransformerFragment extends ConfigFragment {
     public final static class Setter extends AbstractFragmentSetter<Setter> {
         /**
          * Constructor.
-         * @param data data to modify.
+         *
+         * @param data
+         *            data to modify.
          */
         private Setter(final Map<String, String> data) {
             super(data);
@@ -116,7 +127,9 @@ public final class TransformerFragment extends ConfigFragment {
 
         /**
          * Sets the schema registry URL.
-         * @param schemaRegistryUrl the schema registry URL.
+         *
+         * @param schemaRegistryUrl
+         *            the schema registry URL.
          * @return this
          */
         public Setter schemaRegistry(final String schemaRegistryUrl) {
@@ -125,7 +138,9 @@ public final class TransformerFragment extends ConfigFragment {
 
         /**
          * Sets the schema registry for the value converter schema registry URL.
-         * @param valueConverterSchemaRegistryUrl the schema registry URL.
+         *
+         * @param valueConverterSchemaRegistryUrl
+         *            the schema registry URL.
          * @return this
          */
         public Setter valueConverterSchemaRegistry(final String valueConverterSchemaRegistryUrl) {
@@ -134,7 +149,9 @@ public final class TransformerFragment extends ConfigFragment {
 
         /**
          * Sets the input format.
-         * @param inputFormat the input format for the transformer.
+         *
+         * @param inputFormat
+         *            the input format for the transformer.
          * @return this
          */
         public Setter inputFormat(final InputFormat inputFormat) {
@@ -143,11 +160,13 @@ public final class TransformerFragment extends ConfigFragment {
 
         /**
          * Sets the max buffer size for a BYTE transformer.
-         * @param maxBufferSize the maximum buffer size.
+         *
+         * @param maxBufferSize
+         *            the maximum buffer size.
          * @return this
          */
         public Setter maxBufferSize(final int maxBufferSize) {
             return setValue(TRANSFORMER_MAX_BUFFER_SIZE, maxBufferSize);
         }
-     }
+    }
 }

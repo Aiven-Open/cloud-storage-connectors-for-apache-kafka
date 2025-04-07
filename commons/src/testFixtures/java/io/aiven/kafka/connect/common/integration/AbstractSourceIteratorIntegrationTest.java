@@ -16,6 +16,25 @@
 
 package io.aiven.kafka.connect.common.integration;
 
+import static io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest.FILE_PATTERN;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.KafkaFragment;
@@ -28,51 +47,52 @@ import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
+
 import io.confluent.connect.avro.AvroConverter;
 import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
-import static io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest.FILE_PATTERN;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /**
+ * Tests that the AbstractSourceIterator functions correctly with the underlying storage system.
  *
- * @param <K> the native key type.
+ * @param <K>
+ *            the native key type.
  */
-//@SuppressWarnings("PMD.ExcessiveImports")
-public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>,
-        I extends AbstractSourceRecordIterator<?, K, O, ?>> extends AbstractIntegrationTest<K, O, I> {
+public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, I extends AbstractSourceRecordIterator<?, K, O, ?>>
+        extends
+            AbstractIntegrationTest<K, O, I> {
 
+    /**
+     * Static value to flag that the task is not set.
+     */
     private static final int TASK_NOT_SET = -1;
 
+    @Override
     protected Duration getOffsetFlushInterval() {
         return Duration.ofMillis(500);
     }
 
-    protected abstract OffsetManager.OffsetManagerKey createOffsetManagerKey(K nativeKey);
-
-    protected abstract  Function<Map<String, Object>, O> getOffsetManagerEntryCreator(OffsetManager.OffsetManagerKey key);
-
+    /**
+     * Get the Source record iterator under test.
+     *
+     * @param configData
+     *            the configuration data for the iterator.
+     * @param offsetManager
+     *            the OffsetManager for the iterator to use.d
+     * @param transformer
+     *            the Transformer for the iterator to use.
+     * @return a configured SourceRecord iterator.
+     */
     protected abstract I getSourceRecordIterator(Map<String, String> configData, OffsetManager<O> offsetManager,
-                                                 Transformer transformer);
+            Transformer transformer);
 
+    /**
+     * Creates an offset manager that does not have any stored Kafka data.
+     *
+     * @return An offset manager that does not have any stored Kafka data.
+     */
     final protected OffsetManager<O> createOffsetManager() {
         final SourceTaskContext context = mock(SourceTaskContext.class);
         final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
@@ -81,25 +101,53 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
         return new OffsetManager<>(context);
     }
 
-    private Map<String, String> createConfig(final String topic, final int taskId, final int maxTasks, final InputFormat inputFormat) {
+    /**
+     * Creates a configuration for the spcified arguments
+     *
+     * @param topic
+     *            the topic to write to.
+     * @param taskId
+     *            the taskID, May be {@link #TASK_NOT_SET}.
+     * @param maxTasks
+     *            the number of tasks.
+     * @param inputFormat
+     *            the input format to read.
+     * @return a map of configuration values that reflect the arguments.
+     */
+    private Map<String, String> createConfig(final String topic, final int taskId, final int maxTasks,
+            final InputFormat inputFormat) {
         return createConfig(null, topic, taskId, maxTasks, inputFormat);
     }
 
-    private Map<String, String> createConfig(String localPrefix, final String topic, final int taskId, final int maxTasks, final InputFormat inputFormat) {
+    /**
+     * Creates a configuration for the spcified arguments
+     *
+     * @param localPrefix
+     *            the prefix to add to the native key.
+     * @param topic
+     *            the topic to write to.
+     * @param taskId
+     *            the taskID, May be {@link #TASK_NOT_SET}.
+     * @param maxTasks
+     *            the number of tasks.
+     * @param inputFormat
+     *            the input format to read.
+     * @return a map of configuration values that reflect the arguments.
+     */
+    private Map<String, String> createConfig(final String localPrefix, final String topic, final int taskId,
+            final int maxTasks, final InputFormat inputFormat) {
         final Map<String, String> configData = createConnectorConfig(localPrefix);
 
-        KafkaFragment.setter(configData)
-                .connector(getConnectorClass());
+        KafkaFragment.setter(configData).connector(getConnectorClass());
 
         SourceConfigFragment.setter(configData).targetTopic(topic);
 
-        CommonConfigFragment.Setter setter = CommonConfigFragment.setter(configData).maxTasks(maxTasks);
+        final CommonConfigFragment.Setter setter = CommonConfigFragment.setter(configData).maxTasks(maxTasks);
         if (taskId > TASK_NOT_SET) {
             setter.taskId(taskId);
         }
 
-        if (inputFormat == InputFormat.AVRO)
-        {
+        if (inputFormat == InputFormat.AVRO) {
             configData.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, "false");
         }
         TransformerFragment.setter(configData).inputFormat(inputFormat);
@@ -109,8 +157,25 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
         return configData;
     }
 
+    @ParameterizedTest
+    @EnumSource(InputFormat.class)
+    void zeroLengthFilesAreIgnoredTest(final InputFormat inputFormat) {
+        final String topic = getTopic();
+        final int maxTasks = 1;
+        final int taskId = 0;
+
+        // write empty file object
+        write(topic, new byte[0], 3);
+        assertThat(getNativeStorage()).hasSize(1);
+
+        final I sourceRecordIterator = getSourceRecordIterator(createConfig(topic, taskId, maxTasks, inputFormat),
+                createOffsetManager(), TransformerFactory.getTransformer(inputFormat));
+
+        assertThat(sourceRecordIterator).isExhausted();
+    }
+
     /**
-     * Test the integration with the Amazon connector
+     * Test the integration with the BYTE reader.
      */
     @Test
     void sourceRecordIteratorBytesTest() {
@@ -122,31 +187,30 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";
 
         final List<K> expectedKeys = new ArrayList<>();
-        // write 2 objects to storage
+        // write objects to storage
         expectedKeys.add(write(topic, testData1.getBytes(StandardCharsets.UTF_8), 0).getNativeKey());
         expectedKeys.add(write(topic, testData2.getBytes(StandardCharsets.UTF_8), 0).getNativeKey());
         expectedKeys.add(write(topic, testData1.getBytes(StandardCharsets.UTF_8), 1).getNativeKey());
         expectedKeys.add(write(topic, testData2.getBytes(StandardCharsets.UTF_8), 1).getNativeKey());
 
-        // we don't expect the empty one.
-        final List<K> offsetKeys = new ArrayList<>(expectedKeys);
-        offsetKeys.add(write(topic, new byte[0], 3).getNativeKey());
+        assertThat(getNativeStorage()).hasSize(4);
 
-        assertThat(getNativeStorage()).hasSize(5);
-
-        final I sourceRecordIterator = getSourceRecordIterator(createConfig(topic, taskId, maxTasks, InputFormat.BYTES), createOffsetManager(),
-                TransformerFactory.getTransformer(InputFormat.BYTES));
+        final I sourceRecordIterator = getSourceRecordIterator(createConfig(topic, taskId, maxTasks, InputFormat.BYTES),
+                createOffsetManager(), TransformerFactory.getTransformer(InputFormat.BYTES));
 
         final HashSet<K> seenKeys = new HashSet<>();
         while (sourceRecordIterator.hasNext()) {
             final AbstractSourceRecord<?, K, O, ?> sourceRecord = sourceRecordIterator.next();
             final K key = sourceRecord.getNativeKey();
-            assertThat(offsetKeys).contains(key);
+            assertThat(expectedKeys).contains(key);
             seenKeys.add(key);
         }
         assertThat(seenKeys).containsAll(expectedKeys);
     }
 
+    /**
+     * Test the integration with the AVRO reader.
+     */
     @Test
     void sourceRecordIteratorAvroTest() throws IOException {
         final var topic = getTopic();
@@ -158,11 +222,11 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
 
         final int numberOfRecords = 5000;
 
-        final byte[] outputStream1 = AvroTestDataFixture.generateMockAvroData(1, numberOfRecords);
-        final byte[] outputStream2 = AvroTestDataFixture.generateMockAvroData(numberOfRecords + 1, numberOfRecords);
-        final byte[] outputStream3 = AvroTestDataFixture.generateMockAvroData(2 * numberOfRecords + 1, numberOfRecords);
-        final byte[] outputStream4 = AvroTestDataFixture.generateMockAvroData(3 * numberOfRecords + 1, numberOfRecords);
-        final byte[] outputStream5 = AvroTestDataFixture.generateMockAvroData(4 * numberOfRecords + 1, numberOfRecords);
+        final byte[] outputStream1 = AvroTestDataFixture.generateAvroData(1, numberOfRecords);
+        final byte[] outputStream2 = AvroTestDataFixture.generateAvroData(numberOfRecords + 1, numberOfRecords);
+        final byte[] outputStream3 = AvroTestDataFixture.generateAvroData(2 * numberOfRecords + 1, numberOfRecords);
+        final byte[] outputStream4 = AvroTestDataFixture.generateAvroData(3 * numberOfRecords + 1, numberOfRecords);
+        final byte[] outputStream5 = AvroTestDataFixture.generateAvroData(4 * numberOfRecords + 1, numberOfRecords);
 
         final Set<K> offsetKeys = new HashSet<>();
 
@@ -177,7 +241,6 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
 
         final I sourceRecordIterator = getSourceRecordIterator(configData, createOffsetManager(),
                 TransformerFactory.getTransformer(InputFormat.AVRO));
-
 
         final HashSet<K> seenKeys = new HashSet<>();
         final Map<K, List<Long>> seenRecords = new HashMap<>();
@@ -204,6 +267,10 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
         }
     }
 
+    /**
+     * Test the iterator can detect rehydration. Rehydration is when additional data items are written to the data store
+     * after the iterator has reported exhaustion. The iterator must be able to detect the new records ana process them.
+     */
     @Test
     void sourceRecordIteratorRehydrationTest() {
         // create 2 files.
@@ -218,12 +285,11 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
 
         final List<K> actualKeys = new ArrayList<>();
 
-        // write 2 objects to s3
+        // write 2 objects
         expectedKeys.add(write(topic, testData1.getBytes(StandardCharsets.UTF_8), 0).getNativeKey());
-        expectedKeys.add(write(topic, testData2.getBytes(StandardCharsets.UTF_8),0).getNativeKey());
+        expectedKeys.add(write(topic, testData2.getBytes(StandardCharsets.UTF_8), 0).getNativeKey());
 
         assertThat(getNativeStorage()).hasSize(2);
-
 
         final I sourceRecordIterator = getSourceRecordIterator(configData, createOffsetManager(),
                 TransformerFactory.getTransformer(InputFormat.BYTES));
@@ -234,11 +300,11 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
         sourceRecord = sourceRecordIterator.next();
         actualKeys.add(sourceRecord.getNativeKey());
         assertThat(sourceRecordIterator).isExhausted();
-        // ensure that the reload does not replay old data.
+        // ensure checking a 2nd time does not reload old data.
         assertThat(sourceRecordIterator).as("Reloading leads to extra entries").isExhausted();
         assertThat(actualKeys).containsAll(expectedKeys);
 
-        // write 3rd object to s3
+        // write 3rd object
         expectedKeys.add(write(topic, testData3.getBytes(StandardCharsets.UTF_8), 0).getNativeKey());
         assertThat(getNativeStorage()).hasSize(3);
 
@@ -247,7 +313,5 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
         actualKeys.add(sourceRecord.getNativeKey());
         assertThat(sourceRecordIterator).isExhausted();
         assertThat(actualKeys).containsAll(expectedKeys);
-
     }
-
 }

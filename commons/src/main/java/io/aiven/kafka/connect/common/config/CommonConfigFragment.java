@@ -16,13 +16,13 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.connect.runtime.ConnectorConfig;
+import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
 
 import java.util.Map;
 
-import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.runtime.ConnectorConfig;
 
 /**
  * The common configuration fragment.
@@ -33,7 +33,9 @@ public class CommonConfigFragment extends ConfigFragment {
 
     /**
      * Gets a setter for this fragment.
-     * @param data the data to modify.
+     *
+     * @param data
+     *            the data to modify.
      * @return The setter.
      */
     public static Setter setter(final Map<String, String> data) {
@@ -42,7 +44,9 @@ public class CommonConfigFragment extends ConfigFragment {
 
     /**
      * Update the ConfigDef with the values from the fragment.
-     * @param configDef the configuraiton def to update.
+     *
+     * @param configDef
+     *            the configuraiton def to update.
      * @return the updated configuration def.
      */
     public static ConfigDef update(final ConfigDef configDef) {
@@ -50,13 +54,19 @@ public class CommonConfigFragment extends ConfigFragment {
         final String commonGroup = "commons";
 
         return configDef
-                .define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH, "Maximum number of tasks to use for this connector.", commonGroup, ++orderInGroup, ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG)
-                .define(TASK_ID, ConfigDef.Type.INT, 1, atLeast(0), ConfigDef.Importance.HIGH, "The task ID that this connector is working with.", commonGroup, ++orderInGroup, ConfigDef.Width.SHORT, TASK_ID);
+                .define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH,
+                        "Maximum number of tasks to use for this connector.", commonGroup, ++orderInGroup,
+                        ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG)
+                .define(TASK_ID, ConfigDef.Type.INT, 1, atLeast(0), ConfigDef.Importance.HIGH,
+                        "The task ID that this connector is working with.", commonGroup, ++orderInGroup,
+                        ConfigDef.Width.SHORT, TASK_ID);
     }
 
     /**
      * Create a fragment instance from an AbstractConfig.
-     * @param cfg the AbstractConfig to retrieve data from.
+     *
+     * @param cfg
+     *            the AbstractConfig to retrieve data from.
      */
     public CommonConfigFragment(final AbstractConfig cfg) { // NOPMD
         super(cfg);
@@ -64,7 +74,8 @@ public class CommonConfigFragment extends ConfigFragment {
 
     /**
      * Get the task Id.
-     * @return the  task Id.
+     *
+     * @return the task Id.
      */
     public Integer getTaskId() {
         return cfg.getInt(TASK_ID);
@@ -72,7 +83,8 @@ public class CommonConfigFragment extends ConfigFragment {
 
     /**
      * Get the maximum number of tasks.
-     * @return  the maximum number of tasks.
+     *
+     * @return the maximum number of tasks.
      */
     public Integer getMaxTasks() {
         return cfg.getInt(ConnectorConfig.TASKS_MAX_CONFIG);
@@ -84,7 +96,9 @@ public class CommonConfigFragment extends ConfigFragment {
     public static class Setter extends AbstractFragmentSetter<Setter> {
         /**
          * Creates the setter.
-         * @param data the map of data to update.
+         *
+         * @param data
+         *            the map of data to update.
          */
         private Setter(final Map<String, String> data) {
             super(data);
@@ -92,7 +106,9 @@ public class CommonConfigFragment extends ConfigFragment {
 
         /**
          * Sets the task ID value.
-         * @param taskId the task Id value.
+         *
+         * @param taskId
+         *            the task Id value.
          * @return this
          */
         public Setter taskId(final int taskId) {
@@ -101,7 +117,9 @@ public class CommonConfigFragment extends ConfigFragment {
 
         /**
          * Sets the max tasks value.
-         * @param maxTasks the maximum number of tasks for this connector to run.
+         *
+         * @param maxTasks
+         *            the maximum number of tasks for this connector to run.
          * @return this
          */
         public Setter maxTasks(final int maxTasks) {

@@ -16,13 +16,8 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
-import org.apache.kafka.common.record.TimestampType;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.sink.SinkRecord;
-import org.testcontainers.shaded.org.apache.commons.io.function.IOSupplier;
+import static org.apache.kafka.connect.data.Schema.INT32_SCHEMA;
+import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -32,29 +27,34 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.kafka.connect.data.Schema.INT32_SCHEMA;
-import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
+import org.apache.kafka.common.record.TimestampType;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.sink.SinkRecord;
+
+import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
+
+import org.testcontainers.shaded.org.apache.commons.io.function.IOSupplier;
 
 /**
  * Test fixture to generate standard parquet file.
  */
 public final class ParquetTestingFixture {
 
+    /**
+     * The schema for the test cases
+     */
+    public final static Schema PARQUET_SCHEMA = SchemaBuilder.struct()
+            .field("name", STRING_SCHEMA)
+            .field("age", INT32_SCHEMA)
+            .field("email", STRING_SCHEMA)
+            .build();
+
     private ParquetTestingFixture() {
         // do int instantiate
     }
-    /**
-     * Gets the schema used for the test cases.
-     *
-     * @return The schema used for the test cases.
-     */
-    public static Schema getTestSchema() {
-        return SchemaBuilder.struct()
-                .field("name", STRING_SCHEMA)
-                .field("age", INT32_SCHEMA)
-                .field("email", STRING_SCHEMA)
-                .build();
-    }
+
     /**
      * Writes 100 parquet records to the file specified using the default schema. The topic "some-topic" will be used
      * for each record. "some-key-#" will be used for each key.
@@ -86,7 +86,7 @@ public final class ParquetTestingFixture {
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public static Path writeParquetFile(final Path outputFilePath, final String name, final int numOfRecords)
             throws IOException {
-        final Schema schema = getTestSchema();
+        final Schema schema = PARQUET_SCHEMA;
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
@@ -126,9 +126,9 @@ public final class ParquetTestingFixture {
      *             on output error.
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    public static void writeParquetFile(final IOSupplier<OutputStream> outputSupplier, final String name, final int numOfRecords)
-            throws IOException {
-        final Schema schema = getTestSchema();
+    public static void writeParquetFile(final IOSupplier<OutputStream> outputSupplier, final String name,
+            final int numOfRecords) throws IOException {
+        final Schema schema = PARQUET_SCHEMA;
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
@@ -136,10 +136,9 @@ public final class ParquetTestingFixture {
         }
 
         try (OutputStream outputStream = outputSupplier.get();
-             ParquetOutputWriter parquetWriter = new ParquetOutputWriter(
-                     List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
-                     Collections.emptyMap(), false);
-        ) {
+                ParquetOutputWriter parquetWriter = new ParquetOutputWriter(
+                        List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
+                        Collections.emptyMap(), false);) {
             int counter = 0;
             final var sinkRecords = new ArrayList<SinkRecord>();
             for (final var r : allParquetRecords) {

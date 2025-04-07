@@ -1,25 +1,44 @@
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.connect.common.integration;
 
-import io.aiven.kafka.connect.common.config.TransformerFragment;
+import java.util.Properties;
+
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
-import java.util.Properties;
+import io.aiven.kafka.connect.common.config.TransformerFragment;
 
 /**
- * Creates consumer properties to read kafak topics.
+ * Creates consumer properties to read Kafka topics.
  */
-public class ConsumerPropertiesBuilder {
+public final class ConsumerPropertiesBuilder {
     /** The properties for this builder */
     final Properties props = new Properties();
 
     /**
-     * Creates a ConsumerPropertiesBuilder for a bootstrap server.
-     * By default the key and value are serialized as strings.
-     * @param bootstrapServers the bootstrap server to talk to.
+     * Creates a ConsumerPropertiesBuilder for a bootstrap server. By default, the key and value are serialized as
+     * strings.
+     *
+     * @param bootstrapServers
+     *            the bootstrap server to talk to.
      */
-    public ConsumerPropertiesBuilder(String bootstrapServers) {
+    public ConsumerPropertiesBuilder(final String bootstrapServers) {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
@@ -29,7 +48,9 @@ public class ConsumerPropertiesBuilder {
 
     /**
      * Sets the key deserializer.
-     * @param keyDeserializer the class for the key deserializer.
+     *
+     * @param keyDeserializer
+     *            the class for the key deserializer.
      * @return this.
      */
     public ConsumerPropertiesBuilder keyDeserializer(final Class<? extends Deserializer<?>> keyDeserializer) {
@@ -39,7 +60,9 @@ public class ConsumerPropertiesBuilder {
 
     /**
      * Sets the value deserializer.
-     * @param valueDeserializer the class for the value deserializer.
+     *
+     * @param valueDeserializer
+     *            the class for the value deserializer.
      * @return this.
      */
     public ConsumerPropertiesBuilder valueDeserializer(final Class<? extends Deserializer<?>> valueDeserializer) {
@@ -49,7 +72,9 @@ public class ConsumerPropertiesBuilder {
 
     /**
      * Sets the schema registry URL.
-     * @param schemaRegistryUrl the URL as a string.
+     *
+     * @param schemaRegistryUrl
+     *            the URL as a string.
      * @return this.
      */
     public ConsumerPropertiesBuilder schemaRegistry(final String schemaRegistryUrl) {
@@ -59,9 +84,10 @@ public class ConsumerPropertiesBuilder {
 
     /**
      * Builds the properties.
+     *
      * @return the properties from this builder.
      */
     public Properties build() {
-        return props;
+        return new Properties(props);
     }
 }

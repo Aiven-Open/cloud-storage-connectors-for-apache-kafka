@@ -16,12 +16,12 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
-
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Defines the backoff policy for connectors.

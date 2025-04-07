@@ -16,6 +16,13 @@
 
 package io.aiven.kafka.connect.common.source;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
+import java.util.function.Predicate;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.impl.ExampleNativeClient;
 import io.aiven.kafka.connect.common.source.impl.ExampleOffsetManagerEntry;
@@ -27,16 +34,10 @@ import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.common.templating.Template;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-
-import java.util.Optional;
-import java.util.function.Predicate;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
 class TaskAssignmentTest {
@@ -69,7 +70,8 @@ class TaskAssignmentTest {
         final Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
         final SourceCommonConfig config = configureMockConfig(taskId, maxTasks, DistributionType.OBJECT_HASH);
         final ExampleNativeClient nativeClient = mock(ExampleNativeClient.class);
-        final ExampleSourceRecordIterator iterator = new ExampleSourceRecordIterator(config, offsetManager, transformer, nativeClient);
+        final ExampleSourceRecordIterator iterator = new ExampleSourceRecordIterator(config, offsetManager, transformer,
+                nativeClient);
 
         final Predicate<Optional<ExampleSourceRecord>> pred = iterator.taskAssignment;
         final ExampleSourceRecord record = mock(ExampleSourceRecord.class);
@@ -96,7 +98,8 @@ class TaskAssignmentTest {
         final Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
         final SourceCommonConfig config = configureMockConfig(taskId, maxTasks, DistributionType.PARTITION);
         final ExampleNativeClient nativeClient = mock(ExampleNativeClient.class);
-        final ExampleSourceRecordIterator iterator = new ExampleSourceRecordIterator(config, offsetManager, transformer, nativeClient);
+        final ExampleSourceRecordIterator iterator = new ExampleSourceRecordIterator(config, offsetManager, transformer,
+                nativeClient);
 
         final Predicate<Optional<ExampleSourceRecord>> pred = iterator.taskAssignment;
         final ExampleSourceRecord record = mock(ExampleSourceRecord.class);

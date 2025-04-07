@@ -1,21 +1,20 @@
-package io.aiven.kafka.connect.common.integration;
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import io.aiven.kafka.connect.common.source.KafkaConnectRunner;
-import io.aiven.kafka.connect.common.source.SchemaRegistryContainer;
-import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.connect.connector.Connector;
-import org.apache.kafka.connect.json.JsonConverter;
-import org.apache.kafka.connect.runtime.WorkerConfig;
-import org.apache.kafka.connect.storage.ConnectorOffsetBackingStore;
-import org.apache.kafka.connect.storage.KafkaOffsetBackingStore;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
-import org.apache.kafka.connect.storage.OffsetStorageReaderImpl;
-import org.apache.kafka.connect.util.LoggingContext;
-import org.apache.kafka.connect.util.TopicAdmin;
-import org.apache.kafka.connect.util.clusters.WorkerHandle;
-import org.jetbrains.annotations.NotNull;
+package io.aiven.kafka.connect.common.integration;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -26,14 +25,46 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-public final  class KafkaManager {
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.connect.connector.Connector;
+import org.apache.kafka.connect.util.TopicAdmin;
+import org.apache.kafka.connect.util.clusters.WorkerHandle;
 
+import io.aiven.kafka.connect.common.source.KafkaConnectRunner;
+import io.aiven.kafka.connect.common.source.SchemaRegistryContainer;
+
+/**
+ * Manages the a containerized Kafka and some associated components.
+ */
+public final class KafkaManager {
+    /**
+     * The topic administrator.
+     */
     private final TopicAdmin topicAdmin;
+    /**
+     * A connect runner instance.
+     */
     private final KafkaConnectRunner connectRunner;
+    /**
+     * A schema registry.
+     */
     private final SchemaRegistryContainer schemaRegistry;
-    private final KafkaOffsetBackingStore offsetBackingStore;
 
-    public KafkaManager(String clusterName, Duration offsetFlushInterval, Class<? extends Connector> connectorClass) throws IOException, ExecutionException, InterruptedException {
+    /**
+     * Constructor.
+     *
+     * @param clusterName
+     *            The name for the cluster
+     * @param offsetFlushInterval
+     *            the offset topic flush interval.
+     * @param connectorClass
+     *            the connector class to execute.
+     * @throws IOException
+     *             if the cluster can not be started.
+     */
+    public KafkaManager(final String clusterName, final Duration offsetFlushInterval,
+            final Class<? extends Connector> connectorClass) throws IOException {
         connectRunner = new KafkaConnectRunner(offsetFlushInterval);
         connectRunner.startConnectCluster(clusterName, connectorClass);
 
@@ -41,220 +72,169 @@ public final  class KafkaManager {
         adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, connectRunner.getBootstrapServers());
         topicAdmin = new TopicAdmin(adminClientConfig);
 
-
         // This should be done after the process listening the port is already started by host but
         // before the container that will access it is started.
         org.testcontainers.Testcontainers.exposeHostPorts(connectRunner.getContainerPort());
-        schemaRegistry = new SchemaRegistryContainer("host.testcontainers.internal:" + connectRunner.getContainerPort());
+        schemaRegistry = new SchemaRegistryContainer(
+                "host.testcontainers.internal:" + connectRunner.getContainerPort());
         schemaRegistry.start();
         AbstractIntegrationTest.waitForRunningContainer(schemaRegistry);
-
-        offsetBackingStore = new KafkaOffsetBackingStore(() -> topicAdmin);
-
-//
-//
-//        final Properties consumerProperties = new ConsumerPropertiesBuilder(bootstrapServers()).keyDeserializer(ByteArrayDeserializer.class).valueDeserializer(ByteArrayDeserializer.class).build();
-//
-//        consumerProperties.forEach((key, value) -> topicAdminConfig.putIfAbsent(key.toString(), (String) value));
-//        // Add config def
-//        final ConfigDef def = getRequiredConfigDefSettings();
-//
-//        consumerProperties.put("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
-//        consumerProperties.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
-//
-//        final Supplier<TopicAdmin> topicAdminSupplier = () -> new TopicAdmin(new HashMap<>(topicAdminConfig));
-//        return new KafkaOffsetBackingStore(topicAdminSupplier) {
-//            @Override
-//            public void configure(final WorkerConfig config) {
-//                this.exactlyOnce = config.exactlyOnceSourceEnabled();
-//                this.offsetLog = KafkaBasedLog.withExistingClients(getOffsetTopic(),  new KafkaConsumer<>(consumerProperties), null, topicAdminSupplier.get(), consumedCallback,
-//                        Time.SYSTEM, topicAdmin1 -> {
-//                        });
-//
-//                this.offsetLog.start();
-//
-//            }
-//        };
     }
 
+    /**
+     * Gets the cluster name.
+     *
+     * @return the cluster name
+     */
     public String getClusterName() {
         return connectRunner.getClusterName();
     }
 
+    /**
+     * Gets the offset topic name.
+     *
+     * @return the offset topic name.
+     */
     public String getOffsetTopic() {
         return connectRunner.getOffsetTopic();
     }
 
+    /**
+     * Gets the configuration topic name.
+     *
+     * @return the topic from the configuration.
+     */
     public String getConfigTopic() {
         return connectRunner.getConfigTopic();
     }
 
+    /**
+     * Gets the storage topic name
+     *
+     * @return the storage topic name
+     */
     public String getStorageTopic() {
         return connectRunner.getStorageTopic();
     }
 
+    /**
+     * Gets the groupID for the connector.
+     *
+     * @return the groupID for the connector.
+     */
     public String getGroupId() {
         return connectRunner.getGroupId();
     }
 
+    /**
+     * Gets a list of all the current workers.
+     *
+     * @return a list of all the c urrent workers.
+     */
     public Set<WorkerHandle> listWorkers() {
         return connectRunner.listWorkers();
     }
-//    /**
-//     * Creates a kafka AdminClient.
-//     * @return tne Ad k  c.ke t
-//     */
-//    public AdminClient getAdminClient() {
-//        return adminClient;
-//    }
 
     /**
-     * Creates topics on the admin client.  Uses a partition count of 4, and a replication factor of 1.
-     * @param topic the topic to create.
-     * @throws ExecutionException on topic creation error.
-     * @throws InterruptedException if operation is interrupted.
+     * Creates topics on the admin client. Uses a partition count of 4, and a replication factor of 1.
+     *
+     * @param topic
+     *            the topic to create.
+     * @throws ExecutionException
+     *             on topic creation error.
+     * @throws InterruptedException
+     *             if operation is interrupted.
      */
-    public void createTopic(final String topic)
-            throws ExecutionException, InterruptedException {
+    public void createTopic(final String topic) throws ExecutionException, InterruptedException {
         createTopics(List.of(topic), 4, (short) 1);
     }
 
     /**
-     * Creates topics on the admin client.  Uses a partition count of 4, and a replication factor of 1.
-     * @param topics the list of topics to create.
-     * @throws ExecutionException on topic creation error.
-     * @throws InterruptedException if operation is interrupted.
+     * Creates topics on the admin client. Uses a partition count of 4, and a replication factor of 1.
+     *
+     * @param topics
+     *            the list of topics to create.
      */
-    public void createTopics(final List<String> topics)
-            throws ExecutionException, InterruptedException {
+    public void createTopics(final List<String> topics) {
         createTopics(topics, 4, (short) 1);
     }
 
     /**
      * Creates topics on the admin client.
-     * @param topics the list of topics to create.
-     * @throws ExecutionException on topic creation error.
-     * @throws InterruptedException if operation is interrupted.
+     *
+     * @param topics
+     *            the list of topics to create.
+     * @param partitions
+     *            the number of partitions to use.
+     * @param replicationFactor
+     *            the replication factor to use.
      */
-    public void createTopics(final List<String> topics, final int partitions, final short replicationFactor)
-            throws ExecutionException, InterruptedException {
-        NewTopic newTopics[] = topics.stream().map( t -> new NewTopic(t, partitions, replicationFactor)).collect(Collectors.toList()).toArray(new NewTopic[topics.size()]);
+    public void createTopics(final List<String> topics, final int partitions, final short replicationFactor) {
+        final NewTopic[] newTopics = topics.stream()
+                .map(t -> new NewTopic(t, partitions, replicationFactor))
+                .collect(Collectors.toList())
+                .toArray(new NewTopic[topics.size()]);
         topicAdmin.createTopics(newTopics);
     }
 
+    /**
+     * Gets the bootstrap server URL as a string.
+     *
+     * @return the bootstrap server URL as a string.
+     */
     public String bootstrapServers() {
         return connectRunner.getBootstrapServers();
     }
 
-    public String configureConnector(String connectorName, Map<String, String> connectorConfig) {
+    /**
+     * Configure the connector.
+     *
+     * @param connectorName
+     *            the connector name.
+     * @param connectorConfig
+     *            the configuraiton for the connector.
+     * @return the result of the configuration call.
+     */
+    public String configureConnector(final String connectorName, final Map<String, String> connectorConfig) {
         return connectRunner.configureConnector(connectorName, connectorConfig);
     }
 
-    public void deleteConnector(String connectorName) {
+    /**
+     * Deletes the connector.
+     *
+     * @param connectorName
+     *            the connector to delete.
+     */
+    public void deleteConnector(final String connectorName) {
         connectRunner.deleteConnector(connectorName);
     }
 
+    /**
+     * Gets the schema registry URL as a string.
+     *
+     * @return the schema registry URL.
+     */
     public String getSchemaRegistryUrl() {
         return schemaRegistry.getSchemaRegistryUrl();
     }
 
+    /**
+     * Stop the manager and release all objects.
+     */
     public void stop() {
         topicAdmin.close();
         connectRunner.stopConnectCluster();
         schemaRegistry.stop();
     }
 
-    public void restartConnector(String connectorName) {
+    /**
+     * Restarts the connector.
+     *
+     * @param connectorName
+     *            the connector to restart.
+     */
+    public void restartConnector(final String connectorName) {
         connectRunner.restartConnector(connectorName);
     }
 
-    /**
-     * Returns the WorkerConfig ConfigDef with the must have configurations set.
-     *
-     * @return A configured ConfigDef
-     */
-    private static @NotNull ConfigDef getRequiredConfigDefSettings() {
-        final ConfigDef def = new ConfigDef();
-        def.define("offset.storage.partitions", ConfigDef.Type.INT, 25, ConfigDef.Importance.MEDIUM, "partitions");
-        def.define("offset.storage.replication.factor", ConfigDef.Type.SHORT, Short.valueOf("2"),
-                ConfigDef.Importance.MEDIUM, "partitions");
-        return def;
-    }
-
-    /**
-     *
-     * @param topicAdminConfig
-     *            the configuration for the administrative instance with the power to create topics when they do not exist.
-     * @return A configured KafkaOffsetBackingStore which can be used as a WorkerStore
-     */
-    private KafkaOffsetBackingStore createKafkaOffsetBackingStore(final Map<String, String> topicAdminConfig) {
-        return offsetBackingStore;
-//        // create connector store
-//        //final KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProperties); // NOPMD close resource
-//        // after use
-//        // Create Topic Admin
-//        //final TopicAdmin topicAdmin = new TopicAdmin(new HashMap<>(topicAdminConfig)); // NOPMD close resource after use
-//
-//        final Properties consumerProperties = new ConsumerPropertiesBuilder(bootstrapServers()).keyDeserializer(ByteArrayDeserializer.class).valueDeserializer(ByteArrayDeserializer.class).build();
-//
-//        consumerProperties.forEach((key, value) -> topicAdminConfig.putIfAbsent(key.toString(), (String) value));
-//        // Add config def
-//        final ConfigDef def = getRequiredConfigDefSettings();
-//
-//        consumerProperties.put("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
-//        consumerProperties.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
-//
-//        final Supplier<TopicAdmin> topicAdminSupplier = () -> new TopicAdmin(new HashMap<>(topicAdminConfig));
-//        return new KafkaOffsetBackingStore(topicAdminSupplier) {
-//            @Override
-//            public void configure(final WorkerConfig config) {
-//                this.exactlyOnce = config.exactlyOnceSourceEnabled();
-//                this.offsetLog = KafkaBasedLog.withExistingClients(getOffsetTopic(),  new KafkaConsumer<>(consumerProperties), null, topicAdminSupplier.get(), consumedCallback,
-//                        Time.SYSTEM, topicAdmin1 -> {
-//                        });
-//
-//                this.offsetLog.start();
-//
-//            }
-//        };
-    }
-
-    /**
-     *
-     * @param topicAdminConfig
-     *            Internal Connector Config for creating and modifying topics.
-     * @return Configured ConnectorOffsetBackingStore
-     */
-    private ConnectorOffsetBackingStore getConnectorOffsetBackingStore(final Map<String, String> topicAdminConfig) {
-        final KafkaOffsetBackingStore kafkaBackingStore = createKafkaOffsetBackingStore(topicAdminConfig);
-        Map<String, String> config = connectRunner.getWorkerProperties(null);
-        config.putAll(topicAdminConfig);
-        kafkaBackingStore.configure(new WorkerConfig(getRequiredConfigDefSettings(), config));
-        return ConnectorOffsetBackingStore.withOnlyWorkerStore(() -> LoggingContext.forConnector("source-connector"),
-                kafkaBackingStore, getOffsetTopic());
-
-    }
-
-
-    // Create OffsetReader to read back in offsets
-
-    /**
-     * Create an offsetReader that is configured to use a preconfigured OffsetBackingStore and configures the
-     * JsonConverters correctly.
-     *
-     * @param topicAdminConfig
-     *            Internal Connector Config for creating and modifying topics.
-     * @param connectorName
-     *            The name of the connector.
-     * @return Configured OffsetStorageReader
-     */
-    public OffsetStorageReader getOffsetReader(final Map<String, String> topicAdminConfig,  final String connectorName) {
-        ConnectorOffsetBackingStore backingStore = getConnectorOffsetBackingStore(topicAdminConfig);
-
-        final JsonConverter keyConverter = new JsonConverter(); // NOPMD close resource after use
-        final JsonConverter valueConverter = new JsonConverter(); // NOPMD close resource after use
-        keyConverter.configure(Map.of("schemas.enable", "false", "converter.type", "key"));
-        valueConverter.configure(Map.of("schemas.enable", "false", "converter.type", "value"));
-        return new OffsetStorageReaderImpl(backingStore, connectorName, keyConverter, valueConverter);
-    }
 }

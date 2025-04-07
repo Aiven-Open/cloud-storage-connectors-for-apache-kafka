@@ -16,11 +16,11 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.util.Map;
+
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
-
-import java.util.Map;
 
 /**
  * The base configuration or all connectors.
@@ -87,13 +87,12 @@ public class CommonConfig extends AbstractConfig {
         return commonConfigFragment.getMaxTasks();
     }
 
-
     /**
      * Get the task id for this configuration
      *
      * @return The task id for this configuration
      */
-    public final  int getTaskId() {
+    public final int getTaskId() {
         return commonConfigFragment.getTaskId();
     }
 

@@ -16,17 +16,19 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
-import io.aiven.kafka.connect.common.source.task.DistributionType;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
+import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
 
 import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+
+import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
+
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Defines properties that are shared across all Source implementations.
@@ -42,7 +44,9 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     /**
      * Gets a setter for this fragment.
-     * @param data the data map to modify.
+     *
+     * @param data
+     *            the data map to modify.
      * @return the Setter.
      */
     public static Setter setter(final Map<String, String> data) {
@@ -63,8 +67,8 @@ public final class SourceConfigFragment extends ConfigFragment {
         int sourcePollingConfigCounter = 0;
 
         configDef.define(RING_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(0),
-                ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.", GROUP_OTHER, ++sourcePollingConfigCounter,
-                ConfigDef.Width.SHORT, RING_BUFFER_SIZE);
+                ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.", GROUP_OTHER,
+                ++sourcePollingConfigCounter, ConfigDef.Width.SHORT, RING_BUFFER_SIZE);
 
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, ++sourcePollingConfigCounter,
@@ -94,6 +98,7 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     /**
      * Gets the target topic.
+     *
      * @return the target topic.
      */
     public String getTargetTopic() {
@@ -102,6 +107,7 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     /**
      * Gets the maximum number of records to poll at one time.
+     *
      * @return The maximum number of records to poll at one time.
      */
     public int getMaxPollRecords() {
@@ -110,6 +116,7 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     /**
      * Gets the errors tolerance.
+     *
      * @return the errors tolerance.
      */
     public ErrorsTolerance getErrorsTolerance() {
@@ -118,6 +125,7 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     /**
      * Gets the distribution type
+     *
      * @return the distribution type.
      */
     public DistributionType getDistributionType() {
@@ -126,6 +134,7 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     /**
      * Gets the ring buffer size.
+     *
      * @return the ring buffer size.
      */
     public int getRingBufferSize() {
@@ -176,7 +185,9 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static class Setter extends AbstractFragmentSetter<Setter> {
         /**
          * Constructor.
-         * @param data the data to modify.
+         *
+         * @param data
+         *            the data to modify.
          */
         protected Setter(final Map<String, String> data) {
             super(data);
@@ -184,7 +195,9 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         /**
          * Set the maximum poll records.
-         * @param maxPollRecords the maximum number of records to poll.
+         *
+         * @param maxPollRecords
+         *            the maximum number of records to poll.
          * @return this
          */
         public Setter maxPollRecords(final int maxPollRecords) {
@@ -193,7 +206,9 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         /**
          * Sets the error tolerance.
-         * @param tolerance the error tolerance
+         *
+         * @param tolerance
+         *            the error tolerance
          * @return this.
          */
         public Setter errorsTolerance(final ErrorsTolerance tolerance) {
@@ -201,8 +216,10 @@ public final class SourceConfigFragment extends ConfigFragment {
         }
 
         /**
-         * Sets the  target topic.
-         * @param targetTopic the target topic.
+         * Sets the target topic.
+         *
+         * @param targetTopic
+         *            the target topic.
          * @return this.
          */
         public Setter targetTopic(final String targetTopic) {
@@ -211,7 +228,9 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         /**
          * Sets the distribution type.
-         * @param distributionType the distribution type.
+         *
+         * @param distributionType
+         *            the distribution type.
          * @return this
          */
         public Setter distributionType(final DistributionType distributionType) {
@@ -220,7 +239,9 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         /**
          * Sets the ring buffer size.
-         * @param ringBufferSize the ring buffer size
+         *
+         * @param ringBufferSize
+         *            the ring buffer size
          * @return this.
          */
         public Setter ringBufferSize(final int ringBufferSize) {

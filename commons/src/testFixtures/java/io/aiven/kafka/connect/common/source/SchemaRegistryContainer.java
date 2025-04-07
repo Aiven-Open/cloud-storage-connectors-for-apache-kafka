@@ -16,11 +16,11 @@
 
 package io.aiven.kafka.connect.common.source;
 
+import java.time.Duration;
+
 import com.github.dockerjava.api.model.Ulimit;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
-
-import java.time.Duration;
 
 public final class SchemaRegistryContainer extends GenericContainer<SchemaRegistryContainer> {
     public static final int SCHEMA_REGISTRY_PORT = 8081;

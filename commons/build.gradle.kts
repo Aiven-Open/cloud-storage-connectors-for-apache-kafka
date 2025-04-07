@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-plugins {
-  id("aiven-apache-kafka-connectors-all.java-conventions")
-}
+plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+
 val kafkaVersion by extra("3.3.0")
 
 dependencies {
@@ -90,6 +89,7 @@ dependencies {
   testFixturesImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
+  testFixturesImplementation(tools.spotbugs.annotations)
 
   testFixturesImplementation(testinglibs.junit.jupiter)
   testFixturesImplementation(testinglibs.junit.jupiter.params)

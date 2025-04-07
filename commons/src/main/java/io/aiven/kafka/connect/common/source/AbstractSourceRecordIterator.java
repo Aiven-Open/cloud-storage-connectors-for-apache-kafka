@@ -16,17 +16,8 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.source.input.Transformer;
-import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
-import io.aiven.kafka.connect.common.source.task.Context;
-import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
-import io.aiven.kafka.connect.common.source.task.DistributionType;
-import org.apache.commons.io.function.IOSupplier;
-import org.apache.kafka.connect.data.SchemaAndValue;
-import org.slf4j.Logger;
-
 import javax.validation.constraints.NotNull;
+
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Iterator;
@@ -35,36 +26,52 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.data.SchemaAndValue;
+
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
+import io.aiven.kafka.connect.common.source.task.Context;
+import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.io.function.IOSupplier;
+import org.slf4j.Logger;
+
 /**
  * Iterator that processes cloud storage items and creates Kafka source records. Supports multiple output formats.
  *
  * @param <N>
- *            the native object type.  This is the class that represents a file or stream in the underlying data store.
+ *            the native object type. This is the class that represents a file or stream in the underlying data store.
  * @param <K>
- *            the key type for the native object.  This is the class that uniquely identifies a native object.
+ *            the key type for the native object. This is the class that uniquely identifies a native object.
  * @param <O>
- *            the OffsetManagerEntry for the iterator.  The implementation of OffsetManagerEntry for the underlying storage.
+ *            the OffsetManagerEntry for the iterator. The implementation of OffsetManagerEntry for the underlying
+ *            storage.
  * @param <T>
  *            the implementation class for AbstractSourceRecord.
  *
- * <p>This implementation handles converting from the data stored on the underlying storage to an AbstractSourceRecord.  It handles all the
- * transformation and Kafka tracking tasks so that the developer cna focus on how to read the data from the underlying store.
- * </p>
- * <p>
- *     The general process is
- * </p>
- * <ul>
- *     <li>An inner iterator is created from a call to {@link #getNativeItemStream}.  The stream is filtered to remove any files
- *     that do not match the expected pattern or that are not assigned to this task.  It is also converted to an instance of {@code T}
- *     via a call to {@link #createSourceRecord}.  An instance of {@code O} is created via a call to {@link #createOffsetManagerEntry}
- *     and added to the instance of {@code T} created earlier.
- *     </li>
- *     <li>An outer iterator is created for each element in the inner iterator.  The instances of {@code T} returned by the inner iterator
- *     are processed by calling {@link #getInputStream(AbstractSourceRecord)} and passing the result to the specified {@link Transformer} instance
- *     to retrieve all the records stored in the native item.  Each of the records is used to create a new instance of {@code T} that contains the
- *     record number as well as the Kafka Connector defined keyValue and dataValue objects.
- *     </li>
- * </ul>
+ *            <p>
+ *            This implementation handles converting from the data stored on the underlying storage to an
+ *            AbstractSourceRecord. It handles all the transformation and Kafka tracking tasks so that the developer cna
+ *            focus on how to read the data from the underlying store.
+ *            </p>
+ *            <p>
+ *            The general process is
+ *            </p>
+ *            <ul>
+ *            <li>An inner iterator is created from a call to {@link #getNativeItemStream}. The stream is filtered to
+ *            remove any files that do not match the expected pattern or that are not assigned to this task. It is also
+ *            converted to an instance of {@code T} via a call to {@link #createSourceRecord}. An instance of {@code O}
+ *            is created via a call to {@link #createOffsetManagerEntry} and added to the instance of {@code T} created
+ *            earlier.</li>
+ *            <li>An outer iterator is created for each element in the inner iterator. The instances of {@code T}
+ *            returned by the inner iterator are processed by calling {@link #getInputStream(AbstractSourceRecord)} and
+ *            passing the result to the specified {@link Transformer} instance to retrieve all the records stored in the
+ *            native item. Each of the records is used to create a new instance of {@code T} that contains the record
+ *            number as well as the Kafka Connector defined keyValue and dataValue objects.</li>
+ *            </ul>
  */
 public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>>
         implements
@@ -117,7 +124,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      * @param transformer
      *            the transformer to use.
      */
-    //@SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "OffsetManager is externally mutable and expected.")
     public AbstractSourceRecordIterator(final SourceCommonConfig sourceConfig, final OffsetManager<O> offsetManager,
             final Transformer transformer) {
         super();
@@ -145,9 +152,9 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
     abstract protected Logger getLogger();
 
     /**
-     * Get a stream of Native object from the underlying storage layer.
-     * The implementation must return the native objects in a repeatable order based on the key.
-     * In addition, the underlying storage must be able to start streaming from a specific previously returned key.
+     * Get a stream of Native object from the underlying storage layer. The implementation must return the native
+     * objects in a repeatable order based on the key. In addition, the underlying storage must be able to start
+     * streaming from a specific previously returned key.
      *
      * @param offset
      *            the native key to start from. May be {@code null} ot indicate start at the beginning.
@@ -158,8 +165,8 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
     /**
      * Gets an IOSupplier for the specific source record.
      *
-     * The implementation should accept an AbstractSourceRecord created from a sourceRecord returned from a
-     * previous call to {@link #createSourceRecord}.
+     * The implementation should accept an AbstractSourceRecord created from a sourceRecord returned from a previous
+     * call to {@link #createSourceRecord}.
      *
      * @param sourceRecord
      *            the source record to get the input stream from.
@@ -177,8 +184,8 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
     abstract protected K getNativeKey(N nativeObject);
 
     /**
-     * Creates an instance of the concrete implementation of AbstractSourceRecord for the native object.  The SAbstractSourceRecord need only
-     * contain the {@link NativeInfo} instance.
+     * Creates an instance of the concrete implementation of AbstractSourceRecord for the native object. The
+     * SAbstractSourceRecord need only contain the {@link NativeInfo} instance.
      *
      * @param nativeObject
      *            the native object to get the AbstractSourceRecord for.
@@ -213,8 +220,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
             offsetManager.removeEntry(getOffsetManagerKey(lastSeenNativeKey));
         }
         if (!inner.hasNext() && !outer.hasNext()) {
-            inner = getNativeItemStream(ringBuffer.getOldest())
-                    .map(fileMatching)
+            inner = getNativeItemStream(ringBuffer.getOldest()).map(fileMatching)
                     .filter(taskAssignment)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
@@ -248,7 +254,8 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
                 .setKeyData(transformer.getKeyData(sourceRecord.getNativeKey(), sourceRecord.getTopic(), sourceConfig));
 
         lastSeenNativeKey = sourceRecord.getNativeKey();
-        getLogger().info("Processing record: {} skipping {} already read internal records", lastSeenNativeKey, sourceRecord.getRecordCount());
+        getLogger().info("Processing record: {} skipping {} already read internal records", lastSeenNativeKey,
+                sourceRecord.getRecordCount());
         return transformer
                 .getRecords(getInputStream(sourceRecord), sourceRecord.getNativeItemSize(), sourceRecord.getContext(),
                         sourceConfig, sourceRecord.getRecordCount())
