@@ -16,9 +16,7 @@ import com.github.spotbugs.snom.SpotBugsTask
  * limitations under the License.
  */
 
-plugins {
-  id("aiven-apache-kafka-connectors-all.java-conventions")
-}
+plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
 val s3mockVersion by extra("0.2.6")
 val kafkaVersion by extra("3.3.0")
@@ -206,11 +204,11 @@ dependencies {
 
   //  testFixturesImplementation(testcontainers.kafka)
 
-//  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
-//  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
-//  testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-//  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-//  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  //  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
+  //  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
+  //  testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
+  //  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
+  //  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
   testFixturesImplementation(amazonawssdk.s3)
   testFixturesImplementation(amazonawssdk.sts)
   testFixturesImplementation(testFixtures(project(":commons")))
@@ -226,13 +224,13 @@ dependencies {
   testFixturesImplementation(compressionlibs.zstd.jni)
   testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation(apache.kafka.connect.api)
-//  testFixturesImplementation(testinglibs.junit.jupiter
-//  testFixturesImplementation(testinglibs.mockito.junit.jupiter)
-//  testFixturesImplementation(testinglibs.mockito.core)
-//  testFixturesImplementation(testinglibs.assertj.core)
-//  testFixturesImplementation(apache.commons.lang3)
-//  testFixturesImplementation(apache.avro)
-//  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
+  //  testFixturesImplementation(testinglibs.junit.jupiter
+  //  testFixturesImplementation(testinglibs.mockito.junit.jupiter)
+  //  testFixturesImplementation(testinglibs.mockito.core)
+  //  testFixturesImplementation(testinglibs.assertj.core)
+  //  testFixturesImplementation(apache.commons.lang3)
+  //  testFixturesImplementation(apache.avro)
+  //  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
 
 }
 

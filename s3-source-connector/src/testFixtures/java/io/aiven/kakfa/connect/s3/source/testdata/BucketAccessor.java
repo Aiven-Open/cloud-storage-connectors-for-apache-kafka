@@ -16,24 +16,15 @@
 
 package io.aiven.kakfa.connect.s3.source.testdata;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.zip.GZIPInputStream;
 
-import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.source.NativeInfo;
 
-import com.github.luben.zstd.ZstdInputStream;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketResponse;
@@ -68,6 +59,15 @@ public class BucketAccessor {
     public BucketAccessor(final S3Client s3Client, final String bucketName) {
         this.bucketName = bucketName;
         this.s3Client = s3Client;
+    }
+
+    /**
+     * Gets the bucket name this accessor is fronting.
+     *
+     * @return the bucket name.
+     */
+    public String getBucketName() {
+        return bucketName;
     }
 
     /**
@@ -106,33 +106,6 @@ public class BucketAccessor {
     }
 
     /**
-     * Read bytes from the bucket
-     *
-     * @param blobName
-     *            the name of the item to read.
-     * @param compression
-     *            the compresson for the item.
-     * @return the byte buffer
-     * @throws IOException
-     *             on read error.
-     */
-    public final byte[] readBytes(final String blobName, final String compression) throws IOException {
-        Objects.requireNonNull(blobName, "blobName cannot be null");
-        final byte[] blobBytes = s3Client.getObjectAsBytes(builder -> builder.key(blobName).bucket(bucketName).build())
-                .asByteArray();
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
-                InputStream decompressedStream = getDecompressedStream(bais, compression);
-                ByteArrayOutputStream decompressedBytes = new ByteArrayOutputStream()) {
-            final byte[] readBuffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = decompressedStream.read(readBuffer)) != -1) { // NOPMD AssignmentInOperand
-                decompressedBytes.write(readBuffer, 0, bytesRead);
-            }
-            return decompressedBytes.toByteArray();
-        }
-    }
-
-    /**
      * Get the native list of native info for this bucket.
      *
      * @return the list of S3NativeInfo objects.
@@ -143,35 +116,6 @@ public class BucketAccessor {
                 .stream()
                 .map(S3NativeInfo::new)
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * Create a decompressed stream.
-     *
-     * @param inputStream
-     *            the input stream to decompress
-     * @param compression
-     *            the compression format
-     * @return a decompressed input stream
-     * @throws IOException
-     *             on error
-     */
-    private InputStream getDecompressedStream(final InputStream inputStream, final String compression)
-            throws IOException {
-        Objects.requireNonNull(inputStream, "inputStream cannot be null");
-        Objects.requireNonNull(compression, "compression cannot be null");
-
-        final CompressionType compressionType = CompressionType.forName(compression);
-        switch (compressionType) {
-            case ZSTD :
-                return new ZstdInputStream(inputStream);
-            case GZIP :
-                return new GZIPInputStream(inputStream);
-            case SNAPPY :
-                return new SnappyInputStream(inputStream);
-            default :
-                return inputStream;
-        }
     }
 
     /**

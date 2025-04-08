@@ -16,10 +16,20 @@
 
 package io.aiven.kafka.connect.s3.source.testdata;
 
-import com.github.luben.zstd.ZstdInputStream;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
+
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.source.NativeInfo;
+
+import com.github.luben.zstd.ZstdInputStream;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,15 +44,6 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.zip.GZIPInputStream;
 
 /**
  * Utility to access access an S3 bucket

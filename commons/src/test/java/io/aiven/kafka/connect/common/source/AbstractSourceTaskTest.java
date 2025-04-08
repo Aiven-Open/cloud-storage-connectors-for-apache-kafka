@@ -280,7 +280,6 @@ class AbstractSourceTaskTest {
         try {
             sourceTask.start(createDefaultConfig());
             assertThat(sourceTask.isRunning()).isTrue();
-
             assertThat(sourceTask.poll()).isNull();
             assertThat(sourceTask.isRunning()).isTrue();
             assertThat(sourceTask.getBackoff().estimatedDelay()).isGreaterThan(0);

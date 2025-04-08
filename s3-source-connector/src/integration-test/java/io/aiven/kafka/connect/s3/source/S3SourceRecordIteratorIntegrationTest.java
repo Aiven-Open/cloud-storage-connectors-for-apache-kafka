@@ -16,17 +16,23 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import java.util.List;
+import java.util.Map;
+import java.util.function.BiFunction;
+
+import org.apache.kafka.connect.connector.Connector;
+
 import io.aiven.kafka.connect.common.integration.AbstractSourceIteratorIntegrationTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;
-import io.aiven.kakfa.connect.s3.source.testdata.S3OffsetManagerIntegrationTestData;
-import io.aiven.kakfa.connect.s3.source.testdata.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
-import org.apache.kafka.connect.connector.Connector;
+import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;
+import io.aiven.kakfa.connect.s3.source.testdata.BucketAccessor;
+import io.aiven.kakfa.connect.s3.source.testdata.S3OffsetManagerIntegrationTestData;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
@@ -34,10 +40,6 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiFunction;
 
 @SuppressWarnings("PMD.TestClassWithoutTestCases")
 @Testcontainers
@@ -50,6 +52,7 @@ public class S3SourceRecordIteratorIntegrationTest
     static final LocalStackContainer LOCALSTACK = AWSIntegrationTestData.createS3Container();
 
     private AWSIntegrationTestData testData;
+    private BucketAccessor bucketAccessor;
 
     @Override
     protected Logger getLogger() {
@@ -59,10 +62,12 @@ public class S3SourceRecordIteratorIntegrationTest
     @BeforeEach
     void setupAWS() {
         testData = new AWSIntegrationTestData(LOCALSTACK);
+        bucketAccessor = testData.getDefaultBucketAccessor();
     }
 
     @AfterEach
     void tearDownAWS() {
+        bucketAccessor.removeBucket();
         testData.tearDown();
     }
 
@@ -73,7 +78,7 @@ public class S3SourceRecordIteratorIntegrationTest
 
     @Override
     protected List<BucketAccessor.S3NativeInfo> getNativeStorage() {
-        return testData.getNativeStorage();
+        return bucketAccessor.getNativeStorage();
     }
 
     @Override
@@ -88,7 +93,7 @@ public class S3SourceRecordIteratorIntegrationTest
 
     @Override
     protected Map<String, String> createConnectorConfig(final String localPrefix) {
-        return testData.createConnectorConfig(localPrefix);
+        return testData.createConnectorConfig(localPrefix, bucketAccessor.getBucketName());
     }
 
     @Override
