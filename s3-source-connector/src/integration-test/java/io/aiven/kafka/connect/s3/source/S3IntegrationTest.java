@@ -1,13 +1,25 @@
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.connect.s3.source;
 
 import io.aiven.kafka.connect.common.integration.AbstractSourceIntegrationTest;
-import io.aiven.kafka.connect.common.source.OffsetManager;
-import io.aiven.kafka.connect.common.source.input.Transformer;
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.testdata.AWSIntegrationTestData;
-import io.aiven.kafka.connect.s3.source.testdata.S3OffsetManagerIntegrationTestData;
-import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
-import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
+import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;
+import io.aiven.kakfa.connect.s3.source.testdata.S3OffsetManagerIntegrationTestData;
+import io.aiven.kakfa.connect.s3.source.testdata.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
 import org.apache.kafka.connect.connector.Connector;
@@ -18,22 +30,25 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
+/**
+ * Tests the integration with the backend.
+ */
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
 @Testcontainers
-public final class S3IntegrationTest extends AbstractSourceIntegrationTest<String, S3OffsetManagerEntry, S3SourceRecordIterator> {
+public final class S3IntegrationTest
+        extends
+            AbstractSourceIntegrationTest<String, S3OffsetManagerEntry, S3SourceRecordIterator> {
     private static final Logger LOGGER = LoggerFactory.getLogger(S3IntegrationTest.class);
 
     @Container
-    static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
-            .withServices(LocalStackContainer.Service.S3);
+    static final LocalStackContainer LOCALSTACK = AWSIntegrationTestData.createS3Container();
 
-    AWSIntegrationTestData testData;
+    private AWSIntegrationTestData testData;
 
     @Override
     protected Logger getLogger() {
@@ -50,16 +65,8 @@ public final class S3IntegrationTest extends AbstractSourceIntegrationTest<Strin
         testData.tearDown();
     }
 
-
-    /**
-     * Creates the native key.
-     * @param prefix the prefix for the key.
-     * @param topic the topic for the key,
-     * @param partition the partition for the key.
-     * @return the native Key.
-     */
     @Override
-    protected String createKey(String prefix, String topic, int partition) {
+    protected String createKey(final String prefix, final String topic, final int partition) {
         return testData.createKey(prefix, topic, partition);
     }
 
@@ -79,29 +86,12 @@ public final class S3IntegrationTest extends AbstractSourceIntegrationTest<Strin
     }
 
     @Override
-    protected Map<String, String> createConnectorConfig(String localPrefix) {
+    protected Map<String, String> createConnectorConfig(final String localPrefix) {
         return testData.createConnectorConfig(localPrefix);
     }
 
     @Override
     protected BiFunction<Map<String, Object>, Map<String, Object>, S3OffsetManagerEntry> offsetManagerEntryFactory() {
         return S3OffsetManagerIntegrationTestData.offsetManagerEntryFactory();
-    }
-
-
-    @Override
-    protected OffsetManager.OffsetManagerKey createOffsetManagerKey(String nativeKey) {
-        return S3OffsetManagerIntegrationTestData.createOffsetManagerKey(nativeKey);
-    }
-
-    @Override
-    protected Function<Map<String, Object>, S3OffsetManagerEntry> getOffsetManagerEntryCreator(OffsetManager.OffsetManagerKey key) {
-        return (map) ->  new S3OffsetManagerEntry(key.getPartitionMap().get(S3OffsetManagerEntry.BUCKET).toString(), key.getPartitionMap().get(S3OffsetManagerEntry.OBJECT_KEY).toString()).fromProperties(map);
-    }
-
-    @Override
-    protected S3SourceRecordIterator getSourceRecordIterator(Map<String, String> configData, OffsetManager<S3OffsetManagerEntry> offsetManager, Transformer transformer) {
-        S3SourceConfig sourceConfig = new S3SourceConfig(configData);
-        return new S3SourceRecordIterator(sourceConfig, offsetManager, transformer, new AWSV2SourceClient(sourceConfig));
     }
 }

@@ -16,22 +16,24 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import io.aiven.kafka.connect.common.source.OffsetManager;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+
+import io.aiven.kafka.connect.common.source.OffsetManager;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 final class S3OffsetManagerEntryTest {
 

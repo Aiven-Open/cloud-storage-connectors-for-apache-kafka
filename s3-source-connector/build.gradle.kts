@@ -16,7 +16,9 @@ import com.github.spotbugs.snom.SpotBugsTask
  * limitations under the License.
  */
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+  id("aiven-apache-kafka-connectors-all.java-conventions")
+}
 
 val s3mockVersion by extra("0.2.6")
 val kafkaVersion by extra("3.3.0")
@@ -77,6 +79,7 @@ dependencies {
   }
 
   testImplementation(testFixtures(project(":commons")))
+  testImplementation(testFixtures(project(":s3-commons")))
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(testinglibs.awaitility)
@@ -85,11 +88,18 @@ dependencies {
   testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
   testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
 
+  testImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
+  testImplementation(testcontainers.junit.jupiter)
+  testImplementation(testcontainers.kafka) // this is not Kafka version
+  testImplementation(testcontainers.junit.jupiter)
+  testImplementation(testcontainers.localstack)
+
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
 
   testImplementation(testinglibs.mockito.core)
-  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testImplementation(testinglibs.mockito.junit.jupiter)
@@ -140,7 +150,7 @@ dependencies {
   integrationTestImplementation(testcontainers.localstack)
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testFixtures(project(":s3-commons")))
-
+  integrationTestImplementation(testcontainers.localstack)
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
@@ -188,10 +198,42 @@ dependencies {
   integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
   integrationTestImplementation(testFixtures(project(":commons")))
+  integrationTestImplementation(testFixtures(project(":s3-source-connector")))
 
   // Make test utils from 'test' available in 'integration-test'
   integrationTestImplementation(sourceSets["test"].output)
   integrationTestImplementation(testinglibs.awaitility)
+
+  //  testFixturesImplementation(testcontainers.kafka)
+
+//  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
+//  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
+//  testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
+//  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
+//  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  testFixturesImplementation(amazonawssdk.s3)
+  testFixturesImplementation(amazonawssdk.sts)
+  testFixturesImplementation(testFixtures(project(":commons")))
+  testFixturesImplementation(project(":s3-commons"))
+  testFixturesImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
+  testFixturesImplementation(testcontainers.junit.jupiter)
+  testFixturesImplementation(testcontainers.localstack)
+  testFixturesImplementation(testinglibs.junit.jupiter)
+  testFixturesImplementation(testinglibs.assertj.core)
+  testFixturesImplementation(compressionlibs.snappy)
+  testFixturesImplementation(compressionlibs.zstd.jni)
+  testFixturesImplementation(tools.spotbugs.annotations)
+  testFixturesImplementation(apache.kafka.connect.api)
+//  testFixturesImplementation(testinglibs.junit.jupiter
+//  testFixturesImplementation(testinglibs.mockito.junit.jupiter)
+//  testFixturesImplementation(testinglibs.mockito.core)
+//  testFixturesImplementation(testinglibs.assertj.core)
+//  testFixturesImplementation(apache.commons.lang3)
+//  testFixturesImplementation(apache.avro)
+//  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
+
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {

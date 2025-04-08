@@ -16,12 +16,13 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import com.google.common.base.Objects;
-import io.aiven.kafka.connect.common.source.OffsetManager;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import io.aiven.kafka.connect.common.source.OffsetManager;
+
+import com.google.common.base.Objects;
 
 public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEntry<S3OffsetManagerEntry> {
 

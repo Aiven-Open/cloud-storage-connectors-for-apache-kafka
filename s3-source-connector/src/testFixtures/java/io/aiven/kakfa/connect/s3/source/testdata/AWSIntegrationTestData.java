@@ -1,14 +1,31 @@
-package io.aiven.kafka.connect.s3.source.testdata;
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+package io.aiven.kakfa.connect.s3.source.testdata;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.integration.AbstractIntegrationTest.WriteResult;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.S3SourceConnector;
-import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.connect.connector.Connector;
 import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -21,9 +38,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.lang.String.format;
-
-public class AWSIntegrationTestData {
+@SuppressFBWarnings({"EI_EXPOSE_REP2", "EI_EXPOSE_REP"})
+public final class AWSIntegrationTestData {
     static final String BUCKET_NAME = "test-bucket";
     static final String S3_ACCESS_KEY_ID = "test-key-id";
     static final String S3_SECRET_ACCESS_KEY = "test_secret_key";
@@ -31,36 +47,37 @@ public class AWSIntegrationTestData {
     private final LocalStackContainer container;
 
     private final BucketAccessor testBucketAccessor;
-    protected final S3Client s3Client;
+    private final S3Client s3Client;
 
-    public AWSIntegrationTestData(LocalStackContainer container) {
+    public static  LocalStackContainer createS3Container() {
+       return new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2")).withServices(LocalStackContainer.Service.S3);
+    }
+
+    public AWSIntegrationTestData(final LocalStackContainer container) {
         this.container = container;
         s3Client = S3Client.builder()
-                .endpointOverride(
-                        URI.create(container.getEndpointOverride(LocalStackContainer.Service.S3).toString()))
+                .endpointOverride(URI.create(container.getEndpointOverride(LocalStackContainer.Service.S3).toString()))
                 .region(Region.of(container.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials
-                        .create(container.getAccessKey(), container.getSecretKey())))
+                .credentialsProvider(StaticCredentialsProvider
+                        .create(AwsBasicCredentials.create(container.getAccessKey(), container.getSecretKey())))
                 .build();
         testBucketAccessor = new BucketAccessor(s3Client, BUCKET_NAME);
         testBucketAccessor.createBucket();
     }
 
+    @SuppressWarnings("PMD.JUnit4TestShouldUseAfterAnnotation")
     public void tearDown() {
         testBucketAccessor.removeBucket();
         s3Client.close();
     }
 
     public String createKey(final String prefix, final String topic, final int partition) {
-        return format("%s%s-%05d-%d.txt", StringUtils.defaultIfBlank(prefix, ""), topic, partition, System.currentTimeMillis());
+        return String.format("%s%s-%05d-%d.txt", StringUtils.defaultIfBlank(prefix, ""), topic, partition,
+                System.currentTimeMillis());
     }
 
-
     public WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
-        final PutObjectRequest request = PutObjectRequest.builder()
-                .bucket(BUCKET_NAME)
-                .key(nativeKey)
-                .build();
+        final PutObjectRequest request = PutObjectRequest.builder().bucket(BUCKET_NAME).key(nativeKey).build();
         s3Client.putObject(request, RequestBody.fromBytes(testDataBytes));
         return new WriteResult<>(new S3OffsetManagerEntry(BUCKET_NAME, nativeKey).getManagerKey(), nativeKey);
     }
@@ -73,13 +90,12 @@ public class AWSIntegrationTestData {
         return S3SourceConnector.class;
     }
 
-    public Map<String, String> createConnectorConfig(String localPrefix) {
-        Map<String, String> data = new HashMap<>();
+    public Map<String, String> createConnectorConfig(final String localPrefix) {
+        final Map<String, String> data = new HashMap<>();
 
-        SourceConfigFragment.setter(data)
-                .ringBufferSize(10);
+        SourceConfigFragment.setter(data).ringBufferSize(10);
 
-        S3ConfigFragment.Setter setter =  S3ConfigFragment.setter(data)
+        final S3ConfigFragment.Setter setter = S3ConfigFragment.setter(data)
                 .bucketName(BUCKET_NAME)
                 .endpoint(container.getEndpoint())
                 .accessKeyId(S3_ACCESS_KEY_ID)
@@ -89,4 +105,5 @@ public class AWSIntegrationTestData {
         }
         return data;
     }
+
 }

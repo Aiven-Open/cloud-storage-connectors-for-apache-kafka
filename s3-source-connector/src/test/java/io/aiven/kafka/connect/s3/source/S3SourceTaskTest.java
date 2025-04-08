@@ -16,33 +16,13 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.source.AbstractSourceTask;
-import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
-import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.task.Context;
-import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
-import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
-import io.findify.s3mock.S3Mock;
-import org.apache.commons.lang3.time.StopWatch;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaAndValue;
-import org.apache.kafka.connect.runtime.ConnectorConfig;
-import org.apache.kafka.connect.source.SourceRecord;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
-import software.amazon.awssdk.core.retry.RetryMode;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.S3Object;
+import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
+import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
+import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -53,18 +33,61 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
+import java.util.UUID;
 
-import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
+import io.aiven.kafka.connect.common.config.KafkaFragment;
+import io.aiven.kafka.connect.common.config.TransformerFragment;
+import io.aiven.kafka.connect.common.utils.CasedString;
+import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;
+import org.apache.kafka.connect.converters.ByteArrayConverter;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.runtime.ConnectorConfig;
+import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.source.AbstractSourceTask;
+import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.task.Context;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
+
+import org.apache.commons.lang3.time.StopWatch;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.slf4j.Logger;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.retry.RetryMode;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.S3Object;
+
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
+
+@Testcontainers
 final class S3SourceTaskTest {
+
+    /**
+     * The Test info provided before each test. Tests may access this info wihout capturing it themselves.
+     */
+    private TestInfo testInfo;
 
     /**
      * The amount of extra time that we will allow for timing errors.
@@ -72,77 +95,112 @@ final class S3SourceTaskTest {
     private static final long TIMING_DELTA = 500;
 
     private static final Random RANDOM = new Random();
-    private Map<String, String> properties;
+    //private Map<String, String> properties;
 
     private static final String TEST_BUCKET = "test-bucket";
 
     private static final String TEST_OBJECT_KEY = "object_key";
 
-    // TODO S3Mock has not been maintained in 4 years
-    // Adobe have an alternative we can move to.
-    private static S3Mock s3Api;
-    private static S3Client s3Client;
+    @Container
+    static final LocalStackContainer LOCALSTACK = AWSIntegrationTestData.createS3Container();
 
-    private static Map<String, String> commonProperties;
-
-    @BeforeAll
-    public static void setUpClass() throws URISyntaxException {
-        final int s3Port = RANDOM.nextInt(10_000) + 10_000;
-
-        s3Api = new S3Mock.Builder().withPort(s3Port).withInMemoryBackend().build();
-        s3Api.start();
-
-        commonProperties = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "test_key_id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "test_secret_key",
-                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET, S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG,
-                "http://localhost:" + s3Port, S3ConfigFragment.AWS_S3_REGION_CONFIG, "us-west-2");
-
-        final S3SourceConfig config = new S3SourceConfig(commonProperties);
-        final ClientOverrideConfiguration clientOverrideConfiguration = ClientOverrideConfiguration.builder()
-                .retryStrategy(RetryMode.STANDARD)
-                .build();
-
-        s3Client = S3Client.builder()
-                .overrideConfiguration(clientOverrideConfiguration)
-                .region(config.getAwsS3Region())
-                .endpointOverride(URI.create(config.getAwsS3EndPoint()))
-                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
-                .credentialsProvider(config.getAwsV2Provider())
-                .build();
-    }
-
-    @AfterAll
-    public static void tearDownClass() {
-        s3Api.stop();
-    }
+    private AWSIntegrationTestData testData;
 
     @BeforeEach
-    public void setUp() {
-        properties = new HashMap<>(commonProperties);
-        s3Client.createBucket(create -> create.bucket(TEST_BUCKET).build());
+    void setupAWS() {
+        testData = new AWSIntegrationTestData(LOCALSTACK);
+    }
+
+    /**
+     * Captures the test info for the current test.
+     *
+     * @param testInfo
+     *            the test info.
+     */
+    @BeforeEach
+    void captureTestInfo(final TestInfo testInfo) {
+        this.testInfo = testInfo;
     }
 
     @AfterEach
-    public void tearDown() {
-        s3Client.deleteBucket(delete -> delete.bucket(TEST_BUCKET).build());
+    void tearDownAWS() {
+        testData.tearDown();
+    }
+//
+//    private static S3Client s3Client;
+//
+//    private static Map<String, String> commonProperties;
+//
+//    @BeforeAll
+//    public static void setUpClass() throws URISyntaxException {
+//        final int s3Port = RANDOM.nextInt(10_000) + 10_000;
+//
+//        s3Api = new S3Mock.Builder().withPort(s3Port).withInMemoryBackend().build();
+//        s3Api.start();
+//
+//        commonProperties = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "test_key_id",
+//                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "test_secret_key",
+//                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, TEST_BUCKET, S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG,
+//                "http://localhost:" + s3Port, S3ConfigFragment.AWS_S3_REGION_CONFIG, "us-west-2");
+//
+//        final S3SourceConfig config = new S3SourceConfig(commonProperties);
+//        final ClientOverrideConfiguration clientOverrideConfiguration = ClientOverrideConfiguration.builder()
+//                .retryStrategy(RetryMode.STANDARD)
+//                .build();
+//
+//        s3Client = S3Client.builder()
+//                .overrideConfiguration(clientOverrideConfiguration)
+//                .region(config.getAwsS3Region())
+//                .endpointOverride(URI.create(config.getAwsS3EndPoint()))
+//                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+//                .credentialsProvider(config.getAwsV2Provider())
+//                .build();
+//    }
+//
+//    @AfterAll
+//    public static void tearDownClass() {
+//        s3Api.stop();
+//    }
+//
+//    @BeforeEach
+//    public void setUp() {
+//        properties = new HashMap<>(commonProperties);
+//        s3Client.createBucket(create -> create.bucket(TEST_BUCKET).build());
+//    }
+//
+//    @AfterEach
+//    public void tearDown() {
+//        s3Client.deleteBucket(delete -> delete.bucket(TEST_BUCKET).build());
+//    }
+
+    /**
+     * Get the topic from the TestInfo.
+     *
+     * @return The topic extracted from the testInfo for the current test.
+     */
+    public String getTopic() {
+        return testInfo.getTestMethod().get().getName();
     }
 
     @Test
     void testS3SourceTaskInitialization() {
         final S3SourceTask s3SourceTask = new S3SourceTask();
-        startSourceTask(s3SourceTask);
+        try {
+            startSourceTask(s3SourceTask, getTopic());
 
-        assertThat(s3SourceTask.getTransformer()).isInstanceOf(ByteArrayTransformer.class);
+            assertThat(s3SourceTask.getTransformer()).isInstanceOf(ByteArrayTransformer.class);
 
-        assertThat(s3SourceTask.isRunning()).isTrue();
+            assertThat(s3SourceTask.isRunning()).isTrue();
+        } finally {
+            s3SourceTask.stop();
+        }
     }
 
     @Test
     void testStop() {
         final S3SourceTask s3SourceTask = new S3SourceTask();
-        startSourceTask(s3SourceTask);
+        startSourceTask(s3SourceTask, getTopic());
         s3SourceTask.stop();
-
         assertThat(s3SourceTask.isRunning()).isFalse();
     }
 
@@ -161,25 +219,43 @@ final class S3SourceTaskTest {
         return result;
     }
 
-    private void startSourceTask(final S3SourceTask s3SourceTask) {
+    private void startSourceTask(final S3SourceTask s3SourceTask, Map<String, String> properties) {
         final SourceTaskContext mockedSourceTaskContext = mock(SourceTaskContext.class);
         final OffsetStorageReader mockedOffsetStorageReader = mock(OffsetStorageReader.class);
         when(mockedSourceTaskContext.offsetStorageReader()).thenReturn(mockedOffsetStorageReader);
         s3SourceTask.initialize(mockedSourceTaskContext);
 
-        setBasicProperties();
         s3SourceTask.start(properties);
     }
 
-    private void setBasicProperties() {
-        properties.putIfAbsent(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
-        properties.putIfAbsent("name", "test_source_connector");
-        properties.putIfAbsent("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        properties.putIfAbsent("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        properties.putIfAbsent(ConnectorConfig.TASKS_MAX_CONFIG, "1");
-        properties.put(TASK_ID, "1");
-        properties.putIfAbsent("connector.class", S3SourceConnector.class.getName());
-        properties.putIfAbsent(TARGET_TOPIC, "testtopic");
+    private Map<String, String> getBasicProperties(String topic) {
+        final Map<String, String> props = new HashMap<>();
+        final String name = new CasedString(CasedString.StringCase.CAMEL, S3SourceConnector.class.getSimpleName())
+                .toCase(CasedString.StringCase.KEBAB)
+                .toLowerCase(Locale.ROOT) + "-" + UUID.randomUUID();
+
+        TransformerFragment.setter(props)
+                        .inputFormat(InputFormat.BYTES);
+        KafkaFragment.setter(props)
+                        .keyConverter(ByteArrayConverter.class)
+                                .valueConverter(ByteArrayConverter.class)
+                                        .tasksMax(1)
+                .connector(S3SourceConnector.class)
+                .name(name);
+        CommonConfigFragment.setter(props)
+                        .taskId(0);
+        SourceConfigFragment.setter(props)
+                        .targetTopic(topic);
+
+        return props;
+//
+//        properties.putIfAbsent("name", "test_source_connector");
+//        properties.putIfAbsent("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
+//        properties.putIfAbsent("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
+//        properties.putIfAbsent(ConnectorConfig.TASKS_MAX_CONFIG, "1");
+//        properties.put(TASK_ID, "1");
+//        properties.putIfAbsent("connector.class", S3SourceConnector.class.getName());
+//        properties.putIfAbsent(TARGET_TOPIC, "testtopic");
 
     }
 
@@ -311,6 +387,8 @@ final class S3SourceTaskTest {
     @Test
     void testPollsWithExcessRecords() {
         // test that multiple polls to get all records succeeds.
+
+
         SourceConfigFragment.setter(properties).maxPollRecords(2);
 
         final List<S3SourceRecord> lst = createS3SourceRecords(3);

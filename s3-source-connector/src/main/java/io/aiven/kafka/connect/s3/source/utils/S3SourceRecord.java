@@ -17,8 +17,8 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
-
 import io.aiven.kafka.connect.common.source.NativeInfo;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;

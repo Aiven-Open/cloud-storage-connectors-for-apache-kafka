@@ -16,19 +16,20 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.InputStream;
+import java.util.stream.Stream;
+
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;
-
-import java.io.InputStream;
-import java.util.stream.Stream;
 
 /**
  * Iterator that processes S3 files and creates Kafka source records. Supports different output formats (Avro, JSON,

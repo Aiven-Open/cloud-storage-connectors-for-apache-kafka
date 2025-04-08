@@ -29,7 +29,7 @@ import io.aiven.kafka.connect.common.config.TransformerFragment;
  */
 public final class ConsumerPropertiesBuilder {
     /** The properties for this builder */
-    final Properties props = new Properties();
+    private final Properties props = new Properties();
 
     /**
      * Creates a ConsumerPropertiesBuilder for a bootstrap server. By default, the key and value are serialized as
@@ -88,6 +88,8 @@ public final class ConsumerPropertiesBuilder {
      * @return the properties from this builder.
      */
     public Properties build() {
-        return new Properties(props);
+        final Properties result = new Properties();
+        result.putAll(props);
+        return result;
     }
 }

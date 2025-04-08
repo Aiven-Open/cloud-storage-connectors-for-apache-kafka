@@ -100,26 +100,10 @@ dependencies {
   testImplementation(testinglibs.woodstox.stax2.api)
   testImplementation(apache.hadoop.mapreduce.client.core)
   testImplementation(confluent.kafka.connect.avro.converter)
+  testImplementation(testcontainers.kafka) // this is not Kafka version
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
-
-  testFixturesImplementation(testcontainers.kafka)
-
-  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
-  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
-  testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
-  testFixturesImplementation(testFixtures(project(":commons")))
-//  testFixturesImplementation(apache.kafka.connect.api)
-//  testFixturesImplementation(testinglibs.junit.jupiter
-//  testFixturesImplementation(testinglibs.mockito.junit.jupiter)
-//  testFixturesImplementation(testinglibs.mockito.core)
-//  testFixturesImplementation(testinglibs.assertj.core)
-//  testFixturesImplementation(apache.commons.lang3)
-//  testFixturesImplementation(apache.avro)
-//  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
 }
 
 tasks.withType<Jar> { archiveBaseName.set(project.name + "-for-apache-kafka-connect") }

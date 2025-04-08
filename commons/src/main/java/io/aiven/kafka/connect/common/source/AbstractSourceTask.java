@@ -103,7 +103,7 @@ public abstract class AbstractSourceTask extends SourceTask {
     /**
      * The Backoff implementation that executes the delay in the poll loop.
      */
-    private final Backoff backoff;
+    protected final Backoff backoff;
 
     /**
      * The configuration for the backoff calculations.
@@ -327,7 +327,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * @return {@code true} if the connector is running, {@code false} otherwise.
      */
     public final boolean isRunning() {
-        return !connectorStopped.get();
+        return !connectorStopped.get() && implemtationPollingThread.isAlive();
     }
 
     /**

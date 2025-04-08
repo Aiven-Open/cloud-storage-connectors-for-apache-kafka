@@ -16,6 +16,13 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
+
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.connect.source.SourceRecord;
+
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
@@ -26,15 +33,11 @@ import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
 import io.aiven.kafka.connect.s3.source.utils.Version;
+
 import org.apache.commons.collections4.IteratorUtils;
-import org.apache.kafka.connect.source.SourceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.exception.SdkException;
-
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * S3SourceTask is a Kafka Connect SourceTask implementation that reads from source-s3 buckets and generates Kafka
@@ -114,8 +117,7 @@ public class S3SourceTask extends AbstractSourceTask {
         this.transformer = s3SourceConfig.getTransformer();
         offsetManager = new OffsetManager<>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig);
-        setS3SourceRecordIterator(
-                new S3SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, awsv2SourceClient));
+        s3SourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, awsv2SourceClient);
         return s3SourceConfig;
     }
 
@@ -125,9 +127,13 @@ public class S3SourceTask extends AbstractSourceTask {
     }
 
     @Override
-    public void commitRecord(final SourceRecord record) {
+    public void commitRecord(final SourceRecord record, RecordMetadata metadata) {
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Kafka Acked record {}, see readme for details", (Map<String, Object>) record.sourceOffset());
+            if (metadata == null) {
+                LOGGER.debug("Kafka filtered record {}, see readme for details", (Map<String, Object>) record.sourceOffset());
+            } else {
+                LOGGER.debug("Kafka Acked record {}, see readme for details", (Map<String, Object>) record.sourceOffset());
+            }
         }
     }
 

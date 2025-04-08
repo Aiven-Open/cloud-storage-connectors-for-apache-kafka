@@ -39,12 +39,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 final class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
+    private final static OutputWriter NONE = null;
     private final OutputFieldEncodingType noEncoding = OutputFieldEncodingType.NONE;
 
     @BeforeEach
     void setUp() {
         byteStream = new ByteArrayOutputStream();
-        sut = null; // NOPMD NullAssignment
+        sut = NONE;
     }
 
     @Test
@@ -79,12 +80,9 @@ final class JsonOutputWriterTest extends JsonOutputWriterTestHelper {
         final SinkRecord record = createRecord("key0", level1Schema, struct, 1, 1000L);
 
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
-            // The JsonOutputWriter is Closeable, the test fails if writer is not closed before
-            // asserting byte stream content.
-            final JsonOutputWriter writer = new JsonOutputWriter(fields, byteStream, false); // NOPMD
-            writer.writeRecord(record);
-            writer.close();
-
+            try (JsonOutputWriter writer = new JsonOutputWriter(fields, byteStream, false)) {
+                writer.writeRecord(record);
+            }
             assertThat(byteStream).hasToString("[\n{\"name\":\"John\"}\n]");
         }
     }
