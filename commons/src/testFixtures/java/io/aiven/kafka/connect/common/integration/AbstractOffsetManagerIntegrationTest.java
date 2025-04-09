@@ -58,7 +58,7 @@ public abstract class AbstractOffsetManagerIntegrationTest<K extends Comparable<
             AbstractIntegrationTest<K, O, I> {
 
     /**
-     * Statit to indicate that the TASK is not set.
+     * Static to indicate that the TASK is not set.
      */
     private static final int TASK_NOT_SET = -1;
 

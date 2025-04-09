@@ -51,23 +51,6 @@ public final class AzureIntegrationTest extends AbstractSourceIntegrationTest<St
     }
 
     @Override
-    protected OffsetManager.OffsetManagerKey createOffsetManagerKey(String nativeKey) {
-        return AzureOffsetManagerIntegrationTestData.createOffsetManagerKey(nativeKey);
-    }
-
-    @Override
-    protected Function<Map<String, Object>, AzureBlobOffsetManagerEntry> getOffsetManagerEntryCreator(OffsetManager.OffsetManagerKey key) {
-        return AzureOffsetManagerIntegrationTestData.getOffsetManagerEntryCreator(key);
-    }
-
-    @Override
-    protected AzureBlobSourceRecordIterator getSourceRecordIterator(Map<String, String> configData, OffsetManager<AzureBlobOffsetManagerEntry> offsetManager, Transformer transformer) {
-        AzureBlobSourceConfig sourceConfig = new AzureBlobSourceConfig(configData);
-        return new AzureBlobSourceRecordIterator(sourceConfig, offsetManager, transformer, new AzureBlobClient(sourceConfig));
-    }
-
-
-    @Override
     protected String createKey(String prefix, String topic, int partition) {
         return testData.createKey(prefix, topic, partition);
     }

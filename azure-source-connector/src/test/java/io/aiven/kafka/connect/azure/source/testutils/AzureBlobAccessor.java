@@ -240,7 +240,7 @@ public final class AzureBlobAccessor {
         return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
     }
 
-    public static class AzureNativeInfo implements NativeInfo<BlobItem, String> {
+    public static class AzureNativeInfo implements NativeInfo<BlobItem, String>, Comparable<AzureNativeInfo> {
         private BlobItem blobItem;
 
         AzureNativeInfo(BlobItem BlobItem) {
@@ -262,5 +262,9 @@ public final class AzureBlobAccessor {
             return blobItem.getProperties().getContentLength();
         }
 
+        @Override
+        public int compareTo(AzureNativeInfo o) {
+            return getNativeKey().compareTo(o.getNativeKey());
+        }
     }
 }

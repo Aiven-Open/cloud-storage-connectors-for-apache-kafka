@@ -15,13 +15,17 @@ import org.testcontainers.containers.FixedHostPortGenericContainer;
 import org.testcontainers.containers.GenericContainer;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
-public class AzureIntegrationTestData {
+public final class AzureIntegrationTestData {
     static final String AZURE_CONTAINER = "test-container";
     private static final int AZURE_BLOB_PORT = 10_000;
     private static final int AZURE_QUEUE_PORT = 10_001;
@@ -31,34 +35,95 @@ public class AzureIntegrationTestData {
     private static final String ACCOUNT_KEY = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
     private final GenericContainer<?> container;
-
+    private final Map<Integer, Integer> portMap;
     private final BlobContainerClient containerClient;
 
     private final AzureBlobAccessor azureBlobAccessor;
 
     public AzureIntegrationTestData(GenericContainer<?> container) {
         this.container = container;
+        portMap = new HashMap<>();
+        for (String binding : container.getPortBindings()) {
+            String[] parts = binding.split(":");
+            String[] parts2 = parts[1].split("/");
+            int externalPort = Integer.parseInt(parts[0]);
+            int internalPort = Integer.parseInt(parts2[0]);
+            portMap.put(internalPort, externalPort);
+        }
 
         String azureEndpoint = String.format(
                     "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=%s/%s;", ACCOUNT_NAME,
-                    ACCOUNT_KEY, AZURE_ENDPOINT, ACCOUNT_NAME);
+                    ACCOUNT_KEY, getBlobEndpoint(), ACCOUNT_NAME);
+
         BlobServiceClient azureServiceClient = new BlobServiceClientBuilder().connectionString(azureEndpoint).buildClient();
         containerClient = azureServiceClient.getBlobContainerClient(AZURE_CONTAINER);
         containerClient.createIfNotExists();
         azureBlobAccessor = new AzureBlobAccessor(containerClient);
     }
 
+    public int getBlobPort() {
+        return portMap.get(AZURE_BLOB_PORT);
+    }
+
+    public int getQueuePort() {
+        return portMap.get(AZURE_QUEUE_PORT);
+    }
+
+    public int getTablePort() {
+        return portMap.get(AZURE_TABLE_PORT);
+    }
+
+    public String getBlobEndpoint() {
+        return format("http://%s:%s", container.getContainerIpAddress(), getBlobPort());
+    }
+
+    public String getQueueEndpoint() {
+        return format("http://%s:%s", container.getContainerIpAddress(), getQueuePort());
+    }
+
+    public String getTableEndpoint() {
+        return format("http://%s:%s", container.getContainerIpAddress(), getTablePort());
+    }
+
+
+
+
     public void tearDown() {
     }
 
+    /**
+     * Finds 3 simultaneously free port for Kafka listeners
+     *
+     * @return list of 2 ports
+     * @throws IOException
+     *             when port allocation failure happens
+     */
+    static List<Integer> findListenerPorts(int count) throws IOException {
+        ServerSocket[] sockets = new ServerSocket[count];
+        try {
+        for (int i = 0; i < sockets.length; i++) {
+            sockets[i] = new ServerSocket(0);
+        }
+        return Arrays.stream(sockets).map(ServerSocket::getLocalPort).collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new IOException("Failed to allocate ports for test", e);
+        }
+    }
+
     public static GenericContainer<?> createContainer() {
-        return new FixedHostPortGenericContainer<>(
-                "mcr.microsoft.com/azure-storage/azurite") // NOPMD
-                .withFixedExposedPort(AZURE_BLOB_PORT, AZURE_BLOB_PORT)
-                .withFixedExposedPort(AZURE_QUEUE_PORT, AZURE_QUEUE_PORT)
-                .withFixedExposedPort(AZURE_TABLE_PORT, AZURE_TABLE_PORT)
-                .withCommand("azurite --blobHost 0.0.0.0  --queueHost 0.0.0.0 --tableHost 0.0.0.0")
-                .withReuse(true);
+        try {
+            List<Integer> ports = findListenerPorts(3);
+            return new FixedHostPortGenericContainer<>(
+                    "mcr.microsoft.com/azure-storage/azurite")
+                    .withFixedExposedPort(ports.get(0), AZURE_BLOB_PORT)
+                    .withFixedExposedPort(ports.get(1), AZURE_QUEUE_PORT)
+                    .withFixedExposedPort(ports.get(2), AZURE_TABLE_PORT)
+                    .withCommand("azurite --blobHost 0.0.0.0  --queueHost 0.0.0.0 --tableHost 0.0.0.0")
+                    .withReuse(true);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     public String createKey(final String prefix, final String topic, final int partition) {
