@@ -4,6 +4,7 @@ import io.aiven.kafka.connect.azure.source.testdata.AzureIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.testdata.AzureOffsetManagerIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
 import io.aiven.kafka.connect.azure.source.testutils.AzureBlobAccessor;
+import io.aiven.kafka.connect.azure.source.testutils.ContainerAccessor;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
@@ -28,13 +29,10 @@ import java.util.function.Function;
 public class AzureBlobSourceRecordIteratorIntegrationTest extends AbstractSourceIteratorIntegrationTest<String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecordIterator> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceRecordIteratorIntegrationTest.class);
 
-    //    @Container
-//    static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
-//            .withServices(LocalStackContainer.Service.S3);
     @Container
     private static final GenericContainer<?> AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
 
-    AzureIntegrationTestData testData;
+    private AzureIntegrationTestData testData;
 
     @Override
     protected Logger getLogger() {
@@ -48,6 +46,7 @@ public class AzureBlobSourceRecordIteratorIntegrationTest extends AbstractSource
 
     @AfterEach
     void tearDownAzure() {
+
         testData.tearDown();
     }
 
@@ -65,7 +64,7 @@ public class AzureBlobSourceRecordIteratorIntegrationTest extends AbstractSource
     }
 
     @Override
-    protected List<AzureBlobAccessor.AzureNativeInfo> getNativeStorage() {
+    protected List<ContainerAccessor.AzureNativeInfo> getNativeStorage() {
         return testData.getNativeStorage();
     }
 

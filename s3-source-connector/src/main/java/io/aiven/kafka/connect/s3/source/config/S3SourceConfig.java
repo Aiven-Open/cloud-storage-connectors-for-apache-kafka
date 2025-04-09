@@ -41,22 +41,11 @@ final public class S3SourceConfig extends SourceCommonConfig {
     private final AwsCredentialProviderFactory awsCredentialsProviderFactory;
 
     public S3SourceConfig(final Map<String, String> properties) {
-        super(configDef(), S3ConfigFragment.handleDeprecations(properties));
+        super(new S3SourceConfigDef(), S3ConfigFragment.handleDeprecations(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
         awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
 
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
-    }
-
-    public static ConfigDef configDef() {
-
-        final var configDef = new S3SourceConfigDef();
-        S3ConfigFragment.update(configDef);
-        SourceConfigFragment.update(configDef);
-        TransformerFragment.update(configDef);
-        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
-
-        return configDef;
     }
 
     private void validate() {

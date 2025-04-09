@@ -53,6 +53,7 @@ public class S3SourceTask extends AbstractSourceTask {
     private AWSV2SourceClient awsv2SourceClient;
     /** The offset manager this task uses */
     private OffsetManager<S3OffsetManagerEntry> offsetManager;
+    /** The configuration for this run */
     private S3SourceConfig s3SourceConfig;
 
     public S3SourceTask() {

@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
+import com.azure.core.util.io.IOUtils;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
@@ -24,8 +25,11 @@ import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
+import org.apache.kafka.common.utils.ByteBufferInputStream;
 import reactor.core.publisher.Flux;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.stream.Stream;
 
@@ -78,9 +82,9 @@ final public class AzureBlobSourceRecordIteratorTest
         }
 
         /**
-         * Create a S3 ListObjectV2Respone object from a single block.
+         * Create stream of BlobItems from a single block.
          *
-         * @return the new ListObjectV2Response
+         * @return the new Stream of BlobItems
          */
         private Stream<BlobItem> dequeueData() {
             // Dequeue a block. Sets the objects.
@@ -88,12 +92,9 @@ final public class AzureBlobSourceRecordIteratorTest
             return objects.stream();
         }
 
-        private Flux<ByteBuffer> getStream(final String key) {
+        private InputStream getStream(final String key) {
             final ByteBuffer buffer = getData(key);
-            if (buffer != null) {
-                return Flux.just(buffer);
-            }
-            return Flux.empty();
+            return (buffer != null) ? new ByteBufferInputStream(buffer) : new ByteArrayInputStream(new byte[0]);
         }
 
         @Override

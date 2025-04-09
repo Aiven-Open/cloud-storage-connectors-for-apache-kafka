@@ -28,6 +28,10 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,23 +96,25 @@ class AzureBlobClientTest {
     }
 
     @Test
-    void testGetBlobReceivesCanReturnNullWhenObjectIsEmpty() {
+    void testGetBlobReceivesCanReturnNullWhenObjectIsEmpty() throws IOException {
         client = new AzureBlobClient(config);
         when(blobClient.downloadStream()).thenReturn(Flux.empty());
-        final Flux<ByteBuffer> blob = client.getBlob("teste-1");
-        assertThat(blob.blockFirst()).isNull();
+        try (InputStream inputStream = client.getBlob("teste-1")) {
+            assertThat(inputStream.read()).isEqualTo(-1);
+        }
     }
 
     @Test
-    void testGetBlobReturnsDataAsExpected() {
+    void testGetBlobReturnsDataAsExpected() throws IOException {
         client = new AzureBlobClient(config);
         final String blobContent = "This data is amazing";
         when(blobClient.downloadStream()).thenReturn(Flux.just(ByteBuffer.wrap(blobContent.getBytes(UTF_8))));
-        final Flux<ByteBuffer> blob = client.getBlob("teste-1");
-        final ByteBuffer content = blob.blockFirst();
-        assertThat(content).isNotNull();
-        final String downloadedContent = UTF_8.decode(content).toString();
-        assertThat(blobContent).isEqualTo(downloadedContent);
+        try (InputStream inputStream = client.getBlob("teste-1");
+            InputStreamReader reader = new InputStreamReader(inputStream, UTF_8);
+            BufferedReader bufferedReader = new BufferedReader(reader)) {
+            String s = bufferedReader.readLine();
+            assertThat(s).isEqualTo(blobContent);
+        }
     }
 
     private static Stream<BlobItem> createListOfBlobs(final int numberOfItems) {

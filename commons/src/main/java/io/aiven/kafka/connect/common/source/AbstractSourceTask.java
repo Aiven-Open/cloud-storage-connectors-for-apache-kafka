@@ -26,6 +26,7 @@ import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -154,9 +155,10 @@ public abstract class AbstractSourceTask extends SourceTask {
                         }
                     }
                 } catch (InterruptedException e) {
-                    logger.warn("{} interrupted -- EXITING", this.toString());
+                    logger.warn("{} interrupted -- EXITING", this
+                    );
                 } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
-                    logger.error("{} failed -- EXITING", this.toString(), e);
+                    logger.error("{} failed -- EXITING", this, e);
                 }
 
             }
@@ -334,6 +336,31 @@ public abstract class AbstractSourceTask extends SourceTask {
      * Close any resources the source has open. Called by the IteratorRunnable when it is stopping.
      */
     abstract protected void closeResources();
+
+    @Override
+    public void commit() {
+        logger.info("Committed all records through last poll()");
+    }
+
+    @Override
+    public void commitRecord(final SourceRecord record) {
+        commitRecord(record, null);
+    }
+
+    /**
+     * Method that is implemented in later versions.
+     * @param record the SourecRecord being committed.
+     * @param metadata the metadata for the SourceRecord. May be {@code null}
+     */
+    public void commitRecord(final SourceRecord record, final RecordMetadata metadata) {
+        if (logger.isDebugEnabled()) {
+            if (metadata == null) {
+                logger.debug("Kafka filtered record {}, see readme for details", record.sourceOffset());
+            } else {
+                logger.debug("Kafka Acked record {}, see readme for details", record.sourceOffset());
+            }
+        }
+    }
 
     /**
      * Calculates elapsed time and flags when expired.

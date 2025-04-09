@@ -19,7 +19,15 @@ package io.aiven.kafka.connect.azure.source;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecord;
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
+import io.aiven.kafka.connect.common.source.OffsetManager;
+import org.apache.commons.collections4.IteratorUtils;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.source.SourceRecord;
 
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
@@ -33,6 +41,13 @@ import org.slf4j.LoggerFactory;
 public class AzureBlobSourceTask extends AbstractSourceTask {
     /* The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceTask.class);
+    private OffsetManager<AzureBlobOffsetManagerEntry> offsetManager;
+    /** The configuration for this run */
+    private AzureBlobSourceConfig azureBlobSourceConfig;
+    private AzureBlobClient azureBlobClient;
+    private AzureBlobSourceRecordIterator azureBlobSourceRecordIterator;
+
+
     /**
      * Constructor to set the Logger used.
      *
@@ -40,23 +55,26 @@ public class AzureBlobSourceTask extends AbstractSourceTask {
     protected AzureBlobSourceTask() {
         super(LOGGER);
     }
-    private AzureBlobSourceConfig azureBlobSourceConfig; // NOPMD only called once, when used in the future this can be
-                                                         // removed
 
     @Override
     protected Iterator<SourceRecord> getIterator(final BackoffConfig config) {
-        return Collections.emptyIterator();
+        final Iterator<SourceRecord> inner = IteratorUtils.transformedIterator(azureBlobSourceRecordIterator, r -> r.getSourceRecord(azureBlobSourceConfig.getErrorsTolerance(), offsetManager));
+        return IteratorUtils.filteredIterator(inner, Objects::nonNull);
     }
 
     @Override
     protected SourceCommonConfig configure(final Map<String, String> props) {
+        LOGGER.info("Configuring Azure Blob Source task.");
         this.azureBlobSourceConfig = new AzureBlobSourceConfig(props);
+        offsetManager = new OffsetManager<>(context);
+        azureBlobClient = new AzureBlobClient(azureBlobSourceConfig);
+        azureBlobSourceRecordIterator = new AzureBlobSourceRecordIterator(azureBlobSourceConfig, offsetManager, azureBlobSourceConfig.getTransformer(), azureBlobClient);
         return azureBlobSourceConfig;
     }
 
     @Override
     protected void closeResources() {
-
+        // does nothing.
     }
 
     @Override

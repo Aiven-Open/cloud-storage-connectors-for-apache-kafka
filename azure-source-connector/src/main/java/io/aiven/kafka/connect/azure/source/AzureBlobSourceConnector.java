@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfigDef;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
@@ -46,7 +47,7 @@ public class AzureBlobSourceConnector extends SourceConnector {
 
     @Override
     public ConfigDef config() {
-        return AzureBlobSourceConfig.configDef();
+        return new AzureBlobSourceConfigDef();
     }
 
     @Override

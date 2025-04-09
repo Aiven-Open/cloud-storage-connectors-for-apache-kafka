@@ -4,6 +4,7 @@ import io.aiven.kafka.connect.azure.source.testdata.AzureIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.testdata.AzureOffsetManagerIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
 import io.aiven.kafka.connect.azure.source.testutils.AzureBlobAccessor;
+import io.aiven.kafka.connect.azure.source.testutils.ContainerAccessor;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
@@ -61,7 +62,7 @@ public final class AzureIntegrationTest extends AbstractSourceIntegrationTest<St
     }
 
     @Override
-    protected List<AzureBlobAccessor.AzureNativeInfo> getNativeStorage() {
+    protected List<ContainerAccessor.AzureNativeInfo> getNativeStorage() {
         return testData.getNativeStorage();
     }
 

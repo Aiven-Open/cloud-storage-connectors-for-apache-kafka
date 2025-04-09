@@ -21,10 +21,24 @@ import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYy
 import java.util.List;
 import java.util.Map;
 
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.config.TransformerFragment;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigValue;
 
-public class S3SourceConfigDef extends ConfigDef {
+public final class S3SourceConfigDef extends ConfigDef {
+
+    public S3SourceConfigDef() {
+        super();
+        S3ConfigFragment.update(this);
+        SourceConfigFragment.update(this);
+        TransformerFragment.update(this);
+        OutputFormatFragment.update(this, OutputFieldType.VALUE);
+    }
+
     @Override
     public List<ConfigValue> validate(final Map<String, String> props) {
         return super.validate(handleDeprecatedYyyyUppercase(props));

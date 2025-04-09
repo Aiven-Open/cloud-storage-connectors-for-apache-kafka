@@ -56,7 +56,12 @@ public final class AzureBlobSourceRecordIterator
 
     @Override
     protected Stream<BlobItem> getNativeItemStream(final String offset) {
-        return azureBlobClient.getAzureBlobStream();
+        Stream<BlobItem> result = azureBlobClient.getAzureBlobStream()
+                .sorted((a, b) -> a.getName().compareTo(b.getName()));
+        if (offset != null) {
+            result = result.filter(blobItem -> blobItem.getName().compareTo(offset) > 0);
+        }
+        return result;
     }
 
     @Override
@@ -66,7 +71,7 @@ public final class AzureBlobSourceRecordIterator
 
     @Override
     protected IOSupplier<InputStream> getInputStream(final AzureBlobSourceRecord sourceRecord) {
-        return () -> new ByteBufferInputStream(azureBlobClient.getBlob(sourceRecord.getNativeKey()).blockFirst());
+        return () -> azureBlobClient.getBlob(sourceRecord.getNativeKey());
     }
 
     @Override

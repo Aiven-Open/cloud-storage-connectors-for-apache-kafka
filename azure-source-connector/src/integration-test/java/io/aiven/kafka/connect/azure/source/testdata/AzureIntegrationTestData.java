@@ -6,6 +6,7 @@ import com.azure.storage.blob.BlobServiceClientBuilder;
 import io.aiven.kafka.connect.azure.source.AzureBlobSourceConnector;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobConfigFragment;
 import io.aiven.kafka.connect.azure.source.testutils.AzureBlobAccessor;
+import io.aiven.kafka.connect.azure.source.testutils.ContainerAccessor;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.integration.AbstractIntegrationTest;
@@ -30,15 +31,14 @@ public final class AzureIntegrationTestData {
     private static final int AZURE_BLOB_PORT = 10_000;
     private static final int AZURE_QUEUE_PORT = 10_001;
     private static final int AZURE_TABLE_PORT = 10_002;
-    private static final String AZURE_ENDPOINT = "http://127.0.0.1:10000";
     private static final String ACCOUNT_NAME = "devstoreaccount1";
     private static final String ACCOUNT_KEY = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
     private final GenericContainer<?> container;
     private final Map<Integer, Integer> portMap;
-    private final BlobContainerClient containerClient;
-
+    private final BlobServiceClient azureServiceClient;
     private final AzureBlobAccessor azureBlobAccessor;
+    private final ContainerAccessor containerAccessor;;
 
     public AzureIntegrationTestData(GenericContainer<?> container) {
         this.container = container;
@@ -55,10 +55,10 @@ public final class AzureIntegrationTestData {
                     "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=%s/%s;", ACCOUNT_NAME,
                     ACCOUNT_KEY, getBlobEndpoint(), ACCOUNT_NAME);
 
-        BlobServiceClient azureServiceClient = new BlobServiceClientBuilder().connectionString(azureEndpoint).buildClient();
-        containerClient = azureServiceClient.getBlobContainerClient(AZURE_CONTAINER);
-        containerClient.createIfNotExists();
-        azureBlobAccessor = new AzureBlobAccessor(containerClient);
+        azureServiceClient = new BlobServiceClientBuilder().connectionString(azureEndpoint).buildClient();
+        containerAccessor = new ContainerAccessor(azureServiceClient, AZURE_CONTAINER);
+        containerAccessor.createContainer();
+        azureBlobAccessor = new AzureBlobAccessor(containerAccessor);
     }
 
     public int getBlobPort() {
@@ -86,9 +86,8 @@ public final class AzureIntegrationTestData {
     }
 
 
-
-
     public void tearDown() {
+        containerAccessor.removeContainer();
     }
 
     /**
@@ -132,12 +131,12 @@ public final class AzureIntegrationTestData {
 
 
     public AbstractIntegrationTest.WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
-            containerClient.getBlobClient(nativeKey).upload(new ByteArrayInputStream(testDataBytes));
-         return new AbstractIntegrationTest.WriteResult<>(new AzureBlobOffsetManagerEntry(AZURE_CONTAINER, nativeKey).getManagerKey(), nativeKey);
+        containerAccessor.getBlobClient(nativeKey).upload(new ByteArrayInputStream(testDataBytes));
+        return new AbstractIntegrationTest.WriteResult<>(new AzureBlobOffsetManagerEntry(containerAccessor.getContainerName(), nativeKey).getManagerKey(), nativeKey);
     }
 
-    public List<AzureBlobAccessor.AzureNativeInfo> getNativeStorage() {
-        return azureBlobAccessor.getNativeStorage();
+    public List<ContainerAccessor.AzureNativeInfo> getNativeStorage() {
+        return containerAccessor.getNativeStorage();
     }
 
     public Class<? extends Connector> getConnectorClass() {
@@ -154,7 +153,7 @@ public final class AzureIntegrationTestData {
                 .containerName(AZURE_CONTAINER)
                 .connectionString(String.format(
                         "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=%s/%s;", ACCOUNT_NAME,
-                        ACCOUNT_KEY, AZURE_ENDPOINT, ACCOUNT_NAME));
+                        ACCOUNT_KEY, getBlobEndpoint(), ACCOUNT_NAME));
         if (localPrefix != null) {
             setter.prefix(localPrefix);
         }

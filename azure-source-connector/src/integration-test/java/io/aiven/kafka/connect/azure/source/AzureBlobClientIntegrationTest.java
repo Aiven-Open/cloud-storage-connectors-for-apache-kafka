@@ -1,48 +1,81 @@
-///*
-// * Copyright 2024 Aiven Oy
-// *
-// * Licensed under the Apache License, Version 2.0 (the "License");
-// * you may not use this file except in compliance with the License.
-// * You may obtain a copy of the License at
-// *
-// * http://www.apache.org/licenses/LICENSE-2.0
-// *
-// * Unless required by applicable law or agreed to in writing, software
-// * distributed under the License is distributed on an "AS IS" BASIS,
-// * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// * See the License for the specific language governing permissions and
-// * limitations under the License.
-// */
-//
-//package aiven.kafka.connect.azure.source;
-//
-//import static java.nio.charset.StandardCharsets.UTF_8;
-//import static org.assertj.core.api.Assertions.assertThat;
-//import static org.mockito.ArgumentMatchers.anyString;
-//import static org.mockito.Mockito.mock;
-//import static org.mockito.Mockito.when;
-//
-//import java.io.ByteArrayInputStream;
-//import java.util.HashMap;
-//import java.util.Map;
-//import java.util.Objects;
-//import java.util.concurrent.ExecutionException;
-//import java.util.stream.Collectors;
-//
-//import org.apache.kafka.clients.producer.ProducerConfig;
-//
-//import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
-//import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
-//
-//import com.azure.storage.blob.BlobServiceAsyncClient;
-//import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.Test;
-//import org.testcontainers.junit.jupiter.Testcontainers;
-//
-//@Testcontainers
-//final class AzureBlobClientIntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
-//    private static final String CONNECTOR_NAME = "aiven-azure-source-connector";
-//
+/*
+ * Copyright 2024 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.aiven.kafka.connect.azure.source;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.ByteArrayInputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+
+import io.aiven.kafka.connect.azure.source.testdata.AzureIntegrationTestData;
+import io.aiven.kafka.connect.azure.source.testdata.AzureOffsetManagerIntegrationTestData;
+import io.aiven.kafka.connect.azure.source.testutils.AzureBlobAccessor;
+import io.aiven.kafka.connect.azure.source.testutils.ContainerAccessor;
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
+import io.aiven.kafka.connect.common.integration.AbstractIntegrationTest;
+import io.aiven.kafka.connect.common.source.NativeInfo;
+import org.apache.kafka.clients.producer.ProducerConfig;
+
+import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
+
+import com.azure.storage.blob.BlobServiceAsyncClient;
+import org.apache.kafka.connect.connector.Connector;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+@Testcontainers
+final class AzureBlobClientIntegrationTest extends AbstractIntegrationTest<String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecordIterator> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobClientIntegrationTest.class);
+
+    @Container
+    private static final GenericContainer<?> AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
+
+    private AzureIntegrationTestData testData;
+
+    @BeforeEach
+    void setupAzure() {
+        testData = new AzureIntegrationTestData(AZURITE_CONTAINER);
+    }
+
+    @AfterEach
+    void tearDownAzure() {
+        testData.tearDown();
+    }
+
+
 //    @BeforeEach
 //    void setUp() throws ExecutionException, InterruptedException {
 //        testBlobAccessor.clear(azurePrefix);
@@ -132,5 +165,40 @@
 //        assertThat(client.getAzureBlobStream()).isNullOrEmpty();
 //
 //    }
-//
-//}
+
+    @Override
+    protected Logger getLogger() {
+        return LOGGER;
+    }
+
+    @Override
+    protected String createKey(String prefix, String topic, int partition) {
+        return testData.createKey(prefix, topic, partition);
+    }
+
+    @Override
+    protected WriteResult<String> writeWithKey(String nativeKey, byte[] testDataBytes) {
+        return testData.writeWithKey(nativeKey, testDataBytes);
+    }
+
+    @Override
+    protected List<ContainerAccessor.AzureNativeInfo> getNativeStorage() {
+        return testData.getNativeStorage();
+    }
+
+    @Override
+    protected Class<? extends Connector> getConnectorClass() {
+        return testData.getConnectorClass();
+    }
+
+    @Override
+    protected Map<String, String> createConnectorConfig(String localPrefix) {
+        return testData.createConnectorConfig(localPrefix);
+    }
+
+    @Override
+    protected BiFunction<Map<String, Object>, Map<String, Object>, AzureBlobOffsetManagerEntry> offsetManagerEntryFactory() {
+        return AzureOffsetManagerIntegrationTestData.offsetManagerEntryFactory();
+    }
+
+}

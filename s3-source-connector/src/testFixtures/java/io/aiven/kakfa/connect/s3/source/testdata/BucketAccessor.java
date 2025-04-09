@@ -129,7 +129,7 @@ public class BucketAccessor {
          * Constructor
          *
          * @param s3Object
-         *            the natvie object.
+         *            the native object.
          */
         S3NativeInfo(final S3Object s3Object) {
             this.s3Object = s3Object;

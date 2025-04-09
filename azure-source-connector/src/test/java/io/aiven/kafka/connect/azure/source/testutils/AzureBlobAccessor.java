@@ -17,12 +17,9 @@
 package io.aiven.kafka.connect.azure.source.testutils;
 
 import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.models.BlobItem;
 import com.github.luben.zstd.ZstdInputStream;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.source.NativeInfo;
 import org.xerial.snappy.SnappyInputStream;
 
 import java.io.BufferedReader;
@@ -38,11 +35,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
 
 public final class AzureBlobAccessor {
-    private final BlobContainerClient containerClient;
+    private final ContainerAccessor containerAccessor;
 
     private final boolean cache;
 
@@ -52,109 +48,21 @@ public final class AzureBlobAccessor {
     private final Map<String, List<List<String>>> decodedLinesCache = new HashMap<>();
 
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "THis is test code and we arent concerned about the containerClient")
-    public AzureBlobAccessor(final BlobContainerClient containerClient, final boolean cache) {
-        Objects.requireNonNull(containerClient, "containerClient cannot be null");
-        this.containerClient = containerClient;
+    public AzureBlobAccessor(final ContainerAccessor containerAccessor, final boolean cache) {
+        Objects.requireNonNull(containerAccessor, "containerAccessor cannot be null");
+        this.containerAccessor = containerAccessor;
         this.cache = cache;
     }
 
-    public AzureBlobAccessor(final BlobContainerClient containerClient) {
-        this(containerClient, false);
+    public AzureBlobAccessor(final ContainerAccessor containerAccessor) {
+        this(containerAccessor, false);
     }
 
-    public void ensureWorking() {
-        if (!containerClient.exists()) {
-            throw new RuntimeException( // NOPMD
-                    "Cannot access Azure Blob container \"" + containerClient.getBlobContainerName() + "\"");
-        }
-    }
-
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "THis is test code and we arent concerned about the this being changed")
-    public List<String> getBlobNames() {
-        if (cache) {
-            if (blobNamesCache == null) {
-                blobNamesCache = getBlobNames0();
-            }
-            return blobNamesCache;
-        } else {
-            return getBlobNames0();
-        }
-    }
-
-    public List<AzureNativeInfo> getNativeStorage() {
-        return StreamSupport.stream(containerClient.listBlobs().spliterator(), false)
-                .map(AzureNativeInfo::new)
-                .sorted()
-                .collect(Collectors.toList());
-    }
 
     public void createBlob(final String blobName, final InputStream contents) {
-        containerClient.getBlobClient(blobName).upload(contents);
+        containerAccessor.getBlobClient(blobName).upload(contents);
     }
 
-    public void createBlob(final String prefix, final String blobName, final InputStream contents) {
-        this.createBlob(prefix + blobName, contents);
-    }
-
-    private List<String> getBlobNames0() {
-        return StreamSupport.stream(containerClient.listBlobs().spliterator(), false)
-                .map(BlobItem::getName)
-                .sorted()
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Get blob names with the prefix.
-     *
-     * <p>
-     * Doesn't support caching.
-     */
-    public List<String> getBlobNames(final String prefix) {
-        Objects.requireNonNull(prefix, "prefix cannot be null");
-
-        return StreamSupport.stream(containerClient.listBlobsByHierarchy(prefix).spliterator(), false)
-                .map(BlobItem::getName)
-                .sorted()
-                .collect(Collectors.toList());
-    }
-
-    public void clear(final String prefix) {
-        Objects.requireNonNull(prefix, "prefix cannot be null");
-
-        for (final BlobItem blobItem : containerClient.listBlobsByHierarchy(prefix)) {
-            final BlobClient blobClient = containerClient.getBlobClient(blobItem.getName());
-            blobClient.delete();
-        }
-
-        if (cache) {
-            blobNamesCache = null; // NOPMD
-            stringContentCache.clear();
-            linesCache.clear();
-            decodedLinesCache.clear();
-        }
-    }
-
-    public String readStringContent(final String blobName, final String compression) {
-        Objects.requireNonNull(blobName, "blobName cannot be null");
-        if (cache) {
-            return stringContentCache.computeIfAbsent(blobName, k -> readStringContent0(blobName, compression));
-        } else {
-            return readStringContent0(blobName, compression);
-        }
-    }
-
-    private String readStringContent0(final String blobName, final String compression) {
-        final BlobClient blobClient = containerClient.getBlobClient(blobName);
-        final byte[] blobBytes = blobClient.downloadContent().toBytes();
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
-                InputStream decompressedStream = getDecompressedStream(bais, compression);
-                InputStreamReader reader = new InputStreamReader(decompressedStream, StandardCharsets.UTF_8);
-                BufferedReader bufferedReader = new BufferedReader(reader)) {
-            return bufferedReader.readLine();
-        } catch (final IOException e) {
-            throw new RuntimeException(e); // NOPMD
-        }
-    }
 
     public List<String> readLines(final String blobName, final String compression) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
@@ -166,7 +74,7 @@ public final class AzureBlobAccessor {
     }
 
     public byte[] readBytes(final String blobName) {
-        final BlobClient blobClient = containerClient.getBlobClient(blobName);
+        final BlobClient blobClient = containerAccessor.getBlobClient(blobName);
         return blobClient.downloadContent().toBytes();
     }
 
@@ -240,31 +148,4 @@ public final class AzureBlobAccessor {
         return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
     }
 
-    public static class AzureNativeInfo implements NativeInfo<BlobItem, String>, Comparable<AzureNativeInfo> {
-        private BlobItem blobItem;
-
-        AzureNativeInfo(BlobItem BlobItem) {
-            this.blobItem = BlobItem;
-        }
-
-        @Override
-        public BlobItem getNativeItem() {
-            return blobItem;
-        }
-
-        @Override
-        public String getNativeKey() {
-            return blobItem.getName();
-        }
-
-        @Override
-        public long getNativeItemSize() {
-            return blobItem.getProperties().getContentLength();
-        }
-
-        @Override
-        public int compareTo(AzureNativeInfo o) {
-            return getNativeKey().compareTo(o.getNativeKey());
-        }
-    }
 }
