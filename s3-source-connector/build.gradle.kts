@@ -201,13 +201,6 @@ dependencies {
   integrationTestImplementation(sourceSets["test"].output)
   integrationTestImplementation(testinglibs.awaitility)
 
-  //  testFixturesImplementation(testcontainers.kafka)
-
-  //  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
-  //  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
-  //  testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-  //  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-  //  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
   testFixturesImplementation(amazonawssdk.s3)
   testFixturesImplementation(amazonawssdk.sts)
   testFixturesImplementation(testFixtures(project(":commons")))
@@ -223,14 +216,6 @@ dependencies {
   testFixturesImplementation(compressionlibs.zstd.jni)
   testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation(apache.kafka.connect.api)
-  //  testFixturesImplementation(testinglibs.junit.jupiter
-  //  testFixturesImplementation(testinglibs.mockito.junit.jupiter)
-  //  testFixturesImplementation(testinglibs.mockito.core)
-  //  testFixturesImplementation(testinglibs.assertj.core)
-  //  testFixturesImplementation(apache.commons.lang3)
-  //  testFixturesImplementation(apache.avro)
-  //  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
-
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {

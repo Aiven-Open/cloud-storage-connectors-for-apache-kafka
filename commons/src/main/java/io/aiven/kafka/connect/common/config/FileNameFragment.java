@@ -82,7 +82,7 @@ public final class FileNameFragment extends ConfigFragment {
 
         configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
                 new FilenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
-                "The template for file names on S3. "
+                "The template for file names on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "
                         + "(the offset of the first record in the file). "
@@ -90,6 +90,17 @@ public final class FileNameFragment extends ConfigFragment {
                         + "- `topic`, `partition`, `start_offset`."
                         + "There is also `key` only variable {{key}} for grouping by keys",
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
+
+        configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
+                new FilenameTemplateValidator(FILE_PATH_PREFIX_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
+                "The template for file names prefixes on storage system. "
+                        + "Supports `{{ variable }}` placeholders for substituting variables. "
+                        + "Currently supported variables are `topic`, `partition`, and `start_offset` "
+                        + "(the offset of the first record in the file). "
+                        + "Only some combinations of variables are valid, which currently are:\n"
+                        + "- `topic`, `partition`, `start_offset`."
+                        + "There is also `key` only variable {{key}} for grouping by keys",
+                GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_PATH_PREFIX_TEMPLATE_CONFIG);
 
         final String supportedCompressionTypes = CompressionType.names()
                 .stream()
@@ -198,6 +209,10 @@ public final class FileNameFragment extends ConfigFragment {
      */
     public int getMaxRecordsPerFile() {
         return cfg.getInt(FILE_MAX_RECORDS);
+    }
+
+    public String getPrefixTemplate() {
+        return cfg.getString(FILE_PATH_PREFIX_TEMPLATE_CONFIG);
     }
 
     /**

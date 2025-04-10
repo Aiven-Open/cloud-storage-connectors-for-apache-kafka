@@ -3,8 +3,7 @@ package io.aiven.kafka.connect.azure.source;
 import io.aiven.kafka.connect.azure.source.testdata.AzureIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.testdata.AzureOffsetManagerIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
-import io.aiven.kafka.connect.azure.source.testutils.AzureBlobAccessor;
-import io.aiven.kafka.connect.azure.source.testutils.ContainerAccessor;
+import io.aiven.kafka.connect.azure.source.testdata.ContainerAccessor;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
@@ -16,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.azure.AzuriteContainer;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -23,14 +23,13 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 @Testcontainers
 public class AzureBlobSourceRecordIteratorIntegrationTest extends AbstractSourceIteratorIntegrationTest<String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecordIterator> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceRecordIteratorIntegrationTest.class);
 
     @Container
-    private static final GenericContainer<?> AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
+    private static final AzuriteContainer AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
 
     private AzureIntegrationTestData testData;
 
@@ -46,18 +45,9 @@ public class AzureBlobSourceRecordIteratorIntegrationTest extends AbstractSource
 
     @AfterEach
     void tearDownAzure() {
-
         testData.tearDown();
     }
 
-
-    /**
-     * Creates the native key.
-     * @param prefix the prefix for the key.
-     * @param topic the topic for the key,
-     * @param partition the partition for the key.
-     * @return the native Key.
-     */
     @Override
     protected String createKey(String prefix, String topic, int partition) {
         return testData.createKey(prefix, topic, partition);

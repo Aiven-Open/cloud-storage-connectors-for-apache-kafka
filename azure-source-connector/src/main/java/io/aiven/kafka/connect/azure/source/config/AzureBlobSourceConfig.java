@@ -16,8 +16,11 @@
 
 package io.aiven.kafka.connect.azure.source.config;
 
+import java.time.Duration;
 import java.util.Map;
 
+
+import com.azure.core.http.policy.RetryOptions;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.FileNameFragment;
@@ -31,8 +34,8 @@ import com.azure.storage.blob.BlobServiceAsyncClient;
 
 public class AzureBlobSourceConfig extends SourceCommonConfig {
 
-    // TODO AzureBlobFragment needs to be extracted from Azure Sink.
     private final AzureBlobConfigFragment azureBlobConfigFragment;
+
     public AzureBlobSourceConfig(final Map<?, ?> properties) {
         super(new AzureBlobSourceConfigDef(), properties);
         azureBlobConfigFragment = new AzureBlobConfigFragment(this);
@@ -67,5 +70,33 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
 
     public String getAzureContainerName() {
         return azureBlobConfigFragment.getContainerName();
+    }
+
+    public String getConnectionString() {
+        return azureBlobConfigFragment.getConnectionString();
+    }
+
+    public String getContainerName() {
+        return azureBlobConfigFragment.getContainerName();
+    }
+
+    public int getAzureRetryBackoffMaxAttempts() {
+        return azureBlobConfigFragment.getAzureRetryBackoffMaxAttempts();
+    }
+
+    public Duration getAzureRetryBackoffInitialDelay() {
+        return azureBlobConfigFragment.getAzureRetryBackoffInitialDelay();
+    }
+
+    public Duration getAzureRetryBackoffMaxDelay() {
+        return azureBlobConfigFragment.getAzureRetryBackoffMaxDelay();
+    }
+
+    public String getUserAgent() {
+        return azureBlobConfigFragment.getUserAgent();
+    }
+
+    public RetryOptions getAzureRetryOptions() {
+        return azureBlobConfigFragment.getAzureRetryOptions();
     }
 }

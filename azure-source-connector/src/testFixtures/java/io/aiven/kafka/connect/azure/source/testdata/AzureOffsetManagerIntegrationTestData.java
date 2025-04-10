@@ -10,7 +10,7 @@ import java.util.function.Function;
 public class AzureOffsetManagerIntegrationTestData {
 
     private static AzureBlobOffsetManagerEntry createOffsetManagerEntry(final String nativeKey) {
-        return new AzureBlobOffsetManagerEntry(AzureIntegrationTestData.AZURE_CONTAINER, nativeKey);
+        return new AzureBlobOffsetManagerEntry(AzureIntegrationTestData.DEFAULT_CONTAINER, nativeKey);
     }
 
     public static OffsetManager.OffsetManagerKey createOffsetManagerKey(String nativeKey) {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.azure.source.testutils;
+package io.aiven.kafka.connect.azure.source.testdata;
 
 import com.azure.storage.blob.BlobClient;
 import com.github.luben.zstd.ZstdInputStream;
@@ -57,7 +57,6 @@ public final class AzureBlobAccessor {
     public AzureBlobAccessor(final ContainerAccessor containerAccessor) {
         this(containerAccessor, false);
     }
-
 
     public void createBlob(final String blobName, final InputStream contents) {
         containerAccessor.getBlobClient(blobName).upload(contents);

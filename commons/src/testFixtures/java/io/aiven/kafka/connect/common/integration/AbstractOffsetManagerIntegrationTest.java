@@ -91,7 +91,7 @@ public abstract class AbstractOffsetManagerIntegrationTest<K extends Comparable<
         final String testData3 = "Hello, Kafka Connect S3 Source! object 3";
 
         final Map<OffsetManager.OffsetManagerKey, Long> expectedOffsetRecords = new HashMap<>();
-        // write 5 objects
+        // write 4 objects
         expectedOffsetRecords.put(write(topic, testData1.getBytes(StandardCharsets.UTF_8), 0).getOffsetManagerKey(),
                 1L);
 

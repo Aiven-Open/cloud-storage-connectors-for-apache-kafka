@@ -26,21 +26,35 @@ import com.azure.storage.blob.BlobServiceClientBuilder;
 import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
 import io.aiven.kafka.connect.common.config.AbstractFragmentSetter;
 import io.aiven.kafka.connect.common.config.ConfigFragment;
+import io.aiven.kafka.connect.common.config.validators.UrlValidator;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.net.URL;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import static java.lang.String.format;
+
 /**
  * The configuration fragment that defines the Azure specific characteristics.
  */
 public final class AzureBlobConfigFragment extends ConfigFragment {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobConfigFragment.class);
+
+    public enum Protocol {HTTP, HTTPS}
+
     public static final String AZURE_PREFIX_CONFIG = "azure.blob.prefix";
     public static final String AZURE_FETCH_PAGE_SIZE = "azure.blob.fetch.page.size";
     private static final String USER_AGENT_HEADER_FORMAT = "Azure Blob Source/%s (GPN: Aiven;)";
-    public static final String USER_AGENT_HEADER_VALUE = String.format(USER_AGENT_HEADER_FORMAT,
+    public static final String USER_AGENT_HEADER_VALUE = format(USER_AGENT_HEADER_FORMAT,
             new VersionInfo().getVersion());
     private static final String GROUP_AZURE = "Azure";
     public static final String AZURE_STORAGE_CONNECTION_STRING_CONFIG = "azure.storage.connection.string";
@@ -48,20 +62,27 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     public static final String AZURE_USER_AGENT = "azure.user.agent";
 
     private static final String GROUP_AZURE_RETRY_BACKOFF_POLICY = "Azure retry backoff policy";
-
     public static final String AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG = "azure.retry.backoff.initial.delay.ms";
     public static final String AZURE_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG = "azure.retry.backoff.max.delay.ms";
     public static final String AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG = "azure.retry.backoff.max.attempts";
 
-    public static final long AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT = 1_000L;
-    public static final long AZURE_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 32_000L;
+    public static final long AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT = Duration.ofSeconds(1).toMillis();
+    public static final long AZURE_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = Duration.ofSeconds(32).toMillis();
     public static final int AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT = 6;
+
+    /**
+     * "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=%s/%s;"
+     */
+    private static final String AZURE_ACCOUNT_NAME_CONFIG = "azure.account.name";
+    private static final String AZURE_ACCOUNT_KEY_CONFIG = "azure.account.key";
+    private static final String AZURE_BLOB_ENDPOINT_CONFIG = "azure.blob.endpoint";
+    private static final String AZURE_ENDPOINT_PROTOCOL_CONFIG = "azure.endpoint_protocol";
+
 
     /**
      * Construct the Azure Blob ConfigFragment..
      *
-     * @param cfg
-     *            the configuration that this fragment is associated with.
+     * @param cfg the configuration that this fragment is associated with.
      */
     public AzureBlobConfigFragment(final AbstractConfig cfg) {
         super(cfg);
@@ -70,8 +91,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     /**
      * Adds the configuration options for the azure client to the configuration definition.
      *
-     * @param configDef
-     *            the Configuration definition.
+     * @param configDef the Configuration definition.
      * @return the update configuration definition
      */
     public static ConfigDef update(final ConfigDef configDef) {
@@ -92,20 +112,39 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     private static void addAzureConfigGroup(final ConfigDef configDef) {
         int azureGroupCounter = 0;
+
+        configDef.define(AZURE_ACCOUNT_NAME_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.HIGH,
+                "Azure Account id", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.MEDIUM,
+                AZURE_ACCOUNT_NAME_CONFIG);
+
+        configDef.define(AZURE_ACCOUNT_KEY_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.HIGH,
+                "Azure Account key", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.LONG,
+                AZURE_ACCOUNT_KEY_CONFIG);
+
+        configDef.define(AZURE_BLOB_ENDPOINT_CONFIG, ConfigDef.Type.STRING, null, new UrlValidator(), ConfigDef.Importance.HIGH,
+                "Azure Blob source endpoint", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.LONG,
+                AZURE_BLOB_ENDPOINT_CONFIG);
+
+        configDef.define(AZURE_ENDPOINT_PROTOCOL_CONFIG, ConfigDef.Type.STRING, Protocol.HTTPS.name(), new ProtocolValidator(), ConfigDef.Importance.HIGH,
+                "Azure endpoint protocol (http or https)", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.SHORT,
+                AZURE_ENDPOINT_PROTOCOL_CONFIG);
+
         configDef.define(AZURE_STORAGE_CONNECTION_STRING_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.HIGH,
-                "Azure Storage connection string.", GROUP_AZURE, azureGroupCounter++, ConfigDef.Width.NONE,
+                "Azure Storage connection string.", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE,
                 AZURE_STORAGE_CONNECTION_STRING_CONFIG);
 
         configDef.define(AZURE_STORAGE_CONTAINER_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE,
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.HIGH,
-                "The Azure Blob container name to store output files in.", GROUP_AZURE, azureGroupCounter++,
+                "The Azure Blob container name to store output files in.", GROUP_AZURE, ++azureGroupCounter,
                 ConfigDef.Width.NONE, AZURE_STORAGE_CONTAINER_NAME_CONFIG);
+
         configDef.define(AZURE_FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Azure Blob Fetch page size", GROUP_AZURE, azureGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "Azure Blob Fetch page size", GROUP_AZURE, ++azureGroupCounter,
                 ConfigDef.Width.NONE, AZURE_FETCH_PAGE_SIZE);
+
         configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AZURE,
-                azureGroupCounter++, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG); // NOPMD increment value never used
+                ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
     }
 
     private static void addAzureRetryPolicies(final ConfigDef configDef) {
@@ -135,10 +174,20 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     @Override
     public void validate() {
         if (getConnectionString() == null) {
+            if (has(AZURE_ACCOUNT_KEY_CONFIG) && has(AZURE_ACCOUNT_NAME_CONFIG) && has(AZURE_BLOB_ENDPOINT_CONFIG)
+            && has(AZURE_ENDPOINT_PROTOCOL_CONFIG)) {
+                return;
+            }
             throw new ConfigException(
-                    String.format("The configuration %s cannot be null.", AZURE_STORAGE_CONNECTION_STRING_CONFIG));
+                    format("Either %s must be specified or %s, %s, &s, and %s must be specified.", AZURE_STORAGE_CONNECTION_STRING_CONFIG,
+                            AZURE_ACCOUNT_KEY_CONFIG, AZURE_ACCOUNT_NAME_CONFIG, AZURE_BLOB_ENDPOINT_CONFIG, AZURE_ENDPOINT_PROTOCOL_CONFIG));
         }
     }
+
+    private String createURL(String url) {
+        return !url.contains("://") ? format("%s://%s", getEndpointProtocol(), url) : url;
+    }
+
     public int getAzureFetchPageSize() {
         return cfg.getInt(AZURE_FETCH_PAGE_SIZE);
     }
@@ -148,8 +197,29 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     }
 
     public String getConnectionString() {
-        return cfg.getString(AZURE_STORAGE_CONNECTION_STRING_CONFIG);
+        if (has(AZURE_STORAGE_CONNECTION_STRING_CONFIG)) {
+            return cfg.getString(AZURE_STORAGE_CONNECTION_STRING_CONFIG);
+        }
+        return format("DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s;BlobEndpoint=%s/%s;",
+                getEndpointProtocol(), getAccountName(), getAccountKey(), getBlobEndpoint(), getContainerName());
     }
+
+    public String getAccountName() {
+        return cfg.getString(AZURE_ACCOUNT_NAME_CONFIG);
+    }
+
+    public String getAccountKey() {
+        return cfg.getString(AZURE_ACCOUNT_KEY_CONFIG);
+    }
+
+    public String getBlobEndpoint() {
+        return createURL(cfg.getString(AZURE_BLOB_ENDPOINT_CONFIG));
+    }
+
+    public Protocol getEndpointProtocol() {
+        return Protocol.valueOf(cfg.getString(AZURE_ENDPOINT_PROTOCOL_CONFIG));
+    }
+
 
     public String getContainerName() {
         return cfg.getString(AZURE_STORAGE_CONTAINER_NAME_CONFIG);
@@ -208,6 +278,22 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
             return setValue(AZURE_STORAGE_CONNECTION_STRING_CONFIG, connectionString);
         }
 
+        public Setter accountName(final String name) {
+            return setValue(AZURE_ACCOUNT_NAME_CONFIG, name);
+        }
+
+        public Setter accountKey(final String key) {
+            return setValue(AZURE_ACCOUNT_KEY_CONFIG, key);
+        }
+
+        public Setter blobEndpoint(final String blobEndpoint) {
+            return setValue(AZURE_BLOB_ENDPOINT_CONFIG, blobEndpoint);
+        }
+
+        public Setter endpointProtocol(final Protocol protocol) {
+            return setValue(AZURE_ENDPOINT_PROTOCOL_CONFIG, protocol.toString());
+        }
+
         public Setter containerName(final String containerName) {
             return setValue(AZURE_STORAGE_CONTAINER_NAME_CONFIG, containerName);
         }
@@ -225,7 +311,29 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
         }
 
         public Setter retryBackoffMaxDelay(final Duration retryBackoffInitialDelay) {
-            return setValue(AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG, retryBackoffInitialDelay.toMillis());
+            return setValue(AZURE_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, retryBackoffInitialDelay.toMillis());
         }
     }
+
+    public static class ProtocolValidator implements ConfigDef.Validator {
+
+        @Override
+        public void ensureValid(final String name, final Object value) {
+            // is it up to the connector decide how to support default values for compression.
+            // The reason is that for different connectors there is the different compression type
+            if (Objects.nonNull(value)) {
+                try {
+                    Protocol.valueOf(value.toString());
+                } catch (final IllegalArgumentException e) {
+                    throw new ConfigException(name, value.toString(), toString());
+                }
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "Supported Values are: " + Arrays.stream(Protocol.values()).map(Object::toString).collect(Collectors.joining(", ")) + ".";
+        }
+    }
+
 }

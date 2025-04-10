@@ -45,15 +45,27 @@ public class AzureBlobSourceTask extends AbstractSourceTask {
     /** The configuration for this run */
     private AzureBlobSourceConfig azureBlobSourceConfig;
     private AzureBlobClient azureBlobClient;
-    private AzureBlobSourceRecordIterator azureBlobSourceRecordIterator;
+    /**
+     * Iterator to read. protected for testing.
+     */
+    protected Iterator<AzureBlobSourceRecord>  azureBlobSourceRecordIterator;
 
 
     /**
      * Constructor to set the Logger used.
      *
      */
-    protected AzureBlobSourceTask() {
+    public AzureBlobSourceTask() {
         super(LOGGER);
+    }
+
+    /**
+     * For testing access.
+     * @param iterator the iterator to read.
+     */
+    protected AzureBlobSourceTask(Iterator<AzureBlobSourceRecord> iterator) {
+        this();
+        azureBlobSourceRecordIterator = iterator;
     }
 
     @Override

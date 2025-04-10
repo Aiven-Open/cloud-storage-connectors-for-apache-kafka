@@ -21,13 +21,15 @@ import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 
+import java.util.Locale;
+
 public class OutputFieldsEncodingValidator implements ConfigDef.Validator {
 
     @Override
     public void ensureValid(final String name, final Object value) {
         assert value instanceof String;
         final String valueStr = (String) value;
-        if (!OutputFieldEncodingType.names().contains(valueStr)) {
+        if (!OutputFieldEncodingType.names().contains(valueStr.toLowerCase(Locale.ROOT))) {
             throw new ConfigException(name, valueStr,
                     "supported values are: " + OutputFieldEncodingType.SUPPORTED_FIELD_ENCODING_TYPES);
         }

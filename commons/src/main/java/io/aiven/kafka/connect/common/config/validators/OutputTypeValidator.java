@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.config.validators;
 
+import java.util.Locale;
 import java.util.Objects;
 
 import org.apache.kafka.common.config.ConfigDef;
@@ -29,7 +30,7 @@ public class OutputTypeValidator implements ConfigDef.Validator {
     public void ensureValid(final String name, final Object value) {
         if (Objects.nonNull(value)) {
             final String valueStr = (String) value;
-            if (!FormatType.names().contains(valueStr)) {
+            if (!FormatType.names().contains(valueStr.toLowerCase(Locale.ROOT))) {
                 throw new ConfigException(name, valueStr, "supported values are: " + FormatType.SUPPORTED_FORMAT_TYPES);
             }
         }

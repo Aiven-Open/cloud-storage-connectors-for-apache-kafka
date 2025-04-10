@@ -216,9 +216,9 @@ public final class OutputFormatFragment extends ConfigFragment {
          *            the list of output fields
          * @return this
          */
-        public Setter withOutputFields(final List<OutputField> outputFields) {
+        public Setter withOutputFields(final List<OutputFieldType> outputFields) {
             return setValue(FORMAT_OUTPUT_FIELDS_CONFIG,
-                    outputFields.stream().map(OutputField::toString).collect(Collectors.joining(",")));
+                    outputFields.stream().map(OutputFieldType::toString).collect(Collectors.joining(",")));
         }
 
         /**
@@ -228,7 +228,7 @@ public final class OutputFormatFragment extends ConfigFragment {
          *            the list of output fields
          * @return this
          */
-        public Setter withOutputFields(final OutputField... outputFields) {
+        public Setter withOutputFields(final OutputFieldType... outputFields) {
             return withOutputFields(List.of(outputFields));
         }
 

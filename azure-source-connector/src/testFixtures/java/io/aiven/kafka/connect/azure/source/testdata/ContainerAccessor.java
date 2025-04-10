@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.azure.source.testutils;
+package io.aiven.kafka.connect.azure.source.testdata;
 
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
@@ -31,12 +31,12 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * Utility to access an S3 bucket
+ * Utility to access an Azure container
  */
 public class ContainerAccessor {
-    /** the name of the bucket to access */
+    /** the name of the container to access */
     private final String containerName;
-    /** the S3Client to access the bucket */
+    /** the S3Client to access the container */
     private final BlobContainerClient containerClient;
 
     /** the logger to use */
@@ -54,19 +54,20 @@ public class ContainerAccessor {
     public ContainerAccessor(final BlobServiceClient blobServiceClient, final String containerName) {
         this.containerName = containerName;
         this.containerClient = blobServiceClient.getBlobContainerClient(containerName);
+        LOGGER.info("Created container client: {}", containerClient.getServiceVersion());
     }
 
     /**
-     * Gets the bucket name this accessor is fronting.
+     * Gets the container name this accessor is fronting.
      *
-     * @return the bucket name.
+     * @return the container name.
      */
     public String getContainerName() {
         return containerName;
     }
 
     /**
-     * Create the bucket.
+     * Create the container.
      */
     public final void createContainer() {
         containerClient.createIfNotExists();
@@ -77,7 +78,7 @@ public class ContainerAccessor {
     }
 
     /**
-     * Deletes the bucket.
+     * Deletes the container.
      */
     public final void removeContainer() {
         containerClient.deleteIfExists();

@@ -20,6 +20,8 @@ import org.apache.kafka.common.config.AbstractConfig;
 
 import org.slf4j.Logger;
 
+import static java.lang.String.format;
+
 /**
  * Config fragments encapsulate logical fragments of configuration that may be used across multiple Connectors or across
  * the source/sink of a connector pair.
@@ -52,7 +54,20 @@ public class ConfigFragment {
      *            the replacement configuration key.
      */
     public static void logDeprecated(final Logger logger, final String old, final String replacement) {
-        logger.warn("{} property is deprecated please use {}.", old, replacement);
+        logDeprecated(logger, old, "Use property %s instead", replacement);
+    }
+
+    /**
+     * Logs a deprecated message for a deprecated configuration key. This method should only be used when the key does
+     * not have a replacement and the documentation describes what to do.
+     *
+     * @param logger
+     *            the logger to log to.
+     * @param old
+     *            the deprecated configuration key.
+     */
+    public static void logDeprecated(final Logger logger, final String old, final String formatStr, final Object... args) {
+        logger.warn("{} property is deprecated. "+format(formatStr, args));
     }
 
     /**
