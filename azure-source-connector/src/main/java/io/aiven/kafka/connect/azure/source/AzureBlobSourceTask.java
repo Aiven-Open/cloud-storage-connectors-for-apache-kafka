@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.azure.source;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -27,11 +26,10 @@ import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecord;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import org.apache.commons.collections4.IteratorUtils;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.source.SourceRecord;
 
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
-import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
+import io.aiven.kafka.connect.common.utils.VersionInfo;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 
@@ -44,16 +42,13 @@ public class AzureBlobSourceTask extends AbstractSourceTask {
     private OffsetManager<AzureBlobOffsetManagerEntry> offsetManager;
     /** The configuration for this run */
     private AzureBlobSourceConfig azureBlobSourceConfig;
-    private AzureBlobClient azureBlobClient;
     /**
      * Iterator to read. protected for testing.
      */
     protected Iterator<AzureBlobSourceRecord>  azureBlobSourceRecordIterator;
 
-
     /**
      * Constructor to set the Logger used.
-     *
      */
     public AzureBlobSourceTask() {
         super(LOGGER);
@@ -63,7 +58,7 @@ public class AzureBlobSourceTask extends AbstractSourceTask {
      * For testing access.
      * @param iterator the iterator to read.
      */
-    protected AzureBlobSourceTask(Iterator<AzureBlobSourceRecord> iterator) {
+    protected AzureBlobSourceTask(final Iterator<AzureBlobSourceRecord> iterator) {
         this();
         azureBlobSourceRecordIterator = iterator;
     }
@@ -79,7 +74,7 @@ public class AzureBlobSourceTask extends AbstractSourceTask {
         LOGGER.info("Configuring Azure Blob Source task.");
         this.azureBlobSourceConfig = new AzureBlobSourceConfig(props);
         offsetManager = new OffsetManager<>(context);
-        azureBlobClient = new AzureBlobClient(azureBlobSourceConfig);
+        AzureBlobClient azureBlobClient = new AzureBlobClient(azureBlobSourceConfig);
         azureBlobSourceRecordIterator = new AzureBlobSourceRecordIterator(azureBlobSourceConfig, offsetManager, azureBlobSourceConfig.getTransformer(), azureBlobClient);
         return azureBlobSourceConfig;
     }

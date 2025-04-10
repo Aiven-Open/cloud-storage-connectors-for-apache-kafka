@@ -86,15 +86,24 @@ public class AzureBlobClient {
         return containerAsyncClient.getBlobAsyncClient(blobName);
     }
 
+    /**
+     * Converts a Flux ByteBuffer into an input stream that reads the data from start to finish.
+     */
     private static class FluxToInputStream extends InputStream {
+        private static final Object NONE = null;
         private static final int EOF = -1;
         private Iterator<ByteBuffer> iterator;
         private ByteBuffer current;
 
-        FluxToInputStream(Flux<ByteBuffer> flux) {
+        FluxToInputStream(Flux<ByteBuffer> flux)
+        {
+            super();
             iterator = flux.toStream().iterator();
         }
 
+        /**
+         * Check that the current Byte buffer is not null and has data.
+         */
         private void checkCurrent() {
             if (current == null) {
                 if (iterator.hasNext()) {
@@ -133,8 +142,8 @@ public class AzureBlobClient {
 
         @Override
         public void close() throws IOException {
-            current = null;
-            iterator = null;
+            current = (ByteBuffer) NONE;
+            iterator = (Iterator<ByteBuffer>) NONE;
         }
     }
 }

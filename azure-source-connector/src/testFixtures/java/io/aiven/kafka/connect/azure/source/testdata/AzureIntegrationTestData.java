@@ -12,8 +12,6 @@ import org.apache.kafka.connect.connector.Connector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.azure.AzuriteContainer;
-import org.testcontainers.containers.FixedHostPortGenericContainer;
-import org.testcontainers.containers.GenericContainer;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -26,12 +24,12 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 
+/**
+ * Manages test data
+ */
 public final class AzureIntegrationTestData {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureIntegrationTestData.class);
     static final String DEFAULT_CONTAINER = "test-container";
-    private static final int AZURE_BLOB_PORT = 10_000;
-    private static final int AZURE_QUEUE_PORT = 10_001;
-    private static final int AZURE_TABLE_PORT = 10_002;
     private static final String ACCOUNT_NAME = "devstoreaccount1";
     private static final String ACCOUNT_KEY = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
@@ -39,68 +37,95 @@ public final class AzureIntegrationTestData {
     private final BlobServiceClient azureServiceClient;
     private final ContainerAccessor containerAccessor;
 
-
-    public AzureIntegrationTestData(AzuriteContainer container) {
+    /**
+     * Constructor.
+     * @param container the container to Azure read/wrtie to.
+     */
+    public AzureIntegrationTestData(final AzuriteContainer container) {
         this.container = container;
-
         azureServiceClient = new BlobServiceClientBuilder().connectionString(container.getConnectionString()).buildClient();
         LOGGER.info("Azure blob service {} client created", azureServiceClient.getServiceVersion());
-        containerAccessor = new ContainerAccessor(azureServiceClient, DEFAULT_CONTAINER);
+        containerAccessor = getContainerAccessor(DEFAULT_CONTAINER);
         containerAccessor.createContainer();
     }
 
-    public ContainerAccessor getContainerAccessor(String name) {
+    /**
+     * Get a container accessor.
+     * @param name the name of the container.
+     * @return a Container accessor.
+     */
+    public ContainerAccessor getContainerAccessor(final String name) {
         return new ContainerAccessor(azureServiceClient, name);
     }
 
+    /**
+     * Tear down this accessor.
+     */
     public void tearDown() {
         containerAccessor.removeContainer();
     }
 
     /**
-     * Finds 3 simultaneously free port for Kafka listeners
-     *
-     * @return list of 2 ports
-     * @throws IOException when port allocation failure happens
+     * Creates the Azurite container for testing.
+     * @return a newly constructed Azurite container.
      */
-    static List<Integer> findListenerPorts(int count) throws IOException {
-        ServerSocket[] sockets = new ServerSocket[count];
-        try {
-            for (int i = 0; i < sockets.length; i++) {
-                sockets[i] = new ServerSocket(0);
-            }
-            return Arrays.stream(sockets).map(ServerSocket::getLocalPort).collect(Collectors.toList());
-        } catch (IOException e) {
-            throw new IOException("Failed to allocate ports for test", e);
-        }
-    }
-
-
     public static AzuriteContainer createContainer() {
         return new AzuriteContainer("mcr.microsoft.com/azure-storage/azurite:3.33.0");
     }
 
+    /**
+     * Creates a native key.
+     * @param prefix the prefix for the key.
+     * @param topic the  topic for the key.
+     * @param partition the partition for the key.
+     * @return the native key.
+     */
     public String createKey(final String prefix, final String topic, final int partition) {
         return format("%s%s-%05d-%d.txt", StringUtils.defaultIfBlank(prefix, ""), topic, partition, System.currentTimeMillis());
     }
 
+    /**
+     * Writes data to the default container.
+     * @param nativeKey the native key to write
+     * @param testDataBytes the data to write.
+     * @return the WriteResults.
+     */
     public AbstractIntegrationTest.WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
         containerAccessor.getBlobClient(nativeKey).upload(new ByteArrayInputStream(testDataBytes));
         return new AbstractIntegrationTest.WriteResult<>(new AzureBlobOffsetManagerEntry(containerAccessor.getContainerName(), nativeKey).getManagerKey(), nativeKey);
     }
 
+    /**
+     * Gets the native storage information.
+     * @return the native storage information.
+     */
     public List<ContainerAccessor.AzureNativeInfo> getNativeStorage() {
         return containerAccessor.getNativeStorage();
     }
 
+    /**
+     * Gets the connector class.
+     * @return the connector class.
+     */
     public Class<? extends Connector> getConnectorClass() {
         return AzureBlobSourceConnector.class;
     }
 
-    public Map<String, String> createConnectorConfig(String localPrefix) {
+    /**
+     * Creates the connector config with the specified local prefix.
+     * @param localPrefix the prefix to prepend to all keys.  May be {@code nul}.
+     * @return the map of data options.
+     */
+    public Map<String, String> createConnectorConfig(final String localPrefix) {
         return createConnectorConfig(localPrefix, DEFAULT_CONTAINER);
     }
 
+    /**
+     * Creates the connector config with the specified local prefix and container.
+     * @param localPrefix the prefix to prepend to all keys.  May be {@code nul}.
+     * @param containerName the container name to use.
+     * @return the map of data options.
+     */
     public Map<String, String> createConnectorConfig(String localPrefix, String containerName) {
         Map<String, String> data = new HashMap<>();
 
@@ -120,4 +145,3 @@ public final class AzureIntegrationTestData {
         return data;
     }
 }
-

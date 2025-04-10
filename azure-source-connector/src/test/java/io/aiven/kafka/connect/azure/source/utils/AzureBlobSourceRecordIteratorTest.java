@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
-import com.azure.core.util.io.IOUtils;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
@@ -26,7 +25,6 @@ import io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
-import reactor.core.publisher.Flux;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;

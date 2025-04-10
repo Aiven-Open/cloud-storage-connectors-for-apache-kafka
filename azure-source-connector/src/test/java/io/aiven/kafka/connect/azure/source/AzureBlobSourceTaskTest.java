@@ -40,10 +40,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.azure.AzuriteContainer;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import software.amazon.awssdk.core.exception.SdkException;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -159,26 +157,6 @@ final class AzureBlobSourceTaskTest {
         return props;
     }
 
-//    @Test
-//    void testExceptionInGetIterator() {
-//        final List<AzureBlobSourceRecord> records = createAzureSourceRecords(5);
-//        final ExceptionThrowingIterator iterator = new ExceptionThrowingIterator(records);
-//        final TestingAzureSourceTask azureSourceTask = new TestingAzureSourceTask(iterator);
-//
-//        azureSourceTask.initialize(createSourceTaskContext());
-//        azureSourceTask.start(createDefaultConfig());
-//        await().atMost(TIMEOUT).until(azureSourceTask::isRunning);
-//        final List<SourceRecord> result = new ArrayList<>();
-//        await().atMost(TIMEOUT).pollInterval(POLL_INTERVAL).untilAsserted(() -> {
-//            final List<SourceRecord> pollResult = azureSourceTask.poll();
-//            if (pollResult != null) {
-//                result.addAll(pollResult);
-//            }
-//            assertThat(result).hasSize(5);
-//        });
-//        assertThat(iterator.wasExceptionThrown()).isTrue();
-//    }
-
     @Test
     void testGetIterator() {
         final List<AzureBlobSourceRecord> records = createAzureSourceRecords(5);
@@ -201,9 +179,9 @@ final class AzureBlobSourceTaskTest {
     private static AzureBlobSourceRecord createAzureSourceRecord(final String container, final String objectKey, final byte[] key,
             final byte[] value) {
 
-        BlobItem blobItem = new BlobItem();
+        final BlobItem blobItem = new BlobItem();
         blobItem.setName(objectKey);
-        BlobItemProperties blobItemProperties = new BlobItemProperties();
+        final BlobItemProperties blobItemProperties = new BlobItemProperties();
         blobItemProperties.setContentLength((long) value.length);
         blobItem.setProperties(blobItemProperties);
         final AzureBlobSourceRecord result = new AzureBlobSourceRecord(blobItem);
@@ -248,38 +226,4 @@ final class AzureBlobSourceTaskTest {
             return cfg;
         }
     }
-
-//    private final static class ExceptionThrowingIterator implements Iterator<AzureBlobSourceRecord> {
-//        private boolean retry;
-//        private boolean exceptionThrown;
-//        private final SdkException exception;
-//        private final Iterator<AzureBlobSourceRecord> innerIterator;
-//
-//        ExceptionThrowingIterator(final List<AzureBlobSourceRecord> records) {
-//            innerIterator = records.iterator();
-//            exception = createSdkException();
-//        }
-//
-//        @Override
-//        public boolean hasNext() {
-//            retry = !retry;
-//            if (retry) {
-//                exceptionThrown = true;
-//                throw exception;
-//            }
-//            return innerIterator.hasNext();
-//        }
-//
-//        @Override
-//        public AzureBlobSourceRecord next() {
-//            if (retry) {
-//                throw new IllegalStateException("Should not call next()");
-//            }
-//            return innerIterator.next();
-//        }
-//
-//        public boolean wasExceptionThrown() {
-//            return exceptionThrown;
-//        }
-//    }
 }

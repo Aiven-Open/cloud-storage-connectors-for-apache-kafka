@@ -40,9 +40,9 @@ import org.slf4j.LoggerFactory;
  * contents.
  */
 public class S3SourceConnector extends SourceConnector {
-
+    /** The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConnector.class);
-
+    /** The configuration properties */
     private Map<String, String> configProperties;
 
     @Override
@@ -64,7 +64,7 @@ public class S3SourceConnector extends SourceConnector {
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
         final var taskProps = new ArrayList<Map<String, String>>();
         for (int i = 0; i < maxTasks; i++) {
-            final var props = new HashMap<>(configProperties); // NOPMD
+            final var props = new HashMap<>(configProperties);
             props.put(TASK_ID, String.valueOf(i));
             taskProps.add(props);
         }

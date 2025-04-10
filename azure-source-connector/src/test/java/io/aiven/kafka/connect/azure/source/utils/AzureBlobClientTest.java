@@ -112,8 +112,7 @@ class AzureBlobClientTest {
         try (InputStream inputStream = client.getBlob("teste-1");
             InputStreamReader reader = new InputStreamReader(inputStream, UTF_8);
             BufferedReader bufferedReader = new BufferedReader(reader)) {
-            String s = bufferedReader.readLine();
-            assertThat(s).isEqualTo(blobContent);
+            assertThat(bufferedReader.readLine()).isEqualTo(blobContent);
         }
     }
 

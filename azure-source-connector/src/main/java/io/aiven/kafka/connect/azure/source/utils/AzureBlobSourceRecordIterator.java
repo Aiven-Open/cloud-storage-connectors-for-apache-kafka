@@ -23,7 +23,6 @@ import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kafka.common.utils.ByteBufferInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,8 +55,7 @@ public final class AzureBlobSourceRecordIterator
 
     @Override
     protected Stream<BlobItem> getNativeItemStream(final String offset) {
-        Stream<BlobItem> result = azureBlobClient.getAzureBlobStream()
-                .sorted((a, b) -> a.getName().compareTo(b.getName()));
+        Stream<BlobItem> result = azureBlobClient.getAzureBlobStream();
         if (offset != null) {
             result = result.filter(blobItem -> blobItem.getName().compareTo(offset) > 0);
         }

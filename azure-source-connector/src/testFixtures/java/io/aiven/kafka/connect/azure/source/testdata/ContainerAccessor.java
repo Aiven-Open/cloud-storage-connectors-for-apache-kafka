@@ -33,7 +33,7 @@ import java.util.stream.StreamSupport;
 /**
  * Utility to access an Azure container
  */
-public class ContainerAccessor {
+public final class ContainerAccessor {
     /** the name of the container to access */
     private final String containerName;
     /** the S3Client to access the container */
@@ -71,16 +71,16 @@ public class ContainerAccessor {
      */
     public final void createContainer() {
         containerClient.createIfNotExists();
-    }
+        }
 
-    public final BlobClient getBlobClient(String blobName) {
+    public BlobClient getBlobClient(final String blobName) {
         return containerClient.getBlobClient(blobName);
     }
 
     /**
      * Deletes the container.
      */
-    public final void removeContainer() {
+    public void removeContainer() {
         containerClient.deleteIfExists();
     }
 
@@ -94,10 +94,10 @@ public class ContainerAccessor {
     /**
      * Implementation of NativeInfo for the azure blob access.
      */
-    public static class AzureNativeInfo implements NativeInfo<BlobItem, String>, Comparable<AzureNativeInfo> {
-        private BlobItem blobItem;
+    public final static class AzureNativeInfo implements NativeInfo<BlobItem, String>, Comparable<AzureNativeInfo> {
+        private final BlobItem blobItem;
 
-        AzureNativeInfo(BlobItem BlobItem) {
+        AzureNativeInfo(final BlobItem BlobItem) {
             this.blobItem = BlobItem;
         }
 
@@ -117,8 +117,8 @@ public class ContainerAccessor {
         }
 
         @Override
-        public int compareTo(AzureNativeInfo o) {
-            return getNativeKey().compareTo(o.getNativeKey());
+        public int compareTo(final AzureNativeInfo other) {
+            return getNativeKey().compareTo(other.getNativeKey());
         }
     }
 }

@@ -16,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.azure.AzuriteContainer;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -24,8 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
 @Testcontainers
-public class AzureBlobSourceRecordIteratorIntegrationTest extends AbstractSourceIteratorIntegrationTest<String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecordIterator> {
+public final class AzureBlobSourceRecordIteratorIntegrationTest extends AbstractSourceIteratorIntegrationTest<String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecordIterator> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceRecordIteratorIntegrationTest.class);
 
     @Container
@@ -49,7 +49,7 @@ public class AzureBlobSourceRecordIteratorIntegrationTest extends AbstractSource
     }
 
     @Override
-    protected String createKey(String prefix, String topic, int partition) {
+    protected String createKey(final String prefix, final String topic, final int partition) {
         return testData.createKey(prefix, topic, partition);
     }
 
@@ -80,8 +80,8 @@ public class AzureBlobSourceRecordIteratorIntegrationTest extends AbstractSource
     }
 
     @Override
-    protected AzureBlobSourceRecordIterator getSourceRecordIterator(Map<String, String> configData, OffsetManager<AzureBlobOffsetManagerEntry> offsetManager, Transformer transformer) {
-        AzureBlobSourceConfig sourceConfig = new AzureBlobSourceConfig(configData);
+    protected AzureBlobSourceRecordIterator getSourceRecordIterator(final Map<String, String> configData, final OffsetManager<AzureBlobOffsetManagerEntry> offsetManager, final Transformer transformer) {
+        final AzureBlobSourceConfig sourceConfig = new AzureBlobSourceConfig(configData);
         return new AzureBlobSourceRecordIterator(sourceConfig, offsetManager, transformer, new AzureBlobClient(sourceConfig));
     }
 }

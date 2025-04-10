@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.azure.AzuriteContainer;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -21,13 +20,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
 @Testcontainers
-public class AzureBlobOffsetManagerIntegrationTest extends AbstractOffsetManagerIntegrationTest<String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecordIterator> {
+public final class AzureBlobOffsetManagerIntegrationTest extends AbstractOffsetManagerIntegrationTest<String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecordIterator> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobOffsetManagerIntegrationTest.class);
 
+    /**
+     * The azure container
+     */
     @Container
     private static final AzuriteContainer AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
 
+    /**
+     * The utility to wrie test data.
+     */
     private AzureIntegrationTestData testData;
 
     @Override
@@ -46,7 +52,7 @@ public class AzureBlobOffsetManagerIntegrationTest extends AbstractOffsetManager
     }
 
     @Override
-    protected String createKey(String prefix, String topic, int partition) {
+    protected String createKey(final String prefix, final String topic, final int partition) {
         return testData.createKey(prefix, topic, partition);
     }
 
@@ -66,7 +72,7 @@ public class AzureBlobOffsetManagerIntegrationTest extends AbstractOffsetManager
     }
 
     @Override
-    protected Map<String, String> createConnectorConfig(String localPrefix) {
+    protected Map<String, String> createConnectorConfig(final String localPrefix) {
         return testData.createConnectorConfig(localPrefix);
     }
 

@@ -29,8 +29,7 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
-import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
-import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
+import io.aiven.kafka.connect.common.utils.VersionInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,9 +39,11 @@ import org.slf4j.LoggerFactory;
  * generates tasks to ingest contents.
  */
 public class AzureBlobSourceConnector extends SourceConnector {
-
+    /**
+     * The logger to write to
+     */
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceConnector.class);
-
+    /** The configuraiton properties */
     private Map<String, String> configProperties;
 
     @Override
@@ -64,7 +65,7 @@ public class AzureBlobSourceConnector extends SourceConnector {
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
         final var taskProps = new ArrayList<Map<String, String>>();
         for (int i = 0; i < maxTasks; i++) {
-            final var props = new HashMap<>(configProperties); // NOPMD
+            final var props = new HashMap<>(configProperties);
             props.put(TASK_ID, String.valueOf(i));
             taskProps.add(props);
         }
