@@ -76,7 +76,6 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
-  testImplementation(testFixtures(project(":commons")))
   implementation(project(":s3-commons"))
 
   implementation(tools.spotbugs.annotations)
@@ -84,24 +83,21 @@ dependencies {
   implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
   implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
 
+  testImplementation(testFixtures(project(":commons")))
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(project(":s3-commons"))
-
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
-
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
-
-  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
+  testImplementation("io.findify:s3mock_2.13:$s3mockVersion")
 
   testImplementation(testinglibs.mockito.core)
-
-  testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testImplementation(testinglibs.mockito.junit.jupiter)
 
+  testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
 
   integrationTestImplementation(testinglibs.localstack)
@@ -110,7 +106,7 @@ dependencies {
   integrationTestImplementation(testcontainers.localstack)
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testFixtures(project(":s3-commons")))
-
+  integrationTestImplementation(apache.kafka.connect.runtime)
 
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {

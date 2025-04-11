@@ -30,6 +30,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.regions.Region;
+
 @SuppressWarnings({ "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
 public class S3SinkBaseConfig extends SinkCommonConfig {
     private final S3ConfigFragment s3ConfigFragment;

@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.common.config;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -62,7 +63,7 @@ public enum CompressionType {
     public static CompressionType forName(final String name) {
         Objects.requireNonNull(name, "name cannot be null");
         for (final CompressionType ct : CompressionType.values()) {
-            if (ct.name.equalsIgnoreCase(name)) {
+            if (ct.name.equalsIgnoreCase(name.toLowerCase(Locale.ROOT))) {
                 return ct;
             }
         }

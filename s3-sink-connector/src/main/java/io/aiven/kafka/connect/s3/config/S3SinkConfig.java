@@ -38,7 +38,6 @@ import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.templating.Template;
-import io.aiven.kafka.connect.config.s3.S3CommonConfig;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.config.s3.S3SinkBaseConfig;
 import io.aiven.kafka.connect.s3.S3OutputStream;
@@ -67,20 +66,25 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
     // in other words we can't use values greater than 30
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
 
+    private final FileNameFragment fileNameFragment;
+
     public S3SinkConfig(final Map<String, String> properties) {
         super(configDef(), preprocessProperties(properties));
+        fileNameFragment = new FileNameFragment(this);
+        fileNameFragment.validate();
     }
 
     static Map<String, String> preprocessProperties(final Map<String, String> properties) {
         // Add other preprocessings when needed here. Mind the order.
-        return S3CommonConfig.handleDeprecatedYyyyUppercase(properties);
+        S3ConfigFragment.handleDeprecatedOptions(properties);
+        return S3ConfigFragment.handleDeprecatedYyyyUppercase(properties);
     }
 
     public static ConfigDef configDef() {
         final var configDef = new S3SinkConfigDef();
         S3ConfigFragment.update(configDef);
         addS3partSizeConfig(configDef);
-        FileNameFragment.update(configDef);
+        FileNameFragment.update(configDef, CompressionType.GZIP);
         addOutputFieldsFormatConfigGroup(configDef, null);
         addDeprecatedTimestampConfig(configDef);
 
@@ -134,16 +138,10 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
 
     @Override
     public CompressionType getCompressionType() {
-        // we have priority of properties if old one not set or both old and new one set
-        // the new property value will be selected
-        // default value is GZIP
-        if (Objects.nonNull(getString(FILE_COMPRESSION_TYPE_CONFIG))) {
-            return CompressionType.forName(getString(FILE_COMPRESSION_TYPE_CONFIG));
-        }
-        if (Objects.nonNull(getString(S3ConfigFragment.OUTPUT_COMPRESSION))) {
-            return CompressionType.forName(getString(S3ConfigFragment.OUTPUT_COMPRESSION));
-        }
-        return CompressionType.GZIP;
+        // we have priority merged to old OUTPUT_COMPRESSION into the new FILE_COMPRESSION_TYPE_CONFIG property and set
+        // the
+        // default value to GZIP so we just need to read it.
+        return fileNameFragment.getCompressionType();
     }
 
     /**

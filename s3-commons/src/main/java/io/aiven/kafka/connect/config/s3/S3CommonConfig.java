@@ -16,14 +16,15 @@
 
 package io.aiven.kafka.connect.config.s3;
 
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 
 /**
  * This common config handles a specific deprecated date format and is extensible to allow other common configuration
  * that is not specific to a Config Fragment to be available for both sink and source configurations in S3 connectors.
+ *
  * @deprecated use recommended method replacements.
  */
 @Deprecated

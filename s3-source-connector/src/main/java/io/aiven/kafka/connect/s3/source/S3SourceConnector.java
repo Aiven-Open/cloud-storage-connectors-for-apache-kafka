@@ -24,12 +24,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfigDef;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
-import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
+import io.aiven.kafka.connect.s3.source.config.S3SourceConfigDef;
 import io.aiven.kafka.connect.s3.source.utils.Version;
 
 import org.slf4j.Logger;
@@ -60,6 +59,7 @@ public class S3SourceConnector extends SourceConnector {
         return S3SourceTask.class;
     }
 
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     @Override
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
         final var taskProps = new ArrayList<Map<String, String>>();

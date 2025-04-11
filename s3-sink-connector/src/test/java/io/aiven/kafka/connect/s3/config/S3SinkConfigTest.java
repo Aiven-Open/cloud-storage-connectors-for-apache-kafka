@@ -23,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -458,6 +459,7 @@ final class S3SinkConfigTest {
     @NullSource
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
     void supportedCompression(final String compression) {
+        final CompressionType expected = determineExpectedCompressionType(compression);
         final Map<String, String> props = new HashMap<>();
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
@@ -469,7 +471,7 @@ final class S3SinkConfigTest {
         }
 
         var config = new S3SinkConfig(props);
-        assertThat(config.getCompressionType()).isEqualTo(determineExpectedCompressionType(compression));
+        assertThat(config.getCompressionType()).isEqualTo(expected);
 
         props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
         if (!Objects.isNull(compression)) {
@@ -477,7 +479,7 @@ final class S3SinkConfigTest {
         }
 
         config = new S3SinkConfig(props);
-        assertThat(config.getCompressionType()).isEqualTo(determineExpectedCompressionType(compression));
+        assertThat(config.getCompressionType()).isEqualTo(expected);
     }
 
     @Test
@@ -497,17 +499,16 @@ final class S3SinkConfigTest {
     }
 
     private CompressionType determineExpectedCompressionType(final String compression) {
-        if (Objects.isNull(compression) || CompressionType.GZIP.name.equals(compression)) {
+
+        if (Objects.isNull(compression)) {
             return CompressionType.GZIP;
-        } else if (CompressionType.NONE.name.equals(compression)) {
-            return CompressionType.NONE;
-        } else if (CompressionType.SNAPPY.name.equals(compression)) {
-            return CompressionType.SNAPPY;
-        } else if (CompressionType.ZSTD.name.equals(compression)) {
-            return CompressionType.ZSTD;
-        } else {
-            throw new RuntimeException("Shouldn't be here"); // NOPMD AvoidThrowingRawExceptionTypes
         }
+        for (final CompressionType compressionType : CompressionType.values()) {
+            if (compressionType.name().equalsIgnoreCase(compression)) {
+                return compressionType;
+            }
+        }
+        throw new NoSuchElementException("Shouldn't be here");
     }
 
     @Test
