@@ -16,14 +16,14 @@
 
 package io.aiven.kafka.connect.azure.source.config;
 
-import com.azure.core.http.policy.RetryOptions;
-import com.azure.storage.blob.BlobServiceAsyncClient;
-
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.HashMap;
-import static org.assertj.core.api.Assertions.assertThat;
+
+import com.azure.core.http.policy.RetryOptions;
+import com.azure.storage.blob.BlobServiceAsyncClient;
+import org.junit.jupiter.api.Test;
 
 final class AzureBlobConfigTest {
     @Test
@@ -45,16 +45,17 @@ final class AzureBlobConfigTest {
 
         final AzureBlobSourceConfig conf = new AzureBlobSourceConfig(props);
         // azure blob
-        assertThat(conf.getConnectionString()).isEqualTo("DefaultEndpointsProtocol=HTTPS;AccountName=ACCOUNT_NAME;AccountKey=ACCOUNT_KEY;BlobEndpoint=HTTPS://example.com/TheContainer;");
+        assertThat(conf.getConnectionString()).isEqualTo(
+                "DefaultEndpointsProtocol=HTTPS;AccountName=ACCOUNT_NAME;AccountKey=ACCOUNT_KEY;BlobEndpoint=HTTPS://example.com/TheContainer;");
         assertThat(conf.getAzureContainerName()).isEqualTo("TheContainer");
         assertThat(conf.getAzurePrefix()).isEqualTo("Prefix");
         assertThat(conf.getAzureFetchPageSize()).isEqualTo(10);
         assertThat(conf.getAzureRetryBackoffInitialDelay()).isEqualTo(Duration.ofSeconds(1));
         assertThat(conf.getAzureRetryBackoffMaxAttempts()).isEqualTo(5);
         assertThat(conf.getAzureRetryBackoffMaxDelay()).isEqualTo(Duration.ofSeconds(30));
-        RetryOptions retryOptions = conf.getAzureRetryOptions();
+        final RetryOptions retryOptions = conf.getAzureRetryOptions();
         assertThat(retryOptions).isNotNull();
-        BlobServiceAsyncClient client = conf.getAzureServiceAsyncClient();
+        final BlobServiceAsyncClient client = conf.getAzureServiceAsyncClient();
         assertThat(client).isNotNull();
     }
 }

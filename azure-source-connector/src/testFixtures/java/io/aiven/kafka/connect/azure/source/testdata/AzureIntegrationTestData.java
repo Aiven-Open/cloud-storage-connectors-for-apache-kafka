@@ -1,28 +1,43 @@
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.connect.azure.source.testdata;
 
-import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.BlobServiceClientBuilder;
+import static java.lang.String.format;
+
+import java.io.ByteArrayInputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.kafka.connect.connector.Connector;
+
 import io.aiven.kafka.connect.azure.source.AzureBlobSourceConnector;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobConfigFragment;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.integration.AbstractIntegrationTest;
+
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.kafka.connect.connector.Connector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.azure.AzuriteContainer;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
 
 /**
  * Manages test data
@@ -39,11 +54,15 @@ public final class AzureIntegrationTestData {
 
     /**
      * Constructor.
-     * @param container the container to Azure read/wrtie to.
+     *
+     * @param container
+     *            the container to Azure read/wrtie to.
      */
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields and avroData")
     public AzureIntegrationTestData(final AzuriteContainer container) {
         this.container = container;
-        azureServiceClient = new BlobServiceClientBuilder().connectionString(container.getConnectionString()).buildClient();
+        azureServiceClient = new BlobServiceClientBuilder().connectionString(container.getConnectionString())
+                .buildClient();
         LOGGER.info("Azure blob service {} client created", azureServiceClient.getServiceVersion());
         containerAccessor = getContainerAccessor(DEFAULT_CONTAINER);
         containerAccessor.createContainer();
@@ -51,7 +70,9 @@ public final class AzureIntegrationTestData {
 
     /**
      * Get a container accessor.
-     * @param name the name of the container.
+     *
+     * @param name
+     *            the name of the container.
      * @return a Container accessor.
      */
     public ContainerAccessor getContainerAccessor(final String name) {
@@ -59,14 +80,15 @@ public final class AzureIntegrationTestData {
     }
 
     /**
-     * Tear down this accessor.
+     * release resources from instance.
      */
-    public void tearDown() {
+    public void releaseResources() {
         containerAccessor.removeContainer();
     }
 
     /**
      * Creates the Azurite container for testing.
+     *
      * @return a newly constructed Azurite container.
      */
     public static AzuriteContainer createContainer() {
@@ -75,28 +97,40 @@ public final class AzureIntegrationTestData {
 
     /**
      * Creates a native key.
-     * @param prefix the prefix for the key.
-     * @param topic the  topic for the key.
-     * @param partition the partition for the key.
+     *
+     * @param prefix
+     *            the prefix for the key.
+     * @param topic
+     *            the topic for the key.
+     * @param partition
+     *            the partition for the key.
      * @return the native key.
      */
     public String createKey(final String prefix, final String topic, final int partition) {
-        return format("%s%s-%05d-%d.txt", StringUtils.defaultIfBlank(prefix, ""), topic, partition, System.currentTimeMillis());
+        return format("%s%s-%05d-%d.txt", StringUtils.defaultIfBlank(prefix, ""), topic, partition,
+                System.currentTimeMillis());
     }
 
     /**
      * Writes data to the default container.
-     * @param nativeKey the native key to write
-     * @param testDataBytes the data to write.
+     *
+     * @param nativeKey
+     *            the native key to write
+     * @param testDataBytes
+     *            the data to write.
      * @return the WriteResults.
      */
-    public AbstractIntegrationTest.WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
+    public AbstractIntegrationTest.WriteResult<String> writeWithKey(final String nativeKey,
+            final byte[] testDataBytes) {
         containerAccessor.getBlobClient(nativeKey).upload(new ByteArrayInputStream(testDataBytes));
-        return new AbstractIntegrationTest.WriteResult<>(new AzureBlobOffsetManagerEntry(containerAccessor.getContainerName(), nativeKey).getManagerKey(), nativeKey);
+        return new AbstractIntegrationTest.WriteResult<>(
+                new AzureBlobOffsetManagerEntry(containerAccessor.getContainerName(), nativeKey).getManagerKey(),
+                nativeKey);
     }
 
     /**
      * Gets the native storage information.
+     *
      * @return the native storage information.
      */
     public List<ContainerAccessor.AzureNativeInfo> getNativeStorage() {
@@ -105,6 +139,7 @@ public final class AzureIntegrationTestData {
 
     /**
      * Gets the connector class.
+     *
      * @return the connector class.
      */
     public Class<? extends Connector> getConnectorClass() {
@@ -113,7 +148,9 @@ public final class AzureIntegrationTestData {
 
     /**
      * Creates the connector config with the specified local prefix.
-     * @param localPrefix the prefix to prepend to all keys.  May be {@code nul}.
+     *
+     * @param localPrefix
+     *            the prefix to prepend to all keys. May be {@code nul}.
      * @return the map of data options.
      */
     public Map<String, String> createConnectorConfig(final String localPrefix) {
@@ -122,17 +159,18 @@ public final class AzureIntegrationTestData {
 
     /**
      * Creates the connector config with the specified local prefix and container.
-     * @param localPrefix the prefix to prepend to all keys.  May be {@code nul}.
-     * @param containerName the container name to use.
+     *
+     * @param localPrefix
+     *            the prefix to prepend to all keys. May be {@code nul}.
+     * @param containerName
+     *            the container name to use.
      * @return the map of data options.
      */
-    public Map<String, String> createConnectorConfig(String localPrefix, String containerName) {
-        Map<String, String> data = new HashMap<>();
+    public Map<String, String> createConnectorConfig(final String localPrefix, final String containerName) {
+        final Map<String, String> data = new HashMap<>();
+        SourceConfigFragment.setter(data).ringBufferSize(10);
 
-        SourceConfigFragment.setter(data)
-                .ringBufferSize(10);
-
-        AzureBlobConfigFragment.Setter setter =  AzureBlobConfigFragment.setter(data)
+        final AzureBlobConfigFragment.Setter setter = AzureBlobConfigFragment.setter(data)
                 .containerName(containerName)
                 .accountName(ACCOUNT_NAME)
                 .accountKey(ACCOUNT_KEY)

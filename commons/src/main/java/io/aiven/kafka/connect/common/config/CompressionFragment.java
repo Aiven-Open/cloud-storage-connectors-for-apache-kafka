@@ -25,7 +25,10 @@ import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValida
 
 /**
  * The configuration fragment that defines the compression characteristics.
+ *
+ * @deprecated use FileNameFragment
  */
+@Deprecated
 public final class CompressionFragment extends ConfigFragment {
 
     static final String GROUP_COMPRESSION = "File Compression";
@@ -68,8 +71,6 @@ public final class CompressionFragment extends ConfigFragment {
      * @return the defined compression type or {@link CompressionType#NONE} if there is no defined compression type.
      */
     public CompressionType getCompressionType() {
-        return has(FILE_COMPRESSION_TYPE_CONFIG)
-                ? CompressionType.forName(cfg.getString(FILE_COMPRESSION_TYPE_CONFIG))
-                : CompressionType.NONE;
+        return new FileNameFragment(cfg).getCompressionType();
     }
 }

@@ -19,12 +19,13 @@ package io.aiven.kafka.connect.azure.source.config;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigValue;
+
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
 
 public class AzureBlobSourceConfigDef extends ConfigDef {
 

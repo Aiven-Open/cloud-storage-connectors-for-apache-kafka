@@ -16,20 +16,7 @@
 
 package io.aiven.kafka.connect.azure.source.config;
 
-import com.azure.core.http.policy.ExponentialBackoffOptions;
-import com.azure.core.http.policy.HttpLogDetailLevel;
-import com.azure.core.http.policy.HttpLogOptions;
-import com.azure.core.http.policy.RetryOptions;
-import com.azure.core.http.policy.UserAgentPolicy;
-import com.azure.storage.blob.BlobServiceAsyncClient;
-import com.azure.storage.blob.BlobServiceClientBuilder;
-import io.aiven.kafka.connect.common.utils.VersionInfo;
-import io.aiven.kafka.connect.common.config.AbstractFragmentSetter;
-import io.aiven.kafka.connect.common.config.ConfigFragment;
-import io.aiven.kafka.connect.common.config.validators.UrlValidator;
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
+import static java.lang.String.format;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -37,7 +24,22 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static java.lang.String.format;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
+
+import io.aiven.kafka.connect.common.config.AbstractFragmentSetter;
+import io.aiven.kafka.connect.common.config.ConfigFragment;
+import io.aiven.kafka.connect.common.config.validators.UrlValidator;
+import io.aiven.kafka.connect.common.utils.VersionInfo;
+
+import com.azure.core.http.policy.ExponentialBackoffOptions;
+import com.azure.core.http.policy.HttpLogDetailLevel;
+import com.azure.core.http.policy.HttpLogOptions;
+import com.azure.core.http.policy.RetryOptions;
+import com.azure.core.http.policy.UserAgentPolicy;
+import com.azure.storage.blob.BlobServiceAsyncClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 
 /**
  * The configuration fragment that defines the Azure specific characteristics.
@@ -46,13 +48,15 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     /**
      * Valid protocols for Azure blob access
      */
-    public enum Protocol {HTTP, HTTPS}
+    public enum Protocol {
+        HTTP, HTTPS
+    }
     private static final VersionInfo VERSION_INFO = new VersionInfo(AzureBlobConfigFragment.class);
     private static final String AZURE_PREFIX_CONFIG = "azure.blob.prefix";
     private static final String AZURE_FETCH_PAGE_SIZE = "azure.blob.fetch.page.size";
     private static final String USER_AGENT_HEADER_FORMAT = "Azure Blob Source/%s (Vendor: %s)";
-    private static final String USER_AGENT_HEADER_VALUE = format(USER_AGENT_HEADER_FORMAT,
-            VERSION_INFO.getVersion(), VERSION_INFO.getVendor());
+    private static final String USER_AGENT_HEADER_VALUE = format(USER_AGENT_HEADER_FORMAT, VERSION_INFO.getVersion(),
+            VERSION_INFO.getVendor());
     private static final String GROUP_AZURE = "Azure";
     public static final String AZURE_STORAGE_CONNECTION_STRING_CONFIG = "azure.storage.connection.string";
     public static final String AZURE_STORAGE_CONTAINER_NAME_CONFIG = "azure.storage.container.name";
@@ -75,11 +79,11 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     private static final String AZURE_BLOB_ENDPOINT_CONFIG = "azure.blob.endpoint";
     private static final String AZURE_ENDPOINT_PROTOCOL_CONFIG = "azure.endpoint_protocol";
 
-
     /**
      * Construct the Azure Blob ConfigFragment..
      *
-     * @param cfg the configuration that this fragment is associated with.
+     * @param cfg
+     *            the configuration that this fragment is associated with.
      */
     public AzureBlobConfigFragment(final AbstractConfig cfg) {
         super(cfg);
@@ -88,7 +92,8 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     /**
      * Adds the configuration options for the azure client to the configuration definition.
      *
-     * @param configDef the Configuration definition.
+     * @param configDef
+     *            the Configuration definition.
      * @return the update configuration definition
      */
     public static ConfigDef update(final ConfigDef configDef) {
@@ -100,7 +105,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the setter for this fragment.
-     * @param data the data map to update.
+     *
+     * @param data
+     *            the data map to update.
      * @return the setter for this fragment.
      */
     public static Setter setter(final Map<String, String> data) {
@@ -120,16 +127,15 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
                 AZURE_ACCOUNT_NAME_CONFIG);
 
         configDef.define(AZURE_ACCOUNT_KEY_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.HIGH,
-                "Azure Account key", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.LONG,
-                AZURE_ACCOUNT_KEY_CONFIG);
+                "Azure Account key", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.LONG, AZURE_ACCOUNT_KEY_CONFIG);
 
-        configDef.define(AZURE_BLOB_ENDPOINT_CONFIG, ConfigDef.Type.STRING, null, new UrlValidator(), ConfigDef.Importance.HIGH,
-                "Azure Blob source endpoint", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.LONG,
-                AZURE_BLOB_ENDPOINT_CONFIG);
+        configDef.define(AZURE_BLOB_ENDPOINT_CONFIG, ConfigDef.Type.STRING, null, new UrlValidator(),
+                ConfigDef.Importance.HIGH, "Azure Blob source endpoint", GROUP_AZURE, ++azureGroupCounter,
+                ConfigDef.Width.LONG, AZURE_BLOB_ENDPOINT_CONFIG);
 
-        configDef.define(AZURE_ENDPOINT_PROTOCOL_CONFIG, ConfigDef.Type.STRING, Protocol.HTTPS.name(), new ProtocolValidator(), ConfigDef.Importance.HIGH,
-                "Azure endpoint protocol (http or https)", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.SHORT,
-                AZURE_ENDPOINT_PROTOCOL_CONFIG);
+        configDef.define(AZURE_ENDPOINT_PROTOCOL_CONFIG, ConfigDef.Type.STRING, Protocol.HTTPS.name(),
+                new ProtocolValidator(), ConfigDef.Importance.HIGH, "Azure endpoint protocol (http or https)",
+                GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.SHORT, AZURE_ENDPOINT_PROTOCOL_CONFIG);
 
         configDef.define(AZURE_STORAGE_CONNECTION_STRING_CONFIG, ConfigDef.Type.STRING, null, ConfigDef.Importance.HIGH,
                 "Azure Storage connection string.", GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE,
@@ -177,12 +183,12 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     public void validate() {
         if (getConnectionString() == null) {
             if (has(AZURE_ACCOUNT_KEY_CONFIG) && has(AZURE_ACCOUNT_NAME_CONFIG) && has(AZURE_BLOB_ENDPOINT_CONFIG)
-            && has(AZURE_ENDPOINT_PROTOCOL_CONFIG)) {
+                    && has(AZURE_ENDPOINT_PROTOCOL_CONFIG)) {
                 return;
             }
-            throw new ConfigException(
-                    format("Either %s must be specified or %s, %s, &s, and %s must be specified.", AZURE_STORAGE_CONNECTION_STRING_CONFIG,
-                            AZURE_ACCOUNT_KEY_CONFIG, AZURE_ACCOUNT_NAME_CONFIG, AZURE_BLOB_ENDPOINT_CONFIG, AZURE_ENDPOINT_PROTOCOL_CONFIG));
+            throw new ConfigException(format("Either %s must be specified or %s, %s, &s, and %s must be specified.",
+                    AZURE_STORAGE_CONNECTION_STRING_CONFIG, AZURE_ACCOUNT_KEY_CONFIG, AZURE_ACCOUNT_NAME_CONFIG,
+                    AZURE_BLOB_ENDPOINT_CONFIG, AZURE_ENDPOINT_PROTOCOL_CONFIG));
         }
     }
 
@@ -192,7 +198,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     }
 
     /**
-     * Gets the azure fetch page size.  This is the number of items to receive information about on a single call to the backend.
+     * Gets the azure fetch page size. This is the number of items to receive information about on a single call to the
+     * backend.
+     *
      * @return the fetch page size.
      */
     public int getAzureFetchPageSize() {
@@ -200,7 +208,8 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
     }
 
     /**
-     * Gets the Azure prefix.  This is a string that must appear at the beginning of every item returned.
+     * Gets the Azure prefix. This is a string that must appear at the beginning of every item returned.
+     *
      * @return the Azure blob prefix.
      */
     public String getAzurePrefix() {
@@ -209,6 +218,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Get the connection string for the backend.
+     *
      * @return the Azure connection string
      */
     public String getConnectionString() {
@@ -221,6 +231,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the Azure account name.
+     *
      * @return the Azure account name.
      */
     public String getAccountName() {
@@ -229,6 +240,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the Azure account key.
+     *
      * @return the Azure account key.
      */
     public String getAccountKey() {
@@ -237,6 +249,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the blob endpoint URL as a string.
+     *
      * @return the blob endpoint URL.
      */
     public String getBlobEndpoint() {
@@ -245,6 +258,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the default endpoint protocol.
+     *
      * @return the endpoint protocol
      */
     public Protocol getEndpointProtocol() {
@@ -253,6 +267,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the container name.
+     *
      * @return the container name.
      */
     public String getContainerName() {
@@ -261,6 +276,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the retry backoff max attempts.
+     *
      * @return The retry backoff max attempts.
      */
     public int getAzureRetryBackoffMaxAttempts() {
@@ -269,6 +285,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the retry backoff initial delay.
+     *
      * @return The retry backoff initial delay.
      */
     public Duration getAzureRetryBackoffInitialDelay() {
@@ -277,6 +294,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the retry backoff max delay.
+     *
      * @return The retry backoff max delay.
      */
     public Duration getAzureRetryBackoffMaxDelay() {
@@ -285,6 +303,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the user agent.
+     *
      * @return The user agent.
      */
     public String getUserAgent() {
@@ -293,6 +312,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
     /**
      * Gets the RetryOptions.
+     *
      * @return a RetryOptions containing the retry values.
      */
     public RetryOptions getAzureRetryOptions() {
@@ -314,11 +334,13 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
                 .buildAsyncClient();
     }
 
-    @SuppressWarnings({"PMD.TooManyMethods"})
+    @SuppressWarnings({ "PMD.TooManyMethods" })
     public static class Setter extends AbstractFragmentSetter<AzureBlobConfigFragment.Setter> {
         /**
          * Creates the setter
-         * @param data the data to modify.
+         *
+         * @param data
+         *            the data to modify.
          */
         private Setter(final Map<String, String> data) {
             super(data);
@@ -326,7 +348,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the Azure prefix.
-         * @param prefix the Azuere prefix.
+         *
+         * @param prefix
+         *            the Azuere prefix.
          * @return this
          */
         public Setter prefix(final String prefix) {
@@ -335,7 +359,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the fetch page size.
-         * @param fetchPageSize the fetch page size.
+         *
+         * @param fetchPageSize
+         *            the fetch page size.
          * @return this
          */
         public Setter fetchPageSize(final int fetchPageSize) {
@@ -344,7 +370,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the connection string.
-         * @param connectionString the connection string.
+         *
+         * @param connectionString
+         *            the connection string.
          * @return this.
          */
         public Setter connectionString(final String connectionString) {
@@ -353,7 +381,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the account name.
-         * @param name the account name.
+         *
+         * @param name
+         *            the account name.
          * @return this,
          */
         public Setter accountName(final String name) {
@@ -362,7 +392,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the account key.
-         * @param key the account key.
+         *
+         * @param key
+         *            the account key.
          * @return this.
          */
         public Setter accountKey(final String key) {
@@ -371,7 +403,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the blob endpoint.
-         * @param blobEndpoint the blob endpoint.
+         *
+         * @param blobEndpoint
+         *            the blob endpoint.
          * @return this
          */
         public Setter blobEndpoint(final String blobEndpoint) {
@@ -380,7 +414,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the default endpoing protocol.
-         * @param protocol the endpoint protocol.
+         *
+         * @param protocol
+         *            the endpoint protocol.
          * @return this.
          */
         public Setter endpointProtocol(final Protocol protocol) {
@@ -389,7 +425,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the container name.
-         * @param containerName the container name.
+         *
+         * @param containerName
+         *            the container name.
          * @return this.
          */
         public Setter containerName(final String containerName) {
@@ -398,7 +436,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the user agent.
-         * @param userAgent the user agent.
+         *
+         * @param userAgent
+         *            the user agent.
          * @return this.
          */
         public Setter userAgent(final String userAgent) {
@@ -407,7 +447,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the retry backoff max attempts.
-         * @param retryBackoffMaxAttempts the retry backoff max attempts.
+         *
+         * @param retryBackoffMaxAttempts
+         *            the retry backoff max attempts.
          * @return this
          */
         public Setter retryBackoffMaxAttempts(final int retryBackoffMaxAttempts) {
@@ -416,7 +458,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the backoff initial delay.
-         * @param retryBackoffInitialDelay the backoff initial delay.
+         *
+         * @param retryBackoffInitialDelay
+         *            the backoff initial delay.
          * @return this
          */
         public Setter retryBackoffInitialDelay(final Duration retryBackoffInitialDelay) {
@@ -425,7 +469,9 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         /**
          * Sets the backoff maximum delay.
-         * @param retryBackoffMaximumDelay the retry backoff maximum delay.
+         *
+         * @param retryBackoffMaximumDelay
+         *            the retry backoff maximum delay.
          * @return this
          */
         public Setter retryBackoffMaxDelay(final Duration retryBackoffMaximumDelay) {
@@ -453,7 +499,8 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
 
         @Override
         public String toString() {
-            return "Supported Values are: " + Arrays.stream(Protocol.values()).map(Object::toString).collect(Collectors.joining(", ")) + ".";
+            return "Supported Values are: "
+                    + Arrays.stream(Protocol.values()).map(Object::toString).collect(Collectors.joining(", ")) + ".";
         }
     }
 

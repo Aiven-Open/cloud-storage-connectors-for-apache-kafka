@@ -16,17 +16,13 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
-import com.azure.core.http.rest.PagedFlux;
-import com.azure.storage.blob.BlobAsyncClient;
-import com.azure.storage.blob.BlobContainerAsyncClient;
-import com.azure.storage.blob.BlobServiceAsyncClient;
-import com.azure.storage.blob.models.BlobItem;
-import com.azure.storage.blob.models.BlobItemProperties;
-import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -38,18 +34,24 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
+
+import com.azure.core.http.rest.PagedFlux;
+import com.azure.storage.blob.BlobAsyncClient;
+import com.azure.storage.blob.BlobContainerAsyncClient;
+import com.azure.storage.blob.BlobServiceAsyncClient;
+import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobItemProperties;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Provides unit tests to ensure basic functionality is maintained and works as expected.
  *
- * The AzureBlobClientIntegrationTest in the integration-test classes provides tests which ensure the api and client act as expected.
+ * The AzureBlobClientIntegrationTest in the integration-test classes provides tests which ensure the api and client act
+ * as expected.
  */
 class AzureBlobClientTest {
 
@@ -110,8 +112,8 @@ class AzureBlobClientTest {
         final String blobContent = "This data is amazing";
         when(blobClient.downloadStream()).thenReturn(Flux.just(ByteBuffer.wrap(blobContent.getBytes(UTF_8))));
         try (InputStream inputStream = client.getBlob("teste-1");
-            InputStreamReader reader = new InputStreamReader(inputStream, UTF_8);
-            BufferedReader bufferedReader = new BufferedReader(reader)) {
+                InputStreamReader reader = new InputStreamReader(inputStream, UTF_8);
+                BufferedReader bufferedReader = new BufferedReader(reader)) {
             assertThat(bufferedReader.readLine()).isEqualTo(blobContent);
         }
     }

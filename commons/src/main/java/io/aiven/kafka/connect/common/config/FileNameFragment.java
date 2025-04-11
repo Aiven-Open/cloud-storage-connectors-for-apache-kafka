@@ -44,7 +44,7 @@ public final class FileNameFragment extends ConfigFragment {
     static final String FILE_MAX_RECORDS = "file.max.records";
     static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
-    public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
+    static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
 
     public static final String FILE_PATH_PREFIX_TEMPLATE_CONFIG = "file.prefix.template";
@@ -78,6 +78,19 @@ public final class FileNameFragment extends ConfigFragment {
      * @return the updated configuration definition.
      */
     public static ConfigDef update(final ConfigDef configDef) {
+        return update(configDef, CompressionType.NONE);
+    }
+
+    /**
+     * Adds the FileName properties to the configuration definition.
+     *
+     * @param configDef
+     *            the configuration definition to update.
+     * @param defaultCompressionType
+     *            The default compression type. May be {@code null}.
+     * @return the updated configuration definition.
+     */
+    public static ConfigDef update(final ConfigDef configDef, final CompressionType defaultCompressionType) {
         int fileGroupCounter = 0;
 
         configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
@@ -107,22 +120,15 @@ public final class FileNameFragment extends ConfigFragment {
                 .map(f -> "'" + f + "'")
                 .collect(Collectors.joining(", "));
 
-        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, new FileCompressionTypeValidator(),
-                ConfigDef.Importance.MEDIUM,
-                "The compression type used for files put on S3. " + "The supported values are: "
-                        + supportedCompressionTypes + ".",
+        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, defaultCompressionType.name(),
+                new FileCompressionTypeValidator(), ConfigDef.Importance.MEDIUM,
+                "The compression type used for files. " + "The supported values are: " + supportedCompressionTypes
+                        + ".",
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(CompressionType.names()));
 
-        configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, new ConfigDef.Validator() {
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                assert value instanceof Integer;
-                if ((Integer) value < 0) {
-                    throw new ConfigException(FILE_MAX_RECORDS, value, "must be a non-negative integer number");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM,
+        configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, ConfigDef.Range.between(0, Integer.MAX_VALUE),
+                ConfigDef.Importance.MEDIUM,
                 "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.",
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
@@ -168,10 +174,21 @@ public final class FileNameFragment extends ConfigFragment {
         if (has(FILE_NAME_TEMPLATE_CONFIG)) {
             return cfg.getString(FILE_NAME_TEMPLATE_CONFIG);
         }
-        final CompressionType compressionType = new CompressionFragment(cfg).getCompressionType();
+        final CompressionType compressionType = getCompressionType();
         return FormatType.AVRO.equals(new OutputFormatFragment(cfg).getFormatType())
                 ? DEFAULT_FILENAME_TEMPLATE + ".avro" + compressionType.extension()
                 : DEFAULT_FILENAME_TEMPLATE + compressionType.extension();
+    }
+
+    /**
+     * Retrieves the defined compression type.
+     *
+     * @return the defined compression type or {@link CompressionType#NONE} if there is no defined compression type.
+     */
+    public CompressionType getCompressionType() {
+        return has(FILE_COMPRESSION_TYPE_CONFIG)
+                ? CompressionType.forName(cfg.getString(FILE_COMPRESSION_TYPE_CONFIG))
+                : CompressionType.NONE;
     }
 
     /**

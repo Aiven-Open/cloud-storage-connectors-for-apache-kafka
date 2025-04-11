@@ -16,24 +16,26 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
-import com.azure.storage.blob.models.BlobItem;
-import com.azure.storage.blob.models.BlobItemProperties;
-import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
-import io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest;
-import io.aiven.kafka.connect.common.source.OffsetManager;
-import io.aiven.kafka.connect.common.source.input.Transformer;
-import org.apache.kafka.common.utils.ByteBufferInputStream;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.stream.Stream;
 
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.apache.kafka.common.utils.ByteBufferInputStream;
+
+import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
+import io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest;
+import io.aiven.kafka.connect.common.source.OffsetManager;
+import io.aiven.kafka.connect.common.source.input.Transformer;
+
+import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobItemProperties;
 
 @SuppressWarnings("PMD.TestClassWithoutTestCases")
 final public class AzureBlobSourceRecordIteratorTest

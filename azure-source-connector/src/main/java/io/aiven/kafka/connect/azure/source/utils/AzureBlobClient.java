@@ -95,8 +95,7 @@ public class AzureBlobClient {
         private Iterator<ByteBuffer> iterator;
         private ByteBuffer current;
 
-        FluxToInputStream(Flux<ByteBuffer> flux)
-        {
+        private FluxToInputStream(final Flux<ByteBuffer> flux) {
             super();
             iterator = flux.toStream().iterator();
         }
@@ -113,10 +112,8 @@ public class AzureBlobClient {
                 }
 
             }
-            if (current != null && !current.hasRemaining()) {
-                if (iterator.hasNext()) {
-                    current = iterator.next();
-                }
+            if (current != null && !current.hasRemaining() && iterator.hasNext()) {
+                current = iterator.next();
             }
         }
 
@@ -127,7 +124,7 @@ public class AzureBlobClient {
         }
 
         @Override
-        public int read(byte[] b, int off, int len) throws IOException {
+        public int read(final byte[] buffer, final int off, final int len) throws IOException {
             if (len == 0) {
                 return 0;
             }
@@ -135,8 +132,8 @@ public class AzureBlobClient {
             if (!current.hasRemaining()) {
                 return EOF;
             }
-            int copyLen = Math.min(current.remaining(), len);
-            current.get(b, off, copyLen);
+            final int copyLen = Math.min(current.remaining(), len);
+            current.get(buffer, off, copyLen);
             return copyLen;
         }
 

@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
  * <li>When the connector is stopped any collected records are returned to kafka before stopping.</li>
  * </ul>
  */
+@SuppressWarnings("PMD.TooManyMethods")
 public abstract class AbstractSourceTask extends SourceTask {
 
     /**
@@ -155,8 +156,7 @@ public abstract class AbstractSourceTask extends SourceTask {
                         }
                     }
                 } catch (InterruptedException e) {
-                    logger.warn("{} interrupted -- EXITING", this
-                    );
+                    logger.warn("{} interrupted -- EXITING", this);
                 } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
                     logger.error("{} failed -- EXITING", this, e);
                 }
@@ -349,8 +349,11 @@ public abstract class AbstractSourceTask extends SourceTask {
 
     /**
      * Method that is implemented in later versions.
-     * @param record the SourecRecord being committed.
-     * @param metadata the metadata for the SourceRecord. May be {@code null}
+     *
+     * @param record
+     *            the SourecRecord being committed.
+     * @param metadata
+     *            the metadata for the SourceRecord. May be {@code null}
      */
     public void commitRecord(final SourceRecord record, final RecordMetadata metadata) {
         if (logger.isDebugEnabled()) {

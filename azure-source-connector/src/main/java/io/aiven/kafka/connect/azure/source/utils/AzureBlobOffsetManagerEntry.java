@@ -16,12 +16,12 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
-import io.aiven.kafka.connect.common.source.OffsetManager;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import io.aiven.kafka.connect.common.source.OffsetManager;
 
 public final class AzureBlobOffsetManagerEntry
         implements

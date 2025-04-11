@@ -89,9 +89,9 @@ dependencies {
     exclude(group = "io.netty", module = "netty-transport-native-epoll")
   }
 
-//  testImplementation(apache.kafka.connect.api)
-//  testImplementation(apache.kafka.connect.runtime)
-//  testImplementation(apache.kafka.connect.json)
+  //  testImplementation(apache.kafka.connect.api)
+  //  testImplementation(apache.kafka.connect.runtime)
+  //  testImplementation(apache.kafka.connect.json)
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
@@ -156,6 +156,7 @@ dependencies {
   // Make test utils from "test" available in "integration-test"
   integrationTestImplementation(sourceSets["test"].output)
 
+  testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation("com.azure:azure-storage-blob:${azureVersion}")
   testFixturesImplementation(testFixtures(project(":commons")))
   testFixturesImplementation(testinglibs.localstack) {

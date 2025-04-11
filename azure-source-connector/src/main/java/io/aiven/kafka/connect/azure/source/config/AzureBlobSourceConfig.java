@@ -19,8 +19,6 @@ package io.aiven.kafka.connect.azure.source.config;
 import java.time.Duration;
 import java.util.Map;
 
-
-import com.azure.core.http.policy.RetryOptions;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.FileNameFragment;
@@ -30,6 +28,7 @@ import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 
+import com.azure.core.http.policy.RetryOptions;
 import com.azure.storage.blob.BlobServiceAsyncClient;
 
 public class AzureBlobSourceConfig extends SourceCommonConfig {

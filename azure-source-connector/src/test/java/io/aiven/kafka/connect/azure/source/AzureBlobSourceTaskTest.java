@@ -16,8 +16,27 @@
 
 package io.aiven.kafka.connect.azure.source;
 
-import com.azure.storage.blob.models.BlobItem;
-import com.azure.storage.blob.models.BlobItemProperties;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+
+import org.apache.kafka.connect.converters.ByteArrayConverter;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaAndValue;
+import org.apache.kafka.connect.source.SourceRecord;
+import org.apache.kafka.connect.source.SourceTaskContext;
+import org.apache.kafka.connect.storage.OffsetStorageReader;
+
 import io.aiven.kafka.connect.azure.source.testdata.AzureIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecord;
@@ -29,12 +48,9 @@ import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.utils.CasedString;
-import org.apache.kafka.connect.converters.ByteArrayConverter;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaAndValue;
-import org.apache.kafka.connect.source.SourceRecord;
-import org.apache.kafka.connect.source.SourceTaskContext;
-import org.apache.kafka.connect.storage.OffsetStorageReader;
+
+import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.BlobItemProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,20 +58,6 @@ import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.azure.AzuriteContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @Testcontainers
 final class AzureBlobSourceTaskTest {
@@ -100,7 +102,7 @@ final class AzureBlobSourceTaskTest {
 
     @AfterEach
     void tearDownAWS() {
-        testData.tearDown();
+        testData.releaseResources();
     }
 
     /**
@@ -176,8 +178,8 @@ final class AzureBlobSourceTaskTest {
         assertThat(result).hasSize(5);
     }
 
-    private static AzureBlobSourceRecord createAzureSourceRecord(final String container, final String objectKey, final byte[] key,
-            final byte[] value) {
+    private static AzureBlobSourceRecord createAzureSourceRecord(final String container, final String objectKey,
+            final byte[] key, final byte[] value) {
 
         final BlobItem blobItem = new BlobItem();
         blobItem.setName(objectKey);
@@ -198,7 +200,8 @@ final class AzureBlobSourceTaskTest {
     private List<AzureBlobSourceRecord> createAzureSourceRecords(final int count) {
         final List<AzureBlobSourceRecord> lst = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            lst.add(createAzureSourceRecord(TEST_BUCKET, TEST_OBJECT_KEY, ("Hello " + i).getBytes(StandardCharsets.UTF_8),
+            lst.add(createAzureSourceRecord(TEST_BUCKET, TEST_OBJECT_KEY,
+                    ("Hello " + i).getBytes(StandardCharsets.UTF_8),
                     ("Hello World" + i).getBytes(StandardCharsets.UTF_8)));
         }
         return lst;

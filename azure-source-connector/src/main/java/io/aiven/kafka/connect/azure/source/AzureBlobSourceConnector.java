@@ -24,11 +24,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfigDef;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
+import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfigDef;
 import io.aiven.kafka.connect.common.utils.VersionInfo;
 
 import org.slf4j.Logger;
@@ -65,7 +65,7 @@ public class AzureBlobSourceConnector extends SourceConnector {
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
         final var taskProps = new ArrayList<Map<String, String>>();
         for (int i = 0; i < maxTasks; i++) {
-            final var props = new HashMap<>(configProperties);
+            final var props = new HashMap<>(configProperties); // NOPMD AvoidInstantiatingObjectsInLoops
             props.put(TASK_ID, String.valueOf(i));
             taskProps.add(props);
         }

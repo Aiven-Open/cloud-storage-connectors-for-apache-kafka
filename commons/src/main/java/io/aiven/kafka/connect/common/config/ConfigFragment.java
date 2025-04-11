@@ -16,11 +16,11 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import static java.lang.String.format;
+
 import org.apache.kafka.common.config.AbstractConfig;
 
 import org.slf4j.Logger;
-
-import static java.lang.String.format;
 
 /**
  * Config fragments encapsulate logical fragments of configuration that may be used across multiple Connectors or across
@@ -66,8 +66,9 @@ public class ConfigFragment {
      * @param old
      *            the deprecated configuration key.
      */
-    public static void logDeprecated(final Logger logger, final String old, final String formatStr, final Object... args) {
-        logger.warn("{} property is deprecated. "+format(formatStr, args));
+    public static void logDeprecated(final Logger logger, final String old, final String formatStr,
+            final Object... args) {
+        logger.warn("{} property is deprecated. {}", old, format(formatStr, args));
     }
 
     /**

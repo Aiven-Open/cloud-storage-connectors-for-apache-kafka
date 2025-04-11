@@ -16,19 +16,19 @@
 
 package io.aiven.kafka.connect.azure.source.testdata;
 
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import io.aiven.kafka.connect.common.source.NativeInfo;
+
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import io.aiven.kafka.connect.common.source.NativeInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * Utility to access an Azure container
@@ -69,9 +69,9 @@ public final class ContainerAccessor {
     /**
      * Create the container.
      */
-    public final void createContainer() {
+    public void createContainer() {
         containerClient.createIfNotExists();
-        }
+    }
 
     public BlobClient getBlobClient(final String blobName) {
         return containerClient.getBlobClient(blobName);
@@ -97,8 +97,8 @@ public final class ContainerAccessor {
     public final static class AzureNativeInfo implements NativeInfo<BlobItem, String>, Comparable<AzureNativeInfo> {
         private final BlobItem blobItem;
 
-        AzureNativeInfo(final BlobItem BlobItem) {
-            this.blobItem = BlobItem;
+        AzureNativeInfo(final BlobItem blobItem) {
+            this.blobItem = blobItem;
         }
 
         @Override
@@ -119,6 +119,19 @@ public final class ContainerAccessor {
         @Override
         public int compareTo(final AzureNativeInfo other) {
             return getNativeKey().compareTo(other.getNativeKey());
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+            if (other instanceof AzureNativeInfo) {
+                return compareTo((AzureNativeInfo) other) == 0;
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return getNativeKey().hashCode();
         }
     }
 }
