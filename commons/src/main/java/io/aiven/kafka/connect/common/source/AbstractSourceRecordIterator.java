@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import javax.validation.constraints.NotNull;
-
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Iterator;
@@ -36,6 +34,7 @@ import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 

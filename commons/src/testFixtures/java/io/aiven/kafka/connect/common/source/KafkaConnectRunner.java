@@ -37,7 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Runds an embedded connect cluster.
+ * Runs an embedded connect cluster.
  */
 public final class KafkaConnectRunner {
     /**

@@ -342,11 +342,6 @@ public abstract class AbstractSourceTask extends SourceTask {
         logger.info("Committed all records through last poll()");
     }
 
-    @Override
-    public void commitRecord(final SourceRecord record) {
-        commitRecord(record, null);
-    }
-
     /**
      * Method that is implemented in later versions.
      *
@@ -355,6 +350,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * @param metadata
      *            the metadata for the SourceRecord. May be {@code null}
      */
+    @Override
     public void commitRecord(final SourceRecord record, final RecordMetadata metadata) {
         if (logger.isDebugEnabled()) {
             if (metadata == null) {
