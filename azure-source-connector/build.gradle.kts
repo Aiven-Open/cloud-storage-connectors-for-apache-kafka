@@ -2,7 +2,8 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-val kafkaVersion by extra("3.3.0")
+val kafkaAPIVersion by extra("1.1.0")
+val kafkaVersion by extra("3.3.1")
 val azureVersion by extra("12.29.0")
 
 val integrationTest: SourceSet =
@@ -54,7 +55,7 @@ idea {
 }
 
 dependencies {
-  compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
+  compileOnly("org.apache.kafka:connect-api:$kafkaAPIVersion")
   compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
   compileOnly(apache.kafka.connect.api)
 
@@ -80,7 +81,7 @@ dependencies {
   testImplementation(testinglibs.awaitility)
   testImplementation(testcontainers.junit.jupiter)
   testImplementation(testcontainers.kafka) // this is not Kafka version
-  testImplementation("org.apache.kafka:connect-api:$kafkaVersion")
+  testImplementation("org.apache.kafka:connect-api:$kafkaAPIVersion")
   testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
   testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
   testImplementation("org.testcontainers:azure:1.20.6")
@@ -142,8 +143,8 @@ dependencies {
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
   integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+//  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
+//  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
   integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation("org.testcontainers:azure:1.20.6")
 

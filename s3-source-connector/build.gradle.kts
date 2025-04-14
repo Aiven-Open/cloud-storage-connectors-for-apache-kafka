@@ -18,7 +18,8 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-val kafkaVersion by extra("3.3.0")
+val kafkaVersion by extra("3.3.1")
+val kafkaAPIVersion by extra("1.1.0")
 
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
@@ -59,7 +60,7 @@ idea {
 }
 
 dependencies {
-  compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
+  compileOnly("org.apache.kafka:connect-api:$kafkaAPIVersion")
   compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
 
   implementation(apache.commons.collection4)
@@ -81,7 +82,7 @@ dependencies {
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(testinglibs.awaitility)
 
-  testImplementation("org.apache.kafka:connect-api:$kafkaVersion")
+  testImplementation("org.apache.kafka:connect-api:$kafkaAPIVersion")
   testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
   testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
 
@@ -151,6 +152,7 @@ dependencies {
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
+  integrationTestImplementation("org.apache.kafka:connect-api:$kafkaAPIVersion")
 
   testImplementation(apache.hadoop.mapreduce.client.core) {
     exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
@@ -192,8 +194,8 @@ dependencies {
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
   integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+//  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
+//  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
   integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation(testFixtures(project(":s3-source-connector")))
 
@@ -215,7 +217,7 @@ dependencies {
   testFixturesImplementation(compressionlibs.snappy)
   testFixturesImplementation(compressionlibs.zstd.jni)
   testFixturesImplementation(tools.spotbugs.annotations)
-  testFixturesImplementation(apache.kafka.connect.api)
+  testFixturesImplementation("org.apache.kafka:connect-api:$kafkaVersion")
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {

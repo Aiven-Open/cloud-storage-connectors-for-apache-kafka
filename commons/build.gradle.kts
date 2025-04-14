@@ -16,7 +16,7 @@
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-val kafkaVersion by extra("3.3.0")
+val kafkaTestingVersion by extra("3.3.1")
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
@@ -81,13 +81,15 @@ dependencies {
     exclude(group = "io.netty", module = "netty")
   }
 
-  testFixturesImplementation(apache.kafka.connect.api)
 
-  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
-  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
-  testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  //testFixturesImplementation(apache.kafka.connect.api)
+  testFixturesImplementation("javax.validation:validation-api:2.0.1.Final")
+
+  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaTestingVersion}:test")
+  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaTestingVersion}")
+  testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaTestingVersion}:test")
+  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaTestingVersion}:test")
+  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaTestingVersion}")
   testFixturesImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }

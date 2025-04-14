@@ -16,8 +16,8 @@ val jacksonVersion by extra("2.15.3")
 val junitVersion by extra("5.11.4")
 val jqwikVersion by extra("1.8.4")
 // TODO: document why we stick to these versions
-val kafkaVersion by extra("3.3.0")
-// val kafkaVersion by extra("1.1.0")
+val kafkaVersion by extra("2.6.0") // this should move to 3.3.1 minimum after we get source/sink code upgraded
+val kafkaAPIVersion by extra("1.1.0") // because we want the lowest possible API to function.
 val logbackVersion by extra("1.5.6")
 val localstackVersion by extra("0.2.23")
 val mockitoVersion by extra("5.15.2")
@@ -40,7 +40,7 @@ dependencyResolutionManagement {
           "org.apache.commons:commons-collections4:$commonsCollections4Version")
       library("commons-io", "commons-io:commons-io:$commonsIOVersion")
       library("commons-lang3", "org.apache.commons:commons-lang3:$commonsLang3Version")
-      library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaVersion")
+      library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaAPIVersion")
       library("kafka-connect-json", "org.apache.kafka:connect-json:$kafkaVersion")
       library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:$kafkaVersion")
       library("kafka-connect-transforms", "org.apache.kafka:connect-transforms:$kafkaVersion")
