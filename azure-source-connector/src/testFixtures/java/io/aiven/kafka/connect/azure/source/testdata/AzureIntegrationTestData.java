@@ -23,13 +23,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.aiven.kafka.connect.common.integration.AbstractSourceIntegrationBase;
 import org.apache.kafka.connect.connector.Connector;
 
 import io.aiven.kafka.connect.azure.source.AzureBlobSourceConnector;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobConfigFragment;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.integration.AbstractIntegrationTest;
 
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -120,10 +120,10 @@ public final class AzureIntegrationTestData {
      *            the data to write.
      * @return the WriteResults.
      */
-    public AbstractIntegrationTest.WriteResult<String> writeWithKey(final String nativeKey,
-            final byte[] testDataBytes) {
+    public AbstractSourceIntegrationBase.WriteResult<String> writeWithKey(final String nativeKey,
+                                                                          final byte[] testDataBytes) {
         containerAccessor.getBlobClient(nativeKey).upload(new ByteArrayInputStream(testDataBytes));
-        return new AbstractIntegrationTest.WriteResult<>(
+        return new AbstractSourceIntegrationBase.WriteResult<>(
                 new AzureBlobOffsetManagerEntry(containerAccessor.getContainerName(), nativeKey).getManagerKey(),
                 nativeKey);
     }

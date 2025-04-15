@@ -67,7 +67,7 @@ public final class AvroTestDataFixture {
      *            the numer of records to generate
      * @return A byte array containing the specified number of records.
      * @throws IOException
-     *             if the Avro records can not be generated.
+     *             if the Avro records can not be serialized.
      */
     public static byte[] generateAvroData(final int numRecs) throws IOException {
         return generateAvroData(0, DEFAULT_SCHEMA, numRecs);
@@ -84,20 +84,13 @@ public final class AvroTestDataFixture {
      *            the number of records to write.
      * @return A byte array containing the specified number of records.
      * @throws IOException
-     *             if the Avro records can not be generated.
+     *             if the Avro records can not be serialized.
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public static byte[] generateAvroData(final int messageId, final Schema schema, final int numOfRecs)
             throws IOException {
         // Create Avro records
-        final List<GenericRecord> avroRecords = new ArrayList<>();
-        final int limit = messageId + numOfRecs;
-        for (int i = messageId; i < limit; i++) {
-            final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD AvoidInstantiatingObjectsInLoops
-            avroRecord.put("message", "Hello, Kafka Connect Abstract Source! object " + i);
-            avroRecord.put("id", i);
-            avroRecords.add(avroRecord);
-        }
+        final List<GenericRecord> avroRecords = generateAvroRecords(messageId, schema, numOfRecs);
 
         // Serialize Avro records to byte arrays
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -113,5 +106,49 @@ public final class AvroTestDataFixture {
         }
         outputStream.close();
         return outputStream.toByteArray();
+    }
+
+    /**
+     * Creates the specified number of records with the default schema.
+     *
+     * @param numRecs
+     *            the numer of records to generate
+     * @return A byte array containing the specified number of records.
+     */
+    public static List<GenericRecord> generateAvroRecords(final int numRecs) {
+        return generateAvroRecords(0, DEFAULT_SCHEMA, numRecs);
+    }
+
+    /**
+     * Creates the specified number of records with the specified schema.
+     *
+     * @param messageId
+     *            the messageId to start with.
+     * @param schema
+     *            the schema to serialize with.
+     * @param numOfRecs
+     *            the number of records to write.
+     * @return A byte array containing the specified number of records.
+     */
+    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    public static List<GenericRecord> generateAvroRecords(final int messageId, final Schema schema, final int numOfRecs) {
+        // Create Avro records
+        final List<GenericRecord> avroRecords = new ArrayList<>();
+        final int limit = messageId + numOfRecs;
+        for (int i = messageId; i < limit; i++) {
+            avroRecords.add(generateAvroRecord(i, schema));
+        }
+        return avroRecords;
+    }
+
+    public static GenericRecord generateAvroRecord(final int messageId) {
+        return generateAvroRecord(messageId, DEFAULT_SCHEMA);
+    }
+
+    public static GenericRecord generateAvroRecord(final int messageId, final Schema schema) {
+        final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD AvoidInstantiatingObjectsInLoops
+        avroRecord.put("message", "Hello, from Avro Test Data Fixture! object " + messageId);
+        avroRecord.put("id", messageId);
+        return avroRecord;
     }
 }

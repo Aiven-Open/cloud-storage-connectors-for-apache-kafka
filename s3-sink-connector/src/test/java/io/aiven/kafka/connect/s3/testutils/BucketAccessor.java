@@ -30,6 +30,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
+import com.amazonaws.services.s3.model.S3Object;
 import io.aiven.kafka.connect.common.config.CompressionType;
 
 import com.amazonaws.AmazonClientException;
@@ -100,6 +101,12 @@ public class BucketAccessor {
                 .map(l -> l.split(","))
                 .map(fields -> decodeRequiredFields(fields, fieldsToDecode))
                 .collect(Collectors.toList());
+    }
+
+    public final String isReady(final String blobName) {
+        boolean exists = s3Client.doesObjectExist(bucketName, blobName);
+        S3Object object = s3Client.getObject(bucketName, blobName);
+        return object.getObjectMetadata().getObjectLockMode();
     }
 
     public final byte[] readBytes(final String blobName, final String compression) throws IOException {

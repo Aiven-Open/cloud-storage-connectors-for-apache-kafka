@@ -78,7 +78,7 @@ public final class KafkaManager {
         schemaRegistry = new SchemaRegistryContainer(
                 "host.testcontainers.internal:" + connectRunner.getContainerPort());
         schemaRegistry.start();
-        AbstractIntegrationTest.waitForRunningContainer(schemaRegistry);
+        AbstractKafkaIntegrationBase.waitForRunningContainer(schemaRegistry);
     }
 
     /**
