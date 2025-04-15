@@ -51,7 +51,7 @@ public final class AzureBlobOffsetManagerIntegrationTest
     private static final AzuriteContainer AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
 
     /**
-     * The utility to wrie test data.
+     * The utility to write test data.
      */
     private AzureIntegrationTestData testData;
 

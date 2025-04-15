@@ -56,7 +56,7 @@ public final class AzureIntegrationTestData {
      * Constructor.
      *
      * @param container
-     *            the container to Azure read/wrtie to.
+     *            the container to Azure read/write to.
      */
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields and avroData")
     public AzureIntegrationTestData(final AzuriteContainer container) {
@@ -150,7 +150,7 @@ public final class AzureIntegrationTestData {
      * Creates the connector config with the specified local prefix.
      *
      * @param localPrefix
-     *            the prefix to prepend to all keys. May be {@code nul}.
+     *            the prefix to prepend to all keys. May be {@code null}.
      * @return the map of data options.
      */
     public Map<String, String> createConnectorConfig(final String localPrefix) {
