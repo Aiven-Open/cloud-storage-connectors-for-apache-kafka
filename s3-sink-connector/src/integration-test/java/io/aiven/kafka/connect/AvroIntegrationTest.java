@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.connect.common.integration.AbstractKafkaIntegrationBase;
@@ -47,14 +49,8 @@ import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
 
 import com.amazonaws.services.s3.AmazonS3;
-import org.apache.avro.Schema;
-import org.apache.avro.file.DataFileReader;
-import org.apache.avro.file.SeekableByteArrayInput;
-import org.apache.avro.file.SeekableInput;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumReader;
+
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.util.Utf8;
 import org.apache.kafka.connect.connector.Connector;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -102,20 +98,22 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
         final AmazonS3 s3Client = IntegrationBase.createS3Client(LOCALSTACK);
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
-        testBucketAccessor.createBucket();
     }
 
     @BeforeEach
     void setUp() throws ExecutionException, InterruptedException, IOException {
+        testBucketAccessor.createBucket();
         kafkaManager = setupKafka(getConnectorClass());
-        kafkaManager.createTopic(getTopic());
-        producer = newProducer();
     }
 
     @AfterEach
     void tearDown() {
-        kafkaManager.stop();
-        producer.close();
+        if (producer != null) {
+            producer.close();
+            producer = null;
+        }
+        deleteConnector(getConnectorClass());
+        testBucketAccessor.removeBucket();
     }
 
     private static Stream<Arguments> compressionAndCodecTestParameters() {
@@ -124,11 +122,14 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
                 Arguments.of("zstandard", "none"));
     }
 
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     @ParameterizedTest
     @MethodSource("compressionAndCodecTestParameters")
     void avroOutput(final String avroCodec, final String compression, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
-        final var topicName = getTopic();
+        final var topicName = getTopic() + "-" + avroCodec + "-" + compression;
+        kafkaManager.createTopic(topicName);
+        producer = newProducer();
 
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(getConnectorName(getConnectorClass())), topicName);
         connectorConfig.put("file.compression.type", compression);
@@ -140,38 +141,52 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
         final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
         final int partitionCount = 4;
         final int recordCountPerPartition = 10;
-        final List<GenericRecord> expected = produceRecords(recordCountPerPartition, partitionCount, topicName);
 
-        //waitForConnectToFinishProcessing();
+        assertThat(testBucketAccessor.listObjects()).isEmpty();
 
-        final List<String> expectedBlobs = Arrays.asList(getAvroBlobName(topicName, 0, 0, compression),
+        final List<GenericRecord> expectedGenericRecords = produceRecords(recordCountPerPartition, partitionCount, topicName);
+
+        // get list of expected blobs
+        final String[] expectedBlobs = new String[] {getAvroBlobName(topicName, 0, 0, compression),
                 getAvroBlobName(topicName, 1, 0, compression), getAvroBlobName(topicName, 2, 0, compression),
-                getAvroBlobName(topicName, 3, 0, compression));
+                getAvroBlobName(topicName, 3, 0, compression)};
 
+        // wait for them to show up.
         await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
             List<String> actual = testBucketAccessor.listObjects();
-            assertThat(actual.containsAll(expectedBlobs));
+            assertThat(actual).containsExactly(expectedBlobs);
         });
 
-        final List<GenericRecord> actual = new ArrayList<>();
+        // extract all the actual records.
+        final List<GenericRecord> actualValues = new ArrayList<>();
+        final Function<GenericRecord, String> idMapper = mapF("id");
+        final Function<GenericRecord, String> messageMapper = mapF("message");
 
         for (final String blobName : expectedBlobs) {
-            List<String> objects = testBucketAccessor.listObjects();
-            final String s = testBucketAccessor.isReady(blobName);
-
-            final byte[] blobBytes = testBucketAccessor.readBytes(blobName, compression);
-            try (SeekableInput sin = new SeekableByteArrayInput(blobBytes)) { // NOPMD AvoidInstantiatingObjectsInLoops
-                final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>(); // NOPMD
-                                                                                                  // AvoidInstantiatingObjectsInLoops
-                try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) { // NOPMD
-                                                                                                      // AvoidInstantiatingObjectsInLoops
-                    final List<GenericRecord> items = new ArrayList<>(); // NOPMD AvoidInstantiatingObjectsInLoops
-                    reader.forEach(actual::add);
-                }
+            for (GenericRecord r : AvroTestDataFixture.readAvroRecords(testBucketAccessor.readBytes(blobName, compression))) {
+                GenericRecord value = (GenericRecord) r.get("value");
+                String key = r.get("key").toString();
+                assertThat(key).isEqualTo("key-" + idMapper.apply(value));
+                assertThat(messageMapper.apply(value)).endsWith(idMapper.apply(value));
+                actualValues.add(value);
             }
         }
-        assertThat(actual).containsExactlyInAnyOrder(expected.toArray(new GenericRecord[0]));
+
+        List<String> values = actualValues.stream().map(mapF("message")).collect(Collectors.toList());
+        String[] expected = expectedGenericRecords.stream().map(mapF("message")).collect(Collectors.toList()).toArray(new String[0]);
+
+        assertThat(values).containsExactlyInAnyOrder(expected);
+
+        values = actualValues.stream().map(mapF("id")).collect(Collectors.toList());
+        expected = expectedGenericRecords.stream().map(mapF("id")).collect(Collectors.toList()).toArray(new String[0]);
+
+        assertThat(values).containsExactlyInAnyOrder(expected);
     }
+
+    private Function<GenericRecord, String> mapF(String key) {
+        return r -> r.get(key).toString();
+    }
+
 
     @Disabled
     @Test

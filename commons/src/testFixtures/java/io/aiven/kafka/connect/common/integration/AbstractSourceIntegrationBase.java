@@ -171,6 +171,11 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
         this.testInfo = testInfo;
     }
 
+    @AfterAll
+    static void cleanup() {
+        tearDownKafka();
+    }
+
     /**
      * Sets up and returns the KafkaManager. If the KafkaManager has already been set up, this method returns the
      * existing instance.
@@ -221,7 +226,7 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
     /**
      * Tears down any existing KafkaManager. if the KafkaManager has not be created no action is taken.
      */
-    final protected void tearDownKafka() {
+    protected static void tearDownKafka() {
         final KafkaManager kafkaManager = KAFKA_MANAGER_THREAD_LOCAL.get();
         if (kafkaManager != null) {
             kafkaManager.stop();

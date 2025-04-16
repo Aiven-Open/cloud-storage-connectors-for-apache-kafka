@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.util.IOUtils;
 import io.aiven.kafka.connect.common.config.CompressionType;
 
 import com.amazonaws.AmazonClientException;
@@ -103,26 +104,13 @@ public class BucketAccessor {
                 .collect(Collectors.toList());
     }
 
-    public final String isReady(final String blobName) {
-        boolean exists = s3Client.doesObjectExist(bucketName, blobName);
-        S3Object object = s3Client.getObject(bucketName, blobName);
-        return object.getObjectMetadata().getObjectLockMode();
-    }
-
     public final byte[] readBytes(final String blobName, final String compression) throws IOException {
         Objects.requireNonNull(blobName, "blobName cannot be null");
-        final byte[] blobBytes = s3Client.getObject(bucketName, blobName).getObjectContent().readAllBytes();
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
-                InputStream decompressedStream = getDecompressedStream(bais, compression);
+        try (InputStream inputStream = s3Client.getObject(bucketName, blobName).getObjectContent();
+                InputStream decompressedStream = getDecompressedStream(inputStream, compression);
                 ByteArrayOutputStream decompressedBytes = new ByteArrayOutputStream()) {
-            final byte[] readBuffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = decompressedStream.read(readBuffer)) != -1) { // NOPMD AssignmentInOperand
-                decompressedBytes.write(readBuffer, 0, bytesRead);
-            }
+            IOUtils.copy(decompressedStream, decompressedBytes);
             return decompressedBytes.toByteArray();
-        } catch (final IOException e) {
-            throw new RuntimeException(e); // NOPMD AvoidThrowingRawExceptionTypes
         }
     }
 

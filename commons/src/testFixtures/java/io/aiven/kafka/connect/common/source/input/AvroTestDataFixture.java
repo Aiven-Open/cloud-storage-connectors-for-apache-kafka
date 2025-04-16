@@ -20,13 +20,22 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.file.SeekableByteArrayInput;
+import org.apache.avro.file.SeekableInput;
 import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
+import org.apache.commons.lang3.tuple.Pair;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * A testing fixture to generate Avro test data.
@@ -150,5 +159,21 @@ public final class AvroTestDataFixture {
         avroRecord.put("message", "Hello, from Avro Test Data Fixture! object " + messageId);
         avroRecord.put("id", messageId);
         return avroRecord;
+    }
+
+    public static List<GenericRecord> readAvroRecords(byte[] bytes) throws IOException {
+        List<GenericRecord> result = new ArrayList<>();
+        try (SeekableInput sin = new SeekableByteArrayInput(bytes)) {
+            final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
+            try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
+                reader.forEach(result::add);
+            }
+        }
+        return result;
+    }
+
+    public static Pair<String, GenericRecord> parseGenericRecord(GenericRecord avroRecord) throws IOException {
+        return Pair.of(avroRecord.get("key").toString(),
+                (GenericRecord) avroRecord.get("value"));
     }
 }
