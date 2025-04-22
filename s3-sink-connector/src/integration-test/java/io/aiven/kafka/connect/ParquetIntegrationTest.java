@@ -17,7 +17,7 @@
 package io.aiven.kafka.connect;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
+import static org.assertj.core.api.Fail.fail;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -25,7 +25,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -35,27 +34,27 @@ import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.aiven.kafka.connect.common.integration.AbstractKafkaIntegrationBase;
-import io.aiven.kafka.connect.common.integration.KafkaManager;
-import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
-import io.aiven.kafka.connect.s3.testutils.IndexesToString;
-import io.aiven.kafka.connect.s3.testutils.KeyValueGenerator;
-import io.aiven.kafka.connect.s3.testutils.KeyValueMessage;
-import org.apache.avro.Schema;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.connect.connector.Connector;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.integration.AbstractKafkaIntegrationBase;
+import io.aiven.kafka.connect.common.integration.KafkaManager;
+import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
+import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
+import io.aiven.kafka.connect.s3.testutils.IndexesToString;
+import io.aiven.kafka.connect.s3.testutils.KeyValueGenerator;
+import io.aiven.kafka.connect.s3.testutils.KeyValueMessage;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.kafka.connect.connector.Connector;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,16 +68,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
-
+    private static final KafkaProducer<byte[], byte[]> NULL_PRODUCER = null;
     private static final String S3_ACCESS_KEY_ID = "test-key-id0";
 
     private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
 
     private static final String TEST_BUCKET_NAME = "test-bucket0";
-
-    private static final String CONNECTOR_NAME = "aiven-s3-sink-connector";
-
-    private static final int OFFSET_FLUSH_INTERVAL_MS = 5000;
 
     private static String s3Endpoint;
     private static BucketAccessor testBucketAccessor;
@@ -113,7 +108,7 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
     void tearDown() {
         if (producer != null) {
             producer.close();
-            producer = null;
+            producer = NULL_PRODUCER;
         }
         testBucketAccessor.removeBucket();
     }
@@ -128,14 +123,17 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         return new KafkaProducer<>(producerProps);
     }
 
-    private List<KeyValueMessage>  produceRecords(final int partitions, final int epochs, final KeyValueGenerator keyValueGenerator, final String topicName)
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    private List<KeyValueMessage> produceRecords(final int partitions, final int epochs,
+            final KeyValueGenerator keyValueGenerator, final String topicName)
             throws ExecutionException, InterruptedException {
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         final List<KeyValueMessage> result = new ArrayList<>();
 
-        for (KeyValueMessage kvMsg : keyValueGenerator.generateMessages(partitions, epochs)) {
+        for (final KeyValueMessage kvMsg : keyValueGenerator.generateMessages(partitions, epochs)) {
             result.add(kvMsg);
-            sendFutures.add(producer.send(new ProducerRecord<>(topicName, kvMsg.partition, kvMsg.getKeyBytes(), kvMsg.getValueBytes())));
+            sendFutures.add(producer.send(
+                    new ProducerRecord<>(topicName, kvMsg.partition, kvMsg.getKeyBytes(), kvMsg.getValueBytes())));
         }
         producer.flush();
         for (final Future<RecordMetadata> sendFuture : sendFutures) {
@@ -144,17 +142,12 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         return result;
     }
 
-    private List<ProducerRecord<byte[], byte[]>>  produceRecords(ProducerRecord<byte[], byte[]>... records)
-            throws ExecutionException, InterruptedException {
-        return produceRecords(Arrays.asList(records));
-    }
-
-    private List<ProducerRecord<byte[], byte[]>>  produceRecords(Collection<ProducerRecord<byte[], byte[]>> records)
-            throws ExecutionException, InterruptedException {
+    private List<ProducerRecord<byte[], byte[]>> produceRecords(
+            final Collection<ProducerRecord<byte[], byte[]>> records) throws ExecutionException, InterruptedException {
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         final List<ProducerRecord<byte[], byte[]>> result = new ArrayList<>();
 
-        for (ProducerRecord<byte[], byte[]> record : records) {
+        for (final ProducerRecord<byte[], byte[]> record : records) {
             result.add(record);
             sendFutures.add(producer.send(record));
         }
@@ -165,7 +158,7 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         return result;
     }
 
-    private Function<GenericRecord, String> mapF(String key) {
+    private Function<GenericRecord, String> mapF(final String key) {
         return r -> r.get(key).toString();
     }
 
@@ -175,74 +168,7 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         final var compression = CompressionType.NONE;
         final int partitionCount = 4;
         final int recordsPerPartition = 10;
-        final String[] expectedFields = new String[] {"key", "value", "offset", "timestamp", "headers"};
-
-        final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
-        connectorConfig.put("format.output.fields",  String.join(",", expectedFields));
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
-
-        kafkaManager.configureConnector(getConnectorName(getConnectorClass()), connectorConfig);
-        kafkaManager.createTopic(topicName);
-        producer = newProducer();
-
-        final IndexesToString keyGen = (partition, epoch, currIdx) -> "" + currIdx;
-        final IndexesToString valueGen = (partition, epoch, currIdx) -> "value-" + currIdx;
-        final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
-        List<KeyValueMessage> expectedRecords = produceRecords(partitionCount, recordsPerPartition, new KeyValueGenerator(keyGen, valueGen), topicName );
-
-        // get array of expected blobs
-        final String[] expectedBlobs = new String[]{getBlobName(topicName, 0, 0, compression),
-                getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
-                getBlobName(topicName, 3, 0, compression)};
-
-        // wait for them to show up.
-        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            List<String> actual = testBucketAccessor.listObjects();
-            assertThat(actual).containsExactly(expectedBlobs);
-        });
-
-        // extract all the actual records.
-        final List<GenericRecord> actualValues = new ArrayList<>();
-        final Function<GenericRecord, String> idMapper = mapF("key");
-        final Function<GenericRecord, String> messageMapper = mapF("value");
-        long now = System.currentTimeMillis();
-        for (final String blobName : expectedBlobs) {
-            List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)), testBucketAccessor.readBytes(blobName));
-            int offset = 0;
-            for (GenericRecord r : lst) {
-                List<String> fields = r.getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toList());
-                assertThat(fields).containsExactlyInAnyOrder(expectedFields);
-                assertThat(messageMapper.apply(r)).endsWith(idMapper.apply(r));
-                assertThat(Integer.parseInt(r.get("offset").toString())).isEqualTo(offset++);
-                assertThat(r.get("timestamp")).isNotNull();
-                assertThat(Long.parseLong(r.get("timestamp").toString())).isLessThan(now);
-                assertThat(r.get("headers")).isNull();
-                actualValues.add(r);
-            }
-        }
-
-        List<String> values = actualValues.stream().map(mapF("value")).collect(Collectors.toList());
-        String[] expected = expectedRecords.stream().map(KeyValueMessage::getValue).collect(Collectors.toList()).toArray(new String[0]);
-
-        assertThat(values).containsExactlyInAnyOrder(expected);
-
-        values = actualValues.stream().map(mapF("key")).collect(Collectors.toList());
-        expected = expectedRecords.stream().map(KeyValueMessage::getKey).collect(Collectors.toList()).toArray(new String[0]);
-
-        assertThat(values).containsExactlyInAnyOrder(expected);
-
-    }
-
-    @Test
-    void allOutputFieldsJsonValueAsString()
-            throws ExecutionException, InterruptedException, IOException {
-        final String topicName = getTopic();
-        final CompressionType compression = CompressionType.NONE;
-        final int partitionCount = 4;
-        final int recordsPerPartition = 10;
-        final String[] expectedFields = new String[] {"key", "value", "offset", "timestamp", "headers"};
+        final String[] expectedFields = { "key", "value", "offset", "timestamp", "headers" };
 
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", String.join(",", expectedFields));
@@ -254,37 +180,117 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         kafkaManager.createTopic(topicName);
         producer = newProducer();
 
-        final IndexesToString keyGen = (partition, epoch, currIdx) -> "" + currIdx;
-        final IndexesToString valueGen = (partition, epoch, currIdx) -> JsonTestDataFixture.generateJsonRec(currIdx, "name-"+currIdx);
+        final IndexesToString keyGen = (partition, epoch, currIdx) -> Integer.toString(currIdx);
+        final IndexesToString valueGen = (partition, epoch, currIdx) -> "value-" + currIdx;
         final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
-        List<KeyValueMessage> expectedRecords = produceRecords(partitionCount, recordsPerPartition, new KeyValueGenerator(keyGen, valueGen), topicName );
+        final List<KeyValueMessage> expectedRecords = produceRecords(partitionCount, recordsPerPartition,
+                new KeyValueGenerator(keyGen, valueGen), topicName);
 
         // get array of expected blobs
-        final String[] expectedBlobs = new String[]{getBlobName(topicName, 0, 0, compression),
+        final String[] expectedBlobs = { getBlobName(topicName, 0, 0, compression),
                 getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
-                getBlobName(topicName, 3, 0, compression)};
+                getBlobName(topicName, 3, 0, compression) };
 
         // wait for them to show up.
-        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            List<String> actual = testBucketAccessor.listObjects();
-            assertThat(actual).containsExactly(expectedBlobs);
-        });
+        waitForStorage(timeout, testBucketAccessor::listObjects, expectedBlobs);
 
         // extract all the actual records.
         final List<GenericRecord> actualValues = new ArrayList<>();
         final Function<GenericRecord, String> idMapper = mapF("key");
-        final Function<GenericRecord, byte[]> messageMapper = mapF("value").andThen(s -> s.getBytes(StandardCharsets.UTF_8));
-        long now = System.currentTimeMillis();
+        final Function<GenericRecord, String> messageMapper = mapF("value");
+        final long now = System.currentTimeMillis();
         for (final String blobName : expectedBlobs) {
-            List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)), testBucketAccessor.readBytes(blobName));
+            final List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName));
             int offset = 0;
-            for (GenericRecord r : lst) {
-                List<String> fields = r.getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toList());
+            for (final GenericRecord r : lst) {
+                final List<String> fields = r.getSchema()
+                        .getFields()
+                        .stream()
+                        .map(Schema.Field::name)
+                        .collect(Collectors.toList());
                 assertThat(fields).containsExactlyInAnyOrder(expectedFields);
-                JsonNode node = JsonTestDataFixture.readJsonRecord(messageMapper.apply(r));
+                assertThat(messageMapper.apply(r)).endsWith(idMapper.apply(r));
+                assertThat(Integer.parseInt(r.get("offset").toString())).isEqualTo(offset++);
+                assertThat(r.get("timestamp")).isNotNull();
+                assertThat(Long.parseLong(r.get("timestamp").toString())).isLessThan(now);
+                assertThat(r.get("headers")).isNull();
+                actualValues.add(r);
+            }
+        }
+
+        List<String> values = actualValues.stream().map(mapF("value")).collect(Collectors.toList());
+        String[] expected = expectedRecords.stream()
+                .map(KeyValueMessage::getValue)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
+
+        assertThat(values).containsExactlyInAnyOrder(expected);
+
+        values = actualValues.stream().map(mapF("key")).collect(Collectors.toList());
+        expected = expectedRecords.stream()
+                .map(KeyValueMessage::getKey)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
+
+        assertThat(values).containsExactlyInAnyOrder(expected);
+
+    }
+
+    @Test
+    void allOutputFieldsJsonValueAsString() throws ExecutionException, InterruptedException, IOException {
+        final String topicName = getTopic();
+        final CompressionType compression = CompressionType.NONE;
+        final int partitionCount = 4;
+        final int recordsPerPartition = 10;
+        final String[] expectedFields = { "key", "value", "offset", "timestamp", "headers" };
+
+        final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
+        connectorConfig.put("format.output.fields", String.join(",", expectedFields));
+        connectorConfig.put("format.output.fields.value.encoding", "none");
+        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
+        connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
+
+        kafkaManager.configureConnector(getConnectorName(getConnectorClass()), connectorConfig);
+        kafkaManager.createTopic(topicName);
+        producer = newProducer();
+
+        final IndexesToString keyGen = (partition, epoch, currIdx) -> Integer.toString(currIdx);
+        final IndexesToString valueGen = (partition, epoch, currIdx) -> JsonTestDataFixture.generateJsonRec(currIdx,
+                "name-" + currIdx);
+        final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
+        final List<KeyValueMessage> expectedRecords = produceRecords(partitionCount, recordsPerPartition,
+                new KeyValueGenerator(keyGen, valueGen), topicName);
+
+        // get array of expected blobs
+        final String[] expectedBlobs = { getBlobName(topicName, 0, 0, compression),
+                getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
+                getBlobName(topicName, 3, 0, compression) };
+
+        // wait for them to show up.
+        waitForStorage(timeout, testBucketAccessor::listObjects, expectedBlobs);
+
+        // extract all the actual records.
+        final List<GenericRecord> actualValues = new ArrayList<>();
+        final Function<GenericRecord, String> idMapper = mapF("key");
+        final Function<GenericRecord, byte[]> messageMapper = mapF("value")
+                .andThen(s -> s.getBytes(StandardCharsets.UTF_8));
+        final long now = System.currentTimeMillis();
+        for (final String blobName : expectedBlobs) {
+            final List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName));
+            int offset = 0;
+            for (final GenericRecord r : lst) {
+                final List<String> fields = r.getSchema()
+                        .getFields()
+                        .stream()
+                        .map(Schema.Field::name)
+                        .collect(Collectors.toList());
+                assertThat(fields).containsExactlyInAnyOrder(expectedFields);
+                final JsonNode node = JsonTestDataFixture.readJsonRecord(messageMapper.apply(r));
                 assertThat(node.get("id").asText()).isEqualTo(idMapper.apply(r));
-                assertThat(node.get("value").asText()).isEqualTo("value"+idMapper.apply(r));
-                assertThat(node.get("message").asText()).isEqualTo("name-"+idMapper.apply(r));
+                assertThat(node.get("value").asText()).isEqualTo("value" + idMapper.apply(r));
+                assertThat(node.get("message").asText()).isEqualTo("name-" + idMapper.apply(r));
 
                 assertThat(Integer.parseInt(r.get("offset").toString())).isEqualTo(offset++);
                 assertThat(r.get("timestamp")).isNotNull();
@@ -295,22 +301,26 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
             }
         }
 
-
         List<String> values = actualValues.stream().map(mapF("value")).collect(Collectors.toList());
-        String[] expected = expectedRecords.stream().map(KeyValueMessage::getValue).collect(Collectors.toList()).toArray(new String[0]);
+        String[] expected = expectedRecords.stream()
+                .map(KeyValueMessage::getValue)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
 
         assertThat(values).containsExactlyInAnyOrder(expected);
 
         values = actualValues.stream().map(mapF("key")).collect(Collectors.toList());
-        expected = expectedRecords.stream().map(KeyValueMessage::getKey).collect(Collectors.toList()).toArray(new String[0]);
+        expected = expectedRecords.stream()
+                .map(KeyValueMessage::getKey)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
 
         assertThat(values).containsExactlyInAnyOrder(expected);
     }
 
     @ParameterizedTest
     @CsvSource({ "true", "false" })
-    void envelopeTest(final Boolean envelopeEnabled)
-            throws ExecutionException, InterruptedException, IOException {
+    void envelopeTest(final Boolean envelopeEnabled) throws ExecutionException, InterruptedException, IOException {
         final String topicName = getTopic() + "-" + envelopeEnabled;
         final CompressionType compression = CompressionType.NONE;
         final int partitionCount = 4;
@@ -329,7 +339,7 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
         final var jsonMessagePattern = "{\"schema\": %s, \"payload\": %s}";
 
-        final List<ProducerRecord<byte[],byte[]>> producerRecords = new ArrayList<>();
+        final List<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
         int cnt = 0;
         for (int i = 0; i < recordsPerPartition; i++) {
             for (int partition = 0; partition < partitionCount; partition++) {
@@ -344,19 +354,17 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         produceRecords(producerRecords);
 
         final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
-        final String[] expectedBlobs = {getBlobName(topicName, 0, 0, compression),
+        final String[] expectedBlobs = { getBlobName(topicName, 0, 0, compression),
                 getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
-                getBlobName(topicName, 3, 0, compression)};
+                getBlobName(topicName, 3, 0, compression) };
 
         // wait for them to show up.
-        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            List<String> actual = testBucketAccessor.listObjects();
-            assertThat(actual).containsExactly(expectedBlobs);
-        });
+        waitForStorage(timeout, testBucketAccessor::listObjects, expectedBlobs);
 
         for (final String blobName : expectedBlobs) {
-            List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)), testBucketAccessor.readBytes(blobName));
-            for (GenericRecord r : lst) {
+            final List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName));
+            for (final GenericRecord r : lst) {
                 if (envelopeEnabled) {
                     assertThat(r.hasField("value")).isTrue();
                 } else {
@@ -381,10 +389,10 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         kafkaManager.createTopic(topicName);
         producer = newProducer();
 
-        final String jsonMessageSchema1 = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"id\"}," +
-                "{\"type\":\"string\",\"field\":\"value\"}]}";
-        final String jsonMessageSchema2 = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"id\"}," +
-                "{\"type\":\"string\",\"field\":\"value\"}, {\"type\":\"string\",\"field\":\"message\", \"default\": \"no message\"}]}";
+        final String jsonMessageSchema1 = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"id\"},"
+                + "{\"type\":\"string\",\"field\":\"value\"}]}";
+        final String jsonMessageSchema2 = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"id\"},"
+                + "{\"type\":\"string\",\"field\":\"value\"}, {\"type\":\"string\",\"field\":\"message\", \"default\": \"no message\"}]}";
         final String jsonMessagePattern = "{\"schema\": %s, \"payload\": %s}";
 
         final int recordsBeforeSchemaChange = 5;
@@ -392,77 +400,77 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         final int recordCountPerPartition = 10;
         final int partitionCount = 4;
         final int schemaChangeBoundary = recordsBeforeSchemaChange * partitionCount;
-        final String[] expectedFieldsSchema1 = new String[] {"id", "value"};
-        final String[] expectedFieldsSchema2 = new String[] {"id", "value", "message"};
+        final String[] expectedFieldsSchema1 = { "id", "value" };
+        final String[] expectedFieldsSchema2 = { "id", "value", "message" };
 
         final String schemaFmt1 = "{\"id\" : \"%1$s\", \"value\" : \"value%1$s\"}%n";
         final String schemaFmt2 = "{\"id\" : \"%s\", \"message\" : \"from partition %s epoch %s\", \"value\" : \"value%s\"}%n";
-        final IndexesToString keyGen = (partition, epoch, currIdx) -> "" + currIdx;
+        final IndexesToString keyGen = (partition, epoch, currIdx) -> Integer.toString(currIdx);
         final IndexesToString valueGen = (partition, epoch, currIdx) -> {
-            String payload =
-                    (currIdx < schemaChangeBoundary) ?
-                            String.format(schemaFmt1, currIdx) :
-                            String.format(schemaFmt2, currIdx, partition, epoch, currIdx);
-            String schema = (currIdx < schemaChangeBoundary) ? jsonMessageSchema1 : jsonMessageSchema2;
+            final String payload = currIdx < schemaChangeBoundary
+                    ? String.format(schemaFmt1, currIdx)
+                    : String.format(schemaFmt2, currIdx, partition, epoch, currIdx);
+            final String schema = currIdx < schemaChangeBoundary ? jsonMessageSchema1 : jsonMessageSchema2;
 
             return String.format(jsonMessagePattern, schema, payload);
         };
 
-        List<KeyValueMessage> expectedRecords = produceRecords(partitionCount, recordCountPerPartition, new KeyValueGenerator(keyGen, valueGen), topicName );
+        final List<KeyValueMessage> expectedRecords = produceRecords(partitionCount, recordCountPerPartition,
+                new KeyValueGenerator(keyGen, valueGen), topicName);
 
-
-        final String[] expectedBlobs = {getBlobName(topicName, 0, 0, compression),
+        final String[] expectedBlobs = { getBlobName(topicName, 0, 0, compression),
                 getBlobName(topicName, 0, 5, compression), getBlobName(topicName, 1, 0, compression),
                 getBlobName(topicName, 1, 5, compression), getBlobName(topicName, 2, 0, compression),
                 getBlobName(topicName, 2, 5, compression), getBlobName(topicName, 3, 0, compression),
-                getBlobName(topicName, 3, 5, compression)};
+                getBlobName(topicName, 3, 5, compression) };
 
         // wait for them to show up.
-        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            List<String> actual = testBucketAccessor.listObjects();
-            assertThat(actual).containsExactly(expectedBlobs);
-        });
+        waitForStorage(timeout, testBucketAccessor::listObjects, expectedBlobs);
 
         final Function<GenericRecord, String> idMapper = mapF("id");
         final Function<GenericRecord, String> valueMapper = mapF("value");
         final List<GenericRecord> actualValues = new ArrayList<>();
 
         for (final String blobName : expectedBlobs) {
-            List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)), testBucketAccessor.readBytes(blobName));
-            int offset = 0;
-            for (GenericRecord r : lst) {
-                GenericRecord value = (GenericRecord) r.get("value");
-                List<String> fields = value.getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toList());
+            final List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName));
+            for (final GenericRecord r : lst) {
+                final GenericRecord value = (GenericRecord) r.get("value");
+                final List<String> fields = value.getSchema()
+                        .getFields()
+                        .stream()
+                        .map(Schema.Field::name)
+                        .collect(Collectors.toList());
 
-                int i = Integer.parseInt(idMapper.apply(value));
-                if (i < schemaChangeBoundary) {
+                final int recordId = Integer.parseInt(idMapper.apply(value));
+                if (recordId < schemaChangeBoundary) {
                     assertThat(fields).containsExactlyInAnyOrder(expectedFieldsSchema1);
                 } else {
                     assertThat(fields).containsExactlyInAnyOrder(expectedFieldsSchema2);
                     assertThat(value.get("message")).isNotEqualTo("no message");
                 }
-                assertThat(valueMapper.apply(value)).isEqualTo("value"+idMapper.apply(value));
+                assertThat(valueMapper.apply(value)).isEqualTo("value" + idMapper.apply(value));
                 actualValues.add(value);
             }
         }
 
         List<String> values = actualValues.stream().map(valueMapper).collect(Collectors.toList());
-        String[] expected = expectedRecords.stream().map( kvm -> {
+        String[] expected = expectedRecords.stream().map(kvm -> {
             try {
                 return JsonTestDataFixture.readJsonRecord(kvm.getValueBytes()).get("payload").get("value").asText();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                return fail(e);
             }
         }).collect(Collectors.toList()).toArray(new String[0]);
 
         assertThat(values).containsExactlyInAnyOrder(expected);
 
         values = actualValues.stream().map(idMapper).collect(Collectors.toList());
-        expected = expectedRecords.stream().map( kvm -> {
+        expected = expectedRecords.stream().map(kvm -> {
             try {
                 return JsonTestDataFixture.readJsonRecord(kvm.getValueBytes()).get("payload").get("id").asText();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                return fail(e);
             }
         }).collect(Collectors.toList()).toArray(new String[0]);
 

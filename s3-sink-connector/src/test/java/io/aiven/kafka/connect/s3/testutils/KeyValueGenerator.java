@@ -19,20 +19,18 @@ package io.aiven.kafka.connect.s3.testutils;
 import java.util.ArrayList;
 import java.util.List;
 
-public class KeyValueGenerator  {
+public class KeyValueGenerator {
 
     public final IndexesToString keyGenerator;
     public final IndexesToString valueGenerator;
 
-    public KeyValueGenerator(final IndexesToString keyGenerator,
-            final IndexesToString valueGenerator) {
+    public KeyValueGenerator(final IndexesToString keyGenerator, final IndexesToString valueGenerator) {
         this.keyGenerator = keyGenerator;
         this.valueGenerator = valueGenerator;
     }
 
-
     public List<KeyValueMessage> generateMessages(final int numPartitions, final int numEpochs) {
-        List<KeyValueMessage> messages = new ArrayList<>();
+        final List<KeyValueMessage> messages = new ArrayList<>();
         int idx = 0;
         for (int epoch = 0; epoch < numEpochs; epoch++) {
             for (int partition = 0; partition < numPartitions; partition++) {

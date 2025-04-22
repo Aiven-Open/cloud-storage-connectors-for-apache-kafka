@@ -480,7 +480,6 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-
         final List<String> expectedBlobs = Lists.newArrayList(
                 "prefix-topic0-0-00000000000000000010" + compression.extension(),
                 "prefix-topic0-1-00000000000000000020" + compression.extension(),
@@ -550,7 +549,6 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-
         final List<String> expectedBlobs = Lists.newArrayList(
                 "prefix-topic0-0-00000000000000000010" + compression.extension(),
                 "prefix-topic0-1-00000000000000000020" + compression.extension(),
@@ -598,7 +596,6 @@ final class S3SinkTaskTest {
         offsets.put(tp01, new OffsetAndMetadata(20));
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
-
 
         final List<String> expectedBlobs = Lists.newArrayList(
                 "prefix-topic0-0-00000000000000000010" + compression.extension(),
@@ -676,7 +673,6 @@ final class S3SinkTaskTest {
         offsets.put(tp01, new OffsetAndMetadata(20));
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
-
 
         final List<String> expectedBlobs = Lists.newArrayList(
                 "prefix-topic0-0-00000000000000000010" + compression.extension(),

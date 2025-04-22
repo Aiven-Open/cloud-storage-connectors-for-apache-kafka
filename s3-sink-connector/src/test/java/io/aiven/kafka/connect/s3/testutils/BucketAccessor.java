@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.testutils;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,10 +27,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.zip.GZIPInputStream;
 
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.util.IOUtils;
 import io.aiven.kafka.connect.common.config.CompressionType;
 
 import com.amazonaws.AmazonClientException;
@@ -39,11 +35,10 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.github.luben.zstd.ZstdInputStream;
+import com.amazonaws.util.IOUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyInputStream;
 
 public class BucketAccessor {
 
@@ -74,12 +69,12 @@ public class BucketAccessor {
                 s3Client.deleteObjects(deleteObjectsRequest);
             } catch (final MultiObjectDeleteException e) {
                 for (final var err : e.getErrors()) {
-                    LOGGER.warn(String.format("Couldn't delete object: %s. Reason: [%s] %s", err.getKey(), err.getCode(),
-                            err.getMessage()));
+                    LOGGER.warn(String.format("Couldn't delete object: %s. Reason: [%s] %s", err.getKey(),
+                            err.getCode(), err.getMessage()));
                 }
             } catch (final AmazonClientException e) {
-                LOGGER.error(
-                        "Couldn't delete objects: " + Arrays.stream(chunk).reduce(" ", String::concat) + e.getMessage());
+                LOGGER.error("Couldn't delete objects: " + Arrays.stream(chunk).reduce(" ", String::concat)
+                        + e.getMessage());
             }
         }
         s3Client.deleteBucket(bucketName);
@@ -99,7 +94,6 @@ public class BucketAccessor {
 
     private List<List<String>> readAndDecodeLines0(final String blobName, final CompressionType compression,
             final int[] fieldsToDecode) throws IOException {
-        List<String> lst = readLines(blobName, compression);
         return readLines(blobName, compression).stream()
                 .map(l -> l.split(","))
                 .map(fields -> decodeRequiredFields(fields, fieldsToDecode))
@@ -123,9 +117,9 @@ public class BucketAccessor {
     public final List<String> readLines(final String blobName, final CompressionType compression) throws IOException {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         try (InputStream inputStream = s3Client.getObject(bucketName, blobName).getObjectContent();
-             InputStream decompressedStream = compression.decompress(inputStream);
-             InputStreamReader reader = new InputStreamReader(decompressedStream, StandardCharsets.UTF_8);
-             BufferedReader bufferedReader = new BufferedReader(reader)) {
+                InputStream decompressedStream = compression.decompress(inputStream);
+                InputStreamReader reader = new InputStreamReader(decompressedStream, StandardCharsets.UTF_8);
+                BufferedReader bufferedReader = new BufferedReader(reader)) {
             return bufferedReader.lines().collect(Collectors.toList());
         }
     }
@@ -137,24 +131,6 @@ public class BucketAccessor {
                 .map(S3ObjectSummary::getKey)
                 .collect(Collectors.toList());
     }
-
-//    private InputStream getDecompressedStream(final InputStream inputStream, final CompressionType compression)
-//            throws IOException {
-//        Objects.requireNonNull(inputStream, "inputStream cannot be null");
-//        Objects.requireNonNull(compression, "compression cannot be null");
-//
-//        final CompressionType compressionType = CompressionType.forName(compression);
-//        switch (compressionType) {
-//            case ZSTD :
-//                return new ZstdInputStream(inputStream);
-//            case GZIP :
-//                return new GZIPInputStream(inputStream);
-//            case SNAPPY :
-//                return new SnappyInputStream(inputStream);
-//            default :
-//                return inputStream;
-//        }
-//    }
 
     private List<String> decodeRequiredFields(final String[] originalFields, final int[] fieldsToDecode) {
         Objects.requireNonNull(originalFields, "originalFields cannot be null");

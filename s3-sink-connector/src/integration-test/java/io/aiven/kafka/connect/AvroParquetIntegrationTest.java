@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -34,16 +33,17 @@ import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.integration.AbstractKafkaIntegrationBase;
-import io.aiven.kafka.connect.common.integration.KafkaManager;
-import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.connect.connector.Connector;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.integration.AbstractKafkaIntegrationBase;
+import io.aiven.kafka.connect.common.integration.KafkaManager;
+import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
 
@@ -52,7 +52,6 @@ import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.kafka.connect.connector.Connector;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +64,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
 class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
+    private static final KafkaProducer<String, GenericRecord> NULL_PRODUCER = null;
     private static final String S3_ACCESS_KEY_ID = "test-key-id0";
     private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
     private static final String TEST_BUCKET_NAME = "test-bucket0";
@@ -105,21 +105,22 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
     final void tearDown() {
         if (producer != null) {
             producer.close();
-            producer = null;
+            producer = NULL_PRODUCER;
         }
         testBucketAccessor.removeBucket();
     }
 
-    private List<GenericRecord>  produceRecords(final int recordCountPerPartition, int partitionCount, final String topicName)
-            throws ExecutionException, InterruptedException {
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
+            final String topicName) throws ExecutionException, InterruptedException {
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
-        final List<GenericRecord> genericRecords = AvroTestDataFixture.generateAvroRecords(recordCountPerPartition * partitionCount);
+        final List<GenericRecord> genericRecords = AvroTestDataFixture
+                .generateAvroRecords(recordCountPerPartition * partitionCount);
         int cnt = 0;
-        for (GenericRecord value : genericRecords) {
-            int partition = cnt % partitionCount;
+        for (final GenericRecord value : genericRecords) {
+            final int partition = cnt % partitionCount;
             final String key = "key-" + cnt++;
-            final ProducerRecord<String, GenericRecord> msg = new ProducerRecord<>(topicName, partition, key, value);
-            sendFutures.add(producer.send(msg));
+            sendFutures.add(producer.send(new ProducerRecord<>(topicName, partition, key, value)));
         }
         producer.flush();
         for (final Future<RecordMetadata> sendFuture : sendFutures) {
@@ -128,17 +129,18 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         return genericRecords;
     }
 
-
-    private List<GenericRecord>  produceRecords(final int recordCountPerPartition, int partitionCount, final String topicName, Function<Integer, GenericRecord> recordGenerator)
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
+            final String topicName, final Function<Integer, GenericRecord> recordGenerator)
             throws ExecutionException, InterruptedException {
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
-        final List<GenericRecord> genericRecords = AvroTestDataFixture.generateAvroRecords(recordCountPerPartition * partitionCount, recordGenerator);
+        final List<GenericRecord> genericRecords = AvroTestDataFixture
+                .generateAvroRecords(recordCountPerPartition * partitionCount, recordGenerator);
         int cnt = 0;
-        for (GenericRecord value : genericRecords) {
-            int partition = cnt % partitionCount;
+        for (final GenericRecord value : genericRecords) {
+            final int partition = cnt % partitionCount;
             final String key = "key-" + cnt++;
-            final ProducerRecord<String, GenericRecord> msg = new ProducerRecord<>(topicName, partition, key, value);
-            sendFutures.add(producer.send(msg));
+            sendFutures.add(producer.send(new ProducerRecord<>(topicName, partition, key, value)));
         }
         producer.flush();
         for (final Future<RecordMetadata> sendFuture : sendFutures) {
@@ -155,7 +157,7 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         kafkaManager.createTopic(topicName);
         producer = newProducer();
 
-        final String[] expectedFields = new String[] {"key", "value", "offset", "timestamp", "headers"};
+        final String[] expectedFields = { "key", "value", "offset", "timestamp", "headers" };
         final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", String.join(",", expectedFields));
@@ -164,35 +166,38 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         kafkaManager.configureConnector(getConnectorName(getConnectorClass()), connectorConfig);
 
         final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
-        int recordCountPerPartition = 10;
-        int partitionCount = 4;
-        List<GenericRecord> expectedGenericRecords = produceRecords(recordCountPerPartition, partitionCount, topicName);
+        final int recordCountPerPartition = 10;
+        final int partitionCount = 4;
+        final List<GenericRecord> expectedGenericRecords = produceRecords(recordCountPerPartition, partitionCount,
+                topicName);
 
         // get array of expected blobs
-        final String[] expectedBlobs = new String[] {getBlobName(topicName, 0, 0, compression),
+        final String[] expectedBlobs = { getBlobName(topicName, 0, 0, compression),
                 getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
-                getBlobName(topicName, 3, 0, compression)};
+                getBlobName(topicName, 3, 0, compression) };
 
         // wait for them to show up.
-        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            List<String> actual = testBucketAccessor.listObjects();
-            assertThat(actual).containsExactly(expectedBlobs);
-        });
+        waitForStorage(timeout, testBucketAccessor::listObjects, expectedBlobs);
 
         // extract all the actual records.
         final List<GenericRecord> actualValues = new ArrayList<>();
         final Function<GenericRecord, String> idMapper = mapF("id");
         final Function<GenericRecord, String> messageMapper = mapF("message");
-        long now = System.currentTimeMillis();
+        final long now = System.currentTimeMillis();
         for (final String blobName : expectedBlobs) {
-            List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)), testBucketAccessor.readBytes(blobName));
+            final List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName));
             int offset = 0;
-            for (GenericRecord r : lst) {
-                List<String> fields = r.getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toList());
+            for (final GenericRecord r : lst) {
+                final List<String> fields = r.getSchema()
+                        .getFields()
+                        .stream()
+                        .map(Schema.Field::name)
+                        .collect(Collectors.toList());
                 assertThat(fields).containsExactlyInAnyOrder(expectedFields);
-                GenericRecord value = (GenericRecord) r.get("value");
+                final GenericRecord value = (GenericRecord) r.get("value");
                 // verify that additional fields were added.
-                String key = r.get("key").toString();
+                final String key = r.get("key").toString();
                 assertThat(key).isEqualTo("key-" + idMapper.apply(value));
                 assertThat(messageMapper.apply(value)).endsWith(idMapper.apply(value));
                 assertThat(Integer.parseInt(r.get("offset").toString())).isEqualTo(offset++);
@@ -204,7 +209,10 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         }
 
         List<String> values = actualValues.stream().map(mapF("message")).collect(Collectors.toList());
-        String[] expected = expectedGenericRecords.stream().map(mapF("message")).collect(Collectors.toList()).toArray(new String[0]);
+        String[] expected = expectedGenericRecords.stream()
+                .map(mapF("message"))
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
 
         assertThat(values).containsExactlyInAnyOrder(expected);
 
@@ -214,10 +222,9 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         assertThat(values).containsExactlyInAnyOrder(expected);
     }
 
-    private Function<GenericRecord, String> mapF(String key) {
+    private Function<GenericRecord, String> mapF(final String key) {
         return r -> r.get(key).toString();
     }
-
 
     @Test
     final void valueComplexType(@TempDir final Path tmpDir)
@@ -234,20 +241,18 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         kafkaManager.configureConnector(getConnectorName(getConnectorClass()), connectorConfig);
 
         final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
-        int recordCountPerPartition = 10;
-        int partitionCount = 4;
-        List<GenericRecord> expectedGenericRecords = produceRecords(recordCountPerPartition, partitionCount, topicName);
+        final int recordCountPerPartition = 10;
+        final int partitionCount = 4;
+        final List<GenericRecord> expectedGenericRecords = produceRecords(recordCountPerPartition, partitionCount,
+                topicName);
 
         // get array of expected blobs
-        final String[] expectedBlobs = new String[] {getBlobName(topicName, 0, 0, compression),
+        final String[] expectedBlobs = { getBlobName(topicName, 0, 0, compression),
                 getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
-                getBlobName(topicName, 3, 0, compression)};
+                getBlobName(topicName, 3, 0, compression) };
 
         // wait for them to show up.
-        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            List<String> actual = testBucketAccessor.listObjects();
-            assertThat(actual).containsExactly(expectedBlobs);
-        });
+        waitForStorage(timeout, testBucketAccessor::listObjects, expectedBlobs);
 
         // extract all the actual records.
         final List<GenericRecord> actualValues = new ArrayList<>();
@@ -255,15 +260,19 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         final Function<GenericRecord, String> messageMapper = mapF("message");
 
         for (final String blobName : expectedBlobs) {
-            for (GenericRecord r : ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)), testBucketAccessor.readBytes(blobName))) {
-                GenericRecord value = (GenericRecord) r.get("value");
+            for (final GenericRecord r : ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName))) {
+                final GenericRecord value = (GenericRecord) r.get("value");
                 assertThat(messageMapper.apply(value)).endsWith(idMapper.apply(value));
                 actualValues.add(value);
             }
         }
 
         List<String> values = actualValues.stream().map(mapF("message")).collect(Collectors.toList());
-        String[] expected = expectedGenericRecords.stream().map(mapF("message")).collect(Collectors.toList()).toArray(new String[0]);
+        String[] expected = expectedGenericRecords.stream()
+                .map(mapF("message"))
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
 
         assertThat(values).containsExactlyInAnyOrder(expected);
 
@@ -275,8 +284,7 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
     }
 
     @Test
-    final void schemaChanged(@TempDir final Path tmpDir)
-            throws ExecutionException, InterruptedException, IOException {
+    final void schemaChanged(@TempDir final Path tmpDir) throws ExecutionException, InterruptedException, IOException {
         final var topicName = getTopic();
         kafkaManager.createTopic(topicName);
         producer = newProducer();
@@ -287,7 +295,6 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         connectorConfig.put("format.output.fields.value.encoding", "none");
 
         kafkaManager.configureConnector(getConnectorName(getConnectorClass()), connectorConfig);
-
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -322,10 +329,10 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         final int recordCountPerPartition = 10;
         final int partitionCount = 4;
         final int schemaChangeBoundary = recordsBeforeSchemaChange * partitionCount;
-        final String[] expectedFieldsSchema1 = new String[] {"name", "value"};
-        final String[] expectedFieldsSchema2 = new String[] {"name", "value", "blocked"};
+        final String[] expectedFieldsSchema1 = { "name", "value" };
+        final String[] expectedFieldsSchema2 = { "name", "value", "blocked" };
 
-        final Function<Integer, GenericRecord> recordGenerator = i ->  {
+        final Function<Integer, GenericRecord> recordGenerator = i -> {
             GenericRecord value;
             if (i < schemaChangeBoundary) {
                 value = new GenericData.Record(valueSchema); // NOPMD AvoidInstantiatingObjectsInLoops
@@ -340,20 +347,18 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
             return value;
         };
 
-        List<GenericRecord> expectedGenericRecords = produceRecords(recordCountPerPartition, partitionCount, topicName, recordGenerator);
+        final List<GenericRecord> expectedGenericRecords = produceRecords(recordCountPerPartition, partitionCount,
+                topicName, recordGenerator);
 
         // get array of expected blobs
-        final String[] expectedBlobs = new String[] {getBlobName(topicName, 0, 0, compression),
+        final String[] expectedBlobs = { getBlobName(topicName, 0, 0, compression),
                 getBlobName(topicName, 0, 5, compression), getBlobName(topicName, 1, 0, compression),
                 getBlobName(topicName, 1, 5, compression), getBlobName(topicName, 2, 0, compression),
                 getBlobName(topicName, 2, 5, compression), getBlobName(topicName, 3, 0, compression),
-                getBlobName(topicName, 3, 5, compression)};
+                getBlobName(topicName, 3, 5, compression) };
 
         // wait for them to show up.
-        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            List<String> actual = testBucketAccessor.listObjects();
-            assertThat(actual).containsExactly(expectedBlobs);
-        });
+        waitForStorage(timeout, testBucketAccessor::listObjects, expectedBlobs);
 
         // extract all the actual records.
         final List<GenericRecord> actualValues = new ArrayList<>();
@@ -361,13 +366,18 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         final Function<GenericRecord, String> messageMapper = mapF("name");
 
         for (final String blobName : expectedBlobs) {
-            for (GenericRecord r : ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)), testBucketAccessor.readBytes(blobName))) {
-                GenericRecord value = (GenericRecord) r.get("value");
+            for (final GenericRecord r : ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
+                    testBucketAccessor.readBytes(blobName))) {
+                final GenericRecord value = (GenericRecord) r.get("value");
                 assertThat(messageMapper.apply(value)).endsWith(idMapper.apply(value));
                 // verify the schema change.
-                int i = Integer.parseInt(idMapper.apply(value));
-                List<String> fields = value.getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toList());
-                if (i < schemaChangeBoundary) {
+                final int recordId = Integer.parseInt(idMapper.apply(value));
+                final List<String> fields = value.getSchema()
+                        .getFields()
+                        .stream()
+                        .map(Schema.Field::name)
+                        .collect(Collectors.toList());
+                if (recordId < schemaChangeBoundary) {
                     assertThat(fields).containsExactlyInAnyOrder(expectedFieldsSchema1);
                 } else {
                     assertThat(fields).containsExactlyInAnyOrder(expectedFieldsSchema2);
@@ -378,12 +388,18 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         }
 
         List<String> values = actualValues.stream().map(messageMapper).collect(Collectors.toList());
-        String[] expected = expectedGenericRecords.stream().map(messageMapper).collect(Collectors.toList()).toArray(new String[0]);
+        String[] expected = expectedGenericRecords.stream()
+                .map(messageMapper)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
 
         assertThat(values).containsExactlyInAnyOrder(expected);
 
         values = actualValues.stream().map(mapF("value")).collect(Collectors.toList());
-        expected = expectedGenericRecords.stream().map(mapF("value")).collect(Collectors.toList()).toArray(new String[0]);
+        expected = expectedGenericRecords.stream()
+                .map(mapF("value"))
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
 
         assertThat(values).containsExactlyInAnyOrder(expected);
     }
@@ -399,14 +415,13 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         return new KafkaProducer<>(producerProps);
     }
 
-
     private Map<String, String> basicConnectorConfig(final CompressionType compression) {
         final Map<String, String> config = new HashMap<>();
         config.put("name", getConnectorName(getConnectorClass()));
         config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("key.converter.schema.registry.url",  kafkaManager.getSchemaRegistryUrl());
+        config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("value.converter.schema.registry.url",  kafkaManager.getSchemaRegistryUrl());
+        config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("tasks.max", "1");
         config.put("file.compression.type", compression.name());
         config.put("format.output.type", "parquet");
@@ -421,8 +436,8 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         config.put("aws.s3.bucket.name", TEST_BUCKET_NAME);
         config.put("aws.s3.prefix", s3Prefix);
         config.put("topics", topicName);
-        config.put("key.converter.schema.registry.url",  kafkaManager.getSchemaRegistryUrl());
-        config.put("value.converter.schema.registry.url",  kafkaManager.getSchemaRegistryUrl());
+        config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
+        config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("tasks.max", "1");
         return config;
     }
@@ -433,5 +448,4 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         final String result = String.format("%s%s-%d-%020d", s3Prefix, topicName, partition, startOffset);
         return result + compression.extension();
     }
-
 }

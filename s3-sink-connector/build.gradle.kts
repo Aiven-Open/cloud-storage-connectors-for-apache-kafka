@@ -16,9 +16,7 @@ import com.github.spotbugs.snom.SpotBugsTask
  * limitations under the License.
  */
 
-plugins {
-  id("aiven-apache-kafka-connectors-all.java-conventions")
-}
+plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
 val amazonS3Version by extra("1.12.777")
 val amazonSTSVersion by extra("1.12.777")

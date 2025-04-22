@@ -16,14 +16,17 @@
 
 package io.aiven.kafka.connect.common.integration;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.connect.connector.Connector;
@@ -241,6 +244,20 @@ public abstract class AbstractKafkaIntegrationBase {
     @AfterAll
     static void removeKafkaManager() {
         KAFKA_MANAGER_THREAD_LOCAL.remove();
+    }
+
+    /**
+     * Wait until storageList returns all the items in expectedStorage.
+     * @param timeout the maximum duration to wait.
+     * @param storageList The supplier of the storage list.
+     * @param expectedStorage the array of expected values in the storage list.
+     * @param <K> the data type of the storage value. (must implement equals).
+     */
+    protected final <K> void waitForStorage(Duration timeout, Supplier<List<K>> storageList, K[] expectedStorage) {
+        // wait for them to show up.
+        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+            assertThat(storageList.get()).containsExactly(expectedStorage);
+        });
     }
 
 }
