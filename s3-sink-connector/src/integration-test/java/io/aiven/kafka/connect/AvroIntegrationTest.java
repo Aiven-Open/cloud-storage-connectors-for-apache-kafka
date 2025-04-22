@@ -25,8 +25,6 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,9 +34,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.aiven.kafka.connect.common.integration.AbstractKafkaIntegrationBase;
 import io.aiven.kafka.connect.common.integration.KafkaManager;
 import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -55,9 +55,7 @@ import org.apache.kafka.connect.connector.Connector;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -81,11 +79,9 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
     private KafkaManager kafkaManager;
 
     @Container
-    public static final LocalStackContainer LOCALSTACK = IntegrationBase.createS3Container();
+    public static final LocalStackContainer LOCALSTACK = S3IntegrationHelper.createS3Container();
 
     private KafkaProducer<String, GenericRecord> producer;
-    private ConnectRunner connectRunner;
-
 
     private Class<? extends Connector> getConnectorClass() {
         return AivenKafkaConnectS3SinkConnector.class;
@@ -95,7 +91,7 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
     static void setUpAll() throws IOException, InterruptedException {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
-        final AmazonS3 s3Client = IntegrationBase.createS3Client(LOCALSTACK);
+        final AmazonS3 s3Client = S3IntegrationHelper.createS3Client(LOCALSTACK);
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
     }
@@ -112,27 +108,38 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
             producer.close();
             producer = null;
         }
-        deleteConnector(getConnectorClass());
         testBucketAccessor.removeBucket();
     }
 
     private static Stream<Arguments> compressionAndCodecTestParameters() {
-        return Stream.of(Arguments.of("bzip2", "none"), Arguments.of("deflate", "none"), Arguments.of("null", "none"),
-                Arguments.of("snappy", "gzip"), // single test for codec and compression when both set.
-                Arguments.of("zstandard", "none"));
+        String[] codecs = {"null", "deflate", "snappy", "bzip2", "xz", "zstandard"};
+        List<Arguments> lst = new ArrayList<>();
+
+//        for (String codec : codecs) {
+//            for (CompressionType compression : CompressionType.values()) {
+//                lst.add(Arguments.of(codec, compression));
+//            }
+//        }
+        lst.add(Arguments.of("bzip2", CompressionType.NONE));
+        lst.add(Arguments.of("deflate", CompressionType.NONE));
+        lst.add(Arguments.of("null", CompressionType.NONE));
+        lst.add(Arguments.of("snappy", CompressionType.GZIP));
+        lst.add(Arguments.of("zstandard", CompressionType.NONE));
+
+        return lst.stream();
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     @ParameterizedTest
     @MethodSource("compressionAndCodecTestParameters")
-    void avroOutput(final String avroCodec, final String compression, final TestInfo testInfo)
+    void avroOutput(final String avroCodec, final CompressionType compression)
             throws ExecutionException, InterruptedException, IOException {
         final var topicName = getTopic() + "-" + avroCodec + "-" + compression;
         kafkaManager.createTopic(topicName);
         producer = newProducer();
 
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(getConnectorName(getConnectorClass())), topicName);
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.type", "avro");
         connectorConfig.put("avro.codec", avroCodec);
@@ -187,57 +194,56 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
         return r -> r.get(key).toString();
     }
 
-
-    @Disabled
     @Test
-    void jsonlAvroOutputTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+    void jsonlAvroOutputTest() throws ExecutionException, InterruptedException, IOException {
+        final var topicName = getTopic();
+        kafkaManager.createTopic(topicName);
+        producer = newProducer();
+
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(getConnectorName(getConnectorClass())), topicName);
-        final String compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final String contentType = "jsonl";
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("format.output.type", contentType);
-        connectRunner.createConnector(connectorConfig);
 
-        final int recordCountPerPartition = 10;
+        kafkaManager.configureConnector(getConnectorName(getConnectorClass()), connectorConfig);
+        final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
         final int partitionCount = 4;
+        final int recordCountPerPartition = 10;
 
-        produceRecords(recordCountPerPartition, partitionCount, topicName);
-        waitForConnectToFinishProcessing();
+        assertThat(testBucketAccessor.listObjects()).isEmpty();
 
-        final List<String> expectedBlobs = Arrays.asList(getBlobName(topicName, 0, 0, compression),
+        final List<GenericRecord> expectedGenericRecords = produceRecords(recordCountPerPartition, partitionCount, topicName);
+
+        // get list of expected blobs
+        final String[] expectedBlobs = new String[] {getBlobName(topicName, 0, 0, compression),
                 getBlobName(topicName, 1, 0, compression), getBlobName(topicName, 2, 0, compression),
-                getBlobName(topicName, 3, 0, compression));
+                getBlobName(topicName, 3, 0, compression)};
+
+        // wait for them to show up.
+        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+            List<String> actual = testBucketAccessor.listObjects();
+            assertThat(actual).containsExactly(expectedBlobs);
+        });
+
+
+        // extract all the actual records.
+        final List<String> actualValues = new ArrayList<>();
 
         for (final String blobName : expectedBlobs) {
-            assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
-        }
-
-        final Map<String, List<String>> blobContents = new HashMap<>();
-        for (final String blobName : expectedBlobs) {
-            final List<String> items = Collections
-                    .unmodifiableList(testBucketAccessor.readLines(blobName, compression));
-            blobContents.put(blobName, items);
-        }
-
-        int cnt = 0;
-        for (int i = 0; i < recordCountPerPartition; i++) {
-            for (int partition = 0; partition < 4; partition++) {
-                final String key = "key-" + cnt;
-                final String value = "{" + "\"name\":\"user-" + cnt + "\"}";
-                cnt += 1;
-
-                final String blobName = getBlobName(topicName, partition, 0, "none");
-                final String expectedLine = "{\"value\":" + value + ",\"key\":\"" + key + "\"}";
-
-                assertThat(blobContents.get(blobName).get(i)).isEqualTo(expectedLine);
+            for (JsonNode node : JsonTestDataFixture.readJsonRecords(testBucketAccessor.readLines(blobName, compression))) {
+                actualValues.add( node.findValue("message").asText());
             }
         }
+
+        String[] expected = expectedGenericRecords.stream().map(mapF("message")).collect(Collectors.toList()).toArray(new String[0]);
+
+        assertThat(actualValues).containsExactlyInAnyOrder(expected);
     }
 
     private void waitForConnectToFinishProcessing() throws InterruptedException {
@@ -253,7 +259,8 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
         for (GenericRecord value : genericRecords) {
             int partition = cnt % partitionCount;
             final String key = "key-" + cnt++;
-            sendFutures.add(sendMessageAsync(producer, topicName, partition, key, value));
+            final ProducerRecord<String, GenericRecord> msg = new ProducerRecord<>(topicName, partition, key, value);
+            sendFutures.add(producer.send(msg));
         }
         producer.flush();
         for (final Future<RecordMetadata> sendFuture : sendFutures) {
@@ -273,8 +280,7 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
         return new KafkaProducer<>(producerProps);
     }
 
-    private Future<RecordMetadata> sendMessageAsync(final KafkaProducer<String, GenericRecord> producer,
-            final String topicName, final int partition, final String key, final GenericRecord value) {
+    private Future<RecordMetadata> sendMessageAsync(final String topicName, final int partition, final String key, final GenericRecord value) {
         final ProducerRecord<String, GenericRecord> msg = new ProducerRecord<>(topicName, partition, key, value);
         return producer.send(msg);
     }
@@ -305,15 +311,15 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
     }
 
     private String getAvroBlobName(final String topicName, final int partition, final int startOffset,
-            final String compression) {
+            final CompressionType compression) {
         final String result = String.format("%s%s-%d-%020d.avro", s3Prefix, topicName, partition, startOffset);
-        return result + CompressionType.forName(compression).extension();
+        return result + compression.extension();
     }
 
     // WARN: different from GCS
     private String getBlobName(final String topicName, final int partition, final int startOffset,
-            final String compression) {
+            final CompressionType compression) {
         final String result = String.format("%s%s-%d-%020d", s3Prefix, topicName, partition, startOffset);
-        return result + CompressionType.forName(compression).extension();
+        return result + compression.extension();
     }
 }

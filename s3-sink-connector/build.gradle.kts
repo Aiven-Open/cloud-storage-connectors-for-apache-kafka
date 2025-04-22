@@ -113,6 +113,9 @@ dependencies {
   }
 
   integrationTestImplementation(apache.avro)
+  // Make test utils from 'test' available in 'integration-test'
+  integrationTestImplementation(sourceSets["test"].output)
+  integrationTestImplementation(testinglibs.awaitility)
 
   testImplementation(apache.hadoop.mapreduce.client.core) {
     exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
@@ -151,10 +154,6 @@ dependencies {
     exclude(group = "com.google.inject.extensions", module = "guice-servlet")
     exclude(group = "io.netty", module = "netty")
   }
-
-  // Make test utils from 'test' available in 'integration-test'
-  integrationTestImplementation(sourceSets["test"].output)
-  integrationTestImplementation(testinglibs.awaitility)
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {

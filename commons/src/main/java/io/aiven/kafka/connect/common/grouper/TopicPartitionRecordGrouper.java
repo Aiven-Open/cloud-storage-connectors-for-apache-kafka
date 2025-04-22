@@ -65,7 +65,7 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
      * @param tsSource
      *            timestamp sources
      */
-        TopicPartitionRecordGrouper(final Template filenameTemplate, final Integer maxRecordsPerFile,
+    TopicPartitionRecordGrouper(final Template filenameTemplate, final Integer maxRecordsPerFile,
             final TimestampSource tsSource) {
         Objects.requireNonNull(filenameTemplate, "filenameTemplate cannot be null");
         Objects.requireNonNull(tsSource, "tsSource cannot be null");

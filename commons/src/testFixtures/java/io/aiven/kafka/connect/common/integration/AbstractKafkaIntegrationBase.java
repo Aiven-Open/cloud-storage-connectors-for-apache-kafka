@@ -16,24 +16,26 @@
 
 package io.aiven.kafka.connect.common.integration;
 
+import static org.awaitility.Awaitility.await;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.connect.connector.Connector;
 
 import io.aiven.kafka.connect.common.utils.CasedString;
 
-import org.apache.kafka.connect.connector.Connector;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.Container;
-
-import java.io.IOException;
-import java.time.Duration;
-import java.util.Locale;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-
-import static org.awaitility.Awaitility.await;
 
 /**
  * The base abstract case for Kafka based integration tests.
@@ -56,6 +58,34 @@ public abstract class AbstractKafkaIntegrationBase {
     /** The thread local instance of the connector name */
     private static final ThreadLocal<String> CONNECTOR_NAME_THREAD_LOCAL = new ThreadLocal<>() {
     };
+
+    /**
+     * Returns value as bytes or {@code null} .
+     *
+     * @param value
+     *            the value to check.
+     * @return value as bytes or {@code null} if values is {@code null}
+     */
+    protected static byte[] bytesOrNull(final String value) {
+        return value == null ? null : value.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Creates an {@code ProducerRecord<byte[], byte[]>} record.
+     *
+     * @param topic
+     *            the topic for the record.
+     * @param partition
+     *            the partition for the record.
+     * @param key
+     *            the key for the recrod.
+     * @param value
+     *            the value for the record.
+     * @return a {@code }ProducerRecord<byte[], byte[]>}
+     */
+    protected static ProducerRecord<byte[], byte[]> recordOf(String topic, int partition, String key, String value) {
+        return new ProducerRecord<>(topic, partition, bytesOrNull(key), bytesOrNull(value));
+    }
 
     /**
      * Wait for a container to start. Waits up to 1 minute.
@@ -95,7 +125,6 @@ public abstract class AbstractKafkaIntegrationBase {
         return result;
     }
 
-
     /**
      * Get the topic from the TestInfo.
      *
@@ -104,7 +133,6 @@ public abstract class AbstractKafkaIntegrationBase {
     final public String getTopic() {
         return testInfo.getTestMethod().get().getName();
     }
-
 
     /**
      * Gets the default offset flush interval.
@@ -138,7 +166,8 @@ public abstract class AbstractKafkaIntegrationBase {
      * @throws InterruptedException
      *             on interrupted thread.
      */
-    final protected KafkaManager setupKafka(Class<? extends Connector> connectorClass) throws IOException, ExecutionException, InterruptedException {
+    final protected KafkaManager setupKafka(Class<? extends Connector> connectorClass)
+            throws IOException, ExecutionException, InterruptedException {
         return setupKafka(false, connectorClass);
     }
 
@@ -213,4 +242,5 @@ public abstract class AbstractKafkaIntegrationBase {
     static void removeKafkaManager() {
         KAFKA_MANAGER_THREAD_LOCAL.remove();
     }
+
 }

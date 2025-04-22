@@ -16,7 +16,9 @@
 
 package io.aiven.kafka.connect.s3.testutils;
 
-public class KeyValueMessage {
+import java.nio.charset.StandardCharsets;
+
+public final class KeyValueMessage {
     public final String key;
     public final String value;
     public final int partition;
@@ -29,5 +31,21 @@ public class KeyValueMessage {
         this.partition = partition;
         this.idx = idx;
         this.epoch = epoch;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public byte[] getKeyBytes() {
+        return key.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public byte[] getValueBytes() {
+        return value.getBytes(StandardCharsets.UTF_8);
     }
 }

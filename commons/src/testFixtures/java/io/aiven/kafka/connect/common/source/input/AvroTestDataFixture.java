@@ -20,8 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
@@ -33,9 +32,6 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
-import org.apache.commons.lang3.tuple.Pair;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * A testing fixture to generate Avro test data.
@@ -57,21 +53,6 @@ public final class AvroTestDataFixture {
     /**
      * Generates a byte array containing the specified number of records.
      *
-     * @param messageId
-     *            the messageId to start with.
-     * @param numRecs
-     *            the numer of records to generate
-     * @return A byte array containing the specified number of records.
-     * @throws IOException
-     *             if the Avro records can not be generated.
-     */
-    public static byte[] generateAvroData(final int messageId, final int numRecs) throws IOException {
-        return generateAvroData(messageId, DEFAULT_SCHEMA, numRecs);
-    }
-
-    /**
-     * Generates a byte array containing the specified number of records.
-     *
      * @param numRecs
      *            the numer of records to generate
      * @return A byte array containing the specified number of records.
@@ -79,7 +60,7 @@ public final class AvroTestDataFixture {
      *             if the Avro records can not be serialized.
      */
     public static byte[] generateAvroData(final int numRecs) throws IOException {
-        return generateAvroData(0, DEFAULT_SCHEMA, numRecs);
+        return generateAvroData(0, numRecs);
     }
 
     /**
@@ -87,8 +68,6 @@ public final class AvroTestDataFixture {
      *
      * @param messageId
      *            the messageId to start with.
-     * @param schema
-     *            the schema to serialize with.
      * @param numOfRecs
      *            the number of records to write.
      * @return A byte array containing the specified number of records.
@@ -96,18 +75,50 @@ public final class AvroTestDataFixture {
      *             if the Avro records can not be serialized.
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    public static byte[] generateAvroData(final int messageId, final Schema schema, final int numOfRecs)
-            throws IOException {
+    public static byte[] generateAvroData(final int messageId, final int numOfRecs) throws IOException {
         // Create Avro records
-        final List<GenericRecord> avroRecords = generateAvroRecords(messageId, schema, numOfRecs);
+        final List<GenericRecord> avroRecords = generateAvroRecords(messageId, numOfRecs);
 
         // Serialize Avro records to byte arrays
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
+        final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(DEFAULT_SCHEMA);
 
         // Append each record using a loop
         try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
-            dataFileWriter.create(schema, outputStream);
+            dataFileWriter.create(DEFAULT_SCHEMA, outputStream);
+            for (final GenericRecord record : avroRecords) {
+                dataFileWriter.append(record);
+            }
+            dataFileWriter.flush();
+        }
+        outputStream.close();
+        return outputStream.toByteArray();
+    }
+
+    /**
+     * creates and serializes the specified number of records with the specified schema.
+     *
+     * @param messageId
+     *            the messageId to start with.
+     * @param numOfRecs
+     *            the number of records to write.
+     * @return A byte array containing the specified number of records.
+     * @throws IOException
+     *             if the Avro records can not be serialized.
+     */
+    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    public static byte[] generateAvroData(final int messageId, final int numOfRecs,
+            Function<Integer, GenericRecord> recordCreator) throws IOException {
+        // Create Avro records
+        final List<GenericRecord> avroRecords = generateAvroRecords(messageId, numOfRecs, recordCreator);
+
+        // Serialize Avro records to byte arrays
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(DEFAULT_SCHEMA);
+
+        // Append each record using a loop
+        try (DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter)) {
+            dataFileWriter.create(DEFAULT_SCHEMA, outputStream);
             for (final GenericRecord record : avroRecords) {
                 dataFileWriter.append(record);
             }
@@ -125,7 +136,19 @@ public final class AvroTestDataFixture {
      * @return A byte array containing the specified number of records.
      */
     public static List<GenericRecord> generateAvroRecords(final int numRecs) {
-        return generateAvroRecords(0, DEFAULT_SCHEMA, numRecs);
+        return generateAvroRecords(0, numRecs);
+    }
+
+    /**
+     * Creates the specified number of records with the default schema.
+     *
+     * @param numRecs
+     *            the numer of records to generate
+     * @return A byte array containing the specified number of records.
+     */
+    public static List<GenericRecord> generateAvroRecords(final int numRecs,
+            Function<Integer, GenericRecord> recordCreator) {
+        return generateAvroRecords(0, numRecs, recordCreator);
     }
 
     /**
@@ -133,29 +156,39 @@ public final class AvroTestDataFixture {
      *
      * @param messageId
      *            the messageId to start with.
-     * @param schema
-     *            the schema to serialize with.
+     *
      * @param numOfRecs
      *            the number of records to write.
      * @return A byte array containing the specified number of records.
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
-    public static List<GenericRecord> generateAvroRecords(final int messageId, final Schema schema, final int numOfRecs) {
+    public static List<GenericRecord> generateAvroRecords(final int messageId, final int numOfRecs) {
+        return generateAvroRecords(messageId, numOfRecs, AvroTestDataFixture::generateAvroRecord);
+    }
+
+    /**
+     * Creates the specified number of records with the specified schema.
+     *
+     * @param messageId
+     *            the messageId to start with.
+     * @param numOfRecs
+     *            the number of records to write.
+     * @return A byte array containing the specified number of records.
+     */
+    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    public static List<GenericRecord> generateAvroRecords(final int messageId, final int numOfRecs,
+            Function<Integer, GenericRecord> recordCreator) {
         // Create Avro records
         final List<GenericRecord> avroRecords = new ArrayList<>();
         final int limit = messageId + numOfRecs;
         for (int i = messageId; i < limit; i++) {
-            avroRecords.add(generateAvroRecord(i, schema));
+            avroRecords.add(recordCreator.apply(i));
         }
         return avroRecords;
     }
 
     public static GenericRecord generateAvroRecord(final int messageId) {
-        return generateAvroRecord(messageId, DEFAULT_SCHEMA);
-    }
-
-    public static GenericRecord generateAvroRecord(final int messageId, final Schema schema) {
-        final GenericRecord avroRecord = new GenericData.Record(schema); // NOPMD AvoidInstantiatingObjectsInLoops
+        final GenericRecord avroRecord = new GenericData.Record(DEFAULT_SCHEMA);
         avroRecord.put("message", "Hello, from Avro Test Data Fixture! object " + messageId);
         avroRecord.put("id", messageId);
         return avroRecord;
@@ -170,10 +203,5 @@ public final class AvroTestDataFixture {
             }
         }
         return result;
-    }
-
-    public static Pair<String, GenericRecord> parseGenericRecord(GenericRecord avroRecord) throws IOException {
-        return Pair.of(avroRecord.get("key").toString(),
-                (GenericRecord) avroRecord.get("value"));
     }
 }

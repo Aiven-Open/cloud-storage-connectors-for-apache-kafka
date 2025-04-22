@@ -16,12 +16,33 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+
 /**
  * A testing fixture to generate JSON data.
  */
 final public class JsonTestDataFixture {
 
     private final static String MSG_FORMAT = "{\"id\" : %s, \"message\" : \"%s\", \"value\" : \"value%s\"}%n";
+
+    private final static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private final static DeserializationFeature[] deserializationFeatures = {
+            DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS };
+
+    static {
+        for (DeserializationFeature feature : deserializationFeatures) {
+            OBJECT_MAPPER.enable(feature);
+        }
+        OBJECT_MAPPER.setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
+    }
 
     private JsonTestDataFixture() {
         // do not instantiate
@@ -38,6 +59,19 @@ final public class JsonTestDataFixture {
     }
 
     /**
+     * Generates a single JSON record
+     *
+     * @param id
+     *            the id for the record
+     * @param msg
+     *            the message for the record
+     * @return a standard JSON test record.
+     */
+    public static String generateJsonRec(final int id, String msg) {
+        return String.format(MSG_FORMAT, id, msg, id);
+    }
+
+    /**
      * Creates Json test data.
      *
      * @param recordCount
@@ -49,9 +83,20 @@ final public class JsonTestDataFixture {
     public static String generateJsonRecs(final int recordCount, final String testMessage) {
         final StringBuilder jsonRecords = new StringBuilder();
         for (int i = 0; i < recordCount; i++) {
-            jsonRecords.append(String.format(MSG_FORMAT, i, testMessage, i));
+            jsonRecords.append(generateJsonRec(i, testMessage));
         }
         return jsonRecords.toString();
     }
 
+    public static JsonNode readJsonRecord(byte[] bytes) throws IOException {
+        return OBJECT_MAPPER.readTree(bytes);
+    }
+
+    public static List<JsonNode> readJsonRecords(Collection<String> values) throws IOException {
+        List<JsonNode> result = new ArrayList<>();
+        for (String value : values) {
+            result.add(OBJECT_MAPPER.readTree(value));
+        }
+        return result;
+    }
 }

@@ -16,37 +16,27 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
+import com.github.luben.zstd.ZstdInputStream;
+import com.github.luben.zstd.ZstdOutputStream;
+import org.apache.commons.io.function.IOFunction;
+import org.xerial.snappy.SnappyInputStream;
+import org.xerial.snappy.SnappyOutputStream;
 
 public enum CompressionType {
-    NONE("none") {
-        @Override
-        public String extension() {
-            return "";
-        }
-    },
-    GZIP("gzip") {
-        @Override
-        public String extension() {
-            return ".gz";
-        }
-    },
-    SNAPPY("snappy") {
-        @Override
-        public String extension() {
-            return ".snappy";
-        }
-    },
-    ZSTD("zstd") {
-        @Override
-        public String extension() {
-            return ".zst";
-        }
-    };
+    NONE("none", "", in -> in, out -> out), GZIP("gzip", ".gz", GZIPInputStream::new,
+            out -> new GZIPOutputStream(out, true)), SNAPPY("snappy", ".snappy", SnappyInputStream::new,
+                    SnappyOutputStream::new), ZSTD("zstd", ".zst", ZstdInputStream::new, ZstdOutputStream::new);
 
     public static final String SUPPORTED_COMPRESSION_TYPES = CompressionType.names()
             .stream()
@@ -54,10 +44,16 @@ public enum CompressionType {
             .collect(Collectors.joining(", "));
 
     public final String name;
+    private final String extension;
+    private final IOFunction<InputStream, InputStream> inputCreator;
+    private final IOFunction<OutputStream, OutputStream> outputCreator;
 
-    CompressionType(final String name) {
+    CompressionType(final String name, final String extension, final IOFunction<InputStream, InputStream> inputCreator,
+            final IOFunction<OutputStream, OutputStream> outputCreator) {
         this.name = name;
-
+        this.extension = extension;
+        this.inputCreator = inputCreator;
+        this.outputCreator = outputCreator;
     }
 
     public static CompressionType forName(final String name) {
@@ -74,5 +70,16 @@ public enum CompressionType {
         return Arrays.stream(values()).map(v -> v.name).collect(Collectors.toList());
     }
 
-    public abstract String extension();
+    public final String extension() {
+        return extension;
+    }
+
+    public final InputStream decompress(InputStream in) throws IOException {
+        return inputCreator.apply(in);
+    }
+
+    public final OutputStream compress(OutputStream out) throws IOException {
+        return outputCreator.apply(out);
+    }
+
 }

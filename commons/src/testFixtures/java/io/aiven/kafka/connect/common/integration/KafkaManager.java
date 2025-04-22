@@ -200,6 +200,26 @@ public final class KafkaManager {
     }
 
     /**
+     * Pauses the named connector.
+     *
+     * @param connectorName
+     *            the connector to pause.
+     */
+    public void pauseConnector(String connectorName) {
+        connectRunner.pauseConnector(connectorName);
+    }
+
+    /**
+     * resumes the named connector.
+     *
+     * @param connectorName
+     *            the connector to pause.
+     */
+    public void resumeConnector(String connectorName) {
+        connectRunner.resumeConnector(connectorName);
+    }
+
+    /**
      * Deletes the connector.
      *
      * @param connectorName

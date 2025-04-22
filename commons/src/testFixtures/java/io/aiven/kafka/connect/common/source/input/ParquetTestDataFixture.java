@@ -20,6 +20,9 @@ import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.channels.Channels;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,6 +36,13 @@ import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.ParquetTestingFixture;
 import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
+
+import org.apache.avro.generic.GenericRecord;
+import org.apache.parquet.avro.AvroParquetReader;
+import org.apache.parquet.io.DelegatingSeekableInputStream;
+import org.apache.parquet.io.InputFile;
+import org.apache.parquet.io.SeekableInputStream;
+import org.testcontainers.shaded.org.apache.commons.io.FileUtils;
 
 /**
  * A testing feature to generate Parquet data.
@@ -82,5 +92,41 @@ public final class ParquetTestDataFixture {
             parquetWriter.writeRecords(sinkRecords);
         }
         return outputStream.toByteArray();
+    }
+
+    public static List<GenericRecord> readRecords(final Path tmpDir, final byte[] bytes) throws IOException {
+        final var records = new ArrayList<GenericRecord>();
+        final var parquetFile = tmpDir.resolve("parquet.file");
+        FileUtils.writeByteArrayToFile(parquetFile.toFile(), bytes);
+        try (final var seekableByteChannel = Files.newByteChannel(parquetFile);
+                var parquetReader = AvroParquetReader.<GenericRecord>builder(new InputFile() {
+                    @Override
+                    public long getLength() throws IOException {
+                        return seekableByteChannel.size();
+                    }
+
+                    @Override
+                    public SeekableInputStream newStream() throws IOException {
+                        return new DelegatingSeekableInputStream(Channels.newInputStream(seekableByteChannel)) {
+                            @Override
+                            public long getPos() throws IOException {
+                                return seekableByteChannel.position();
+                            }
+
+                            @Override
+                            public void seek(final long position) throws IOException {
+                                seekableByteChannel.position(position);
+                            }
+                        };
+                    }
+
+                }).withCompatibility(false).build()) {
+            var record = parquetReader.read();
+            while (record != null) {
+                records.add(record);
+                record = parquetReader.read();
+            }
+        }
+        return records;
     }
 }

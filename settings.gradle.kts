@@ -16,8 +16,10 @@ val jacksonVersion by extra("2.15.3")
 val junitVersion by extra("5.11.4")
 val jqwikVersion by extra("1.8.4")
 // TODO: document why we stick to these versions
-//val kafkaVersion by extra("2.6.0") // this should move to 3.3.1 minimum after we get source/sink code upgraded
-val kafkaVersion by extra("3.3.1") // this should move to 3.3.1 minimum after we get source/sink code upgraded
+// val kafkaVersion by extra("2.6.0") // this should move to 3.3.1 minimum after we get source/sink
+// code upgraded
+val kafkaVersion by
+    extra("3.3.1") // this should move to 3.3.1 minimum after we get source/sink code upgraded
 val kafkaAPIVersion by extra("1.1.0") // because we want the lowest possible API to function.
 val logbackVersion by extra("1.5.6")
 val localstackVersion by extra("0.2.23")

@@ -16,47 +16,30 @@
 
 package io.aiven.kafka.connect.s3.testutils;
 
-import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.List;
 
-public class KeyValueGenerator implements Iterable<KeyValueMessage> {
+public class KeyValueGenerator  {
 
-    public final int numPartitions;
-    public final int numEpochs;
     public final IndexesToString keyGenerator;
     public final IndexesToString valueGenerator;
 
-    public KeyValueGenerator(final int numPartitions, final int numEpochs, final IndexesToString keyGenerator,
+    public KeyValueGenerator(final IndexesToString keyGenerator,
             final IndexesToString valueGenerator) {
-        this.numPartitions = numPartitions;
-        this.numEpochs = numEpochs;
         this.keyGenerator = keyGenerator;
         this.valueGenerator = valueGenerator;
     }
 
-    @Override
-    public Iterator<KeyValueMessage> iterator() {
-        return new Iterator<>() {
-            int partition;
-            int epoch;
-            int currIdx;
 
-            @Override
-            public boolean hasNext() {
-                return epoch < numEpochs;
+    public List<KeyValueMessage> generateMessages(final int numPartitions, final int numEpochs) {
+        List<KeyValueMessage> messages = new ArrayList<>();
+        int idx = 0;
+        for (int epoch = 0; epoch < numEpochs; epoch++) {
+            for (int partition = 0; partition < numPartitions; partition++) {
+                messages.add(new KeyValueMessage(keyGenerator.generate(partition, epoch, idx),
+                        valueGenerator.generate(partition, epoch, idx), partition, idx++, epoch));
             }
-
-            @Override
-            public KeyValueMessage next() {
-                final KeyValueMessage msg = new KeyValueMessage(keyGenerator.generate(partition, epoch, currIdx),
-                        valueGenerator.generate(partition, epoch, currIdx), partition, currIdx, epoch);
-                currIdx += 1;
-                partition += 1;
-                if (partition >= numPartitions) {
-                    epoch += 1;
-                    partition = 0;
-                }
-                return msg;
-            }
-        };
+        }
+        return messages;
     }
 }
