@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.testutils;
+package io.aiven.kafka.connect.common.integration.sink;
 
 import java.nio.charset.StandardCharsets;
 

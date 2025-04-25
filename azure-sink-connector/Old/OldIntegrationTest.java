@@ -44,7 +44,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
+final class OldIntegrationTest extends OldAbstractIntegrationTest<byte[], byte[]> {
     private static final String CONNECTOR_NAME = "aiven-azure-sink-connector";
 
     @BeforeEach

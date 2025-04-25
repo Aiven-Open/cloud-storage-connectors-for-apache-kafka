@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.azure.sink;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
@@ -142,24 +143,25 @@ public final class AzureBlobSinkTask extends SinkTask {
         final String blobName = config.getPrefix() + filename;
         final BlockBlobClient blockBlobClient = getBlockBlobClient(blobName);
 
-        try (var channel = new BlobWritableByteChannel(blockBlobClient.getBlobOutputStream(true));
+        // TODO this is very messy. The problem being solved is that the writeRecords methods close the output stream
+        try (BlobWritableByteChannel channel = new BlobWritableByteChannel(blockBlobClient.getBlobOutputStream(true));
                 OutputStream out = Channels.newOutputStream(channel);
-                var outputWriter = OutputWriter.builder()
+//        try (BufferedOutputStream bos = new BufferedOutputStream(blockBlobClient.getBlobOutputStream(true));
+             OutputWriter outputWriter = OutputWriter.builder()
                         .withCompressionType(config.getCompressionType())
                         .withExternalProperties(config.originalsStrings())
                         .withOutputFields(config.getOutputFields())
                         .withEnvelopeEnabled(config.envelopeEnabled())
                         .build(out, config.getFormatType())) {
 
-            LOG.debug("Opened BlobOutputStream for blob {}", blobName);
-
+            LOG.debug("Opened BlobOutputStream for blob {}, writing {} records", blobName, records.size());
             outputWriter.writeRecords(records);
             LOG.debug("Successfully wrote records to blob {}", blobName);
         } catch (IOException e) {
             LOG.error("IOException when writing to the blob {}: {}", blobName, e.getMessage());
             throw new ConnectException(e);
         } catch (Exception e) { // NOPMD broad exception catched
-            LOG.error("Exception when writing to the blob {}: {}", blobName, e.getMessage());
+            LOG.error("Exception when writing to the blob {}: {}", blobName, e.getMessage(), e);
             throw new ConnectException("Failed to write records to Azure Blob", e);
         }
     }

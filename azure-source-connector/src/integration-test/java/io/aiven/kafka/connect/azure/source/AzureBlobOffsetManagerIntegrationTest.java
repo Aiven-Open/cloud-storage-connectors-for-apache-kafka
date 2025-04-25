@@ -22,9 +22,8 @@ import java.util.function.BiFunction;
 
 import org.apache.kafka.connect.connector.Connector;
 
-import io.aiven.kafka.connect.azure.source.testdata.AzureIntegrationTestData;
+import io.aiven.kafka.connect.azure.source.testdata.AzureSourceIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.testdata.AzureOffsetManagerIntegrationTestData;
-import io.aiven.kafka.connect.azure.source.testdata.ContainerAccessor;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
 import io.aiven.kafka.connect.common.integration.AbstractOffsetManagerIntegrationTest;
@@ -48,12 +47,12 @@ public final class AzureBlobOffsetManagerIntegrationTest
      * The azure container
      */
     @Container
-    private static final AzuriteContainer AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
+    private static final AzuriteContainer AZURITE_CONTAINER = AzureSourceIntegrationTestData.createContainer();
 
     /**
-     * The utility to wrie test data.
+     * The utility to write test data.
      */
-    private AzureIntegrationTestData testData;
+    private AzureSourceIntegrationTestData testData;
 
     @Override
     protected Logger getLogger() {
@@ -62,7 +61,7 @@ public final class AzureBlobOffsetManagerIntegrationTest
 
     @BeforeEach
     void setupAzure() {
-        testData = new AzureIntegrationTestData(AZURITE_CONTAINER);
+        testData = new AzureSourceIntegrationTestData(AZURITE_CONTAINER);
     }
 
     @AfterEach

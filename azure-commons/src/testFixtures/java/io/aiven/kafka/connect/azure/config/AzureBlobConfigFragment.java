@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.azure.source.config;
+package io.aiven.kafka.connect.azure.config;
 
 import static java.lang.String.format;
 

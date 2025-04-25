@@ -37,7 +37,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
-import io.aiven.kafka.connect.azure.source.testdata.AzureIntegrationTestData;
+import io.aiven.kafka.connect.azure.source.testdata.AzureSourceIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecord;
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
@@ -84,9 +84,9 @@ final class AzureBlobSourceTaskTest {
     private static final String TEST_OBJECT_KEY = "object_key";
 
     @Container
-    private static final AzuriteContainer AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
+    private static final AzuriteContainer AZURITE_CONTAINER = AzureSourceIntegrationTestData.createContainer();
 
-    private AzureIntegrationTestData testData;
+    private AzureSourceIntegrationTestData testData;
 
     /**
      * Sets up the AWS test container.
@@ -97,7 +97,7 @@ final class AzureBlobSourceTaskTest {
     @BeforeEach
     void setupAWS(final TestInfo testInfo) {
         this.testInfo = testInfo;
-        testData = new AzureIntegrationTestData(AZURITE_CONTAINER);
+        testData = new AzureSourceIntegrationTestData(AZURITE_CONTAINER);
     }
 
     @AfterEach

@@ -22,12 +22,15 @@ import static org.awaitility.Awaitility.await;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.common.source.NativeInfo;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.connect.connector.Connector;
 
@@ -133,8 +136,12 @@ public abstract class AbstractKafkaIntegrationBase {
      *
      * @return The topic extracted from the testInfo for the current test.
      */
-    final public String getTopic() {
-        return testInfo.getTestMethod().get().getName();
+    final public String getTopic(String ... args) {
+        StringBuilder pfx = new StringBuilder(testInfo.getTestMethod().get().getName());
+        for (String arg : args) {
+            pfx.append("-").append(arg);
+        }
+        return pfx.toString();
     }
 
     /**
@@ -252,11 +259,41 @@ public abstract class AbstractKafkaIntegrationBase {
      * @param storageList The supplier of the storage list.
      * @param expectedStorage the array of expected values in the storage list.
      * @param <K> the data type of the storage value. (must implement equals).
+     * @deprecated use {@link #waitForStorage(Duration, Supplier, Collection)}
      */
-    protected final <K> void waitForStorage(Duration timeout, Supplier<List<K>> storageList, K[] expectedStorage) {
+    @Deprecated
+    protected final <K> void waitForStorage(Duration timeout, Supplier<Collection<K>> storageList, K[] expectedStorage) {
         // wait for them to show up.
         await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
             assertThat(storageList.get()).containsExactly(expectedStorage);
+        });
+    }
+
+    /**
+     * Wait until storageList returns all the items in expectedStorage.
+     * @param timeout the maximum duration to wait.
+     * @param storageList The supplier of the storage list.
+     * @param expectedStorage the array of expected values in the storage list.
+     * @param <K> the data type of the storage value. (must implement equals).
+     */
+    protected final <K> void waitForStorage(Duration timeout, Supplier<Collection<K>> storageList, Collection<K> expectedStorage) {
+        // wait for them to show up.
+        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+            assertThat(storageList.get()).containsExactlyInAnyOrderElementsOf(expectedStorage);
+        });
+    }
+    /**
+     * Wait until storageList returns all the items in expectedStorage.
+     * @param timeout the maximum duration to wait.
+     * @param storageList The supplier of the storage list.
+     * @param expectedStorage the array of expected values in the storage list.
+     * @param <K> the data type of the storage value. (must implement equals).
+     */
+    protected final <K> void waitForNativeStorage(Duration timeout, Supplier<Collection<? extends NativeInfo<?, K>>> storageList, K[] expectedStorage) {
+        // wait for them to show up.
+        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+            List<K> lst = storageList.get().stream().map(NativeInfo::getNativeKey).collect(Collectors.toList());
+            assertThat(lst).containsExactly(expectedStorage);
         });
     }
 

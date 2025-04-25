@@ -14,22 +14,16 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.azure.source.testdata;
+package io.aiven.kafka.connect.azure.testdata;
 
-import static java.lang.String.format;
-
-import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.kafka.connect.connector.Connector;
+import io.aiven.kafka.connect.azure.ContainerAccessor;
+import io.aiven.kafka.connect.azure.config.AzureBlobConfigFragment;
 
-import io.aiven.kafka.connect.azure.source.AzureBlobSourceConnector;
-import io.aiven.kafka.connect.azure.source.config.AzureBlobConfigFragment;
-import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.integration.AbstractSourceIntegrationBase;
 
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -42,15 +36,24 @@ import org.testcontainers.azure.AzuriteContainer;
 /**
  * Manages test data
  */
-public final class AzureIntegrationTestData {
+public class AzureIntegrationTestData {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureIntegrationTestData.class);
-    static final String DEFAULT_CONTAINER = "test-container";
+    public static final String DEFAULT_CONTAINER = "test-container";
     private static final String ACCOUNT_NAME = "devstoreaccount1";
     private static final String ACCOUNT_KEY = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
-    private final AzuriteContainer container;
-    private final BlobServiceClient azureServiceClient;
-    private final ContainerAccessor containerAccessor;
+    protected final AzuriteContainer container;
+    protected final BlobServiceClient azureServiceClient;
+    protected final ContainerAccessor containerAccessor;
+
+    /**
+     * Creates the Azurite container for testing.
+     *
+     * @return a newly constructed Azurite container.
+     */
+    public static AzuriteContainer createContainer() {
+        return new AzuriteContainer("mcr.microsoft.com/azure-storage/azurite:3.33.0");
+    }
 
     /**
      * Constructor.
@@ -75,25 +78,17 @@ public final class AzureIntegrationTestData {
      *            the name of the container.
      * @return a Container accessor.
      */
-    public ContainerAccessor getContainerAccessor(final String name) {
+    public final ContainerAccessor getContainerAccessor(final String name) {
         return new ContainerAccessor(azureServiceClient, name);
     }
 
     /**
      * release resources from instance.
      */
-    public void releaseResources() {
+    public final void releaseResources() {
         containerAccessor.removeContainer();
     }
 
-    /**
-     * Creates the Azurite container for testing.
-     *
-     * @return a newly constructed Azurite container.
-     */
-    public static AzuriteContainer createContainer() {
-        return new AzuriteContainer("mcr.microsoft.com/azure-storage/azurite:3.33.0");
-    }
 
     /**
      * Creates a native key.
@@ -106,44 +101,19 @@ public final class AzureIntegrationTestData {
      *            the partition for the key.
      * @return the native key.
      */
-    public String createKey(final String prefix, final String topic, final int partition) {
-        return format("%s%s-%05d-%d.txt", StringUtils.defaultIfBlank(prefix, ""), topic, partition,
+    public final String createKey(final String prefix, final String topic, final int partition) {
+        return String.format("%s%s-%05d-%d.txt", StringUtils.defaultIfBlank(prefix, ""), topic, partition,
                 System.currentTimeMillis());
     }
 
-    /**
-     * Writes data to the default container.
-     *
-     * @param nativeKey
-     *            the native key to write
-     * @param testDataBytes
-     *            the data to write.
-     * @return the WriteResults.
-     */
-    public AbstractSourceIntegrationBase.WriteResult<String> writeWithKey(final String nativeKey,
-            final byte[] testDataBytes) {
-        containerAccessor.getBlobClient(nativeKey).upload(new ByteArrayInputStream(testDataBytes));
-        return new AbstractSourceIntegrationBase.WriteResult<>(
-                new AzureBlobOffsetManagerEntry(containerAccessor.getContainerName(), nativeKey).getManagerKey(),
-                nativeKey);
-    }
 
     /**
      * Gets the native storage information.
      *
      * @return the native storage information.
      */
-    public List<ContainerAccessor.AzureNativeInfo> getNativeStorage() {
+    public final List<ContainerAccessor.AzureNativeInfo> getNativeStorage() {
         return containerAccessor.getNativeStorage();
-    }
-
-    /**
-     * Gets the connector class.
-     *
-     * @return the connector class.
-     */
-    public Class<? extends Connector> getConnectorClass() {
-        return AzureBlobSourceConnector.class;
     }
 
     /**
@@ -153,7 +123,7 @@ public final class AzureIntegrationTestData {
      *            the prefix to prepend to all keys. May be {@code nul}.
      * @return the map of data options.
      */
-    public Map<String, String> createConnectorConfig(final String localPrefix) {
+    public final Map<String, String> createConnectorConfig(final String localPrefix) {
         return createConnectorConfig(localPrefix, DEFAULT_CONTAINER);
     }
 
@@ -166,7 +136,7 @@ public final class AzureIntegrationTestData {
      *            the container name to use.
      * @return the map of data options.
      */
-    public Map<String, String> createConnectorConfig(final String localPrefix, final String containerName) {
+    public final Map<String, String> createConnectorConfig(final String localPrefix, final String containerName) {
         final Map<String, String> data = new HashMap<>();
         SourceConfigFragment.setter(data).ringBufferSize(10);
 

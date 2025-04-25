@@ -1,13 +1,13 @@
 package io.aiven.kafka.connect.azure.sink;
 
 import com.azure.storage.blob.models.BlobItem;
-import io.aiven.kafka.connect.common.integration.sink.AbstractAvroIntegrationTest;
+import io.aiven.kafka.connect.common.integration.sink.AbstractBytesIntegrationTest;
 import org.testcontainers.azure.AzuriteContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-public class AvroIntegrationTest extends AbstractAvroIntegrationTest<BlobItem, String> {
+public class BytesIntegrationTest extends AbstractBytesIntegrationTest<BlobItem, String> {
 
     /**
      * The azure container
@@ -17,7 +17,7 @@ public class AvroIntegrationTest extends AbstractAvroIntegrationTest<BlobItem, S
 
     private AzureSinkStorage storage;
 
-    public AvroIntegrationTest() {
+    public BytesIntegrationTest() {
         storage = new AzureSinkStorage(AZURITE_CONTAINER);
     }
     @Override

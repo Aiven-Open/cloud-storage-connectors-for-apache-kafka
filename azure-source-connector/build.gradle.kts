@@ -146,6 +146,7 @@ dependencies {
   //  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
   //  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
   integrationTestImplementation(testFixtures(project(":commons")))
+  integrationTestImplementation(testFixtures(project(":azure-commons")))
   integrationTestImplementation("org.testcontainers:azure:1.20.6")
 
   integrationTestImplementation(apache.kafka.connect.transforms)
@@ -160,6 +161,7 @@ dependencies {
   testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation("com.azure:azure-storage-blob:${azureVersion}")
   testFixturesImplementation(testFixtures(project(":commons")))
+  testFixturesImplementation(testFixtures(project(":azure-commons")))
   testFixturesImplementation(testinglibs.localstack) {
     exclude(group = "io.netty", module = "netty-transport-native-epoll")
   }

@@ -80,6 +80,7 @@ dependencies {
   implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
   implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
 
+  testImplementation(apache.commons.io)
   testImplementation(testFixtures(project(":commons")))
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
@@ -103,6 +104,7 @@ dependencies {
   integrationTestImplementation(testcontainers.localstack)
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testFixtures(project(":s3-commons")))
+  integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation(apache.kafka.connect.runtime)
 
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath

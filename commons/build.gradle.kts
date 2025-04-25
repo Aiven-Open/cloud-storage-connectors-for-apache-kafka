@@ -81,7 +81,7 @@ dependencies {
     exclude(group = "io.netty", module = "netty")
   }
 
-  // testFixturesImplementation(apache.kafka.connect.api)
+  testFixturesImplementation(apache.kafka.connect.api)
   testFixturesImplementation("javax.validation:validation-api:2.0.1.Final")
   testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaTestingVersion}:test")
   testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaTestingVersion}")
@@ -102,7 +102,9 @@ dependencies {
   testFixturesImplementation(testinglibs.mockito.junit.jupiter)
   testFixturesImplementation(testinglibs.awaitility)
 
+  testFixturesImplementation(testinglibs.wiremock)
   testFixturesImplementation(apache.commons.lang3)
+  testFixturesImplementation(apache.commons.io)
   testFixturesImplementation(apache.avro)
   testFixturesImplementation(testcontainers.junit.jupiter)
   testFixturesImplementation(testcontainers.kafka) // this is not Kafka version

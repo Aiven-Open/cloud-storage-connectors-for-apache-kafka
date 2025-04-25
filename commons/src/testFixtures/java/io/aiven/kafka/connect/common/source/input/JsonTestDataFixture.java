@@ -16,15 +16,27 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import io.aiven.kafka.connect.common.config.CompressionType;
+import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * A testing fixture to generate JSON data.
@@ -98,5 +110,45 @@ final public class JsonTestDataFixture {
             result.add(OBJECT_MAPPER.readTree(value));
         }
         return result;
+    }
+
+    public static List<JsonNode> readJsonRecords(byte[] bytes) throws IOException, JsonProcessingException {
+        List<JsonNode> result = new ArrayList<>();
+        for (String value : readLines(bytes)) {
+            result.add(OBJECT_MAPPER.readTree(value));
+        }
+        return result;
+    }
+
+
+    public static List<List<String>> readAndDecodeLines(byte[] input,
+                                                       final int... fieldsToDecode) throws IOException {
+        try (InputStreamReader reader = new InputStreamReader(new ByteArrayInputStream(input), StandardCharsets.UTF_8);
+             BufferedReader bufferedReader = new BufferedReader(reader)) {
+            return bufferedReader.lines().map(l -> l.split(","))
+                    .map(fields -> decodeRequiredFields(fields, fieldsToDecode))
+                    .collect(Collectors.toList());
+        }
+
+    }
+
+    public static List<String> readLines(byte[] input) throws IOException {
+        try (InputStreamReader reader = new InputStreamReader(new ByteArrayInputStream(input), StandardCharsets.UTF_8);
+             BufferedReader bufferedReader = new BufferedReader(reader)) {
+            return bufferedReader.lines().collect(Collectors.toList());
+        }
+    }
+
+    private static List<String> decodeRequiredFields(final String[] originalFields, final int[] fieldsToDecode) {
+        final List<String> result = Arrays.asList(originalFields);
+        for (final int fieldIdx : fieldsToDecode) {
+            result.set(fieldIdx, b64Decode(result.get(fieldIdx)));
+        }
+        return result;
+    }
+
+    public static String b64Decode(final String value) {
+        Objects.requireNonNull(value, "value cannot be null");
+        return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
     }
 }

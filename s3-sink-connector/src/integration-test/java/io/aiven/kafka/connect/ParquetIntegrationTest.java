@@ -47,9 +47,9 @@ import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
-import io.aiven.kafka.connect.s3.testutils.IndexesToString;
-import io.aiven.kafka.connect.s3.testutils.KeyValueGenerator;
-import io.aiven.kafka.connect.s3.testutils.KeyValueMessage;
+import io.aiven.kafka.connect.common.integration.sink.IndexesToString;
+import io.aiven.kafka.connect.common.integration.sink.KeyValueGenerator;
+import io.aiven.kafka.connect.common.integration.sink.KeyValueMessage;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -507,5 +507,4 @@ final class ParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         final String result = String.format("%s-%d-%d", topicName, partition, startOffset);
         return result + compression.extension();
     }
-
 }

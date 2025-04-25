@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.azure.source.testdata;
+package io.aiven.kafka.connect.azure;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -67,6 +67,14 @@ public final class ContainerAccessor {
     }
 
     /**
+     * Gets the container URL
+     * @return the container url.
+     */
+    public String getContainerUrl() {
+        return containerClient.getBlobContainerUrl();
+    }
+
+    /**
      * Create the container.
      */
     public void createContainer() {
@@ -85,6 +93,8 @@ public final class ContainerAccessor {
     }
 
     public List<AzureNativeInfo> getNativeStorage() {
+        containerClient.getBlobContainerName();
+        List<BlobItem> lst = containerClient.listBlobs().stream().collect(Collectors.toList());
         return StreamSupport.stream(containerClient.listBlobs().spliterator(), false)
                 .map(AzureNativeInfo::new)
                 .sorted()

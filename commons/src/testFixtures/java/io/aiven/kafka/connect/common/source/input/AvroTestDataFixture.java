@@ -39,16 +39,59 @@ import org.apache.avro.io.DatumWriter;
 public final class AvroTestDataFixture {
 
     /** The Json string used to create the {@link #DEFAULT_SCHEMA} */
-    public static final String SCHEMA_JSON = "{\n" + "  \"type\": \"record\",\n" + "  \"name\": \"TestRecord\",\n"
-            + "  \"fields\": [\n" + "    {\"name\": \"message\", \"type\": \"string\"},\n"
-            + "    {\"name\": \"id\", \"type\": \"int\"}\n" + "  ]\n" + "}";
+    public static final String SCHEMA_JSON = "{\n  \"type\": \"record\",\n  \"name\": \"TestRecord\",\n"
+            + "  \"fields\": [\n    {\"name\": \"message\", \"type\": \"string\"},\n"
+            + "    {\"name\": \"id\", \"type\": \"int\"}\n  ]\n}";
+
+
+    final String schemaFmt1 = "{\"id\" : \"%1$s\", \"value\" : \"value%1$s\"}%n";
+    final String schemaFmt2 = "{\"id\" : \"%s\", \"message\" : \"from partition %s epoch %s\", \"value\" : \"value%s\"}%n";
+
+//    //    private final Schema avroInputDataSchema = new Schema.Parser().parse(
+////            "{\"type\":\"record\",\"name\":\"input_data\"," + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
+//
+//    // Connect will add two extra fields to schema and enrich it with
+//    // connect.version: 1
+//    // connect.name: input_data
+//    final Schema avroInputDataSchemaWithConnectExtra = new Schema.Parser()
+//            .parse("{\"type\":\"record\",\"name\":\"input_data\","
+//                    + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"}],"
+//                    + "\"connect.version\":1,\"connect.name\":\"input_data\"}");
+
+    public static final String CONNECT_EXTRA_SCHEMA_JSON =  "{\n  \"type\": \"record\",\n  \"name\": \"TestRecord\",\n"
+            + "  \"fields\": [\n    {\"name\": \"message\", \"type\": \"string\"},\n"
+            + "    {\"name\": \"id\", \"type\": \"int\"}\n  ],\n"
+            + "    \"connect.version\":1, \"connect.name\": \"TestRecord\"}\n";
+
+//    final Schema evolvedAvroInputDataSchema = new Schema.Parser()
+//            .parse("{\"type\":\"record\",\"name\":\"input_data\","
+//                    + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"age\",\"type\":\"int\",\"default\":0}]}");
+
+    public static final String EVOLVED_SCHEMA_JSON =  "{\n  \"type\": \"record\",\n  \"name\": \"TestRecord\",\n"
+            + "  \"fields\": [\n    {\"name\": \"message\", \"type\": \"string\"},\n"
+            + "    {\"name\": \"id\", \"type\": \"int\"},\n"
+            + "    {\"name\": \"age\", \"type\": \"int\", \"default\":0}\n  ]\n}";
+
 
     /** The schema used for most testing. Created from {@link #SCHEMA_JSON}. */
     public static final Schema DEFAULT_SCHEMA = new Schema.Parser().parse(SCHEMA_JSON);
 
+    public static final Schema CONNECT_EXTRA_SCHEMA = new Schema.Parser().parse(CONNECT_EXTRA_SCHEMA_JSON);
+
+    public static final Schema EVOLVED_SCHEMA = new Schema.Parser().parse(EVOLVED_SCHEMA_JSON);
+
     private AvroTestDataFixture() {
         // do not instantiate
     }
+
+    public static String formatDefaultData(final int id, final String message) {
+        return String.format("{\"id\" : \"%1$s\", \"message\" : \"%2$s\"}%n", id, message);
+    }
+
+    public static String formatEvolvedData(final int id, final String message, int age) {
+        return String.format("{\"id\" : \"%1$s\", \"message\" : \"%2$s\", \"age\" : \"%3$s\"}%n", id, message, age);
+    }
+
 
     /**
      * Generates a byte array containing the specified number of records.
@@ -188,7 +231,11 @@ public final class AvroTestDataFixture {
     }
 
     public static GenericRecord generateAvroRecord(final int messageId) {
-        final GenericRecord avroRecord = new GenericData.Record(DEFAULT_SCHEMA);
+        return generateAvroRecord(messageId, DEFAULT_SCHEMA);
+    }
+
+    public static GenericRecord generateAvroRecord(final int messageId, Schema schema) {
+        final GenericRecord avroRecord = new GenericData.Record(schema);
         avroRecord.put("message", "Hello, from Avro Test Data Fixture! object " + messageId);
         avroRecord.put("id", messageId);
         return avroRecord;

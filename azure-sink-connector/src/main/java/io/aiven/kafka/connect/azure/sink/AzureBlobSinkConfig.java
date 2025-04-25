@@ -26,6 +26,9 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
@@ -41,7 +44,8 @@ import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class AzureBlobSinkConfig extends AivenCommonConfig {
+public final class AzureBlobSinkConfig extends SinkCommonConfig {
+
     private static final Logger LOG = LoggerFactory.getLogger(AzureBlobSinkConfig.class);
     private static final String USER_AGENT_HEADER_FORMAT = "Azure Blob Sink/%s (GPN: Aiven;)";
     public static final String USER_AGENT_HEADER_VALUE = String.format(USER_AGENT_HEADER_FORMAT, Version.VERSION);
@@ -49,16 +53,9 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
     public static final String AZURE_STORAGE_CONNECTION_STRING_CONFIG = "azure.storage.connection.string";
     public static final String AZURE_STORAGE_CONTAINER_NAME_CONFIG = "azure.storage.container.name";
     public static final String AZURE_USER_AGENT = "azure.user.agent";
-    private static final String GROUP_FILE = "File";
+    private static final String GROUP_FILE = "AzureFile";
     public static final String FILE_NAME_PREFIX_CONFIG = "file.name.prefix";
-    public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
-    public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
-    public static final String FILE_MAX_RECORDS = "file.max.records";
-    public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
-    public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
 
-    public static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
-    public static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
 
     private static final String GROUP_AZURE_RETRY_BACKOFF_POLICY = "Azure retry backoff policy";
 
@@ -77,7 +74,6 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
         addAzureConfigGroup(configDef);
         addFileConfigGroup(configDef);
         addOutputFieldsFormatConfigGroup(configDef, OutputFieldType.VALUE);
-        addKafkaBackoffPolicy(configDef);
         addAzureRetryPolicies(configDef);
         addUserAgentConfig(configDef);
         return configDef;
@@ -126,6 +122,7 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
 
     private static void addFileConfigGroup(final ConfigDef configDef) {
         int fileGroupCounter = 0;
+        FileNameFragment.update(configDef);
         configDef.define(FILE_NAME_PREFIX_CONFIG, ConfigDef.Type.STRING, "", new ConfigDef.Validator() {
             @Override
             public void ensureValid(final String name, final Object value) {
@@ -137,84 +134,17 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
                 }
             }
         }, ConfigDef.Importance.MEDIUM, "The prefix to be added to the name of each file put on Azure Blob.",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.NONE, FILE_NAME_PREFIX_CONFIG);
+                GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.NONE, FILE_NAME_PREFIX_CONFIG);
 
-        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-                new FilenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
-                "The template for file names on Azure Blob. "
-                        + "Supports `{{ variable }}` placeholders for substituting variables. "
-                        + "Currently supported variables are `topic`, `partition`, and `start_offset` "
-                        + "(the offset of the first record in the file). "
-                        + "Only some combinations of variables are valid, which currently are:\n"
-                        + "- `topic`, `partition`, `start_offset`.",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
-
-        final String supportedCompressionTypes = CompressionType.names()
-                .stream()
-                .map(f -> "'" + f + "'")
-                .collect(Collectors.joining(", "));
-        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, CompressionType.NONE.name,
-                new ConfigDef.Validator() {
-                    @Override
-                    public void ensureValid(final String name, final Object value) {
-                        assert value instanceof String;
-                        final String valueStr = (String) value;
-                        if (!CompressionType.names().contains(valueStr)) {
-                            throw new ConfigException(FILE_COMPRESSION_TYPE_CONFIG, valueStr,
-                                    "supported values are: " + supportedCompressionTypes);
-                        }
-                    }
-                }, ConfigDef.Importance.MEDIUM,
-                "The compression type used for files put on Azure Blob. " + "The supported values are: "
-                        + supportedCompressionTypes + ".",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
-                FixedSetRecommender.ofSupportedValues(CompressionType.names()));
-
-        configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, new ConfigDef.Validator() {
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                assert value instanceof Integer;
-                if ((Integer) value < 0) {
-                    throw new ConfigException(FILE_MAX_RECORDS, value, "must be a non-negative integer number");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM,
-                "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
-                        + "0 is interpreted as \"unlimited\", which is the default.",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
-
-        configDef.define(FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(),
-                new ConfigDef.Validator() {
-                    @Override
-                    public void ensureValid(final String name, final Object value) {
-                        try {
-                            ZoneId.of(value.toString());
-                        } catch (final Exception e) { // NOPMD broad exception catched
-                            throw new ConfigException(FILE_NAME_TIMESTAMP_TIMEZONE, value, e.getMessage());
-                        }
-                    }
-                }, ConfigDef.Importance.LOW,
-                "Specifies the timezone in which the dates and time for the timestamp variable will be treated. "
-                        + "Use standard shot and long names. Default is UTC",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_TIMEZONE);
-
-        configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
-                new ConfigDef.Validator() {
-                    @Override
-                    public void ensureValid(final String name, final Object value) {
-                        try {
-                            TimestampSource.Type.of(value.toString());
-                        } catch (final Exception e) { // NOPMD broad exception catched
-                            throw new ConfigException(FILE_NAME_TIMESTAMP_SOURCE, value, e.getMessage());
-                        }
-                    }
-                }, ConfigDef.Importance.LOW, "Specifies the timestamp variable source. Default is wall-clock.",
-                GROUP_FILE, fileGroupCounter, ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_SOURCE);
     }
+
+    private final OutputFormatFragment outputFormatFragment;
 
     public AzureBlobSinkConfig(final Map<String, String> properties) {
         super(configDef(), handleDeprecatedYyyyUppercase(properties));
+        outputFormatFragment = new OutputFormatFragment(this);
         validate();
+
     }
 
     static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
@@ -267,18 +197,7 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
 
     @Override
     public List<OutputField> getOutputFields() {
-        final List<OutputField> result = new ArrayList<>();
-        for (final String outputFieldTypeStr : getList(FORMAT_OUTPUT_FIELDS_CONFIG)) {
-            final OutputFieldType fieldType = OutputFieldType.forName(outputFieldTypeStr);
-            final OutputFieldEncodingType encodingType;
-            if (fieldType == OutputFieldType.VALUE) {
-                encodingType = OutputFieldEncodingType.forName(getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG));
-            } else {
-                encodingType = OutputFieldEncodingType.NONE;
-            }
-            result.add(new OutputField(fieldType, encodingType));
-        }
-        return result;
+        return outputFormatFragment.getOutputFields();
     }
 
     public String getPrefix() {

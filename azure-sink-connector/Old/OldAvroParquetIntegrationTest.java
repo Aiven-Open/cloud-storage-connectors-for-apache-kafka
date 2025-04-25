@@ -44,7 +44,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
+final class OldAvroParquetIntegrationTest extends OldAbstractIntegrationTest<String, GenericRecord> {
 
     private static final String CONNECTOR_NAME = "aiven-azure-sink-connector-parquet";
 

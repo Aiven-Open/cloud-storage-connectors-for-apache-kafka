@@ -74,11 +74,11 @@ final class AvroIntegrationTest extends AbstractKafkaIntegrationBase {
     private static BucketAccessor testBucketAccessor;
 
     private KafkaManager kafkaManager;
+    private KafkaProducer<String, GenericRecord> producer;
 
     @Container
     public static final LocalStackContainer LOCALSTACK = S3IntegrationHelper.createS3Container();
 
-    private KafkaProducer<String, GenericRecord> producer;
 
     private Class<? extends Connector> getConnectorClass() {
         return AivenKafkaConnectS3SinkConnector.class;
