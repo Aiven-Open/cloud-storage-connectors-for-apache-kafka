@@ -17,29 +17,20 @@
 package io.aiven.kafka.connect.azure.sink;
 
 import java.time.Duration;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.OutputFormatFragment;
-import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.config.FixedSetRecommender;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputField;
-import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.common.config.TimestampSource;
-import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +47,6 @@ public final class AzureBlobSinkConfig extends SinkCommonConfig {
     private static final String GROUP_FILE = "AzureFile";
     public static final String FILE_NAME_PREFIX_CONFIG = "file.name.prefix";
 
-
     private static final String GROUP_AZURE_RETRY_BACKOFF_POLICY = "Azure retry backoff policy";
 
     public static final String AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG = "azure.retry.backoff.initial.delay.ms";
@@ -68,6 +58,8 @@ public final class AzureBlobSinkConfig extends SinkCommonConfig {
     public static final int AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT = 6;
 
     public static final String NAME_CONFIG = "name";
+
+    private final OutputFormatFragment outputFormatFragment;
 
     public static ConfigDef configDef() {
         final ConfigDef configDef = new ConfigDef();
@@ -137,8 +129,6 @@ public final class AzureBlobSinkConfig extends SinkCommonConfig {
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.NONE, FILE_NAME_PREFIX_CONFIG);
 
     }
-
-    private final OutputFormatFragment outputFormatFragment;
 
     public AzureBlobSinkConfig(final Map<String, String> properties) {
         super(configDef(), handleDeprecatedYyyyUppercase(properties));

@@ -24,6 +24,7 @@ dependencies {
   compileOnly(apache.kafka.connect.json)
   // https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api
   implementation("jakarta.validation:jakarta.validation-api:3.1.1")
+  implementation(tools.spotbugs.annotations)
 
   implementation(confluent.kafka.connect.avro.data) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")

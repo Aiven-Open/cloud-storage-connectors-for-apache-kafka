@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.azure.sink;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.channels.Channels;
@@ -146,8 +145,8 @@ public final class AzureBlobSinkTask extends SinkTask {
         // TODO this is very messy. The problem being solved is that the writeRecords methods close the output stream
         try (BlobWritableByteChannel channel = new BlobWritableByteChannel(blockBlobClient.getBlobOutputStream(true));
                 OutputStream out = Channels.newOutputStream(channel);
-//        try (BufferedOutputStream bos = new BufferedOutputStream(blockBlobClient.getBlobOutputStream(true));
-             OutputWriter outputWriter = OutputWriter.builder()
+                // try (BufferedOutputStream bos = new BufferedOutputStream(blockBlobClient.getBlobOutputStream(true));
+                OutputWriter outputWriter = OutputWriter.builder()
                         .withCompressionType(config.getCompressionType())
                         .withExternalProperties(config.originalsStrings())
                         .withOutputFields(config.getOutputFields())

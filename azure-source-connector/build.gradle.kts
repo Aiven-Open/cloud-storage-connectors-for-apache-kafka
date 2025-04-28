@@ -70,6 +70,7 @@ dependencies {
   implementation(apache.commons.collection4)
 
   testImplementation(testFixtures(project(":commons")))
+  testImplementation(testFixtures(project(":azure-commons")))
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.hamcrest)
   testImplementation(testinglibs.assertj.core)

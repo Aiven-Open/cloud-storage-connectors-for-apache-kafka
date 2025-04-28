@@ -23,6 +23,7 @@ import java.util.HashMap;
 
 import com.azure.core.http.policy.RetryOptions;
 import com.azure.storage.blob.BlobServiceAsyncClient;
+import io.aiven.kafka.connect.azure.config.AzureBlobConfigFragment;
 import org.junit.jupiter.api.Test;
 
 final class AzureBlobConfigTest {

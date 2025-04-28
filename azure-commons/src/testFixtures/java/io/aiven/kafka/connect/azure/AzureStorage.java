@@ -164,6 +164,7 @@ public abstract class AzureStorage implements StorageBase<BlobItem, String> {
         containerAccessor.removeContainer();
     }
 
+    @SuppressWarnings("PMD.EmptyMethodInAbstractClassShouldBeAbstract")
     @Override
     public String defaultPrefix() {
         return "";

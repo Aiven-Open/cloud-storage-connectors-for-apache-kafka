@@ -7,6 +7,7 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+@SuppressWarnings("PMD:TestClassWithoutTestCases")
 @Testcontainers
 public class AvroParquetIntegrationTest extends AbstractAvroParquetIntegrationTest<S3Object, String> {
 

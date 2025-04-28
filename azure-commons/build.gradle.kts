@@ -19,6 +19,10 @@ plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 val azureVersion by extra("12.29.0")
 
 dependencies {
+  compileOnly(apache.kafka.connect.api)
+
+  implementation("com.azure:azure-storage-blob:12.29.0")
+
   testFixturesImplementation(apache.kafka.connect.api)
 
   implementation(project(":commons"))
