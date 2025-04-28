@@ -16,25 +16,22 @@
 
 package io.aiven.kafka.connect.azure.source.testdata;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.ByteArrayInputStream;
+
+import org.apache.kafka.connect.connector.Connector;
+
 import io.aiven.kafka.connect.azure.source.AzureBlobSourceConnector;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.testdata.AzureIntegrationTestData;
 import io.aiven.kafka.connect.common.integration.AbstractSourceIntegrationBase;
-import org.apache.kafka.connect.connector.Connector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.azure.AzuriteContainer;
 
-import java.io.ByteArrayInputStream;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.testcontainers.azure.AzuriteContainer;
 
 /**
  * Manages test data
  */
 public final class AzureSourceIntegrationTestData extends AzureIntegrationTestData {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AzureSourceIntegrationTestData.class);
-
-
     /**
      * Constructor.
      *
@@ -45,7 +42,6 @@ public final class AzureSourceIntegrationTestData extends AzureIntegrationTestDa
     public AzureSourceIntegrationTestData(final AzuriteContainer container) {
         super(container);
     }
-
 
     /**
      * Writes data to the default container.
@@ -72,6 +68,5 @@ public final class AzureSourceIntegrationTestData extends AzureIntegrationTestDa
     public Class<? extends Connector> getConnectorClass() {
         return AzureBlobSourceConnector.class;
     }
-
 
 }

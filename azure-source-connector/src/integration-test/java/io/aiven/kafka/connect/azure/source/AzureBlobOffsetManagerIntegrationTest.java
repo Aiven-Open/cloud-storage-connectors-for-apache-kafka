@@ -22,8 +22,9 @@ import java.util.function.BiFunction;
 
 import org.apache.kafka.connect.connector.Connector;
 
-import io.aiven.kafka.connect.azure.source.testdata.AzureSourceIntegrationTestData;
+import io.aiven.kafka.connect.azure.ContainerAccessor;
 import io.aiven.kafka.connect.azure.source.testdata.AzureOffsetManagerIntegrationTestData;
+import io.aiven.kafka.connect.azure.source.testdata.AzureSourceIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
 import io.aiven.kafka.connect.common.integration.AbstractOffsetManagerIntegrationTest;
