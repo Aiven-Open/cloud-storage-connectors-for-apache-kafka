@@ -84,7 +84,8 @@ public class BucketAccessor {
      * Deletes the bucket.
      */
     public final void removeBucket() {
-        final List<ObjectIdentifier> deleteIds = s3Client.listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build())
+        final List<ObjectIdentifier> deleteIds = s3Client
+                .listObjectsV2(ListObjectsV2Request.builder().bucket(bucketName).build())
                 .contents()
                 .stream()
                 .map(S3Object::key)
@@ -97,8 +98,8 @@ public class BucketAccessor {
                         .delete(Delete.builder().objects(deleteIds).build())
                         .build());
             } catch (final S3Exception e) {
-                LOGGER.warn(
-                        String.format("Couldn't delete objects. Reason: [%s] %s", e.awsErrorDetails().errorMessage(), e));
+                LOGGER.warn(String.format("Couldn't delete objects. Reason: [%s] %s",
+                        e.awsErrorDetails().errorMessage(), e));
             } catch (final SdkException e) {
                 LOGGER.error("Couldn't delete objects: {}, Exception{} ", deleteIds, e.getMessage());
             }
