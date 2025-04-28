@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.azure.source.testdata;
+package io.aiven.kafka.connect.azure;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -64,6 +64,15 @@ public final class ContainerAccessor {
      */
     public String getContainerName() {
         return containerName;
+    }
+
+    /**
+     * Gets the container URL
+     *
+     * @return the container url.
+     */
+    public String getContainerUrl() {
+        return containerClient.getBlobContainerUrl();
     }
 
     /**

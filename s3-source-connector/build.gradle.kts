@@ -194,8 +194,8 @@ dependencies {
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
   integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-//  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-//  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  //  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
+  //  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
   integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation(testFixtures(project(":s3-source-connector")))
 

@@ -324,7 +324,7 @@ final class AzureSinkConfigTest {
                 "file.max.records", "-42");
 
         final var expectedErrorMessage = "Invalid value -42 for configuration file.max.records: "
-                + "must be a non-negative integer number";
+                + "Value must be at least 0";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.max.records", expectedErrorMessage);
 

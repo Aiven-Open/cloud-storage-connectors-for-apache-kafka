@@ -78,7 +78,7 @@ public final class KafkaManager {
         schemaRegistry = new SchemaRegistryContainer(
                 "host.testcontainers.internal:" + connectRunner.getContainerPort());
         schemaRegistry.start();
-        AbstractIntegrationTest.waitForRunningContainer(schemaRegistry);
+        KafkaIntegrationTestBase.waitForRunningContainer(schemaRegistry);
     }
 
     /**
@@ -197,6 +197,26 @@ public final class KafkaManager {
      */
     public String configureConnector(final String connectorName, final Map<String, String> connectorConfig) {
         return connectRunner.configureConnector(connectorName, connectorConfig);
+    }
+
+    /**
+     * Pauses the named connector.
+     *
+     * @param connectorName
+     *            the connector to pause.
+     */
+    public void pauseConnector(final String connectorName) {
+        connectRunner.pauseConnector(connectorName);
+    }
+
+    /**
+     * resumes the named connector.
+     *
+     * @param connectorName
+     *            the connector to pause.
+     */
+    public void resumeConnector(final String connectorName) {
+        connectRunner.resumeConnector(connectorName);
     }
 
     /**

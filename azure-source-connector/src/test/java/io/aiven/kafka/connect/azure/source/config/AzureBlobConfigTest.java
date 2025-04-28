@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.util.HashMap;
 
+import io.aiven.kafka.connect.azure.config.AzureBlobConfigFragment;
+
 import com.azure.core.http.policy.RetryOptions;
 import com.azure.storage.blob.BlobServiceAsyncClient;
 import org.junit.jupiter.api.Test;

@@ -240,6 +240,26 @@ public final class KafkaConnectRunner {
     }
 
     /**
+     * Pauses the named connector.
+     *
+     * @param connectorName
+     *            the connector to pause.
+     */
+    public void pauseConnector(final String connectorName) {
+        connectCluster.pauseConnector(connectorName);
+    }
+
+    /**
+     * Resumes the named connector.
+     *
+     * @param connectorName
+     *            the connector to resume.
+     */
+    public void resumeConnector(final String connectorName) {
+        connectCluster.resumeConnector(connectorName);
+    }
+
+    /**
      * Restarts a connector.
      *
      * @param connectorName

@@ -62,7 +62,7 @@ import org.junit.jupiter.params.provider.EnumSource;
  */
 public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, I extends AbstractSourceRecordIterator<?, K, O, ?>>
         extends
-            AbstractIntegrationTest<K, O, I> {
+            AbstractSourceIntegrationBase<K, O, I> {
 
     /**
      * Static value to flag that the task is not set.

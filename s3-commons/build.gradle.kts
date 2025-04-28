@@ -104,6 +104,8 @@ dependencies {
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
+
+  testFixturesImplementation(testFixtures(project(":commons")))
 }
 
 tasks.withType<Jar> { archiveBaseName.set(project.name + "-for-apache-kafka-connect") }

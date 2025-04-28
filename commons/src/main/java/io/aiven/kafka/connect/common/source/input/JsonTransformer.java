@@ -29,7 +29,6 @@ import org.apache.kafka.connect.json.JsonConverter;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.task.Context;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -40,8 +39,6 @@ public class JsonTransformer extends Transformer {
     private final JsonConverter jsonConverter;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JsonTransformer.class);
-
-    final ObjectMapper objectMapper = new ObjectMapper();
 
     JsonTransformer(final JsonConverter jsonConverter) {
         super();

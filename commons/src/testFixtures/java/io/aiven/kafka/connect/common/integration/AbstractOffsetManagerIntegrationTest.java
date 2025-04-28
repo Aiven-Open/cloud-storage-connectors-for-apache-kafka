@@ -55,7 +55,7 @@ import org.junit.jupiter.api.Test;
  */
 public abstract class AbstractOffsetManagerIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, I extends AbstractSourceRecordIterator<?, K, O, ?>>
         extends
-            AbstractIntegrationTest<K, O, I> {
+            AbstractSourceIntegrationBase<K, O, I> {
 
     /**
      * Static to indicate that the TASK is not set.

@@ -75,7 +75,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 @SuppressWarnings("PMD.ExcessiveImports")
 public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, I extends AbstractSourceRecordIterator<?, K, O, ?>>
         extends
-            AbstractIntegrationTest<K, O, I> {
+            AbstractSourceIntegrationBase<K, O, I> {
 
     /** static to indicate that the task has not been set */
     private static final int TASK_NOT_SET = -1;

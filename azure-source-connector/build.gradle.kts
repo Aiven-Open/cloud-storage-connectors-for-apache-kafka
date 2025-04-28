@@ -62,6 +62,7 @@ dependencies {
   implementation("commons-io:commons-io:2.18.0")
   implementation("org.apache.commons:commons-lang3:3.17.0")
   implementation(project(":commons"))
+  implementation(project(":azure-commons"))
   implementation(apache.commons.collection4)
   implementation("com.azure:azure-storage-blob:${azureVersion}")
 
@@ -70,6 +71,7 @@ dependencies {
   implementation(apache.commons.collection4)
 
   testImplementation(testFixtures(project(":commons")))
+  testImplementation(testFixtures(project(":azure-commons")))
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.hamcrest)
   testImplementation(testinglibs.assertj.core)
@@ -143,9 +145,10 @@ dependencies {
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
   integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-//  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-//  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  //  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
+  //  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
   integrationTestImplementation(testFixtures(project(":commons")))
+  integrationTestImplementation(testFixtures(project(":azure-commons")))
   integrationTestImplementation("org.testcontainers:azure:1.20.6")
 
   integrationTestImplementation(apache.kafka.connect.transforms)
@@ -160,6 +163,7 @@ dependencies {
   testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation("com.azure:azure-storage-blob:${azureVersion}")
   testFixturesImplementation(testFixtures(project(":commons")))
+  testFixturesImplementation(testFixtures(project(":azure-commons")))
   testFixturesImplementation(testinglibs.localstack) {
     exclude(group = "io.netty", module = "netty-transport-native-epoll")
   }

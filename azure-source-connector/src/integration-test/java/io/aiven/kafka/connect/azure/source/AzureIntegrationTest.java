@@ -22,9 +22,9 @@ import java.util.function.BiFunction;
 
 import org.apache.kafka.connect.connector.Connector;
 
-import io.aiven.kafka.connect.azure.source.testdata.AzureIntegrationTestData;
+import io.aiven.kafka.connect.azure.ContainerAccessor;
 import io.aiven.kafka.connect.azure.source.testdata.AzureOffsetManagerIntegrationTestData;
-import io.aiven.kafka.connect.azure.source.testdata.ContainerAccessor;
+import io.aiven.kafka.connect.azure.source.testdata.AzureSourceIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
 import io.aiven.kafka.connect.common.integration.AbstractSourceIntegrationTest;
@@ -45,13 +45,13 @@ public final class AzureIntegrationTest
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureIntegrationTest.class);
 
     @Container
-    private static final AzuriteContainer AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
+    private static final AzuriteContainer AZURITE_CONTAINER = AzureSourceIntegrationTestData.createContainer();
 
-    private AzureIntegrationTestData testData;
+    private AzureSourceIntegrationTestData testData;
 
     @BeforeEach
     void setupAzure() {
-        testData = new AzureIntegrationTestData(AZURITE_CONTAINER);
+        testData = new AzureSourceIntegrationTestData(AZURITE_CONTAINER);
     }
 
     @AfterEach

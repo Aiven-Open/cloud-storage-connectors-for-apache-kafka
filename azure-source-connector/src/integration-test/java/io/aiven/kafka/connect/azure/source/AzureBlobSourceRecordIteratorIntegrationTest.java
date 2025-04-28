@@ -22,10 +22,10 @@ import java.util.function.BiFunction;
 
 import org.apache.kafka.connect.connector.Connector;
 
+import io.aiven.kafka.connect.azure.ContainerAccessor;
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
-import io.aiven.kafka.connect.azure.source.testdata.AzureIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.testdata.AzureOffsetManagerIntegrationTestData;
-import io.aiven.kafka.connect.azure.source.testdata.ContainerAccessor;
+import io.aiven.kafka.connect.azure.source.testdata.AzureSourceIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
@@ -49,9 +49,9 @@ public final class AzureBlobSourceRecordIteratorIntegrationTest
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceRecordIteratorIntegrationTest.class);
 
     @Container
-    private static final AzuriteContainer AZURITE_CONTAINER = AzureIntegrationTestData.createContainer();
+    private static final AzuriteContainer AZURITE_CONTAINER = AzureSourceIntegrationTestData.createContainer();
 
-    private AzureIntegrationTestData testData;
+    private AzureSourceIntegrationTestData testData;
 
     @Override
     protected Logger getLogger() {
@@ -60,7 +60,7 @@ public final class AzureBlobSourceRecordIteratorIntegrationTest
 
     @BeforeEach
     void setupAzure() {
-        testData = new AzureIntegrationTestData(AZURITE_CONTAINER);
+        testData = new AzureSourceIntegrationTestData(AZURITE_CONTAINER);
     }
 
     @AfterEach

@@ -55,7 +55,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
-import org.testcontainers.containers.Container;
 
 /**
  * The base abstract case for Kafka based integration tests.
@@ -70,7 +69,7 @@ import org.testcontainers.containers.Container;
  * @param <I>
  *            The implementation of the {@link AbstractSourceRecordIterator}
  */
-public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, I extends AbstractSourceRecordIterator<?, K, O, ?>> {
+public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, I extends AbstractSourceRecordIterator<?, K, O, ?>> {
 
     /**
      * The Test info provided before each test. Tests may access this info wihout capturing it themselves.
@@ -172,6 +171,11 @@ public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends
         this.testInfo = testInfo;
     }
 
+    @AfterAll
+    static void cleanup() {
+        tearDownKafka();
+    }
+
     /**
      * Sets up and returns the KafkaManager. If the KafkaManager has already been set up, this method returns the
      * existing instance.
@@ -222,7 +226,7 @@ public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends
     /**
      * Tears down any existing KafkaManager. if the KafkaManager has not be created no action is taken.
      */
-    final protected void tearDownKafka() {
+    protected static void tearDownKafka() {
         final KafkaManager kafkaManager = KAFKA_MANAGER_THREAD_LOCAL.get();
         if (kafkaManager != null) {
             kafkaManager.stop();
@@ -339,34 +343,12 @@ public abstract class AbstractIntegrationTest<K extends Comparable<K>, O extends
     }
 
     /**
-     * Wait for a container to start. Waits up to 1 minute.
-     *
-     * @param container
-     *            the container to wait for.
-     */
-    public static void waitForRunningContainer(final Container<?> container) {
-        waitForRunningContainer(container, Duration.ofMinutes(1));
-    }
-
-    /**
-     * Wait for a container to start.
-     *
-     * @param container
-     *            the container to wait for.
-     * @param timeout
-     *            the length of time to wait for startup.
-     */
-    public static void waitForRunningContainer(final Container<?> container, final Duration timeout) {
-        await().atMost(timeout).until(container::isRunning);
-    }
-
-    /**
      * Handles reading messages from the local kafka.
      */
     public class MessageConsumer {
         /** constructor */
         private MessageConsumer() {
-            // use AbstractIntegrationTest.messageConsumer();
+            // use AbstractSourceIntegrationBase.messageConsumer();
         }
 
         /**
