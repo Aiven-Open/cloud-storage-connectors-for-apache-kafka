@@ -23,7 +23,6 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.connector.policy.AllConnectorClientConfigOverridePolicy;
-import org.apache.kafka.connect.connector.policy.ConnectorClientConfigOverridePolicy;
 import org.apache.kafka.connect.runtime.Connect;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
 import org.apache.kafka.connect.runtime.Herder;
@@ -82,9 +81,9 @@ final class ConnectRunner {
         final Plugins plugins = new Plugins(workerProps);
         final StandaloneConfig config = new StandaloneConfig(workerProps);
 
-        ConnectorClientConfigOverridePolicy policy = new AllConnectorClientConfigOverridePolicy();
-        final Worker worker = new Worker(workerId, time, plugins, config, new MemoryOffsetBackingStore(), policy);
-        herder = new StandaloneHerder(worker, kafkaClusterId, policy);
+        final Worker worker = new Worker(workerId, time, plugins, config, new MemoryOffsetBackingStore(),
+                new AllConnectorClientConfigOverridePolicy());
+        herder = new StandaloneHerder(worker, kafkaClusterId, new AllConnectorClientConfigOverridePolicy());
 
         final RestServer rest = new RestServer(config);
 
