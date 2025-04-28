@@ -125,7 +125,7 @@ final class S3SinkConfigTest {
         assertThat(conf.getCompressionType()).isEqualTo(CompressionType.GZIP);
         assertThat(conf.getOutputFieldEncodingType()).isEqualTo(OutputFieldEncodingType.BASE64);
         assertThat(conf.getOutputFields()).containsExactlyInAnyOrderElementsOf(
-                Arrays.asList(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.BASE64),
+                Arrays.asList(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
                         new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64),
                         new OutputField(OutputFieldType.OFFSET, OutputFieldEncodingType.NONE),
                         new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE),
@@ -382,7 +382,7 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
 
         assertThat(conf.getOutputFields())
-                .containsExactly(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.BASE64));
+                .containsExactly(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE));
     }
 
     @Test

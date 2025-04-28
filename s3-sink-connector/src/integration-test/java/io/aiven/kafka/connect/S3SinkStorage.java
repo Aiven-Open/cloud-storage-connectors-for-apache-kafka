@@ -1,21 +1,22 @@
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.connect;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.S3Object;
-import com.github.tomakehurst.wiremock.WireMockServer;
-import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.OutputFormatFragment;
-import io.aiven.kafka.connect.common.integration.sink.SinkStorage;
-import io.aiven.kafka.connect.common.source.NativeInfo;
-import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
-import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
-import org.apache.commons.io.function.IOSupplier;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.kafka.connect.connector.Connector;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.utility.DockerImageName;
+import static com.amazonaws.SDKGlobalConfiguration.DISABLE_CERT_CHECKING_SYSTEM_PROPERTY;
 
 import java.io.InputStream;
 import java.time.ZoneId;
@@ -25,7 +26,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.amazonaws.SDKGlobalConfiguration.DISABLE_CERT_CHECKING_SYSTEM_PROPERTY;
+import org.apache.kafka.connect.connector.Connector;
+
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.integration.sink.SinkStorage;
+import io.aiven.kafka.connect.common.source.NativeInfo;
+import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
+import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
+
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.S3Object;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.io.function.IOSupplier;
+import org.apache.commons.lang3.StringUtils;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.utility.DockerImageName;
 
 public class S3SinkStorage implements SinkStorage<S3Object, String> {
 
@@ -34,19 +54,27 @@ public class S3SinkStorage implements SinkStorage<S3Object, String> {
     private static final String TEST_BUCKET_NAME = "test-bucket0";
 
     private final LocalStackContainer container;
-    private final AmazonS3 s3Client;
     private final BucketAccessor bucketAccessor;
-
 
     public static LocalStackContainer createContainer() {
         return new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
                 .withServices(LocalStackContainer.Service.S3);
     }
 
-    public S3SinkStorage(LocalStackContainer container) {
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
+    public S3SinkStorage(final LocalStackContainer container) {
         this.container = container;
-        s3Client = S3IntegrationHelper.createS3Client(container);
-        bucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
+        bucketAccessor = new BucketAccessor(createS3Client(container), TEST_BUCKET_NAME);
+    }
+
+    private AmazonS3 createS3Client(final LocalStackContainer localStackContainer) {
+        return AmazonS3ClientBuilder.standard()
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                        localStackContainer.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
+                        localStackContainer.getRegion()))
+                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(
+                        localStackContainer.getAccessKey(), localStackContainer.getSecretKey())))
+                .build();
     }
 
     @Override
@@ -55,31 +83,35 @@ public class S3SinkStorage implements SinkStorage<S3Object, String> {
     }
 
     @Override
-    public String getAvroBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression) {
+    public String getAvroBlobName(final String prefix, final String topicName, final int partition,
+            final int startOffset, final CompressionType compression) {
         final String result = String.format("%s%s-%d-%d.avro", prefix, topicName, partition, startOffset);
         return result + compression.extension();
     }
 
     @Override
-    public String getBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression) {
+    public String getBlobName(final String prefix, final String topicName, final int partition, final int startOffset,
+            final CompressionType compression) {
         final String result = String.format("%s%s-%d-%d", prefix, topicName, partition, startOffset);
         return result + compression.extension();
     }
 
     @Override
-    public String getKeyBlobName(String prefix, String key, CompressionType compression) {
+    public String getKeyBlobName(final String prefix, final String key, final CompressionType compression) {
         final String result = String.format("%s%s", prefix, key);
         return result + compression.extension();
     }
 
     @Override
-    public String getNewBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression) {
+    public String getNewBlobName(final String prefix, final String topicName, final int partition,
+            final int startOffset, final CompressionType compression) {
         final String result = String.format("%s%s-%d-%d", prefix, topicName, partition, startOffset);
         return result + compression.extension();
     }
 
     @Override
-    public String getTimestampBlobName(String prefix, String topicName, int partition, int startOffset) {
+    public String getTimestampBlobName(final String prefix, final String topicName, final int partition,
+            final int startOffset) {
         final ZonedDateTime time = ZonedDateTime.now(ZoneId.of("UTC"));
         return String.format("%s%s-%d-%d-%s-%s-%s", prefix, topicName, partition, startOffset,
                 time.format(DateTimeFormatter.ofPattern("yyyy")), time.format(DateTimeFormatter.ofPattern("MM")),
@@ -87,8 +119,8 @@ public class S3SinkStorage implements SinkStorage<S3Object, String> {
     }
 
     @Override
-    public Map<String, String> createSinkProperties(String prefix, String connectorName) {
-         Map<String, String> config = new HashMap<>();
+    public Map<String, String> createSinkProperties(final String prefix, final String connectorName) {
+        final Map<String, String> config = new HashMap<>();
         config.put("connector.class", AivenKafkaConnectS3SinkConnector.class.getName());
         config.put("aws.access.key.id", S3_ACCESS_KEY_ID);
         config.put("aws.secret.access.key", S3_SECRET_ACCESS_KEY);
@@ -106,12 +138,12 @@ public class S3SinkStorage implements SinkStorage<S3Object, String> {
     }
 
     @Override
-    public String getURLPathPattern(String topicName) {
+    public String getURLPathPattern(final String topicName) {
         return String.format("/%s/%s([\\-0-9]+)", TEST_BUCKET_NAME, topicName);
     }
 
     @Override
-    public boolean enableProxy(Map<String, String> config, WireMockServer proxy) {
+    public boolean enableProxy(final Map<String, String> config, final WireMockServer proxy) {
         System.setProperty(DISABLE_CERT_CHECKING_SYSTEM_PROPERTY, "true");
         config.put("aws.s3.endpoint", proxy.baseUrl());
         return true;
@@ -143,7 +175,7 @@ public class S3SinkStorage implements SinkStorage<S3Object, String> {
     }
 
     @Override
-    public IOSupplier<InputStream> getInputStream(String nativeKey) {
+    public IOSupplier<InputStream> getInputStream(final String nativeKey) {
         return bucketAccessor.getStream(nativeKey);
     }
 }

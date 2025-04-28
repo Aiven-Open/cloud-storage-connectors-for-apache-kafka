@@ -139,8 +139,6 @@ public final class S3SinkTask extends SinkTask {
             outputWriter.writeRecords(records);
         } catch (final IOException e) {
             throw new ConnectException(e);
-        } catch (RuntimeException e) {
-            LOGGER.error("Error flushing file", e);
         }
     }
 

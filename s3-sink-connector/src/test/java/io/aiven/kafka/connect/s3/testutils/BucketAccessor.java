@@ -28,17 +28,17 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.model.S3Object;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.source.NativeInfo;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.util.IOUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import io.aiven.kafka.connect.common.source.NativeInfo;
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +106,7 @@ public class BucketAccessor {
     }
 
     public final IOSupplier<InputStream> getStream(final String blobName) {
-        return () ->  s3Client.getObject(bucketName, blobName).getObjectContent();
+        return () -> s3Client.getObject(bucketName, blobName).getObjectContent();
     }
 
     public final byte[] readBytes(final String blobName, final CompressionType compression) throws IOException {
@@ -159,23 +159,25 @@ public class BucketAccessor {
     }
 
     public final List<NativeInfo<S3Object, String>> getNativeInfo() {
-        List<S3ObjectSummary> lst = s3Client.listObjects(bucketName).getObjectSummaries();
-        return s3Client.listObjects(bucketName).getObjectSummaries().stream()
+        return s3Client.listObjects(bucketName)
+                .getObjectSummaries()
+                .stream()
                 .map(objectSummary -> new NativeInfo<S3Object, String>() {
-            @Override
-            public S3Object getNativeItem() {
-                return s3Client.getObject(bucketName, getNativeKey());
-            }
+                    @Override
+                    public S3Object getNativeItem() {
+                        return s3Client.getObject(bucketName, getNativeKey());
+                    }
 
-            @Override
-            public String getNativeKey() {
-                return objectSummary.getKey();
-            }
+                    @Override
+                    public String getNativeKey() {
+                        return objectSummary.getKey();
+                    }
 
-            @Override
-            public long getNativeItemSize() {
-                return objectSummary.getSize();
-            }
-        }).collect(Collectors.toList());
+                    @Override
+                    public long getNativeItemSize() {
+                        return objectSummary.getSize();
+                    }
+                })
+                .collect(Collectors.toList());
     }
 }
