@@ -23,7 +23,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
@@ -40,46 +39,37 @@ import io.aiven.kafka.connect.common.config.OutputFieldType;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
-public class OutputWriterTest {
+class OutputWriterTest {
 
     @ParameterizedTest
-    @MethodSource("compressionTypes")
-    void checkRoundTrip(CompressionType compression) throws IOException {
-        List<OutputField> lst = Arrays.asList(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
+    @EnumSource(CompressionType.class)
+    void checkRoundTrip(final CompressionType compression) throws IOException {
+        final List<OutputField> lst = Arrays.asList(new OutputField(OutputFieldType.KEY, OutputFieldEncodingType.NONE),
                 new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE));
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        OutputWriter.Builder builder = OutputWriter.builder()
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        final OutputWriter.Builder builder = OutputWriter.builder()
                 .withCompressionType(compression)
                 // .withExternalProperties(config.originalsStrings())
                 .withOutputFields(lst)
                 .withEnvelopeEnabled(false);
         try (OutputWriter writer = builder.build(out, FormatType.CSV)) {
-            SinkRecord record = new SinkRecord("topic", 1, Schema.STRING_SCHEMA, "key", Schema.BYTES_SCHEMA,
+            final SinkRecord record = new SinkRecord("topic", 1, Schema.STRING_SCHEMA, "key", Schema.BYTES_SCHEMA,
                     "value".getBytes(StandardCharsets.UTF_8), 0L);
             writer.writeRecord(record);
         }
-        byte[] resultBytes = decompress(out.toByteArray(), compression);
-        String[] s = new String(resultBytes).split(",");
-        s[0] = b64Decode(s[0]);
-        assertThat(s[0]).isEqualTo("key");
-        assertThat(s[1]).isEqualTo("value");
+        final byte[] resultBytes = decompress(out.toByteArray(), compression);
+        String[] resultArray = new String(resultBytes, StandardCharsets.UTF_8).split(",");
+        resultArray[0] = b64Decode(resultArray[0]);
+        assertThat(resultArray[0]).isEqualTo("key");
+        assertThat(resultArray[1]).isEqualTo("value");
     }
 
-    public static List<Arguments> compressionTypes() {
-        List<Arguments> compressionTypes = new ArrayList<>();
-        for (CompressionType compressionType : CompressionType.values()) {
-            compressionTypes.add(Arguments.of(compressionType));
-        }
-        return compressionTypes;
-    }
-
-    private byte[] decompress(final byte[] input, CompressionType compressionType) throws IOException {
-        try (final var stream = new ByteArrayInputStream(input);
-                final InputStream decompressedStream = compressionType.decompress(stream);
-                final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();) {
+    private byte[] decompress(final byte[] input, final CompressionType compressionType) throws IOException {
+        try (var stream = new ByteArrayInputStream(input);
+                InputStream decompressedStream = compressionType.decompress(stream);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();) {
             IOUtils.copy(decompressedStream, outputStream);
             outputStream.flush();
             return outputStream.toByteArray();

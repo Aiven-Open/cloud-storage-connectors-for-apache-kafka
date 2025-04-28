@@ -16,27 +16,9 @@
 
 package io.aiven.kafka.connect.common.integration.sink;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.http.RequestMethod;
-import com.github.tomakehurst.wiremock.matching.UrlPattern;
-import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.integration.AbstractKafkaIntegrationBase;
-import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.TopicPartition;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.shaded.org.checkerframework.checker.units.qual.C;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.request;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -47,17 +29,34 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.request;
-import static org.assertj.core.api.Assertions.assertThat;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.TopicPartition;
 
-public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> extends AbstractSinkIntegrationTest<N, K> {
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
+
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.http.RequestMethod;
+import com.github.tomakehurst.wiremock.matching.UrlPattern;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>>
+        extends
+            AbstractSinkIntegrationTest<N, K> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractBytesIntegrationTest.class);
     private static final KafkaProducer<byte[], byte[]> NULL_PRODUCER = null;
     protected KafkaProducer<byte[], byte[]> producer;
@@ -69,14 +68,6 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
             producer = NULL_PRODUCER;
         }
         sinkStorage.removeStorage();
-    }
-
-    public static List<Arguments> compressionTypes() {
-        final List<Arguments> compressionTypes = new ArrayList<>();
-        for (final CompressionType compressionType : CompressionType.values()) {
-            compressionTypes.add(Arguments.of(compressionType));
-        }
-        return compressionTypes;
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
@@ -120,7 +111,7 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
     }
 
     @ParameterizedTest
-    @MethodSource("compressionTypes")
+    @EnumSource(CompressionType.class)
     void basicTest(final CompressionType compression) throws ExecutionException, InterruptedException, IOException {
         final var topicName = getTopic() + "-" + compression.name();
         prefix = createPrefix();
@@ -143,14 +134,10 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
 
         // get array of expected blobs
         final Collection<K> expectedBlobs = List.of(sinkStorage.getBlobName(prefix, topicName, 0, 0, compression),
-                sinkStorage.getBlobName(prefix, topicName, 1, 0, compression), sinkStorage.getBlobName(prefix, topicName, 2, 0, compression),
+                sinkStorage.getBlobName(prefix, topicName, 1, 0, compression),
+                sinkStorage.getBlobName(prefix, topicName, 2, 0, compression),
                 sinkStorage.getBlobName(prefix, topicName, 3, 0, compression));
 
-        List<K> nativeKeys = Collections.emptyList();
-        while (nativeKeys.size() < expectedBlobs.size()) {
-            Thread.currentThread().sleep(2000);
-            nativeKeys = this.getNativeKeys();
-        }
         // wait for them to show up.
         waitForStorage(timeout, this::getNativeKeys, expectedBlobs);
 
@@ -173,7 +160,7 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
     }
 
     @ParameterizedTest
-    @MethodSource("compressionTypes")
+    @EnumSource(CompressionType.class)
     void groupByTimestampVariable(final CompressionType compression)
             throws ExecutionException, InterruptedException, IOException {
         final var topicName = getTopic() + "-" + compression.name();
@@ -194,28 +181,29 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
                 recordOf(topicName, 3, "key-4", "value-4"));
 
         // get expected blobs
-        final Map<K, String[]> expectedBlobsAndContent = new TreeMap<>();
+        final Map<K, List<String>> expectedBlobsAndContent = new TreeMap<>();
         expectedBlobsAndContent.put(sinkStorage.getTimestampBlobName(prefix, topicName, 0, 0),
-                new String[] { "key-0,value-0", "key-1,value-1", "key-2,value-2" });
-        expectedBlobsAndContent.put(sinkStorage.getTimestampBlobName(prefix, topicName, 1, 0), new String[] { "key-3,value-3" });
-        expectedBlobsAndContent.put(sinkStorage.getTimestampBlobName(prefix, topicName, 3, 0), new String[] { "key-4,value-4" });
-
-        final Collection<K> expectedBlobs = expectedBlobsAndContent.keySet();
+                List.of("key-0,value-0", "key-1,value-1", "key-2,value-2"));
+        expectedBlobsAndContent.put(sinkStorage.getTimestampBlobName(prefix, topicName, 1, 0),
+                List.of("key-3,value-3"));
+        expectedBlobsAndContent.put(sinkStorage.getTimestampBlobName(prefix, topicName, 3, 0),
+                List.of("key-4,value-4"));
 
         // wait for them to show up.
-        waitForStorage(timeout, this::getNativeKeys, expectedBlobs);
+        waitForStorage(timeout, this::getNativeKeys, expectedBlobsAndContent.keySet());
 
-        for (final K blobName : expectedBlobs) {
-            final List<String> blobContent = JsonTestDataFixture.readAndDecodeLines(readBytes(blobName, compression), 0, 1)
+        for (final Map.Entry<K, List<String>> expected : expectedBlobsAndContent.entrySet()) {
+            final List<String> blobContent = JsonTestDataFixture
+                    .readAndDecodeLines(readBytes(expected.getKey(), compression), 0, 1)
                     .stream()
                     .map(fields -> String.join(",", fields))
                     .collect(Collectors.toList());
-            assertThat(blobContent).containsExactlyInAnyOrder(expectedBlobsAndContent.get(blobName));
+            assertThat(blobContent).containsExactlyInAnyOrderElementsOf(expected.getValue());
         }
     }
 
     @ParameterizedTest
-    @MethodSource("compressionTypes")
+    @EnumSource(CompressionType.class)
     void oneFilePerRecordWithPlainValues(final CompressionType compression)
             throws ExecutionException, InterruptedException, IOException {
         final var topicName = getTopic() + "-" + compression.name();
@@ -254,7 +242,7 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
     }
 
     @ParameterizedTest
-    @MethodSource("compressionTypes")
+    @EnumSource(CompressionType.class)
     void groupByKey(final CompressionType compression) throws ExecutionException, InterruptedException, IOException {
         final String topicName0 = getTopic() + "-" + compression.name();
         final String topicName1 = topicName0 + "_1";
@@ -302,7 +290,7 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
         final Collection<K> expectedBlobs = keysPerTopicPartition.values()
                 .stream()
                 .flatMap(keys -> keys.stream().map(key -> sinkStorage.getKeyBlobName(prefix, key, compression)))
-                        .collect(Collectors.toList());
+                .collect(Collectors.toList());
 
         // wait for them to show up.
         waitForStorage(timeout, this::getNativeKeys, expectedBlobs);
@@ -359,7 +347,8 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
         produceRecords(records);
 
         final Collection<K> expectedBlobs = List.of(sinkStorage.getNewBlobName(prefix, topicName, 0, 0, compression),
-                sinkStorage.getNewBlobName(prefix, topicName, 1, 0, compression), sinkStorage.getNewBlobName(prefix, topicName, 2, 0, compression),
+                sinkStorage.getNewBlobName(prefix, topicName, 1, 0, compression),
+                sinkStorage.getNewBlobName(prefix, topicName, 2, 0, compression),
                 sinkStorage.getNewBlobName(prefix, topicName, 3, 0, compression));
 
         // wait for them to show up.
@@ -417,7 +406,8 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
                 new KeyValueGenerator(keyGen, valueGen), topicName);
 
         final Collection<K> expectedBlobs = List.of(sinkStorage.getNewBlobName(prefix, topicName, 0, 0, compression),
-                sinkStorage.getNewBlobName(prefix, topicName, 1, 0, compression), sinkStorage.getNewBlobName(prefix, topicName, 2, 0, compression),
+                sinkStorage.getNewBlobName(prefix, topicName, 1, 0, compression),
+                sinkStorage.getNewBlobName(prefix, topicName, 2, 0, compression),
                 sinkStorage.getNewBlobName(prefix, topicName, 3, 0, compression));
 
         // wait for them to show up.
@@ -475,13 +465,16 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
             final int partitions = 4;
 
             final IndexesToString keyGen = (partition, epoch, currIdx) -> "key-" + currIdx;
-            final IndexesToString valueGen = (partition, epoch, currIdx) -> "[{" + "\"name\":\"user-" + currIdx + "\"}]";
+            final IndexesToString valueGen = (partition, epoch, currIdx) -> "[{" + "\"name\":\"user-" + currIdx
+                    + "\"}]";
 
             final List<KeyValueMessage> expectedRecords = produceRecords(partitions, epochs,
                     new KeyValueGenerator(keyGen, valueGen), topicName);
 
-            final Collection<K> expectedBlobs = List.of(sinkStorage.getNewBlobName(prefix, topicName, 0, 0, compression),
-                    sinkStorage.getNewBlobName(prefix, topicName, 1, 0, compression), sinkStorage.getNewBlobName(prefix, topicName, 2, 0, compression),
+            final Collection<K> expectedBlobs = List.of(
+                    sinkStorage.getNewBlobName(prefix, topicName, 0, 0, compression),
+                    sinkStorage.getNewBlobName(prefix, topicName, 1, 0, compression),
+                    sinkStorage.getNewBlobName(prefix, topicName, 2, 0, compression),
                     sinkStorage.getNewBlobName(prefix, topicName, 3, 0, compression));
 
             // wait for them to show up.
@@ -517,12 +510,12 @@ public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>> e
 
     }
 
-    private static WireMockServer createFaultyProxy(SinkStorage<?, ?> sinkStorage, final String topicName) {
+    private static WireMockServer createFaultyProxy(final SinkStorage<?, ?> sinkStorage, final String topicName) {
         final WireMockServer wireMockServer = new WireMockServer(WireMockConfiguration.options().dynamicHttpsPort());
         wireMockServer.start();
-        wireMockServer.addStubMapping(
-                request(RequestMethod.ANY.getName(), UrlPattern.ANY).willReturn(aResponse().proxiedFrom(sinkStorage.getEndpointURL()))
-                        .build());
+        wireMockServer.addStubMapping(request(RequestMethod.ANY.getName(), UrlPattern.ANY)
+                .willReturn(aResponse().proxiedFrom(sinkStorage.getEndpointURL()))
+                .build());
         final String urlPathPattern = sinkStorage.getURLPathPattern(topicName);
         wireMockServer.addStubMapping(
                 request(RequestMethod.POST.getName(), UrlPattern.fromOneOf(null, null, null, urlPathPattern))

@@ -23,45 +23,38 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.stream.Stream;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
-public class CompressionTypeTest {
-    private final String testText = "Now is the time for all good people to come to the aid of their country";
+class CompressionTypeTest {
 
     @ParameterizedTest
-    @MethodSource("CompressionTypeArgs")
-    void testCompressionType(CompressionType compressionType) throws IOException {
-        byte[] compressed = compress(testText.getBytes(), compressionType);
-        byte[] decompressed = decompress(compressed, compressionType);
-        assertThat(new String(decompressed)).isEqualTo(testText);
+    @EnumSource(CompressionType.class)
+    void testCompressionType(final CompressionType compressionType) throws IOException {
+        final String testText = "Now is the time for all good people to come to the aid of their country";
+        final byte[] compressed = compress(testText.getBytes(StandardCharsets.UTF_8), compressionType);
+        final byte[] decompressed = decompress(compressed, compressionType);
+        assertThat(new String(decompressed, StandardCharsets.UTF_8)).isEqualTo(testText);
     }
 
-    private byte[] compress(final byte[] input, CompressionType compressionType) throws IOException {
-        try (final var stream = new ByteArrayInputStream(input);
-                final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                final OutputStream compressedStream = compressionType.compress(outputStream);) {
+    private byte[] compress(final byte[] input, final CompressionType compressionType) throws IOException {
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try (var stream = new ByteArrayInputStream(input);
+                OutputStream compressedStream = compressionType.compress(outputStream);) {
             IOUtils.copy(stream, compressedStream);
-            compressedStream.close();
-            return outputStream.toByteArray();
         }
+        return outputStream.toByteArray();
     }
 
-    private byte[] decompress(final byte[] input, CompressionType compressionType) throws IOException {
-        try (final var stream = new ByteArrayInputStream(input);
-                final InputStream decompressedStream = compressionType.decompress(stream);
-                final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();) {
+    private byte[] decompress(final byte[] input, final CompressionType compressionType) throws IOException {
+        try (var stream = new ByteArrayInputStream(input);
+                InputStream decompressedStream = compressionType.decompress(stream);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();) {
             IOUtils.copy(decompressedStream, outputStream);
-            outputStream.flush();
             return outputStream.toByteArray();
         }
-    }
-
-    private static Stream<CompressionType> CompressionTypeArgs() {
-        return Arrays.stream(CompressionType.values());
     }
 }

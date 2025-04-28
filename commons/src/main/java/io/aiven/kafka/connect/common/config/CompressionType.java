@@ -44,14 +44,15 @@ public enum CompressionType {
             .collect(Collectors.joining(", "));
 
     public final String name;
-    private final String extension;
+    private final String extensionStr;
     private final IOFunction<InputStream, InputStream> inputCreator;
     private final IOFunction<OutputStream, OutputStream> outputCreator;
 
-    CompressionType(final String name, final String extension, final IOFunction<InputStream, InputStream> inputCreator,
+    CompressionType(final String name, final String extensionStr,
+            final IOFunction<InputStream, InputStream> inputCreator,
             final IOFunction<OutputStream, OutputStream> outputCreator) {
         this.name = name;
-        this.extension = extension;
+        this.extensionStr = extensionStr;
         this.inputCreator = inputCreator;
         this.outputCreator = outputCreator;
     }
@@ -71,15 +72,33 @@ public enum CompressionType {
     }
 
     public final String extension() {
-        return extension;
+        return extensionStr;
     }
 
-    public final InputStream decompress(InputStream in) throws IOException {
-        return inputCreator.apply(in);
+    /**
+     * Decompresses an input stream.
+     *
+     * @param input
+     *            the input stream to read compressed data from.
+     * @return and input stream that returns decompressed data.
+     * @throws IOException
+     *             on error.
+     */
+    public final InputStream decompress(final InputStream input) throws IOException {
+        return inputCreator.apply(input);
     }
 
-    public final OutputStream compress(OutputStream out) throws IOException {
-        return outputCreator.apply(out);
+    /**
+     * Compresses an output stream.
+     *
+     * @param output
+     *            the output stream to write compressed data to.
+     * @return an output stream that writes compressed data.
+     * @throws IOException
+     *             on error.
+     */
+    public final OutputStream compress(final OutputStream output) throws IOException {
+        return outputCreator.apply(output);
     }
 
 }

@@ -91,8 +91,6 @@ public abstract class OutputWriter implements AutoCloseable {
             try {
                 writer.stopWriting(outputStream);
                 this.outputStream.flush();
-            } catch (Exception e) {
-                e.printStackTrace();;
             } finally {
                 if (this.outputStream != null) {
                     this.outputStream.close();

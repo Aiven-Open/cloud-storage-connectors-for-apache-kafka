@@ -23,14 +23,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.source.NativeInfo;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.connect.connector.Connector;
 
@@ -39,8 +36,6 @@ import io.aiven.kafka.connect.common.utils.CasedString;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.Container;
 
 /**
@@ -49,9 +44,7 @@ import org.testcontainers.containers.Container;
  * This class handles the creation and destruction of a thread safe {@link KafkaManager}.
  * </p>
  */
-public abstract class AbstractKafkaIntegrationBase {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractKafkaIntegrationBase.class);
+public class KafkaIntegrationTestBase {
 
     /**
      * The Test info provided before each test. Tests may access this info wihout capturing it themselves.
@@ -89,7 +82,8 @@ public abstract class AbstractKafkaIntegrationBase {
      *            the value for the record.
      * @return a {@code }ProducerRecord<byte[], byte[]>}
      */
-    protected static ProducerRecord<byte[], byte[]> recordOf(String topic, int partition, String key, String value) {
+    protected static ProducerRecord<byte[], byte[]> recordOf(final String topic, final int partition, final String key,
+            final String value) {
         return new ProducerRecord<>(topic, partition, bytesOrNull(key), bytesOrNull(value));
     }
 
@@ -118,9 +112,11 @@ public abstract class AbstractKafkaIntegrationBase {
     /**
      * Gets the name of the current connector.
      *
+     * @param connectorClass
+     *            the connector class to use.
      * @return the name of the connector.
      */
-    final protected String getConnectorName(Class<? extends Connector> connectorClass) {
+    final protected String getConnectorName(final Class<? extends Connector> connectorClass) {
         String result = CONNECTOR_NAME_THREAD_LOCAL.get();
         if (result == null) {
             result = new CasedString(CasedString.StringCase.CAMEL, connectorClass.getSimpleName())
@@ -134,12 +130,13 @@ public abstract class AbstractKafkaIntegrationBase {
     /**
      * Get the topic from the TestInfo.
      *
+     * @args the arguments to append to the topic name.
      * @return The topic extracted from the testInfo for the current test.
      */
-    final public String getTopic(String ... args) {
-        StringBuilder pfx = new StringBuilder(testInfo.getTestMethod().get().getName());
-        for (String arg : args) {
-            pfx.append("-").append(arg);
+    final public String getTopic(final String... args) {
+        final StringBuilder pfx = new StringBuilder(testInfo.getTestMethod().get().getName());
+        for (final String arg : args) {
+            pfx.append('-').append(arg);
         }
         return pfx.toString();
     }
@@ -168,6 +165,8 @@ public abstract class AbstractKafkaIntegrationBase {
      * Sets up and returns the KafkaManager. If the KafkaManager has already been set up, this method returns the
      * existing instance.
      *
+     * @param connectorClass
+     *            the connector class to use.
      * @return a KafkaManager instance. This is equivalent of calling @{code setupKafka(false)}.
      * @throws IOException
      *             on IO error.
@@ -176,7 +175,7 @@ public abstract class AbstractKafkaIntegrationBase {
      * @throws InterruptedException
      *             on interrupted thread.
      */
-    final protected KafkaManager setupKafka(Class<? extends Connector> connectorClass)
+    final protected KafkaManager setupKafka(final Class<? extends Connector> connectorClass)
             throws IOException, ExecutionException, InterruptedException {
         return setupKafka(false, connectorClass);
     }
@@ -187,11 +186,13 @@ public abstract class AbstractKafkaIntegrationBase {
      *
      * @param forceRestart
      *            If true any existing KafkaManager is shutdown and a new one created.
+     * @param connectorClass
+     *            the connector class to use.
      * @return a KafkaManager instance. This is equivalent of calling @{code setupKafka(false)}.
      * @throws IOException
      *             on IO error.
      */
-    final protected KafkaManager setupKafka(final boolean forceRestart, Class<? extends Connector> connectorClass)
+    final protected KafkaManager setupKafka(final boolean forceRestart, final Class<? extends Connector> connectorClass)
             throws IOException {
         KafkaManager kafkaManager = KAFKA_MANAGER_THREAD_LOCAL.get();
         if (kafkaManager != null && forceRestart) {
@@ -221,8 +222,11 @@ public abstract class AbstractKafkaIntegrationBase {
 
     /**
      * Delete the current connector from the running kafka.
+     *
+     * @param connectorClass
+     *            the connector class to use.
      */
-    final protected void deleteConnector(Class<? extends Connector> connectorClass) {
+    final protected void deleteConnector(final Class<? extends Connector> connectorClass) {
         final KafkaManager kafkaManager = KAFKA_MANAGER_THREAD_LOCAL.get();
         if (kafkaManager != null) {
             kafkaManager.deleteConnector(getConnectorName(connectorClass));
@@ -246,7 +250,7 @@ public abstract class AbstractKafkaIntegrationBase {
     }
 
     /**
-     * Removes/deletes the KafkatManager.
+     * Removes/deletes the Kafka Manager.
      */
     @AfterAll
     static void removeKafkaManager() {
@@ -255,14 +259,20 @@ public abstract class AbstractKafkaIntegrationBase {
 
     /**
      * Wait until storageList returns all the items in expectedStorage.
-     * @param timeout the maximum duration to wait.
-     * @param storageList The supplier of the storage list.
-     * @param expectedStorage the array of expected values in the storage list.
-     * @param <K> the data type of the storage value. (must implement equals).
+     *
+     * @param timeout
+     *            the maximum duration to wait.
+     * @param storageList
+     *            The supplier of the storage list.
+     * @param expectedStorage
+     *            the array of expected values in the storage list.
+     * @param <K>
+     *            the data type of the storage value. (must implement equals).
      * @deprecated use {@link #waitForStorage(Duration, Supplier, Collection)}
      */
     @Deprecated
-    protected final <K> void waitForStorage(Duration timeout, Supplier<Collection<K>> storageList, K[] expectedStorage) {
+    protected final <K> void waitForStorage(final Duration timeout, final Supplier<Collection<K>> storageList,
+            final K[] expectedStorage) {
         // wait for them to show up.
         await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
             assertThat(storageList.get()).containsExactly(expectedStorage);
@@ -271,30 +281,21 @@ public abstract class AbstractKafkaIntegrationBase {
 
     /**
      * Wait until storageList returns all the items in expectedStorage.
-     * @param timeout the maximum duration to wait.
-     * @param storageList The supplier of the storage list.
-     * @param expectedStorage the array of expected values in the storage list.
-     * @param <K> the data type of the storage value. (must implement equals).
+     *
+     * @param timeout
+     *            the maximum duration to wait.
+     * @param storageList
+     *            The supplier of the storage list.
+     * @param expectedStorage
+     *            the array of expected values in the storage list.
+     * @param <K>
+     *            the data type of the storage value. (must implement equals).
      */
-    protected final <K> void waitForStorage(Duration timeout, Supplier<Collection<K>> storageList, Collection<K> expectedStorage) {
+    protected final <K> void waitForStorage(final Duration timeout, final Supplier<Collection<K>> storageList,
+            final Collection<K> expectedStorage) {
         // wait for them to show up.
         await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
             assertThat(storageList.get()).containsExactlyInAnyOrderElementsOf(expectedStorage);
         });
     }
-    /**
-     * Wait until storageList returns all the items in expectedStorage.
-     * @param timeout the maximum duration to wait.
-     * @param storageList The supplier of the storage list.
-     * @param expectedStorage the array of expected values in the storage list.
-     * @param <K> the data type of the storage value. (must implement equals).
-     */
-    protected final <K> void waitForNativeStorage(Duration timeout, Supplier<Collection<? extends NativeInfo<?, K>>> storageList, K[] expectedStorage) {
-        // wait for them to show up.
-        await().atMost(timeout).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            List<K> lst = storageList.get().stream().map(NativeInfo::getNativeKey).collect(Collectors.toList());
-            assertThat(lst).containsExactly(expectedStorage);
-        });
-    }
-
 }
