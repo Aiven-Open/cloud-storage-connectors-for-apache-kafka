@@ -35,7 +35,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import io.aiven.kafka.connect.common.config.CompressionType;
 import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
@@ -43,7 +42,43 @@ import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingExcept
  */
 final public class JsonTestDataFixture {
 
+
     private final static String MSG_FORMAT = "{\"id\" : %s, \"message\" : \"%s\", \"value\" : \"value%s\"}%n";
+
+    //         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
+    //        final var jsonMessagePattern = "{\"schema\": %s, \"payload\": %s}";
+
+
+    public static final String SCHEMA_JSON = "{\n  \"type\": \"struct\", \"name\": \"TestRecord\",\n "
+            + "  \"fields\": [\n {\"field\": \"message\", \"type\": \"string\"},\n"
+            + "    {\"field\": \"id\", \"type\": \"int32\"}\n  ]\n}";
+
+
+//    //    private final Schema avroInputDataSchema = new Schema.Parser().parse(
+    ////            "{\"type\":\"record\",\"name\":\"input_data\"," + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
+//
+//    // Connect will add two extra fields to schema and enrich it with
+//    // connect.version: 1
+//    // connect.name: input_data
+//    final Schema avroInputDataSchemaWithConnectExtra = new Schema.Parser()
+//            .parse("{\"type\":\"record\",\"name\":\"input_data\","
+//                    + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"}],"
+//                    + "\"connect.version\":1,\"connect.name\":\"input_data\"}");
+
+    public static final String CONNECT_EXTRA_SCHEMA_JSON =  "{\n  \"type\": \"struct\",\n  \"name\": \"TestRecord\",\n"
+            + "  \"fields\": [\n    {\"name\": \"message\", \"type\": \"string\"},\n"
+            + "    {\"name\": \"id\", \"type\": \"int32\"}\n  ],\n"
+            + "    \"connect.version\":1, \"connect.name\": \"TestRecord\"}\n";
+
+//    final Schema evolvedAvroInputDataSchema = new Schema.Parser()
+//            .parse("{\"type\":\"record\",\"name\":\"input_data\","
+//                    + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"age\",\"type\":\"int\",\"default\":0}]}");
+
+    public static final String EVOLVED_SCHEMA_JSON =  "{\n  \"type\": \"struct\",\n  \"name\": \"TestRecord\",\n"
+            + "  \"fields\": [\n    {\"field\": \"message\", \"type\": \"string\"},\n"
+            + "    {\"field\": \"id\", \"type\": \"int32\"},\n"
+            + "    {\"field\": \"age\", \"type\": \"int32\", \"default\":0}\n  ]\n}";
+
 
     private final static ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private final static DeserializationFeature[] deserializationFeatures = {
@@ -54,11 +89,55 @@ final public class JsonTestDataFixture {
             OBJECT_MAPPER.enable(feature);
         }
         OBJECT_MAPPER.setNodeFactory(JsonNodeFactory.withExactBigDecimals(true));
+
+//        final Schema valueSchema = SchemaBuilder.record("value")
+//                .fields()
+//                .name("name")
+//                .type()
+//                .stringType()
+//                .noDefault()
+//                .name("value")
+//                .type()
+//                .stringType()
+//                .noDefault()
+//                .endRecord();
+//
+//        final Schema newValueSchema = SchemaBuilder.record("value")
+//                .fields()
+//                .name("name")
+//                .type()
+//                .stringType()
+//                .noDefault()
+//                .name("value")
+//                .type()
+//                .stringType()
+//                .noDefault()
+//                .name("blocked")
+//                .type()
+//                .booleanType()
+//                .booleanDefault(false)
+//                .endRecord();
+
+//
+//        JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(OBJECT_MAPPER);
+//        DEFAULT_SCHEMA = schemaGen.generateSchema(SCHEMA_JSON);
+//        CONNECT_EXTRA_SCHEMA = schemaGen.generateSchema(CONNECT_EXTRA_SCHEMA_JSON);
+//        EVOLVED_SCHEMA = schemaGen.generateSchema(EVOLVED_SCHEMA_JSON);
+
     }
 
     private JsonTestDataFixture() {
         // do not instantiate
     }
+
+    public static String formatDefaultData(final int id, final String message) {
+        return String.format("{\"id\" : %1$s, \"message\" : \"%2$s\"}%n", id, message);
+    }
+
+    public static String formatEvolvedData(final int id, final String message, int age) {
+        return String.format("{\"id\" : %1$s, \"message\" : \"%2$s\", \"age\" : %3$s}%n", id, message, age);
+    }
+
     /**
      * Creates the specified number of JSON records encoded into a string.
      *

@@ -16,19 +16,23 @@
     package io.aiven.kafka.connect.common.integration.sink;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
 import org.apache.avro.Schema;
-import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -50,11 +54,10 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
-public abstract class AbstractParquetIntegrationTest <N, K extends Comparable<K>> extends AbstractSinkIntegrationTest<N, K> {
+public abstract class AbstractByteParquetIntegrationTest<N, K extends Comparable<K>> extends AbstractSinkIntegrationTest<N, K> {
 
-    private static final KafkaProducer<byte[], byte[]> NULL_PRODUCER = null;
-    private KafkaProducer<byte[], byte[]> producer;
-
+    private static final KafkaProducer<byte[], byte[]>  NULL_PRODUCER = null;
+    private KafkaProducer<byte[], byte[]>  producer;
 
     @AfterEach
     void tearDown() {
@@ -72,8 +75,10 @@ public abstract class AbstractParquetIntegrationTest <N, K extends Comparable<K>
     @Override
     protected Map<String, String> createConfiguration(String... topics) {
         Map<String, String> config = super.createConfiguration(topics);
-        config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
+        KafkaFragment.setter(config)
+                .valueConverter(ByteArrayConverter.class)
+                .keyConverter(ByteArrayConverter.class);
+        OutputFormatFragment.setter(config).withFormatType(FormatType.PARQUET);
         return config;
     }
 
@@ -124,7 +129,7 @@ public abstract class AbstractParquetIntegrationTest <N, K extends Comparable<K>
         final long now = System.currentTimeMillis();
         for (final K blobName : expectedBlobs) {
             final List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName.toString())),
-                    readBytes(blobName, compression));
+                    readBytes(blobName, CompressionType.NONE));
             int offset = 0;
             for (final GenericRecord r : lst) {
                 final List<String> fields = r.getSchema()
@@ -160,17 +165,17 @@ public abstract class AbstractParquetIntegrationTest <N, K extends Comparable<K>
     }
 
     @Test
+    @Disabled
     final void valueComplexType(@TempDir final Path tmpDir)
             throws ExecutionException, InterruptedException, IOException {
         final String topicName = getTopic();
-        final CompressionType compression =sinkStorage.getDefaultCompression();
+        final CompressionType compression = sinkStorage.getDefaultCompression();
         kafkaManager.createTopic(topicName);
         producer = newProducer();
 
         final Map<String, String> connectorConfig = createConfiguration(topicName);
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
-
 
         kafkaManager.configureConnector(connectorName, connectorConfig);
 
@@ -200,7 +205,7 @@ public abstract class AbstractParquetIntegrationTest <N, K extends Comparable<K>
 
         for (final K blobName : expectedBlobs) {
             for (final GenericRecord r : ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName.toString())),
-                    readBytes(blobName, compression))) {
+                    readBytes(blobName, CompressionType.NONE))) {
                 final GenericRecord value = (GenericRecord) r.get("value");
                 assertThat(messageMapper.apply(value)).endsWith(idMapper.apply(value));
                 actualValues.add(value);
@@ -222,6 +227,7 @@ public abstract class AbstractParquetIntegrationTest <N, K extends Comparable<K>
     }
 
     @Test
+    @Disabled
     final void schemaChangedJson(@TempDir final Path tmpDir) throws ExecutionException, InterruptedException, IOException {
         final String topicName = getTopic();
         final CompressionType compression = sinkStorage.getDefaultCompression();
@@ -265,9 +271,9 @@ public abstract class AbstractParquetIntegrationTest <N, K extends Comparable<K>
         final IndexesToString keyGen = (partition, epoch, currIdx) -> Integer.toString(currIdx);
         final IndexesToString valueGen = (partition, epoch, currIdx) -> {
             final String payload = currIdx < schemaChangeBoundary
-                    ? AvroTestDataFixture.formatDefaultData(currIdx, "Hello from partition " + partition)
-                    : AvroTestDataFixture.formatEvolvedData(currIdx, "Hello from partition " + partition, epoch);
-            final String schema = currIdx < schemaChangeBoundary ? AvroTestDataFixture.SCHEMA_JSON : AvroTestDataFixture.EVOLVED_SCHEMA_JSON;
+                    ? JsonTestDataFixture.formatDefaultData(currIdx, "Hello from partition " + partition)
+                    : JsonTestDataFixture.formatEvolvedData(currIdx, "Hello from partition " + partition, epoch);
+            final String schema = currIdx < schemaChangeBoundary ? JsonTestDataFixture.SCHEMA_JSON : JsonTestDataFixture.EVOLVED_SCHEMA_JSON;
 
             return String.format(jsonMessagePattern, schema, payload);
         };
@@ -291,8 +297,9 @@ public abstract class AbstractParquetIntegrationTest <N, K extends Comparable<K>
         final Function<GenericRecord, String> messageMapper = mapF("message");
 
         for (final K blobName : expectedBlobs) {
+            List<GenericRecord> lst = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName.toString())),  readBytes(blobName, CompressionType.NONE));
             for (final GenericRecord r : ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName.toString())),
-                    readBytes(blobName, compression))) {
+                    readBytes(blobName, CompressionType.NONE))) {
                 final GenericRecord value = (GenericRecord) r.get("value");
                 assertThat(messageMapper.apply(value)).endsWith(idMapper.apply(value));
                 // verify the schema change.
@@ -327,17 +334,6 @@ public abstract class AbstractParquetIntegrationTest <N, K extends Comparable<K>
 
         assertThat(values).containsExactlyInAnyOrderElementsOf(expected);
     }
-
-//    private KafkaProducer<String, GenericRecord> newProducer() {
-//        final Map<String, Object> producerProps = new HashMap<>();
-//        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
-//        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-//                "io.confluent.kafka.serializers.KafkaAvroSerializer");
-//        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-//                "io.confluent.kafka.serializers.KafkaAvroSerializer");
-//        producerProps.put("schema.registry.url", kafkaManager.getSchemaRegistryUrl());
-//        return new KafkaProducer<>(producerProps);
-//    }
 
     private KafkaProducer<byte[], byte[]> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();

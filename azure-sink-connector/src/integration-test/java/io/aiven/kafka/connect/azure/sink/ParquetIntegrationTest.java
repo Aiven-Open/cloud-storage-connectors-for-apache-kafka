@@ -1,13 +1,13 @@
 package io.aiven.kafka.connect.azure.sink;
 
 import com.azure.storage.blob.models.BlobItem;
-import io.aiven.kafka.connect.common.integration.sink.AbstractParquetIntegrationTest;
+import io.aiven.kafka.connect.common.integration.sink.AbstractByteParquetIntegrationTest;
 import org.testcontainers.azure.AzuriteContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-public class ParquetIntegrationTest extends AbstractParquetIntegrationTest<BlobItem, String> {
+public class ParquetIntegrationTest extends AbstractByteParquetIntegrationTest<BlobItem, String> {
 
     /**
      * The azure container

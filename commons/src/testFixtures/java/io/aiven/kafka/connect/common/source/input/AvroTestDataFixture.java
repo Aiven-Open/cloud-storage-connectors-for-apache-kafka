@@ -20,6 +20,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 
 import org.apache.avro.Schema;
@@ -32,6 +34,9 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 
 /**
  * A testing fixture to generate Avro test data.
@@ -136,6 +141,44 @@ public final class AvroTestDataFixture {
         }
         outputStream.close();
         return outputStream.toByteArray();
+    }
+
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    public static List<GenericRecord> produceRecords(final KafkaProducer<String, GenericRecord> producer, final int recordCountPerPartition, final int partitionCount,
+                                                      final String topicName) throws ExecutionException, InterruptedException {
+        final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
+        final List<GenericRecord> genericRecords = AvroTestDataFixture
+                .generateAvroRecords(recordCountPerPartition * partitionCount);
+        int cnt = 0;
+        for (final GenericRecord value : genericRecords) {
+            final int partition = cnt % partitionCount;
+            final String key = "key-" + cnt++;
+            sendFutures.add(producer.send(new ProducerRecord<>(topicName, partition, key, value)));
+        }
+        producer.flush();
+        for (final Future<RecordMetadata> sendFuture : sendFutures) {
+            sendFuture.get();
+        }
+        return genericRecords;
+    }
+
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    public static List<GenericRecord> produceRecords(final KafkaProducer<String, GenericRecord> producer, final int recordCountPerPartition, final int partitionCount,
+                                                     final String topicName, Function<Integer, GenericRecord> recordCreator) throws ExecutionException, InterruptedException {
+        final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
+        final List<GenericRecord> genericRecords = AvroTestDataFixture
+                .generateAvroRecords(recordCountPerPartition * partitionCount, recordCreator);
+        int cnt = 0;
+        for (final GenericRecord value : genericRecords) {
+            final int partition = cnt % partitionCount;
+            final String key = "key-" + cnt++;
+            sendFutures.add(producer.send(new ProducerRecord<>(topicName, partition, key, value)));
+        }
+        producer.flush();
+        for (final Future<RecordMetadata> sendFuture : sendFutures) {
+            sendFuture.get();
+        }
+        return genericRecords;
     }
 
     /**

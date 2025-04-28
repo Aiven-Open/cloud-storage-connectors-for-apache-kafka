@@ -21,12 +21,15 @@ import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.avro.Schema;
+import org.apache.avro.SchemaBuilder;
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -48,6 +51,34 @@ import org.testcontainers.shaded.org.apache.commons.io.FileUtils;
  * A testing feature to generate Parquet data.
  */
 public final class ParquetTestDataFixture {
+
+    public static final Schema NAME_VALUE_SCHEMA = SchemaBuilder.record("value")
+            .fields()
+            .name("name")
+            .type()
+            .stringType()
+            .noDefault()
+            .name("value")
+            .type()
+            .stringType()
+            .noDefault()
+            .endRecord();
+
+    public static final Schema EVOLVED_NAME_VALUE_SCHEMA = SchemaBuilder.record("value")
+        .fields()
+        .name("name")
+        .type()
+        .stringType()
+        .noDefault()
+        .name("value")
+        .type()
+        .stringType()
+        .noDefault()
+        .name("blocked")
+        .type()
+        .booleanType()
+        .booleanDefault(false)
+        .endRecord();
 
     private ParquetTestDataFixture() {
         // do not instantiate
@@ -98,8 +129,8 @@ public final class ParquetTestDataFixture {
         final var records = new ArrayList<GenericRecord>();
         final var parquetFile = tmpDir.resolve("parquet.file");
         FileUtils.writeByteArrayToFile(parquetFile.toFile(), bytes);
-        try (final var seekableByteChannel = Files.newByteChannel(parquetFile);
-                var parquetReader = AvroParquetReader.<GenericRecord>builder(new InputFile() {
+        try (final SeekableByteChannel seekableByteChannel = Files.newByteChannel(parquetFile);
+             var parquetReader = AvroParquetReader.<GenericRecord>builder(new InputFile() {
                     @Override
                     public long getLength() throws IOException {
                         return seekableByteChannel.size();
