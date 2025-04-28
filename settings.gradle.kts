@@ -110,15 +110,16 @@ dependencyResolutionManagement {
 
 include("commons")
 
-
 include("gcs-sink-connector")
 
-
 include("azure-commons")
+
 include("azure-sink-connector")
+
 include("azure-source-connector")
 
 include("s3-commons")
-include("s3-sink-connector")
-include("s3-source-connector")
 
+include("s3-sink-connector")
+
+include("s3-source-connector")

@@ -68,6 +68,7 @@ public final class ContainerAccessor {
 
     /**
      * Gets the container URL
+     *
      * @return the container url.
      */
     public String getContainerUrl() {
@@ -93,8 +94,6 @@ public final class ContainerAccessor {
     }
 
     public List<AzureNativeInfo> getNativeStorage() {
-        containerClient.getBlobContainerName();
-        List<BlobItem> lst = containerClient.listBlobs().stream().collect(Collectors.toList());
         return StreamSupport.stream(containerClient.listBlobs().spliterator(), false)
                 .map(AzureNativeInfo::new)
                 .sorted()

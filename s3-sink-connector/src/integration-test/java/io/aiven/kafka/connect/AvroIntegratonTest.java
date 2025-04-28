@@ -1,14 +1,14 @@
 package io.aiven.kafka.connect;
 
 import com.amazonaws.services.s3.model.S3Object;
-import io.aiven.kafka.connect.common.integration.sink.AbstractBytesIntegrationTest;
+import io.aiven.kafka.connect.common.integration.sink.AbstractAvroIntegrationTest;
 import io.aiven.kafka.connect.common.integration.sink.SinkStorage;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-public class BytesIntegrationTest2  extends AbstractBytesIntegrationTest<S3Object, String> {
+public class AvroIntegratonTest extends AbstractAvroIntegrationTest<S3Object, String> {
 
     @Container
     public static final LocalStackContainer LOCALSTACK = S3SinkStorage.createContainer();

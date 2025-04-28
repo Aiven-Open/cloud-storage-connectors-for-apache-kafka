@@ -22,7 +22,6 @@ import java.util.Map;
 
 import io.aiven.kafka.connect.azure.ContainerAccessor;
 import io.aiven.kafka.connect.azure.config.AzureBlobConfigFragment;
-
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 
 import com.azure.storage.blob.BlobServiceClient;
@@ -89,7 +88,6 @@ public class AzureIntegrationTestData {
         containerAccessor.removeContainer();
     }
 
-
     /**
      * Creates a native key.
      *
@@ -105,7 +103,6 @@ public class AzureIntegrationTestData {
         return String.format("%s%s-%05d-%d.txt", StringUtils.defaultIfBlank(prefix, ""), topic, partition,
                 System.currentTimeMillis());
     }
-
 
     /**
      * Gets the native storage information.

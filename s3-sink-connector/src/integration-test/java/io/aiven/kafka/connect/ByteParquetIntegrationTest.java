@@ -8,7 +8,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-public class ByteParquetIntegrationTest2 extends AbstractByteParquetIntegrationTest<S3Object, String> {
+public class ByteParquetIntegrationTest extends AbstractByteParquetIntegrationTest<S3Object, String> {
 
     @Container
     public static final LocalStackContainer LOCALSTACK = S3SinkStorage.createContainer();
