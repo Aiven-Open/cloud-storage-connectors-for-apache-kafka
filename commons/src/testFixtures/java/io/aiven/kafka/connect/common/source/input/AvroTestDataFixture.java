@@ -147,8 +147,7 @@ public final class AvroTestDataFixture {
     public static List<GenericRecord> produceRecords(final KafkaProducer<String, GenericRecord> producer, final int recordCountPerPartition, final int partitionCount,
                                                       final String topicName) throws ExecutionException, InterruptedException {
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
-        final List<GenericRecord> genericRecords = AvroTestDataFixture
-                .generateAvroRecords(recordCountPerPartition * partitionCount);
+        final List<GenericRecord> genericRecords = AvroTestDataFixture.generateAvroRecords(recordCountPerPartition * partitionCount);
         int cnt = 0;
         for (final GenericRecord value : genericRecords) {
             final int partition = cnt % partitionCount;
@@ -166,8 +165,7 @@ public final class AvroTestDataFixture {
     public static List<GenericRecord> produceRecords(final KafkaProducer<String, GenericRecord> producer, final int recordCountPerPartition, final int partitionCount,
                                                      final String topicName, Function<Integer, GenericRecord> recordCreator) throws ExecutionException, InterruptedException {
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
-        final List<GenericRecord> genericRecords = AvroTestDataFixture
-                .generateAvroRecords(recordCountPerPartition * partitionCount, recordCreator);
+        final List<GenericRecord> genericRecords = AvroTestDataFixture.generateAvroRecords(recordCountPerPartition * partitionCount, recordCreator);
         int cnt = 0;
         for (final GenericRecord value : genericRecords) {
             final int partition = cnt % partitionCount;

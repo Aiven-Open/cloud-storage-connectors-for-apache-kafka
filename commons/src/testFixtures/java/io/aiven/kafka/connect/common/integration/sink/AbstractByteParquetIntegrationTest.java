@@ -45,6 +45,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -95,6 +96,8 @@ public abstract class AbstractByteParquetIntegrationTest<N, K extends Comparable
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET, OutputFieldType.TIMESTAMP, OutputFieldType.HEADERS)
                 .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
+        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
+        connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
 
 
         kafkaManager.configureConnector(connectorName, connectorConfig);
@@ -135,7 +138,7 @@ public abstract class AbstractByteParquetIntegrationTest<N, K extends Comparable
                 final List<String> fields = r.getSchema()
                         .getFields()
                         .stream()
-                        .map(Schema.Field::name)
+                        .map(s -> s.name().toUpperCase(Locale.ROOT))
                         .collect(Collectors.toList());
                 assertThat(fields).containsExactlyInAnyOrderElementsOf(expectedFields);
                 final GenericRecord value = (GenericRecord) r.get("value");
@@ -345,6 +348,25 @@ public abstract class AbstractByteParquetIntegrationTest<N, K extends Comparable
         return new KafkaProducer<>(producerProps);
     }
 
+    /*
+    private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
+            final String topicName) throws ExecutionException, InterruptedException {
+        final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
+        final List<GenericRecord> genericRecords = AvroTestDataFixture
+                .generateAvroRecords(recordCountPerPartition * partitionCount);
+        int cnt = 0;
+        for (final GenericRecord value : genericRecords) {
+            final int partition = cnt % partitionCount;
+            final String key = "key-" + cnt++;
+            sendFutures.add(producer.send(new ProducerRecord<>(topicName, partition, key, value)));
+        }
+        producer.flush();
+        for (final Future<RecordMetadata> sendFuture : sendFutures) {
+            sendFuture.get();
+        }
+        return genericRecords;
+    }
+     */
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private List<KeyValueMessage> produceRecords(final int partitions, final int epochs,
