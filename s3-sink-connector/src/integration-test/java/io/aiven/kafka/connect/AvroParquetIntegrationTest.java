@@ -33,6 +33,7 @@ import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -162,6 +163,7 @@ class AvroParquetIntegrationTest extends AbstractKafkaIntegrationBase {
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", String.join(",", expectedFields));
         connectorConfig.put("format.output.fields.value.encoding", "none");
+
 
         kafkaManager.configureConnector(getConnectorName(getConnectorClass()), connectorConfig);
 
