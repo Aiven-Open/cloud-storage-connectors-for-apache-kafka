@@ -145,7 +145,7 @@ public final class KafkaManager {
      * @throws InterruptedException
      *             if operation is interrupted.
      */
-    public void createTopic(final String topic) throws ExecutionException, InterruptedException {
+    public void createTopic(final String... topic) throws ExecutionException, InterruptedException {
         createTopics(List.of(topic), 4, (short) 1);
     }
 
