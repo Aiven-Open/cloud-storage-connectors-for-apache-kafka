@@ -481,18 +481,18 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
             // Ensure this method deserializes Avro
 
             // Verify that the correct data is read from storage and pushed to Kafka
-            assertThat(records).map(record -> entry(record.get("id"), String.valueOf(record.get("message"))))
-                    .contains(entry(1, "Hello, Kafka Connect Abstract Source! object 1"),
-                            entry(2, "Hello, Kafka Connect Abstract Source! object 2"),
-                            entry(numOfRecsFactor, "Hello, Kafka Connect Abstract Source! object " + numOfRecsFactor),
+            assertThat(records).map(record -> entry(record.get("id"), record.get("message").toString()))
+                    .contains(entry(1, "Hello, from Avro Test Data Fixture! object 1"),
+                            entry(2, "Hello, from Avro Test Data Fixture! object 2"),
+                            entry(numOfRecsFactor, "Hello, from Avro Test Data Fixture! object " + numOfRecsFactor),
                             entry(2 * numOfRecsFactor,
-                                    "Hello, Kafka Connect Abstract Source! object " + (2 * numOfRecsFactor)),
+                                    "Hello, from Avro Test Data Fixture! object " + (2 * numOfRecsFactor)),
                             entry(3 * numOfRecsFactor,
-                                    "Hello, Kafka Connect Abstract Source! object " + (3 * numOfRecsFactor)),
+                                    "Hello, from Avro Test Data Fixture! object " + (3 * numOfRecsFactor)),
                             entry(4 * numOfRecsFactor,
-                                    "Hello, Kafka Connect Abstract Source! object " + (4 * numOfRecsFactor)),
+                                    "Hello, from Avro Test Data Fixture! object " + (4 * numOfRecsFactor)),
                             entry(5 * numOfRecsFactor,
-                                    "Hello, Kafka Connect Abstract Source! object " + (5 * numOfRecsFactor)));
+                                    "Hello, from Avro Test Data Fixture! object " + (5 * numOfRecsFactor)));
 
             verifyOffsetPositions(expectedOffsetRecords, Duration.ofMinutes(1));
         } catch (IOException | ExecutionException | InterruptedException e) {
@@ -604,7 +604,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, O e
     }
 
     /**
-     * Verifies the the offset positions reported on the offset topic match the exprected values.
+     * Verifies the offset positions reported on the offset topic match the expected values.
      *
      * @param expectedRecords
      *            A map of OffsetManagerKey to count.
