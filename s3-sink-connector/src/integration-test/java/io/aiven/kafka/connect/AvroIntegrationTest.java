@@ -26,7 +26,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SuppressWarnings("PMD.TestClassWithoutTestCases")
 @Testcontainers
-public class AvroIntegratonTest extends AbstractAvroIntegrationTest<S3Object, String> {
+public class AvroIntegrationTest extends AbstractAvroIntegrationTest<S3Object, String> {
 
     @Container
     public static final LocalStackContainer LOCALSTACK = S3SinkStorage.createContainer();

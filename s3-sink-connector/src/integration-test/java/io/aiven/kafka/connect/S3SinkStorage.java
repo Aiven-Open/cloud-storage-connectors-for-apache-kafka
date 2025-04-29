@@ -92,7 +92,10 @@ public class S3SinkStorage implements SinkStorage<S3Object, String> {
     @Override
     public String getBlobName(final String prefix, final String topicName, final int partition, final int startOffset,
             final CompressionType compression) {
-        final String result = String.format("%s%s-%d-%d", prefix, topicName, partition, startOffset);
+        // TODO FIX THIS !!! We should not be formatting the output string based on the presence of the prefix.
+        final String result = StringUtils.isBlank(prefix)
+                ? String.format("%s%s-%d-%d", prefix, topicName, partition, startOffset)
+                : String.format("%s%s-%d-%020d", prefix, topicName, partition, startOffset);
         return result + compression.extension();
     }
 
