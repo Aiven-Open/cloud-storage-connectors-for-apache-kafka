@@ -50,7 +50,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
@@ -58,8 +57,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-avro";
 
-//    @Container
-//    private final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(KAFKA);
+    // @Container
+    // private final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(KAFKA);
 
     private final Schema avroInputDataSchema = new Schema.Parser().parse(
             "{\"type\":\"record\",\"name\":\"input_data\"," + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");

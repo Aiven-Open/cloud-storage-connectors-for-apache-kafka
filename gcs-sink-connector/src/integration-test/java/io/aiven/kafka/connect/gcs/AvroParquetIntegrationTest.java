@@ -40,7 +40,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
@@ -48,8 +47,8 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-parquet";
 
-//    @Container
-//    private final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(KAFKA);
+    // @Container
+    // private final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(KAFKA);
 
     @BeforeEach
     void setUp() throws ExecutionException, InterruptedException {

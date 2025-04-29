@@ -130,7 +130,8 @@ public class KafkaIntegrationTestBase {
     /**
      * Get the topic from the TestInfo.
      *
-     * @param args the arguments to append to the topic name.
+     * @param args
+     *            the arguments to append to the topic name.
      * @return The topic extracted from the testInfo for the current test.
      */
     final public String getTopic(final String... args) {
