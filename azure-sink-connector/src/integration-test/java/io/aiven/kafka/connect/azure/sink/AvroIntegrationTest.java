@@ -33,12 +33,19 @@ public class AvroIntegrationTest extends AbstractAvroIntegrationTest<BlobItem, S
     @Container
     private static final AzuriteContainer AZURITE_CONTAINER = AzureSinkStorage.createContainer();
 
+    /**
+     * The azure sink storage
+     */
     private final AzureSinkStorage storage;
 
+    /**
+     * Constructor.
+     */
     public AvroIntegrationTest() {
         super();
         storage = new AzureSinkStorage(AZURITE_CONTAINER);
     }
+
     @Override
     protected AzureSinkStorage getSinkStorage() {
         return storage;

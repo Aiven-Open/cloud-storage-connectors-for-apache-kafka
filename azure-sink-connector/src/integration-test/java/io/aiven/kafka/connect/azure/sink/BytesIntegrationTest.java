@@ -33,8 +33,14 @@ public class BytesIntegrationTest extends AbstractBytesIntegrationTest<BlobItem,
     @Container
     private static final AzuriteContainer AZURITE_CONTAINER = AzureSinkStorage.createContainer();
 
+    /**
+     * The Azure sink storage.
+     */
     private final AzureSinkStorage storage;
 
+    /**
+     * Constructor.
+     */
     public BytesIntegrationTest() {
         super();
         storage = new AzureSinkStorage(AZURITE_CONTAINER);

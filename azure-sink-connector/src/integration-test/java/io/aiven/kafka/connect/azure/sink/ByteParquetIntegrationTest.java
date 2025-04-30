@@ -33,8 +33,12 @@ public class ByteParquetIntegrationTest extends AbstractByteParquetIntegrationTe
     @Container
     private static final AzuriteContainer AZURITE_CONTAINER = AzureSinkStorage.createContainer();
 
+    /** The Azure sink storage */
     private final AzureSinkStorage storage;
 
+    /**
+     * Constructor.
+     */
     public ByteParquetIntegrationTest() {
         super();
         storage = new AzureSinkStorage(AZURITE_CONTAINER);

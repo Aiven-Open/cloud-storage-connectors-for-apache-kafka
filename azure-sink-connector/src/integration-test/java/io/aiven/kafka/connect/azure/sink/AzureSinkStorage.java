@@ -31,6 +31,9 @@ import com.azure.storage.blob.models.BlobItem;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.testcontainers.azure.AzuriteContainer;
 
+/**
+ * Implementation of the SinkStorage for the sink Azure tests.
+ */
 public class AzureSinkStorage extends AzureStorage implements SinkStorage<BlobItem, String> {
     /**
      * Constructor.

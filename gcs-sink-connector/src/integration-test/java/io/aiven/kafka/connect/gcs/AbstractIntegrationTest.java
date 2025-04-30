@@ -200,7 +200,6 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         return producer.send(msg);
     }
 
-
     protected void startConnectRunner(final Map<String, Object> testSpecificProducerProperties)
             throws ExecutionException, InterruptedException {
         testBucketAccessor.clear(gcsPrefix);

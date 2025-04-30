@@ -33,8 +33,12 @@ public class AvroParquetIntegrationTest extends AbstractAvroParquetIntegrationTe
     @Container
     private static final AzuriteContainer AZURITE_CONTAINER = AzureSinkStorage.createContainer();
 
+    /** The azure sink storage */
     private final AzureSinkStorage storage;
 
+    /**
+     * Constructor.
+     */
     public AvroParquetIntegrationTest() {
         super();
         storage = new AzureSinkStorage(AZURITE_CONTAINER);
