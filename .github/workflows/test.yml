@@ -22,19 +22,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
-    # "windows" takes up a lot of diskspace due a longstanding JDK issue
-    # Running on c: seems to work.
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-docker-action@v4
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build for windows-latest
-        run: ./gradlew build test integrationTest
+      - name: Build and test
+        run: ./gradlew build test
 
