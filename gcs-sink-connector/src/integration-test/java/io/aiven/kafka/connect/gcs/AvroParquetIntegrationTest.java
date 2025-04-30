@@ -47,9 +47,6 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-parquet";
 
-    // @Container
-    // private final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(KAFKA);
-
     @BeforeEach
     void setUp() throws ExecutionException, InterruptedException {
         testBucketAccessor.clear(gcsPrefix);

@@ -57,9 +57,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-avro";
 
-    // @Container
-    // private final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(KAFKA);
-
     private final Schema avroInputDataSchema = new Schema.Parser().parse(
             "{\"type\":\"record\",\"name\":\"input_data\"," + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
 

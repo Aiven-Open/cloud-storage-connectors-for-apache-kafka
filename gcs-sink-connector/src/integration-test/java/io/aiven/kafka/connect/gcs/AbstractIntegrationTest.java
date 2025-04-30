@@ -61,8 +61,6 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
     protected final String testTopic0;
     protected final String testTopic1;
 
-    // private AdminClient adminClient;
-    // private ConnectRunner connectRunner;
     private KafkaManager kafkaManager;
 
     private KafkaProducer<K, V> producer;
@@ -95,13 +93,6 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
             .withFixedExposedPort(GCS_PORT, GCS_PORT)
             .withCommand("-port", Integer.toString(GCS_PORT), "-scheme", "http")
             .withReuse(true);
-    // @Container
-    // protected static final KafkaContainer KAFKA = new KafkaContainer("5.2.1")
-    // .withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "false")
-    // .withNetwork(Network.newNetwork())
-    // .withExposedPorts(KafkaContainer.KAFKA_PORT, 9092)
-    // .withCreateContainerCmdModifier(
-    // cmd -> cmd.getHostConfig().withUlimits(List.of(new Ulimit("nofile", 30_000L, 30_000L))));
 
     static int getRandomPort() {
         try (ServerSocket socket = new ServerSocket(0)) {
@@ -169,11 +160,8 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
 
     @AfterEach
     void tearDown() {
-        // connectRunner.stop();
-        // adminClient.close();
         producer.close();
         testBucketAccessor.clear(gcsPrefix);
-        // connectRunner.awaitStop();
         CONNECTOR_NAMES.forEach(kafkaManager::deleteConnector);
     }
 
@@ -212,29 +200,17 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         return producer.send(msg);
     }
 
-    // protected ConnectRunner getConnectRunner() {
-    // return connectRunner;
-    // }
 
     protected void startConnectRunner(final Map<String, Object> testSpecificProducerProperties)
             throws ExecutionException, InterruptedException {
         testBucketAccessor.clear(gcsPrefix);
 
         kafkaManager.createTopic(testTopic0, testTopic1);
-        // final Properties adminClientConfig = new Properties();
-        // adminClientConfig.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
-        // adminClient = AdminClient.create(adminClientConfig);
 
         final Map<String, Object> producerProps = new HashMap<>(testSpecificProducerProperties);
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
         producer = new KafkaProducer<>(producerProps);
-        //
-        // final NewTopic newTopic0 = new NewTopic(testTopic0, 4, (short) 1);
-        // final NewTopic newTopic1 = new NewTopic(testTopic1, 4, (short) 1);
-        // adminClient.createTopics(Arrays.asList(newTopic0, newTopic1)).all().get();
 
-        // connectRunner = new ConnectRunner(pluginDir, KAFKA.getBootstrapServers(), OFFSET_FLUSH_INTERVAL_MS);
-        // connectRunner.start();
     }
 
     protected void createConnector(final Map<String, String> connectorConfig) {

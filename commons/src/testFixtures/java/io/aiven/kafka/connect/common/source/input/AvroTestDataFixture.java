@@ -43,11 +43,13 @@ public final class AvroTestDataFixture {
             + "  \"fields\": [\n    {\"name\": \"message\", \"type\": \"string\"},\n"
             + "    {\"name\": \"id\", \"type\": \"int\"}\n  ]\n}";
 
+    /** The Json string used to create the {@link #CONNECT_EXTRA_SCHEMA} */
     public static final String CONNECT_EXTRA_SCHEMA_JSON = "{\n  \"type\": \"record\",\n  \"name\": \"TestRecord\",\n"
             + "  \"fields\": [\n    {\"name\": \"message\", \"type\": \"string\"},\n"
             + "    {\"name\": \"id\", \"type\": \"int\"}\n  ],\n"
             + "    \"connect.version\":1, \"connect.name\": \"TestRecord\"}\n";
 
+    /** The Json string used to create the {@link #EVOLVED_SCHEMA} */
     public static final String EVOLVED_SCHEMA_JSON = "{\n  \"type\": \"record\",\n  \"name\": \"TestRecord\",\n"
             + "  \"fields\": [\n    {\"name\": \"message\", \"type\": \"string\"},\n"
             + "    {\"name\": \"id\", \"type\": \"int\"},\n"
@@ -56,8 +58,10 @@ public final class AvroTestDataFixture {
     /** The schema used for most testing. Created from {@link #SCHEMA_JSON}. */
     public static final Schema DEFAULT_SCHEMA = new Schema.Parser().parse(SCHEMA_JSON);
 
+    /** The schema used when testing plain data without envelope. Created from {@link #CONNECT_EXTRA_SCHEMA_JSON}. */
     public static final Schema CONNECT_EXTRA_SCHEMA = new Schema.Parser().parse(CONNECT_EXTRA_SCHEMA_JSON);
 
+    /** The schema used to test the evolution of schema. Created from {@link #EVOLVED_SCHEMA_JSON}. */
     public static final Schema EVOLVED_SCHEMA = new Schema.Parser().parse(EVOLVED_SCHEMA_JSON);
 
     private AvroTestDataFixture() {
@@ -168,10 +172,21 @@ public final class AvroTestDataFixture {
         return avroRecords;
     }
 
+    /**
+     * Generate an avro record with the specified message id using the default schema.
+     * @param messageId the message id.
+     * @return a GenericRecord with the specified data.
+     */
     public static GenericRecord generateAvroRecord(final int messageId) {
         return generateAvroRecord(messageId, DEFAULT_SCHEMA);
     }
 
+    /**
+     * Generate an avro record with the specified message id using the specified schema
+     * @param messageId the message id.
+     * @param schema the schaema to use.
+     * @return a GenericRecord with the specified data and schema.
+     */
     public static GenericRecord generateAvroRecord(final int messageId, final Schema schema) {
         final GenericRecord avroRecord = new GenericData.Record(schema);
         avroRecord.put("message", "Hello, from Avro Test Data Fixture! object " + messageId);
@@ -179,6 +194,12 @@ public final class AvroTestDataFixture {
         return avroRecord;
     }
 
+    /**
+     * Extracts Avro records from a byte array.
+     * @param bytes the byte array to extract the records from.
+     * @return the GenericRecords from the byte array.
+     * @throws IOException on read error.
+     */
     public static List<GenericRecord> readAvroRecords(final byte[] bytes) throws IOException {
         final List<GenericRecord> result = new ArrayList<>();
         try (SeekableInput sin = new SeekableByteArrayInput(bytes)) {

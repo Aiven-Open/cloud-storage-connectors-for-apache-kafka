@@ -67,12 +67,19 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractAvroParquetIntegrationTest<N, K extends Comparable<K>>
         extends
             AbstractSinkIntegrationTest<N, K> {
+    /** The logger for this class */
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractAvroParquetIntegrationTest.class);
+    /** A directory to write parquet files to locally so they can be read */
     @TempDir
     private static Path tmpDir;
+    /** The @{code null} value used ot clear the KafkaProducer when it is no longer needed */
     private static final KafkaProducer<String, GenericRecord> NULL_PRODUCER = null;
+    /** The KafkaProducer that this test uses */
     private KafkaProducer<String, GenericRecord> producer;
 
+    /**
+     * Deletes the KafkaProducer
+     */
     @AfterEach
     void tearDown() {
         if (producer != null) {
@@ -82,9 +89,9 @@ public abstract class AbstractAvroParquetIntegrationTest<N, K extends Comparable
     }
 
     /**
-     * Creates producer for avro converter read/write
+     * Creates the producer for this test suite.
      *
-     * @return
+     * @return the KafkaProducer for this test suite.
      */
     private KafkaProducer<String, GenericRecord> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
@@ -101,7 +108,7 @@ public abstract class AbstractAvroParquetIntegrationTest<N, K extends Comparable
      * Creates a configuration with the storage and general Avro configuration options.
      *
      * @param topics
-     *            the topics to listend to.
+     *            the topics to listen to.
      * @return ta configuration map.
      */
     @Override
@@ -112,6 +119,18 @@ public abstract class AbstractAvroParquetIntegrationTest<N, K extends Comparable
         return config;
     }
 
+    /**
+     * Creates and sends a list of GenericRecords.  All sent records are acknowledged by the producer before this method
+     * exits. Records are produced across the partitions.  For example the first record produced is assigned to partition 0,
+     * the next to partition 1 and so on until all partitions have a record.  Then the second record is added.  This proceeds until
+     * all partitions have the proper number of records.
+     * @param recordCountPerPartition the number of records to put in each partition.
+     * @param partitionCount the number of partitions.
+     * @param topicName the topic name for the records.
+     * @return the list of Generic records that were sent.
+     * @throws ExecutionException if there is an issue generating or sending the records.
+     * @throws InterruptedException if the process is interrupted.
+     */
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
             final String topicName) throws ExecutionException, InterruptedException {
@@ -129,7 +148,7 @@ public abstract class AbstractAvroParquetIntegrationTest<N, K extends Comparable
                     if (exception != null) {
                         LOGGER.error("Error writing {}", rec, exception);
                     } else {
-                        LOGGER.info("wrote metadata: {}", metadata);
+                        LOGGER.debug("wrote metadata: {}", metadata);
                     }
                 }
             }));
@@ -141,6 +160,19 @@ public abstract class AbstractAvroParquetIntegrationTest<N, K extends Comparable
         return genericRecords;
     }
 
+    /**
+     * Creates and sends a list of GenericRecords using a custom format.  All sent records are acknowledged by the producer before this method
+     * exits. Records are produced across the partitions.  For example the first record produced is assigned to partition 0,
+     * the next to partition 1 and so on until all partitions have a record.  Then the second record is added.  This proceeds until
+     * all partitions have the proper number of records.
+     * @param recordCountPerPartition the number of records to put in each partition.
+     * @param partitionCount the number of partitions.
+     * @param topicName the topic name for the records.
+     * @param recordGenerator the function to convert an integer into a GenericRecord.  See {@link AvroTestDataFixture#generateAvroRecord(int)} for an example.
+     * @return the list of Generic records that were sent.
+     * @throws ExecutionException if there is an issue generating or sending the records.
+     * @throws InterruptedException if the process is interrupted.
+     */
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
             final String topicName, final Function<Integer, GenericRecord> recordGenerator)

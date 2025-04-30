@@ -52,12 +52,22 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+/**
+ * The collecton of defined tests for Avro Sink.
+ * @param <N> the native storage object type
+ * @param <K> the native storage key type.
+ */
 public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         extends
             AbstractSinkIntegrationTest<N, K> {
+    /** The @{code null} value used ot clear the KafkaProducer when it is no longer needed */
     private static final KafkaProducer<String, GenericRecord> NULL_PRODUCER = null;
+    /** The KafkaProducer that this test uses */
     private KafkaProducer<String, GenericRecord> producer;
 
+    /**
+     * Clears the producer and removes the native storage.
+     */
     @AfterEach
     void tearDown() {
         if (producer != null) {
@@ -82,15 +92,25 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         return config;
     }
 
+    /**
+     * Creates the Avro codec / compression pairs for testing.
+     * <p>
+     *     Note: some combinations do not work.  These should be fixed or noted in the configuration documentation..
+     * </p>
+     * @return A stream of avro codec / compression type pairs.
+     */
     private static Stream<Arguments> compressionAndCodecTestParameters() {
         final List<Arguments> lst = new ArrayList<>();
 
-        // String[] codecs = {"null", "deflate", "snappy", "bzip2", "xz", "zstandard"};
-        // for (String codec : codecs) {
-        // for (CompressionType compression : CompressionType.values()) {
-        // lst.add(Arguments.of(codec, compression));
-        // }
-        // }
+        /*
+         // code that adds all combination of codec and compression.
+         String[] codecs = {"null", "deflate", "snappy", "bzip2", "xz", "zstandard"};
+         for (String codec : codecs) {
+            for (CompressionType compression : CompressionType.values()) {
+               lst.add(Arguments.of(codec, compression));
+            }
+         }
+         */
         lst.add(Arguments.of("null", CompressionType.NONE));
         lst.add(Arguments.of("bzip2", CompressionType.NONE));
         lst.add(Arguments.of("deflate", CompressionType.NONE));
@@ -220,6 +240,18 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         assertThat(actualValues).containsExactlyInAnyOrder(expected);
     }
 
+    /**
+     * Creates and sends a list of GenericRecords.  All sent records are acknowledged by the producer before this method
+     * exits. Records are produced across the partitions.  For example the first record produced is assigned to partition 0,
+     * the next to partition 1 and so on until all partitions have a record.  Then the second record is added.  This proceeds until
+     * all partitions have the proper number of records.
+     * @param recordCountPerPartition the number of records to put in each partition.
+     * @param partitionCount the number of partitions.
+     * @param topicName the topic name for the records.
+     * @return the list of Generic records that were sent.
+     * @throws ExecutionException if there is an issue generating or sending the records.
+     * @throws InterruptedException if the process is interrupted.
+     */
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
             final String topicName) throws ExecutionException, InterruptedException {
@@ -239,13 +271,26 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         return genericRecords;
     }
 
-    @SuppressWarnings("PMD.AvoidInstantiatingObjeqctsInLoops")
+    /**
+     * Creates and sends a list of GenericRecords using a custom format.  All sent records are acknowledged by the producer before this method
+     * exits. Records are produced across the partitions.  For example the first record produced is assigned to partition 0,
+     * the next to partition 1 and so on until all partitions have a record.  Then the second record is added.  This proceeds until
+     * all partitions have the proper number of records.
+     * @param recordCountPerPartition the number of records to put in each partition.
+     * @param partitionCount the number of partitions.
+     * @param topicName the topic name for the records.
+     * @param recordGenerator the function to convert an integer into a GenericRecord.  See {@link AvroTestDataFixture#generateAvroRecord(int)} for an example.
+     * @return the list of Generic records that were sent.
+     * @throws ExecutionException if there is an issue generating or sending the records.
+     * @throws InterruptedException if the process is interrupted.
+     */
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
-            final String topicName, final Function<Integer, GenericRecord> func)
+            final String topicName, final Function<Integer, GenericRecord> recordGenerator)
             throws ExecutionException, InterruptedException {
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         final List<GenericRecord> genericRecords = AvroTestDataFixture
-                .generateAvroRecords(recordCountPerPartition * partitionCount, func);
+                .generateAvroRecords(recordCountPerPartition * partitionCount, recordGenerator);
         int cnt = 0;
         for (final GenericRecord value : genericRecords) {
             final int partition = cnt % partitionCount;
@@ -259,6 +304,10 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         return genericRecords;
     }
 
+    /**
+     * Create a producer for this test suite.
+     * @return the KafkaProducer for this test suite.
+     */
     private KafkaProducer<String, GenericRecord> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
@@ -270,151 +319,6 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         return new KafkaProducer<>(producerProps);
     }
 
-    // private Map<String, String> basicConnectorConfig(final String connectorName) {
-    // final Map<String, String> config = new HashMap<>();
-    // config.put("name", connectorName);
-    // config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
-    // config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
-    // config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-    // config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
-    // config.put("tasks.max", "1");
-    // return config;
-    // }
-
-    // private Map<String, String> awsSpecificConfig(final Map<String, String> config, final String topicName) {
-    // config.put("connector.class", AivenKafkaConnectS3SinkConnector.class.getName());
-    // config.put("aws.access.key.id", S3_ACCESS_KEY_ID);
-    // config.put("aws.secret.access.key", S3_SECRET_ACCESS_KEY);
-    // config.put("aws.s3.endpoint", s3Endpoint);
-    // config.put("aws.s3.bucket.name", TEST_BUCKET_NAME);
-    // config.put("aws.s3.prefix", prefix);
-    // config.put("topics", topicName);
-    // config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
-    // config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
-    // config.put("tasks.max", "1");
-    // return config;
-    // }
-
-    // private String getAvroBlobName(final String topicName, final int partition, final int startOffset,
-    // final CompressionType compression) {
-    // final String result = String.format("%s%s-%d-%020d.avro", prefix, topicName, partition, startOffset);
-    // return result + compression.extension();
-    // }
-
-    // WARN: different from GCS
-    // private String getBlobName(final String topicName, final int partition, final int startOffset,
-    // final CompressionType compression) {
-    // final String result = String.format("%s%s-%d-%020d", prefix, topicName, partition, startOffset);
-    // return result + compression.extension();
-    // }
-
-    // private static final String CONNECTOR_NAME = "aiven-azure-sink-connector-avro";
-    //
-    // private final Schema avroInputDataSchema = new Schema.Parser().parse(
-    // "{\"type\":\"record\",\"name\":\"input_data\"," + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
-    //
-    //// @BeforeEach
-    //// void setUp() throws ExecutionException, InterruptedException {
-    //// testBlobAccessor.clear(azurePrefix);
-    //// final Map<String, Object> producerProps = new HashMap<>();
-    //// producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
-    //// producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-    //// "io.confluent.kafka.serializers.KafkaAvroSerializer");
-    //// producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-    //// "io.confluent.kafka.serializers.KafkaAvroSerializer");
-    //// producerProps.put("schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
-    //// startConnectRunner(producerProps);
-    //// }
-    //
-    // private void produceRecords(final int recordCountPerPartition) throws ExecutionException, InterruptedException {
-    // final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
-    // int cnt = 0;
-    // for (int i = 0; i < recordCountPerPartition; i++) {
-    // for (int partition = 0; partition < 4; partition++) {
-    // final String key = "key-" + cnt;
-    // final GenericRecord value = new GenericData.Record(avroInputDataSchema);
-    // value.put("name", "user-" + cnt);
-    // cnt += 1;
-    //
-    // sendFutures.add(sendMessageAsync(testTopic0, partition, key, value));
-    // }
-    // }
-    // getProducer().flush();
-    // for (final Future<RecordMetadata> sendFuture : sendFutures) {
-    // sendFuture.get();
-    // }
-    // }
-
-    // @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    // @ParameterizedTest
-    // @MethodSource("compressionAndCodecTestParameters")
-    // void avroOutput(final String avroCodec, final CompressionType compression)
-    // throws ExecutionException, InterruptedException, IOException {
-    // final var topicName = getTopic() + "-" + avroCodec + "-" + compression;
-    // final KafkaManager kafkaManager = getKafkaManager();
-    // kafkaManager.createTopic(topicName);
-    //
-    // producer = newProducer();
-    //
-    // final Map<String, String> connectorConfig = avroSpecificConfig(
-    // basicConnectorConfig(getConnectorName(getConnectorClass())), topicName);
-    // connectorConfig.put("file.compression.type", compression.name());
-    // connectorConfig.put("format.output.fields", "key,value");
-    // connectorConfig.put("format.output.type", "avro");
-    // connectorConfig.put("avro.codec", avroCodec);
-    // kafkaManager.configureConnector(getConnectorName(getConnectorClass()), connectorConfig);
-    //
-    // final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
-    // final int partitionCount = 4;
-    // final int recordCountPerPartition = 10;
-    //
-    // assertThat(containerAccessor.getNativeStorage()).isEmpty();
-    //
-    // final List<GenericRecord> expectedGenericRecords = produceRecords(recordCountPerPartition, partitionCount,
-    // topicName);
-    //
-    // // get list of expected blobs
-    // final String[] expectedBlobs = { getAvroBlobName(topicName, 0, 0, compression),
-    // getAvroBlobName(topicName, 1, 0, compression), getAvroBlobName(topicName, 2, 0, compression),
-    // getAvroBlobName(topicName, 3, 0, compression) };
-    //
-    // waitForNativeStorage(timeout, containerAccessor::getNativeStorage, expectedBlobs);
-    //
-    // // extract all the actual records.
-    // final List<GenericRecord> actualValues = new ArrayList<>();
-    // final Function<GenericRecord, String> idMapper = mapF("id");
-    // final Function<GenericRecord, String> messageMapper = mapF("message");
-    //
-    // for (final String blobName : expectedBlobs) {
-    // for (final GenericRecord r : AvroTestDataFixture
-    // .readAvroRecords(testBucketAccessor.readBytes(blobName, compression))) {
-    // final GenericRecord value = (GenericRecord) r.get("value");
-    // final String key = r.get("key").toString();
-    // assertThat(key).isEqualTo("key-" + idMapper.apply(value));
-    // assertThat(messageMapper.apply(value)).endsWith(idMapper.apply(value));
-    // actualValues.add(value);
-    // }
-    // }
-    //
-    // List<String> values = actualValues.stream().map(mapF("message")).collect(Collectors.toList());
-    // String[] expected = expectedGenericRecords.stream()
-    // .map(mapF("message"))
-    // .collect(Collectors.toList())
-    // .toArray(new String[0]);
-    //
-    // assertThat(values).containsExactlyInAnyOrder(expected);
-    //
-    // values = actualValues.stream().map(mapF("id")).collect(Collectors.toList());
-    // expected = expectedGenericRecords.stream().map(mapF("id")).collect(Collectors.toList()).toArray(new String[0]);
-    //
-    // assertThat(values).containsExactlyInAnyOrder(expected);
-    // }
-
-    // private String getAvroBlobName(final String topicName, final int partition, final int startOffset,
-    // final CompressionType compression) {
-    // final String result = String.format("%s%s-%d-%020d.avro", s3Prefix, topicName, partition, startOffset);
-    // return result + compression.extension();
-    // }
 
     @Test
     void defaultAvroOutput() throws ExecutionException, InterruptedException, IOException {

@@ -139,7 +139,7 @@ public final class KafkaManager {
      * Creates topics on the admin client. Uses a partition count of 4, and a replication factor of 1.
      *
      * @param topic
-     *            the topic to create.
+     *            one or more topic names to create.
      * @throws ExecutionException
      *             on topic creation error.
      * @throws InterruptedException

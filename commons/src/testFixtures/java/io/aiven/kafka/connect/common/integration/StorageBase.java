@@ -26,17 +26,25 @@ import io.aiven.kafka.connect.common.source.NativeInfo;
 import org.apache.commons.io.function.IOSupplier;
 
 /**
- * Bsse class for storage implementations.
- * @param <N> The native storage class.
- * @param <K> The natvie key class.
+ * The base class for Sink and Source storage.
+ * @param <N> the native storage object type
+ * @param <K> the native storage key type.
  */
 public interface StorageBase<N, K extends Comparable<K>> {
     /**
-     * Gets the connector for the class.
-     * @return
+     * Gets the Connector class under test.
+     * @return The Connector class under test.
      */
     Class<? extends Connector> getConnectorClass();
+
+    /**
+     * Creates the storage space
+     */
     void createStorage();
+
+    /**
+     * Deletes the storage space.
+     */
     void removeStorage();
     /**
      * Retrieves a list of {@link NativeInfo} implementations, one for each item in native storage.
@@ -44,6 +52,18 @@ public interface StorageBase<N, K extends Comparable<K>> {
      * @return the list of {@link NativeInfo} implementations, one for each item in native storage.
      */
     List<? extends NativeInfo<N, K>> getNativeStorage();
+
+    /**
+     * Gets an IOSupplier for an InputStream for the specified nativeKey.
+     * @param nativeKey the key to retrieve the contents for.
+     * @return An IOSupplier for an InputStream for the specified nativeKey.
+     */
     IOSupplier<InputStream> getInputStream(K nativeKey);
+
+    /**
+     * Gets the default prefix used in testing.
+     * <p>Note - This method may be unnecessary.</p>
+     * @return The default prefix used in testing.
+     */
     String defaultPrefix();
 }
