@@ -15,8 +15,8 @@ jobs:
       matrix:
         #java-version: [ 11, 17 ]
         #runs-on: [ubuntu-latest, macos-latest, windows-latest]
-        java-version: 17
-        runs-on: windows-latest
+        java-version: [17]
+        runs-on: [windows-latest]
     name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
     runs-on: ${{ matrix.runs-on }}
     steps:
