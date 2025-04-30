@@ -92,10 +92,6 @@ dependencies {
     exclude(group = "io.netty", module = "netty-transport-native-epoll")
   }
 
-  //  testImplementation(apache.kafka.connect.api)
-  //  testImplementation(apache.kafka.connect.runtime)
-  //  testImplementation(apache.kafka.connect.json)
-
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(apache.hadoop.mapreduce.client.core) {
