@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.source.input;
+package io.aiven.kafka.connect.common.format;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -36,7 +36,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
- * A testing fixture to generate JSON data.
+ * A testing fixture to generate/read JSON data.
  */
 final public class JsonTestDataFixture {
 
@@ -113,10 +113,22 @@ final public class JsonTestDataFixture {
         return jsonRecords.toString();
     }
 
+    /**
+     * Reads a json record from the byte array.
+     * @param bytes the bytes to extract the record from.
+     * @return JsonNode read from the bytes.
+     * @throws IOException on IO error.
+     */
     public static JsonNode readJsonRecord(final byte[] bytes) throws IOException {
         return OBJECT_MAPPER.readTree(bytes);
     }
 
+    /**
+     * read multiple JSON records.
+     * @param values The Strings containing the serialized JSON records.
+     * @return a list of JsonRecords extracted from the values.
+     * @throws IOException on IO error.
+     */
     public static List<JsonNode> readJsonRecords(final Collection<String> values) throws IOException {
         final List<JsonNode> result = new ArrayList<>();
         for (final String value : values) {
@@ -125,7 +137,14 @@ final public class JsonTestDataFixture {
         return result;
     }
 
-    public static List<JsonNode> readJsonRecords(final byte[] bytes) throws IOException, JsonProcessingException {
+    /**
+     * Reads a list of JsonRecords from an array of bytes.
+     * Reads the bytes line by line.
+     * @param bytes the serialized json records.
+     * @return a list of JsonRecords extracted from the values.
+     * @throws IOException on IO error.
+     */
+    public static List<JsonNode> readJsonRecords(final byte[] bytes) throws IOException {
         final List<JsonNode> result = new ArrayList<>();
         for (final String value : readLines(bytes)) {
             result.add(OBJECT_MAPPER.readTree(value));
@@ -133,6 +152,14 @@ final public class JsonTestDataFixture {
         return result;
     }
 
+    /**
+     * Reads and decodes CSV based lines.  Reads each line from the byte array and splits it based on ',' returning the
+     * field values specified.
+     * @param input the serialized data
+     * @param fieldsToDecode the indices of the fields to return in the value.
+     * @return a list of lists of strings.  The innermost list are the values returned from the csv files.
+     * @throws IOException on IO error.
+     */
     public static List<List<String>> readAndDecodeLines(final byte[] input, final int... fieldsToDecode)
             throws IOException {
         try (InputStreamReader reader = new InputStreamReader(new ByteArrayInputStream(input), StandardCharsets.UTF_8);
@@ -145,6 +172,12 @@ final public class JsonTestDataFixture {
 
     }
 
+    /**
+     * Reads based lines from the byte array.
+     * @param input the serialized data
+     * @return a list of lines from the byte data.
+     * @throws IOException on IO error.
+     */
     public static List<String> readLines(final byte[] input) throws IOException {
         try (InputStreamReader reader = new InputStreamReader(new ByteArrayInputStream(input), StandardCharsets.UTF_8);
                 BufferedReader bufferedReader = new BufferedReader(reader)) {
@@ -152,6 +185,12 @@ final public class JsonTestDataFixture {
         }
     }
 
+    /**
+     * Decodes base 64 encoded fields.
+     * @param originalFields the list of fields.
+     * @param fieldsToDecode the list of fields to decode.
+     * @return the original fields with the specified fields decoded.
+     */
     private static List<String> decodeRequiredFields(final String[] originalFields, final int[] fieldsToDecode) {
         final List<String> result = Arrays.asList(originalFields);
         for (final int fieldIdx : fieldsToDecode) {
@@ -160,6 +199,11 @@ final public class JsonTestDataFixture {
         return result;
     }
 
+    /**
+     * Decode a base 64 string.
+     * @param value the value to decode.
+     * @return the decoded value.
+     */
     public static String b64Decode(final String value) {
         Objects.requireNonNull(value, "value cannot be null");
         return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);

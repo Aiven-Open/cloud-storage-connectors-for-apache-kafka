@@ -58,7 +58,7 @@ public interface SinkStorage<N, K extends Comparable<K>> extends StorageBase<N, 
      * @param prefix the prefix for the storage location.
      * @param key the key for the storage location.
      * @param compression the compression type for the data at the storage location.
-     * @return a native key for the specified avro file.
+     * @return a native key for the specified data.
      */
     K getKeyBlobName(String prefix, String key, CompressionType compression);
 
@@ -69,18 +69,18 @@ public interface SinkStorage<N, K extends Comparable<K>> extends StorageBase<N, 
      * @param partition the partition for the storage location.
      * @param startOffset the start offset for the storage location.
      * @param compression the compression type for the data at the storage location.
-     * @return a native key for the specified avro file.
+     * @return a native key for the specified data.
      */
     K getNewBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression);
 
     /**
      * Return a native key with the format {@code prefixtopicName-partition-offset-yyyy-MM-dd}
      *
-     * @param prefix
-     * @param topicName
-     * @param partition
-     * @param startOffset
-     * @return
+     * @param prefix the prefix for the storage location.
+     * @param topicName the topic name for the storage location.
+     * @param partition the partition for the storage location.
+     * @param startOffset the start offset for the storage location.
+     * @return a native key for the specified data.
      */
     K getTimestampBlobName(String prefix, String topicName, int partition, int startOffset);
 

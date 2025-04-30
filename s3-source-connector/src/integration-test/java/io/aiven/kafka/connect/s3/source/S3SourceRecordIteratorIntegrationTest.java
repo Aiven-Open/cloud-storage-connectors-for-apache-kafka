@@ -22,7 +22,7 @@ import java.util.function.BiFunction;
 
 import org.apache.kafka.connect.connector.Connector;
 
-import io.aiven.kafka.connect.common.integration.AbstractSourceIteratorIntegrationTest;
+import io.aiven.kafka.connect.common.integration.source.AbstractSourceIteratorIntegrationTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;

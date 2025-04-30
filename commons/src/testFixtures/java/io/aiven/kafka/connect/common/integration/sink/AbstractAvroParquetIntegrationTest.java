@@ -42,8 +42,8 @@ import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
-import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
+import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 
 import io.confluent.connect.avro.AvroConverter;
 import org.apache.avro.Schema;

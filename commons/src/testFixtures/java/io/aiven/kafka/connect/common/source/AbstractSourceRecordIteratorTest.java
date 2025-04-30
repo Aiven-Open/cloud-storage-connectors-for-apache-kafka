@@ -40,10 +40,10 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
+import io.aiven.kafka.connect.common.format.JsonTestDataFixture;
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.DistributionType;

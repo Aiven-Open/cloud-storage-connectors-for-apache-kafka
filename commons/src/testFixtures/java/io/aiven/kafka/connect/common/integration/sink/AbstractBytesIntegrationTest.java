@@ -41,7 +41,7 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
+import io.aiven.kafka.connect.common.format.JsonTestDataFixture;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;

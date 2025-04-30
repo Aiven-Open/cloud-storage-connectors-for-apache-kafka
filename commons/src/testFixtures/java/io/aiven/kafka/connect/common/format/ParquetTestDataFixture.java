@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.source.input;
+package io.aiven.kafka.connect.common.format;
 
 import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
 
@@ -48,7 +48,7 @@ import org.apache.parquet.io.SeekableInputStream;
 import org.testcontainers.shaded.org.apache.commons.io.FileUtils;
 
 /**
- * A testing feature to generate Parquet data.
+ * A testing feature to generate/read Parquet data.
  */
 public final class ParquetTestDataFixture {
 
@@ -125,6 +125,13 @@ public final class ParquetTestDataFixture {
         return outputStream.toByteArray();
     }
 
+    /**
+     * Reads records.
+     * @param tmpDir the temporary directory to write files to.
+     * @param bytes the bytes to write to a file.
+     * @return the List of GenericRecords extracted from the bytes data.
+     * @throws IOException on IO error.
+     */
     public static List<GenericRecord> readRecords(final Path tmpDir, final byte[] bytes) throws IOException {
         final var records = new ArrayList<GenericRecord>();
         final var parquetFile = tmpDir.resolve("parquet.file");

@@ -35,7 +35,7 @@ import io.aiven.kafka.connect.common.source.KafkaConnectRunner;
 import io.aiven.kafka.connect.common.source.SchemaRegistryContainer;
 
 /**
- * Manages the a containerized Kafka and some associated components.
+ * Manages a containerized Kafka and some associated components.
  */
 public final class KafkaManager {
     /**

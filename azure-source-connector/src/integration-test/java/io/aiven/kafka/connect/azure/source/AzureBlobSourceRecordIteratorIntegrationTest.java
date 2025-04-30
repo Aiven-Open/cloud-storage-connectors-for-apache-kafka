@@ -29,7 +29,7 @@ import io.aiven.kafka.connect.azure.source.testdata.AzureSourceIntegrationTestDa
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
-import io.aiven.kafka.connect.common.integration.AbstractSourceIteratorIntegrationTest;
+import io.aiven.kafka.connect.common.integration.source.AbstractSourceIteratorIntegrationTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 

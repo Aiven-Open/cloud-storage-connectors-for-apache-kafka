@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.integration;
+package io.aiven.kafka.connect.common.integration.source;
 
 import static io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest.FILE_PATTERN;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import io.aiven.kafka.connect.common.integration.KafkaManager;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.source.input;
+package io.aiven.kafka.connect.common.format;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -34,7 +34,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 
 /**
- * A testing fixture to generate Avro test data.
+ * A testing fixture to generate/read Avro test data.
  */
 public final class AvroTestDataFixture {
 

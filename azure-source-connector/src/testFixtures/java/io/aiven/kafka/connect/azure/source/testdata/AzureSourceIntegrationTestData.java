@@ -23,7 +23,7 @@ import org.apache.kafka.connect.connector.Connector;
 import io.aiven.kafka.connect.azure.source.AzureBlobSourceConnector;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.testdata.AzureIntegrationTestData;
-import io.aiven.kafka.connect.common.integration.AbstractSourceIntegrationBase;
+import io.aiven.kafka.connect.common.integration.source.AbstractSourceIntegrationBase;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.testcontainers.azure.AzuriteContainer;

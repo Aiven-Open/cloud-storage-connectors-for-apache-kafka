@@ -41,8 +41,8 @@ import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
-import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
+import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.format.JsonTestDataFixture;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.avro.generic.GenericRecord;

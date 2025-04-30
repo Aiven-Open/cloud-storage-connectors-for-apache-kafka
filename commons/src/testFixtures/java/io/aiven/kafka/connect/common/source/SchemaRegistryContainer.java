@@ -22,13 +22,26 @@ import com.github.dockerjava.api.model.Ulimit;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
+/**
+ * A container for the schema registry.
+ */
 public final class SchemaRegistryContainer extends GenericContainer<SchemaRegistryContainer> {
+    /** The schema registry local port */
     public static final int SCHEMA_REGISTRY_PORT = 8081;
 
+    /**
+     * Constructs the container with the default version of 4.1.0
+     * @param bootstrapServer the url of the kafka bootstrap server.
+     */
     public SchemaRegistryContainer(final String bootstrapServer) {
         this("4.1.0", bootstrapServer);
     }
 
+    /**
+     * Constructs the container.
+     * @param karapaceVersion the version of karapace to run.
+     * @param bootstrapServer the url of the kafka bootstrap server.
+     */
     public SchemaRegistryContainer(final String karapaceVersion, final String bootstrapServer) {
         super("ghcr.io/aiven-open/karapace:" + karapaceVersion);
         withAccessToHost(true);
@@ -58,6 +71,10 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
                 cmd -> cmd.getHostConfig().withUlimits(new Ulimit[] { new Ulimit("nofile", 30_000L, 30_000L) }));
     }
 
+    /**
+     * Get the schema registry URL for this container.
+     * @return the schema registry URL as a string.
+     */
     public String getSchemaRegistryUrl() {
         return String.format("http://%s:%s", getHost(), getMappedPort(SCHEMA_REGISTRY_PORT));
 

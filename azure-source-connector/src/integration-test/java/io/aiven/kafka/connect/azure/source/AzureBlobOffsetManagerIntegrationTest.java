@@ -27,7 +27,7 @@ import io.aiven.kafka.connect.azure.source.testdata.AzureOffsetManagerIntegratio
 import io.aiven.kafka.connect.azure.source.testdata.AzureSourceIntegrationTestData;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
-import io.aiven.kafka.connect.common.integration.AbstractOffsetManagerIntegrationTest;
+import io.aiven.kafka.connect.common.integration.source.AbstractOffsetManagerIntegrationTest;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

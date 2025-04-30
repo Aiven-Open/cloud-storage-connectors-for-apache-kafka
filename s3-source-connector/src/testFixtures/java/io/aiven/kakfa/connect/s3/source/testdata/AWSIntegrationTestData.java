@@ -23,7 +23,7 @@ import java.util.Map;
 import org.apache.kafka.connect.connector.Connector;
 
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.integration.AbstractSourceIntegrationBase.WriteResult;
+import io.aiven.kafka.connect.common.integration.source.AbstractSourceIntegrationBase.WriteResult;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.S3SourceConnector;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;

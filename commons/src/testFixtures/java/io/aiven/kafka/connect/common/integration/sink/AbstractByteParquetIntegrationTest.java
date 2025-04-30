@@ -45,7 +45,7 @@ import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
-import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 
 import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.AfterEach;
