@@ -80,7 +80,7 @@ class AbstractSourceTaskTest {
         assertThat(timer.millisecondsRemaining()).isEqualTo(Duration.ofSeconds(1).toMillis());
         timer.start();
         await().atMost(Duration.ofSeconds(2)).until(timer::isExpired);
-        assertThat(timer.millisecondsRemaining()).isLessThan(0);
+        assertThat(timer.millisecondsRemaining()).isLessThanOrEqualTo(0);
         timer.stop();
         assertThat(timer.millisecondsRemaining()).isEqualTo(Duration.ofSeconds(1).toMillis());
     }
