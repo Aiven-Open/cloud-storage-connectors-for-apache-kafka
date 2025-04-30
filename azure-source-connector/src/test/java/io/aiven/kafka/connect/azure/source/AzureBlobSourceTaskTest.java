@@ -61,7 +61,7 @@ import org.testcontainers.azure.AzuriteContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@DisabledOnOs(value={OS.WINDOWS, OS.MAC}, disabledReason="Container testing does not run on Mac and Windows")
+@DisabledOnOs(value = { OS.WINDOWS, OS.MAC }, disabledReason = "Container testing does not run on Mac and Windows")
 @Testcontainers
 final class AzureBlobSourceTaskTest {
 

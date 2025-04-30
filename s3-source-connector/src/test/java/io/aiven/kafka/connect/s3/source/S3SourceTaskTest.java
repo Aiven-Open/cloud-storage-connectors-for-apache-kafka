@@ -61,7 +61,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
-@DisabledOnOs(value={OS.WINDOWS, OS.MAC}, disabledReason="Container testing does not run on Mac and Windows")
+@DisabledOnOs(value = { OS.WINDOWS, OS.MAC }, disabledReason = "Container testing does not run on Mac and Windows")
 @Testcontainers
 final class S3SourceTaskTest {
 

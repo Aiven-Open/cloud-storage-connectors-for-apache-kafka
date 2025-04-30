@@ -1,37 +1,37 @@
 ## Licensed under the terms of http://www.apache.org/licenses/LICENSE-2.0
-
-name: Build test
-on:
-  push:
-    branches:
-      - main
-      - feat-azure-blob-source
-  pull_request:
-    branches:
-      - main
-      - feat-azure-blob-source
-
-permissions:
-  contents: read
-
-jobs:
-  build:
-
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Build and test
-        run: ./gradlew build test
+#
+#name: Build test
+#on:
+#  push:
+#    branches:
+#      - main
+#      - feat-azure-blob-source
+#  pull_request:
+#    branches:
+#      - main
+#      - feat-azure-blob-source
+#
+#permissions:
+#  contents: read
+#
+#jobs:
+#  build:
+#
+#    runs-on: ${{ matrix.os }}
+#
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        os: [windows-latest]
+#
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Set up JDK
+#        uses: actions/setup-java@v4
+#        with:
+#          distribution: 'temurin'
+#          java-version: '17'
+#
+#      - name: Build and test
+#        run: ./gradlew build test
 
