@@ -239,7 +239,7 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         return genericRecords;
     }
 
-    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    @SuppressWarnings("PMD.AvoidInstantiatingObjeqctsInLoops")
     private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
             final String topicName, final Function<Integer, GenericRecord> func)
             throws ExecutionException, InterruptedException {

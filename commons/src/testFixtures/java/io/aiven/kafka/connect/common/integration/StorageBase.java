@@ -25,7 +25,16 @@ import io.aiven.kafka.connect.common.source.NativeInfo;
 
 import org.apache.commons.io.function.IOSupplier;
 
+/**
+ * Bsse class for storage implementations.
+ * @param <N> The native storage class.
+ * @param <K> The natvie key class.
+ */
 public interface StorageBase<N, K extends Comparable<K>> {
+    /**
+     * Gets the connector for the class.
+     * @return
+     */
     Class<? extends Connector> getConnectorClass();
     void createStorage();
     void removeStorage();
