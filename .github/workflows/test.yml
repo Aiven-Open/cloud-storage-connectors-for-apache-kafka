@@ -1,6 +1,6 @@
 ## Licensed under the terms of http://www.apache.org/licenses/LICENSE-2.0
 
-name: Main and pull request checks (MS Windows)
+name: Build test
 on:
   push:
     branches:
@@ -22,9 +22,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest]
 
     steps:
+      - uses: vedantmgoyal9/setup-wsl2@main
       - uses: actions/checkout@v4
       - name: Set up JDK
         uses: actions/setup-java@v4
