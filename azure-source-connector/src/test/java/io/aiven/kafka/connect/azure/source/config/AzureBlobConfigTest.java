@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Aiven Oy
+ * Copyright 2025 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,10 @@ final class AzureBlobConfigTest {
     void correctFullConfig() {
         final var props = new HashMap<String, String>();
 
+        /*
+         * This is the string that is expected to be generated given the values below.  This is the connect string for Azure.
+         */
+        final String expectedConnectionString = "DefaultEndpointsProtocol=HTTPS;AccountName=ACCOUNT_NAME;AccountKey=ACCOUNT_KEY;BlobEndpoint=HTTPS://example.com/TheContainer;";
         // azure props
         AzureBlobConfigFragment.setter(props)
                 .blobEndpoint("example.com")
@@ -47,8 +51,7 @@ final class AzureBlobConfigTest {
 
         final AzureBlobSourceConfig conf = new AzureBlobSourceConfig(props);
         // azure blob
-        assertThat(conf.getConnectionString()).isEqualTo(
-                "DefaultEndpointsProtocol=HTTPS;AccountName=ACCOUNT_NAME;AccountKey=ACCOUNT_KEY;BlobEndpoint=HTTPS://example.com/TheContainer;");
+        assertThat(conf.getConnectionString()).isEqualTo(expectedConnectionString);
         assertThat(conf.getAzureContainerName()).isEqualTo("TheContainer");
         assertThat(conf.getAzurePrefix()).isEqualTo("Prefix");
         assertThat(conf.getAzureFetchPageSize()).isEqualTo(10);
