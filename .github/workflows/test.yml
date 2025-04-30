@@ -25,9 +25,6 @@ jobs:
         os: [windows-latest]
 
     steps:
-      - uses: vedantmgoyal9/setup-wsl2@main
-        with:
-          distro: 'none'
       - uses: actions/checkout@v4
       - name: Set up JDK
         uses: actions/setup-java@v4
