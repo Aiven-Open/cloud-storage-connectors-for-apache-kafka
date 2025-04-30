@@ -47,26 +47,45 @@ import org.apache.commons.lang3.StringUtils;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
+/**
+ * S3 implementation of SinkStorage.
+ */
 public class S3SinkStorage implements SinkStorage<S3Object, String> {
-
+    /** The Access key */
     private static final String S3_ACCESS_KEY_ID = "test-key-id0";
+    /** The access secret */
     private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
+    /** the test bucket name */
     private static final String TEST_BUCKET_NAME = "test-bucket0";
-
+    /** the S3 container */
     private final LocalStackContainer container;
+    /** THe bucket accessor */
     private final BucketAccessor bucketAccessor;
 
+    /**
+     * Creates the container.
+     * @return the S3 Container.
+     */
     public static LocalStackContainer createContainer() {
         return new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
                 .withServices(LocalStackContainer.Service.S3);
     }
 
+    /**
+     * Constructor.
+     * @param container the container to execute against.
+     */
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     public S3SinkStorage(final LocalStackContainer container) {
         this.container = container;
         bucketAccessor = new BucketAccessor(createS3Client(container), TEST_BUCKET_NAME);
     }
 
+    /**
+     * Creates an AmazonS3 client.
+     * @param localStackContainer the container containing the S3 server.
+     * @return an AmazonS3 client.
+     */
     private AmazonS3 createS3Client(final LocalStackContainer localStackContainer) {
         return AmazonS3ClientBuilder.standard()
                 .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
