@@ -83,10 +83,11 @@ dependencies {
   testImplementation(testinglibs.awaitility)
   testImplementation(testcontainers.junit.jupiter)
   testImplementation(testcontainers.kafka) // this is not Kafka version
+  testImplementation(testcontainers.azure) // this is not Kafka version
   testImplementation("org.apache.kafka:connect-api:$kafkaAPIVersion")
   testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
   testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
-  testImplementation("org.testcontainers:azure:1.20.6")
+
 
   testImplementation(testinglibs.localstack) {
     exclude(group = "io.netty", module = "netty-transport-native-epoll")
@@ -141,15 +142,14 @@ dependencies {
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
+  integrationTestImplementation(testcontainers.azure) // this is not Kafka version
   integrationTestImplementation(testinglibs.awaitility)
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
   integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
   integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-  //  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-  //  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
   integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation(testFixtures(project(":azure-commons")))
-  integrationTestImplementation("org.testcontainers:azure:1.20.6")
+
 
   integrationTestImplementation(apache.kafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
@@ -169,13 +169,13 @@ dependencies {
   }
   testFixturesImplementation(testcontainers.junit.jupiter)
   testFixturesImplementation(testcontainers.localstack)
+  testFixturesImplementation(testcontainers.azure)
   testFixturesImplementation(testinglibs.junit.jupiter)
   testFixturesImplementation(testinglibs.assertj.core)
   testFixturesImplementation(compressionlibs.snappy)
   testFixturesImplementation(compressionlibs.zstd.jni)
   testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation(apache.kafka.connect.api)
-  testFixturesImplementation("org.testcontainers:azure:1.20.6")
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {

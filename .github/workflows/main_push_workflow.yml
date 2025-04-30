@@ -30,7 +30,7 @@ jobs:
           cache: gradle
       - name: Build in Windows
         if: runner.os == 'Windows'
-        run: ./gradlew --status build test
+        run: ./gradlew build test
       - name: Build in MacOS
         if: runner.os == 'macOS'
         run: ./gradlew build test

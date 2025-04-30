@@ -21,13 +21,13 @@ val azureVersion by extra("12.29.0")
 dependencies {
   compileOnly(apache.kafka.connect.api)
 
-  implementation("com.azure:azure-storage-blob:12.29.0")
+  implementation("com.azure:azure-storage-blob:${azureVersion}")
 
   testFixturesImplementation(apache.kafka.connect.api)
 
   implementation(project(":commons"))
 
-  testFixturesImplementation("com.azure:azure-storage-blob:12.29.0")
+  testFixturesImplementation("com.azure:azure-storage-blob:${azureVersion}")
 
   testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation(logginglibs.slf4j)
@@ -53,55 +53,13 @@ dependencies {
   }
   testFixturesImplementation(testcontainers.junit.jupiter)
   testFixturesImplementation(testcontainers.localstack)
+  testFixturesImplementation(testcontainers.azure)
   testFixturesImplementation(testinglibs.junit.jupiter)
   testFixturesImplementation(testinglibs.assertj.core)
   testFixturesImplementation(compressionlibs.snappy)
   testFixturesImplementation(compressionlibs.zstd.jni)
   testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation(apache.kafka.connect.api)
-  testFixturesImplementation("org.testcontainers:azure:1.20.6")
-
-  //  testImplementation(compressionlibs.snappy)
-  //  testImplementation(compressionlibs.zstd.jni)
-  //  testImplementation(apache.hadoop.mapreduce.client.core) {
-  //    exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
-  //    exclude(group = "org.apache.hadoop.thirdparty", module = "hadoop-shaded-protobuf_3_7")
-  //    exclude(group = "com.google.guava", module = "guava")
-  //    exclude(group = "commons-cli", module = "commons-cli")
-  //    exclude(group = "org.apache.commons", module = "commons-math3")
-  //    exclude(group = "org.apache.httpcomponents", module = "httpclient")
-  //    exclude(group = "commons-codec", module = "commons-codec")
-  //    exclude(group = "commons-io", module = "commons-io")
-  //    exclude(group = "commons-net", module = "commons-net")
-  //    exclude(group = "org.eclipse.jetty")
-  //    exclude(group = "org.eclipse.jetty.websocket")
-  //    exclude(group = "javax.servlet")
-  //    exclude(group = "javax.servlet.jsp")
-  //    exclude(group = "javax.activation")
-  //    exclude(group = "com.sun.jersey")
-  //    exclude(group = "log4j")
-  //    exclude(group = "org.apache.commons", module = "commons-text")
-  //    exclude(group = "org.slf4j", module = "slf4j-api")
-  //    exclude(group = "org.apache.hadoop", module = "hadoop-auth")
-  //    exclude(group = "org.apache.hadoop", module = "hadoop-yarn-api")
-  //    exclude(group = "com.google.re2j")
-  //    exclude(group = "com.google.protobuf")
-  //    exclude(group = "com.google.code.gson")
-  //    exclude(group = "com.jcraft")
-  //    exclude(group = "org.apache.curator")
-  //    exclude(group = "org.apache.zookeeper")
-  //    exclude(group = "org.apache.htrace")
-  //    exclude(group = "com.google.code.findbugs")
-  //    exclude(group = "org.apache.kerby")
-  //    exclude(group = "com.fasterxml.jackson.core")
-  //    exclude(group = "com.fasterxml.woodstox", module = "woodstox-core:5.0.3")
-  //    exclude(group = "org.apache.avro", module = "avro")
-  //    exclude(group = "org.apache.hadoop", module = "hadoop-yarn-common")
-  //    exclude(group = "com.google.inject.extensions", module = "guice-servlet")
-  //    exclude(group = "io.netty", module = "netty")
-  //  }
-  //
-  //  testRuntimeOnly(logginglibs.slf4j.log4j12)
 }
 
 tasks.processResources {

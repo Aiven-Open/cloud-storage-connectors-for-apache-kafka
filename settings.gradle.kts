@@ -29,7 +29,7 @@ val slf4jVersion by extra("1.7.36")
 val snappyVersion by extra("1.1.10.5")
 val spotbugsAnnotationsVersion by extra("4.8.1")
 val stax2ApiVersion by extra("4.2.2")
-val testcontainersVersion by extra("1.19.8")
+val testcontainersVersion by extra("1.20.6")
 val zstdVersion by extra("1.5.6-3")
 val wireMockVersion by extra("2.35.0")
 
@@ -104,6 +104,7 @@ dependencyResolutionManagement {
       library(
           "kafka", "org.testcontainers:kafka:$testcontainersVersion") // this is not Kafka version
       library("localstack", "org.testcontainers:localstack:$testcontainersVersion")
+      library("azure", "org.testcontainers:azure:$testcontainersVersion")
     }
   }
 }

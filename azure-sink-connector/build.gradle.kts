@@ -135,6 +135,7 @@ dependencies {
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
+  integrationTestImplementation(testcontainers.azure) // this is not Kafka version
   integrationTestImplementation(testinglibs.awaitility)
 
   integrationTestImplementation(apache.kafka.connect.transforms)
@@ -146,10 +147,9 @@ dependencies {
   // Make test utils from "test" available in "integration-test"
   integrationTestImplementation(sourceSets["test"].output)
   integrationTestImplementation(testFixtures(project(":azure-commons")))
-  integrationTestImplementation("org.testcontainers:azure:1.20.6")
 
   testFixturesImplementation(testFixtures(project(":azure-commons")))
-  testFixturesImplementation("org.testcontainers:azure:1.20.6")
+  testFixturesImplementation(testcontainers.azure)
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {
