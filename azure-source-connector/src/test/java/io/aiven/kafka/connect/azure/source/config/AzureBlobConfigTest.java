@@ -33,7 +33,8 @@ final class AzureBlobConfigTest {
         final var props = new HashMap<String, String>();
 
         /*
-         * This is the string that is expected to be generated given the values below.  This is the connect string for Azure.
+         * This is the string that is expected to be generated given the values below. This is the connect string for
+         * Azure.
          */
         final String expectedConnectionString = "DefaultEndpointsProtocol=HTTPS;AccountName=ACCOUNT_NAME;AccountKey=ACCOUNT_KEY;BlobEndpoint=HTTPS://example.com/TheContainer;";
         // azure props
