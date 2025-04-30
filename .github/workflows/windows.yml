@@ -1,0 +1,40 @@
+## Licensed under the terms of http://www.apache.org/licenses/LICENSE-2.0
+
+name: Main and pull request checks (MS Windows)
+on:
+  push:
+    branches:
+      - main
+      - feat-azure-blob-source
+  pull_request:
+    branches:
+      - main
+      - feat-azure-blob-source
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+
+    # "windows" takes up a lot of diskspace due a longstanding JDK issue
+    # Running on c: seems to work.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-docker-action@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build for windows-latest
+        run: ./gradlew build test integrationTest
+
