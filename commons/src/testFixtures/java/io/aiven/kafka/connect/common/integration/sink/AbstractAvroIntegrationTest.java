@@ -54,8 +54,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * The collecton of defined tests for Avro Sink.
- * @param <N> the native storage object type
- * @param <K> the native storage key type.
+ *
+ * @param <N>
+ *            the native storage object type
+ * @param <K>
+ *            the native storage key type.
  */
 public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         extends
@@ -95,21 +98,18 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
     /**
      * Creates the Avro codec / compression pairs for testing.
      * <p>
-     *     Note: some combinations do not work.  These should be fixed or noted in the configuration documentation..
+     * Note: some combinations do not work. These should be fixed or noted in the configuration documentation..
      * </p>
+     *
      * @return A stream of avro codec / compression type pairs.
      */
     private static Stream<Arguments> compressionAndCodecTestParameters() {
         final List<Arguments> lst = new ArrayList<>();
 
         /*
-         // code that adds all combination of codec and compression.
-         String[] codecs = {"null", "deflate", "snappy", "bzip2", "xz", "zstandard"};
-         for (String codec : codecs) {
-            for (CompressionType compression : CompressionType.values()) {
-               lst.add(Arguments.of(codec, compression));
-            }
-         }
+         * // code that adds all combination of codec and compression. String[] codecs = {"null", "deflate", "snappy",
+         * "bzip2", "xz", "zstandard"}; for (String codec : codecs) { for (CompressionType compression :
+         * CompressionType.values()) { lst.add(Arguments.of(codec, compression)); } }
          */
         lst.add(Arguments.of("null", CompressionType.NONE));
         lst.add(Arguments.of("bzip2", CompressionType.NONE));
@@ -241,16 +241,22 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
     }
 
     /**
-     * Creates and sends a list of GenericRecords.  All sent records are acknowledged by the producer before this method
-     * exits. Records are produced across the partitions.  For example the first record produced is assigned to partition 0,
-     * the next to partition 1 and so on until all partitions have a record.  Then the second record is added.  This proceeds until
-     * all partitions have the proper number of records.
-     * @param recordCountPerPartition the number of records to put in each partition.
-     * @param partitionCount the number of partitions.
-     * @param topicName the topic name for the records.
+     * Creates and sends a list of GenericRecords. All sent records are acknowledged by the producer before this method
+     * exits. Records are produced across the partitions. For example the first record produced is assigned to partition
+     * 0, the next to partition 1 and so on until all partitions have a record. Then the second record is added. This
+     * proceeds until all partitions have the proper number of records.
+     *
+     * @param recordCountPerPartition
+     *            the number of records to put in each partition.
+     * @param partitionCount
+     *            the number of partitions.
+     * @param topicName
+     *            the topic name for the records.
      * @return the list of Generic records that were sent.
-     * @throws ExecutionException if there is an issue generating or sending the records.
-     * @throws InterruptedException if the process is interrupted.
+     * @throws ExecutionException
+     *             if there is an issue generating or sending the records.
+     * @throws InterruptedException
+     *             if the process is interrupted.
      */
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
@@ -272,17 +278,25 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
     }
 
     /**
-     * Creates and sends a list of GenericRecords using a custom format.  All sent records are acknowledged by the producer before this method
-     * exits. Records are produced across the partitions.  For example the first record produced is assigned to partition 0,
-     * the next to partition 1 and so on until all partitions have a record.  Then the second record is added.  This proceeds until
-     * all partitions have the proper number of records.
-     * @param recordCountPerPartition the number of records to put in each partition.
-     * @param partitionCount the number of partitions.
-     * @param topicName the topic name for the records.
-     * @param recordGenerator the function to convert an integer into a GenericRecord.  See {@link AvroTestDataFixture#generateAvroRecord(int)} for an example.
+     * Creates and sends a list of GenericRecords using a custom format. All sent records are acknowledged by the
+     * producer before this method exits. Records are produced across the partitions. For example the first record
+     * produced is assigned to partition 0, the next to partition 1 and so on until all partitions have a record. Then
+     * the second record is added. This proceeds until all partitions have the proper number of records.
+     *
+     * @param recordCountPerPartition
+     *            the number of records to put in each partition.
+     * @param partitionCount
+     *            the number of partitions.
+     * @param topicName
+     *            the topic name for the records.
+     * @param recordGenerator
+     *            the function to convert an integer into a GenericRecord. See
+     *            {@link AvroTestDataFixture#generateAvroRecord(int)} for an example.
      * @return the list of Generic records that were sent.
-     * @throws ExecutionException if there is an issue generating or sending the records.
-     * @throws InterruptedException if the process is interrupted.
+     * @throws ExecutionException
+     *             if there is an issue generating or sending the records.
+     * @throws InterruptedException
+     *             if the process is interrupted.
      */
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
@@ -306,6 +320,7 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
 
     /**
      * Create a producer for this test suite.
+     *
      * @return the KafkaProducer for this test suite.
      */
     private KafkaProducer<String, GenericRecord> newProducer() {
@@ -318,7 +333,6 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         producerProps.put("schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         return new KafkaProducer<>(producerProps);
     }
-
 
     @Test
     void defaultAvroOutput() throws ExecutionException, InterruptedException, IOException {

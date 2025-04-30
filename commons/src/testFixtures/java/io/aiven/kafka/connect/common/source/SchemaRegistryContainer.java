@@ -31,7 +31,9 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
 
     /**
      * Constructs the container with the default version of 4.1.0
-     * @param bootstrapServer the url of the kafka bootstrap server.
+     *
+     * @param bootstrapServer
+     *            the url of the kafka bootstrap server.
      */
     public SchemaRegistryContainer(final String bootstrapServer) {
         this("4.1.0", bootstrapServer);
@@ -39,8 +41,11 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
 
     /**
      * Constructs the container.
-     * @param karapaceVersion the version of karapace to run.
-     * @param bootstrapServer the url of the kafka bootstrap server.
+     *
+     * @param karapaceVersion
+     *            the version of karapace to run.
+     * @param bootstrapServer
+     *            the url of the kafka bootstrap server.
      */
     public SchemaRegistryContainer(final String karapaceVersion, final String bootstrapServer) {
         super("ghcr.io/aiven-open/karapace:" + karapaceVersion);
@@ -73,6 +78,7 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
 
     /**
      * Get the schema registry URL for this container.
+     *
      * @return the schema registry URL as a string.
      */
     public String getSchemaRegistryUrl() {

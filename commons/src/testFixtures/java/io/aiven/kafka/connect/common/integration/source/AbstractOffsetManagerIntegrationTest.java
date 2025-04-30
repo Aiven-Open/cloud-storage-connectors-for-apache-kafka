@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import io.aiven.kafka.connect.common.integration.KafkaManager;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
@@ -36,6 +35,7 @@ import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
+import io.aiven.kafka.connect.common.integration.KafkaManager;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;

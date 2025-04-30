@@ -33,7 +33,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * A testing fixture to generate/read JSON data.
@@ -115,9 +114,12 @@ final public class JsonTestDataFixture {
 
     /**
      * Reads a json record from the byte array.
-     * @param bytes the bytes to extract the record from.
+     *
+     * @param bytes
+     *            the bytes to extract the record from.
      * @return JsonNode read from the bytes.
-     * @throws IOException on IO error.
+     * @throws IOException
+     *             on IO error.
      */
     public static JsonNode readJsonRecord(final byte[] bytes) throws IOException {
         return OBJECT_MAPPER.readTree(bytes);
@@ -125,9 +127,12 @@ final public class JsonTestDataFixture {
 
     /**
      * read multiple JSON records.
-     * @param values The Strings containing the serialized JSON records.
+     *
+     * @param values
+     *            The Strings containing the serialized JSON records.
      * @return a list of JsonRecords extracted from the values.
-     * @throws IOException on IO error.
+     * @throws IOException
+     *             on IO error.
      */
     public static List<JsonNode> readJsonRecords(final Collection<String> values) throws IOException {
         final List<JsonNode> result = new ArrayList<>();
@@ -138,11 +143,13 @@ final public class JsonTestDataFixture {
     }
 
     /**
-     * Reads a list of JsonRecords from an array of bytes.
-     * Reads the bytes line by line.
-     * @param bytes the serialized json records.
+     * Reads a list of JsonRecords from an array of bytes. Reads the bytes line by line.
+     *
+     * @param bytes
+     *            the serialized json records.
      * @return a list of JsonRecords extracted from the values.
-     * @throws IOException on IO error.
+     * @throws IOException
+     *             on IO error.
      */
     public static List<JsonNode> readJsonRecords(final byte[] bytes) throws IOException {
         final List<JsonNode> result = new ArrayList<>();
@@ -153,12 +160,16 @@ final public class JsonTestDataFixture {
     }
 
     /**
-     * Reads and decodes CSV based lines.  Reads each line from the byte array and splits it based on ',' returning the
+     * Reads and decodes CSV based lines. Reads each line from the byte array and splits it based on ',' returning the
      * field values specified.
-     * @param input the serialized data
-     * @param fieldsToDecode the indices of the fields to return in the value.
-     * @return a list of lists of strings.  The innermost list are the values returned from the csv files.
-     * @throws IOException on IO error.
+     *
+     * @param input
+     *            the serialized data
+     * @param fieldsToDecode
+     *            the indices of the fields to return in the value.
+     * @return a list of lists of strings. The innermost list are the values returned from the csv files.
+     * @throws IOException
+     *             on IO error.
      */
     public static List<List<String>> readAndDecodeLines(final byte[] input, final int... fieldsToDecode)
             throws IOException {
@@ -174,9 +185,12 @@ final public class JsonTestDataFixture {
 
     /**
      * Reads based lines from the byte array.
-     * @param input the serialized data
+     *
+     * @param input
+     *            the serialized data
      * @return a list of lines from the byte data.
-     * @throws IOException on IO error.
+     * @throws IOException
+     *             on IO error.
      */
     public static List<String> readLines(final byte[] input) throws IOException {
         try (InputStreamReader reader = new InputStreamReader(new ByteArrayInputStream(input), StandardCharsets.UTF_8);
@@ -187,8 +201,11 @@ final public class JsonTestDataFixture {
 
     /**
      * Decodes base 64 encoded fields.
-     * @param originalFields the list of fields.
-     * @param fieldsToDecode the list of fields to decode.
+     *
+     * @param originalFields
+     *            the list of fields.
+     * @param fieldsToDecode
+     *            the list of fields to decode.
      * @return the original fields with the specified fields decoded.
      */
     private static List<String> decodeRequiredFields(final String[] originalFields, final int[] fieldsToDecode) {
@@ -201,7 +218,9 @@ final public class JsonTestDataFixture {
 
     /**
      * Decode a base 64 string.
-     * @param value the value to decode.
+     *
+     * @param value
+     *            the value to decode.
      * @return the decoded value.
      */
     public static String b64Decode(final String value) {

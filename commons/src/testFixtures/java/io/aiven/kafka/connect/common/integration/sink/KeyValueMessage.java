@@ -26,20 +26,26 @@ public final class KeyValueMessage {
     public final String key;
     /** the value as a string */
     public final String value;
-    /** The partition this message was generated for  */
+    /** The partition this message was generated for */
     public final int partition;
     /** The message index from the run */
     public final int idx;
-    /** The epoch this message was generated for  */
+    /** The epoch this message was generated for */
     public final int epoch;
 
     /**
      * Constructor.
-     * @param key the key string.
-     * @param value the value string.
-     * @param partition the partition.
-     * @param idx the index from the run.
-     * @param epoch the epoch.
+     *
+     * @param key
+     *            the key string.
+     * @param value
+     *            the value string.
+     * @param partition
+     *            the partition.
+     * @param idx
+     *            the index from the run.
+     * @param epoch
+     *            the epoch.
      */
     public KeyValueMessage(final String key, final String value, final int partition, final int idx, final int epoch) {
         this.key = key;
@@ -51,6 +57,7 @@ public final class KeyValueMessage {
 
     /**
      * Get the key as a string.
+     *
      * @return he key as a string.
      */
     public String getKey() {
@@ -59,6 +66,7 @@ public final class KeyValueMessage {
 
     /**
      * Get the key as a byte array.
+     *
      * @return the key as a byte array.
      */
     public byte[] getKeyBytes() {
@@ -67,6 +75,7 @@ public final class KeyValueMessage {
 
     /**
      * Get the value as a string.
+     *
      * @return he value as a string.
      */
     public String getValue() {
@@ -75,6 +84,7 @@ public final class KeyValueMessage {
 
     /**
      * Get the value as a byte array.
+     *
      * @return the value as a byte array.
      */
     public byte[] getValueBytes() {

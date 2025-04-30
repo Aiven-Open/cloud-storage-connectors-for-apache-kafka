@@ -120,16 +120,22 @@ public abstract class AbstractAvroParquetIntegrationTest<N, K extends Comparable
     }
 
     /**
-     * Creates and sends a list of GenericRecords.  All sent records are acknowledged by the producer before this method
-     * exits. Records are produced across the partitions.  For example the first record produced is assigned to partition 0,
-     * the next to partition 1 and so on until all partitions have a record.  Then the second record is added.  This proceeds until
-     * all partitions have the proper number of records.
-     * @param recordCountPerPartition the number of records to put in each partition.
-     * @param partitionCount the number of partitions.
-     * @param topicName the topic name for the records.
+     * Creates and sends a list of GenericRecords. All sent records are acknowledged by the producer before this method
+     * exits. Records are produced across the partitions. For example the first record produced is assigned to partition
+     * 0, the next to partition 1 and so on until all partitions have a record. Then the second record is added. This
+     * proceeds until all partitions have the proper number of records.
+     *
+     * @param recordCountPerPartition
+     *            the number of records to put in each partition.
+     * @param partitionCount
+     *            the number of partitions.
+     * @param topicName
+     *            the topic name for the records.
      * @return the list of Generic records that were sent.
-     * @throws ExecutionException if there is an issue generating or sending the records.
-     * @throws InterruptedException if the process is interrupted.
+     * @throws ExecutionException
+     *             if there is an issue generating or sending the records.
+     * @throws InterruptedException
+     *             if the process is interrupted.
      */
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,
@@ -161,17 +167,25 @@ public abstract class AbstractAvroParquetIntegrationTest<N, K extends Comparable
     }
 
     /**
-     * Creates and sends a list of GenericRecords using a custom format.  All sent records are acknowledged by the producer before this method
-     * exits. Records are produced across the partitions.  For example the first record produced is assigned to partition 0,
-     * the next to partition 1 and so on until all partitions have a record.  Then the second record is added.  This proceeds until
-     * all partitions have the proper number of records.
-     * @param recordCountPerPartition the number of records to put in each partition.
-     * @param partitionCount the number of partitions.
-     * @param topicName the topic name for the records.
-     * @param recordGenerator the function to convert an integer into a GenericRecord.  See {@link AvroTestDataFixture#generateAvroRecord(int)} for an example.
+     * Creates and sends a list of GenericRecords using a custom format. All sent records are acknowledged by the
+     * producer before this method exits. Records are produced across the partitions. For example the first record
+     * produced is assigned to partition 0, the next to partition 1 and so on until all partitions have a record. Then
+     * the second record is added. This proceeds until all partitions have the proper number of records.
+     *
+     * @param recordCountPerPartition
+     *            the number of records to put in each partition.
+     * @param partitionCount
+     *            the number of partitions.
+     * @param topicName
+     *            the topic name for the records.
+     * @param recordGenerator
+     *            the function to convert an integer into a GenericRecord. See
+     *            {@link AvroTestDataFixture#generateAvroRecord(int)} for an example.
      * @return the list of Generic records that were sent.
-     * @throws ExecutionException if there is an issue generating or sending the records.
-     * @throws InterruptedException if the process is interrupted.
+     * @throws ExecutionException
+     *             if there is an issue generating or sending the records.
+     * @throws InterruptedException
+     *             if the process is interrupted.
      */
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private List<GenericRecord> produceRecords(final int recordCountPerPartition, final int partitionCount,

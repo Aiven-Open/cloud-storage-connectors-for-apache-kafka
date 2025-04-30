@@ -27,12 +27,16 @@ import org.apache.commons.io.function.IOSupplier;
 
 /**
  * The base class for Sink and Source storage.
- * @param <N> the native storage object type
- * @param <K> the native storage key type.
+ *
+ * @param <N>
+ *            the native storage object type
+ * @param <K>
+ *            the native storage key type.
  */
 public interface StorageBase<N, K extends Comparable<K>> {
     /**
      * Gets the Connector class under test.
+     *
      * @return The Connector class under test.
      */
     Class<? extends Connector> getConnectorClass();
@@ -55,14 +59,19 @@ public interface StorageBase<N, K extends Comparable<K>> {
 
     /**
      * Gets an IOSupplier for an InputStream for the specified nativeKey.
-     * @param nativeKey the key to retrieve the contents for.
+     *
+     * @param nativeKey
+     *            the key to retrieve the contents for.
      * @return An IOSupplier for an InputStream for the specified nativeKey.
      */
     IOSupplier<InputStream> getInputStream(K nativeKey);
 
     /**
      * Gets the default prefix used in testing.
-     * <p>Note - This method may be unnecessary.</p>
+     * <p>
+     * Note - This method may be unnecessary.
+     * </p>
+     *
      * @return The default prefix used in testing.
      */
     String defaultPrefix();

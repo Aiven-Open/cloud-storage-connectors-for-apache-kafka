@@ -33,8 +33,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.integration.ConsumerPropertiesBuilder;
-import io.aiven.kafka.connect.common.integration.KafkaManager;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -42,6 +40,8 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.json.JsonDeserializer;
 
+import io.aiven.kafka.connect.common.integration.ConsumerPropertiesBuilder;
+import io.aiven.kafka.connect.common.integration.KafkaManager;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.NativeInfo;

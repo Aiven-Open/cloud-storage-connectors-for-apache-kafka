@@ -127,10 +127,14 @@ public final class ParquetTestDataFixture {
 
     /**
      * Reads records.
-     * @param tmpDir the temporary directory to write files to.
-     * @param bytes the bytes to write to a file.
+     *
+     * @param tmpDir
+     *            the temporary directory to write files to.
+     * @param bytes
+     *            the bytes to write to a file.
      * @return the List of GenericRecords extracted from the bytes data.
-     * @throws IOException on IO error.
+     * @throws IOException
+     *             on IO error.
      */
     public static List<GenericRecord> readRecords(final Path tmpDir, final byte[] bytes) throws IOException {
         final var records = new ArrayList<GenericRecord>();

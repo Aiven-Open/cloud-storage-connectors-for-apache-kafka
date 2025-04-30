@@ -174,7 +174,9 @@ public final class AvroTestDataFixture {
 
     /**
      * Generate an avro record with the specified message id using the default schema.
-     * @param messageId the message id.
+     *
+     * @param messageId
+     *            the message id.
      * @return a GenericRecord with the specified data.
      */
     public static GenericRecord generateAvroRecord(final int messageId) {
@@ -183,8 +185,11 @@ public final class AvroTestDataFixture {
 
     /**
      * Generate an avro record with the specified message id using the specified schema
-     * @param messageId the message id.
-     * @param schema the schaema to use.
+     *
+     * @param messageId
+     *            the message id.
+     * @param schema
+     *            the schaema to use.
      * @return a GenericRecord with the specified data and schema.
      */
     public static GenericRecord generateAvroRecord(final int messageId, final Schema schema) {
@@ -196,9 +201,12 @@ public final class AvroTestDataFixture {
 
     /**
      * Extracts Avro records from a byte array.
-     * @param bytes the byte array to extract the records from.
+     *
+     * @param bytes
+     *            the byte array to extract the records from.
      * @return the GenericRecords from the byte array.
-     * @throws IOException on read error.
+     * @throws IOException
+     *             on read error.
      */
     public static List<GenericRecord> readAvroRecords(final byte[] bytes) throws IOException {
         final List<GenericRecord> result = new ArrayList<>();

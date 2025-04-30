@@ -17,8 +17,8 @@
 package io.aiven.kafka.connect.common.integration.sink;
 
 /**
- * A functional interface to convert partition, epoch, and index into a string.
- * This is generally used for generating Key and Value values for testing.
+ * A functional interface to convert partition, epoch, and index into a string. This is generally used for generating
+ * Key and Value values for testing.
  */
 @FunctionalInterface
 public interface IndexesToString {

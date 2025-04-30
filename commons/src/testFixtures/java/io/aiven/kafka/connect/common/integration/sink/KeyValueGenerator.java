@@ -30,8 +30,11 @@ public class KeyValueGenerator {
 
     /**
      * Creates a KeyValueGenerator with the specified key and value generators.
-     * @param keyGenerator the function to generate the key string
-     * @param valueGenerator the function to generate the value string
+     *
+     * @param keyGenerator
+     *            the function to generate the key string
+     * @param valueGenerator
+     *            the function to generate the value string
      */
     public KeyValueGenerator(final IndexesToString keyGenerator, final IndexesToString valueGenerator) {
         this.keyGenerator = keyGenerator;
@@ -40,8 +43,11 @@ public class KeyValueGenerator {
 
     /**
      * Generates a list of KeyValueMessages.
-     * @param numPartitions the number of partitions to generate values for.
-     * @param numEpochs the number of epochs to generate values for.
+     *
+     * @param numPartitions
+     *            the number of partitions to generate values for.
+     * @param numEpochs
+     *            the number of epochs to generate values for.
      * @return a list of KeyValueMessages, one for each partition/epoch pair.
      */
     public List<KeyValueMessage> generateMessages(final int numPartitions, final int numEpochs) {
