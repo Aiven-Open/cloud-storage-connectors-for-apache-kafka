@@ -53,12 +53,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
+@DisabledOnOs(value={OS.WINDOWS, OS.MAC}, disabledReason="Container testing does not run on Mac and Windows")
 @Testcontainers
 final class S3SourceTaskTest {
 

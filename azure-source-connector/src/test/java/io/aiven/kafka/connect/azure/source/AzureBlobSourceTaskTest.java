@@ -55,10 +55,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.testcontainers.azure.AzuriteContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+@DisabledOnOs(value={OS.WINDOWS, OS.MAC}, disabledReason="Container testing does not run on Mac and Windows")
 @Testcontainers
 final class AzureBlobSourceTaskTest {
 
@@ -89,7 +92,7 @@ final class AzureBlobSourceTaskTest {
     private AzureSourceIntegrationTestData testData;
 
     /**
-     * Sets up the AWS test container.
+     * Sets up the Azure test container.
      *
      * @param testInfo
      *            the test info.
