@@ -88,7 +88,6 @@ dependencies {
   testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
   testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
 
-
   testImplementation(testinglibs.localstack) {
     exclude(group = "io.netty", module = "netty-transport-native-epoll")
   }
@@ -149,7 +148,6 @@ dependencies {
   integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
   integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation(testFixtures(project(":azure-commons")))
-
 
   integrationTestImplementation(apache.kafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
