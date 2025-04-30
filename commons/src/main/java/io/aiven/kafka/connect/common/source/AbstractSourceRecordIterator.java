@@ -253,7 +253,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
                 .setKeyData(transformer.getKeyData(sourceRecord.getNativeKey(), sourceRecord.getTopic(), sourceConfig));
 
         lastSeenNativeKey = sourceRecord.getNativeKey();
-        getLogger().info("Processing record: {} skipping {} already read internal records", lastSeenNativeKey,
+        getLogger().debug("Processing record: {} skipping {} already read internal records", lastSeenNativeKey,
                 sourceRecord.getRecordCount());
         return transformer
                 .getRecords(getInputStream(sourceRecord), sourceRecord.getNativeItemSize(), sourceRecord.getContext(),
