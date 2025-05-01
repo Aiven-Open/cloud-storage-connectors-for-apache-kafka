@@ -634,6 +634,7 @@ public final class S3ConfigFragment extends ConfigFragment {
      * @return the updated properties.
      */
     public static Map<String, String> handleDeprecatedOptions(final Map<String, String> properties) {
+        // we need to have the old OUTPUT_COMPRESSION take priority over the new FILE_COMPRESSION_TYPE_CONFIG
         final String newValue = properties.get(FILE_COMPRESSION_TYPE_CONFIG);
         final String oldValue = properties.get(OUTPUT_COMPRESSION);
         if (oldValue != null) {

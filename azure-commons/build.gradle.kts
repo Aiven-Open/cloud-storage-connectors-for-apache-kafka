@@ -16,18 +16,16 @@
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-val azureVersion by extra("12.29.0")
-
 dependencies {
   compileOnly(apache.kafka.connect.api)
 
-  implementation("com.azure:azure-storage-blob:${azureVersion}")
+  implementation(azure.storage.blob)
 
   testFixturesImplementation(apache.kafka.connect.api)
 
   implementation(project(":commons"))
 
-  testFixturesImplementation("com.azure:azure-storage-blob:${azureVersion}")
+  testFixturesImplementation(azure.storage.blob)
 
   testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation(logginglibs.slf4j)
@@ -46,7 +44,7 @@ dependencies {
   testFixturesImplementation(apache.kafka.connect.json)
 
   testFixturesImplementation(tools.spotbugs.annotations)
-  testFixturesImplementation("com.azure:azure-storage-blob:${azureVersion}")
+  testFixturesImplementation(azure.storage.blob)
   testFixturesImplementation(testFixtures(project(":commons")))
   testFixturesImplementation(testinglibs.localstack) {
     exclude(group = "io.netty", module = "netty-transport-native-epoll")

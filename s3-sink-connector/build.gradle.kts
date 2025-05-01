@@ -18,8 +18,6 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-val amazonS3Version by extra("1.12.777")
-val amazonSTSVersion by extra("1.12.777")
 val s3mockVersion by extra("0.2.6")
 
 val integrationTest: SourceSet =
@@ -77,8 +75,8 @@ dependencies {
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
-  implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
-  implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
+  implementation(amazonoldawssdk.s3)
+  implementation(amazonoldawssdk.sts)
 
   testImplementation(apache.commons.io)
   testImplementation(testFixtures(project(":commons")))

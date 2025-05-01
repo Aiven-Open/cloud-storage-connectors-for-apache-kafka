@@ -2,10 +2,6 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-val kafkaAPIVersion by extra("1.1.0")
-val kafkaVersion by extra("3.3.1")
-val azureVersion by extra("12.29.0")
-
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
       java { srcDir("src/integration-test/java") }
@@ -55,8 +51,8 @@ idea {
 }
 
 dependencies {
-  compileOnly("org.apache.kafka:connect-api:$kafkaAPIVersion")
-  compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
+  compileOnly(apache.kafka.connect.api)
+  compileOnly(apache.kafka.connect.runtime)
   compileOnly(apache.kafka.connect.api)
 
   implementation("commons-io:commons-io:2.18.0")
@@ -64,7 +60,7 @@ dependencies {
   implementation(project(":commons"))
   implementation(project(":azure-commons"))
   implementation(apache.commons.collection4)
-  implementation("com.azure:azure-storage-blob:${azureVersion}")
+  implementation(azure.storage.blob)
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -84,9 +80,9 @@ dependencies {
   testImplementation(testcontainers.junit.jupiter)
   testImplementation(testcontainers.kafka) // this is not Kafka version
   testImplementation(testcontainers.azure) // this is not Kafka version
-  testImplementation("org.apache.kafka:connect-api:$kafkaAPIVersion")
-  testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
-  testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
+  testImplementation(apache.kafka.connect.api)
+  testImplementation(apache.kafka.connect.runtime)
+  testImplementation(apache.kafka.connect.json)
 
   testImplementation(testinglibs.localstack) {
     exclude(group = "io.netty", module = "netty-transport-native-epoll")
@@ -139,9 +135,7 @@ dependencies {
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testcontainers.azure) // this is not Kafka version
   integrationTestImplementation(testinglibs.awaitility)
-  integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
-  integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
+  integrationTestImplementation(apache.kafka.connect.runtime)
   integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation(testFixtures(project(":azure-commons")))
 
@@ -155,7 +149,7 @@ dependencies {
   integrationTestImplementation(sourceSets["test"].output)
 
   testFixturesImplementation(tools.spotbugs.annotations)
-  testFixturesImplementation("com.azure:azure-storage-blob:${azureVersion}")
+  testFixturesImplementation(azure.storage.blob)
   testFixturesImplementation(testFixtures(project(":commons")))
   testFixturesImplementation(testFixtures(project(":azure-commons")))
   testFixturesImplementation(testinglibs.localstack) {

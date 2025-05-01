@@ -198,15 +198,6 @@ public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
         connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("format.output.type", contentType);
 
-        /*
-         * connectorConfig.put("format.output.fields", "key,value");
-         * connectorConfig.put("format.output.fields.value.encoding", "none"); connectorConfig.put("key.converter",
-         * "io.confluent.connect.avro.AvroConverter"); connectorConfig.put("value.converter",
-         * "io.confluent.connect.avro.AvroConverter"); connectorConfig.put("value.converter.schemas.enable", "false");
-         * connectorConfig.put("file.compression.type", compression.name()); connectorConfig.put("format.output.type",
-         * contentType);
-         */
-
         kafkaManager.configureConnector(connectorName, connectorConfig);
         final Duration timeout = Duration.ofSeconds(getOffsetFlushInterval().toSeconds() * 2);
         final int partitionCount = 4;

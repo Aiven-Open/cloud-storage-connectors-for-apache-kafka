@@ -64,6 +64,7 @@ public class S3SinkStorage implements SinkStorage<S3Object, String> {
 
     /**
      * Creates the container.
+     *
      * @return the S3 Container.
      */
     public static LocalStackContainer createContainer() {
@@ -73,7 +74,9 @@ public class S3SinkStorage implements SinkStorage<S3Object, String> {
 
     /**
      * Constructor.
-     * @param container the container to execute against.
+     *
+     * @param container
+     *            the container to execute against.
      */
     @SuppressFBWarnings("EI_EXPOSE_REP2")
     public S3SinkStorage(final LocalStackContainer container) {
@@ -83,7 +86,9 @@ public class S3SinkStorage implements SinkStorage<S3Object, String> {
 
     /**
      * Creates an AmazonS3 client.
-     * @param localStackContainer the container containing the S3 server.
+     *
+     * @param localStackContainer
+     *            the container containing the S3 server.
      * @return an AmazonS3 client.
      */
     private AmazonS3 createS3Client(final LocalStackContainer localStackContainer) {

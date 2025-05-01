@@ -138,9 +138,6 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
 
     @Override
     public CompressionType getCompressionType() {
-        // we have priority merged to old OUTPUT_COMPRESSION into the new FILE_COMPRESSION_TYPE_CONFIG property and set
-        // the
-        // default value to GZIP so we just need to read it.
         return fileNameFragment.getCompressionType();
     }
 

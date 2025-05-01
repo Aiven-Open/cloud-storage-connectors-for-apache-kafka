@@ -95,10 +95,8 @@ class FileNameFragmentTest {
         argList.remove(FileNameArgs.GROUP_FILE);
         argList.remove(FileNameArgs.DEFAULT_FILENAME_TEMPLATE);
         configDefSource().map(a -> (FileNameArgs) (a.get()[0])).forEach(argList::remove);
-        assertThat(argList.isEmpty())
-                .as(() -> "Tests do not process the following arguments: "
-                        + String.join(", ", argList.stream().map(arg -> arg.toString()).collect(Collectors.toList())))
-                .isTrue();
+        assertThat(argList.isEmpty()).as(() -> "Tests do not process the following arguments: "
+                + argList.stream().map(Enum::toString).collect(Collectors.joining(", "))).isTrue();
     }
 
     private static Stream<Arguments> configDefSource() {
@@ -133,7 +131,7 @@ class FileNameFragmentTest {
         props.put(FileNameFragment.FILE_MAX_RECORDS, "50");
         final AbstractConfig cfg = new AbstractConfig(configDef, props);
         final FileNameFragment underTest = new FileNameFragment(cfg);
-        assertThatThrownBy(() -> underTest.validate()).isInstanceOf(ConfigException.class);
+        assertThatThrownBy(underTest::validate).isInstanceOf(ConfigException.class);
     }
 
     @ParameterizedTest(name = "{index} {0}")
@@ -159,13 +157,13 @@ class FileNameFragmentTest {
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.CSV.name,
-                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + ".avro" + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.AVRO.name,
-                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         return args.stream();
@@ -249,9 +247,7 @@ class FileNameFragmentTest {
         final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
         for (final CompressionType compressionType : CompressionType.values()) {
             setter.fileCompression(compressionType);
-            final FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data())); // NOPMD
-                                                                                                                   // ./gradlew
-                                                                                                                   // :commons:spotlessApply
+            final FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
             assertThat(underTest.getCompressionType()).isEqualTo(compressionType);
         }
     }

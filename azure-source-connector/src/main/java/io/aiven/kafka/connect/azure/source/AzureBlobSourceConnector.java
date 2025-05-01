@@ -43,7 +43,7 @@ public class AzureBlobSourceConnector extends SourceConnector {
      * The logger to write to
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceConnector.class);
-    /** The configuraiton properties */
+    /** The configuration properties */
     private Map<String, String> configProperties;
 
     @Override
@@ -61,11 +61,12 @@ public class AzureBlobSourceConnector extends SourceConnector {
         return AzureBlobSourceTask.class;
     }
 
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     @Override
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
         final var taskProps = new ArrayList<Map<String, String>>();
         for (int i = 0; i < maxTasks; i++) {
-            final var props = new HashMap<>(configProperties); // NOPMD AvoidInstantiatingObjectsInLoops
+            final var props = new HashMap<>(configProperties);
             props.put(TASK_ID, String.valueOf(i));
             taskProps.add(props);
         }

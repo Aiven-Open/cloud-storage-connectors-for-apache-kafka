@@ -71,7 +71,7 @@ dependencies {
 
   implementation(project(":commons"))
 
-  implementation("com.azure:azure-storage-blob:12.29.0")
+  implementation(azure.storage.blob)
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -135,7 +135,7 @@ dependencies {
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
-  integrationTestImplementation(testcontainers.azure) // this is not Kafka version
+  integrationTestImplementation(testcontainers.azure)
   integrationTestImplementation(testinglibs.awaitility)
 
   integrationTestImplementation(apache.kafka.connect.transforms)

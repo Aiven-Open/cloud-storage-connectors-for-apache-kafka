@@ -5,6 +5,7 @@ val avroVersion by extra("1.11.3")
 val avroConverterVersion by extra("7.2.2")
 val avroDataVersion by extra("7.2.2")
 val awaitilityVersion by extra("4.2.1")
+val amazonAwsSdkV1Version by extra("1.12.777")
 val amazonAwsSdkV2Version by extra("2.29.34")
 val commonsCollections4Version by extra("4.4")
 val commonsIOVersion by extra("2.18.0")
@@ -15,11 +16,7 @@ val hamcrestVersion by extra("2.2")
 val jacksonVersion by extra("2.15.3")
 val junitVersion by extra("5.11.4")
 val jqwikVersion by extra("1.8.4")
-// TODO: document why we stick to these versions
-// val kafkaVersion by extra("2.6.0") // this should move to 3.3.1 minimum after we get source/sink
-// code upgraded
-val kafkaVersion by
-    extra("3.3.1") // this should move to 3.3.1 minimum after we get source/sink code upgraded
+val kafkaVersion by extra("3.3.1")
 val kafkaAPIVersion by extra("1.1.0") // because we want the lowest possible API to function.
 val logbackVersion by extra("1.5.6")
 val localstackVersion by extra("0.2.23")
@@ -32,6 +29,7 @@ val stax2ApiVersion by extra("4.2.2")
 val testcontainersVersion by extra("1.20.6")
 val zstdVersion by extra("1.5.6-3")
 val wireMockVersion by extra("2.35.0")
+val azureVersion by extra("12.29.0")
 
 dependencyResolutionManagement {
   versionCatalogs {
@@ -47,6 +45,7 @@ dependencyResolutionManagement {
       library("kafka-connect-json", "org.apache.kafka:connect-json:$kafkaVersion")
       library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:$kafkaVersion")
       library("kafka-connect-transforms", "org.apache.kafka:connect-transforms:$kafkaVersion")
+      library("kafka-clients", "org.apache.kafka:kafka-clients:${kafkaVersion}")
       library("hadoop-common", "org.apache.hadoop:hadoop-common:$hadoopVersion")
       library(
           "hadoop-mapreduce-client-core",
@@ -58,6 +57,13 @@ dependencyResolutionManagement {
       library("s3", "software.amazon.awssdk:s3:$amazonAwsSdkV2Version")
       library("sts", "software.amazon.awssdk:sts:$amazonAwsSdkV2Version")
     }
+
+    create("amazonoldawssdk") {
+      library("s3", "com.amazonaws:aws-java-sdk-s3:$amazonAwsSdkV1Version")
+      library("sts", "com.amazonaws:aws-java-sdk-sts:$amazonAwsSdkV1Version")
+    }
+
+    create("azure") { library("storage-blob", "com.azure:azure-storage-blob:${azureVersion}") }
     create("compressionlibs") {
       library("snappy", "org.xerial.snappy:snappy-java:$snappyVersion")
       library("zstd-jni", "com.github.luben:zstd-jni:$zstdVersion")

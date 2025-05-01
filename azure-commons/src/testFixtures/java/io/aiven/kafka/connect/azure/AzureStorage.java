@@ -37,15 +37,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.azure.AzuriteContainer;
 
+/**
+ * The abstract base class for all Azure storage implementations.
+ */
 public abstract class AzureStorage implements StorageBase<BlobItem, String> {
-
+    /** The logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureStorage.class);
+    /** The default container name */
     public static final String DEFAULT_CONTAINER = "test-container";
+    /** The testing account name */
     private static final String ACCOUNT_NAME = "devstoreaccount1";
+    /** the testing account key */
     private static final String ACCOUNT_KEY = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
-
+    /** The container that holds the Azure storage */
     protected final AzuriteContainer container;
+    /** The blob service client for the container */
     protected final BlobServiceClient azureServiceClient;
+    /** The container accessor for the Azure storage */
     protected final ContainerAccessor containerAccessor;
 
     /**

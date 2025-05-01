@@ -19,13 +19,9 @@ plugins {
   id("java-test-fixtures")
 }
 
-val kafkaVersion by extra("3.3.1")
-val amazonS3Version by extra("1.12.777")
-val amazonSTSVersion by extra("1.12.777")
-
 dependencies {
-  implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
-  implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
+  implementation(amazonoldawssdk.s3)
+  implementation(amazonoldawssdk.sts)
   implementation(amazonawssdk.authentication)
   implementation(amazonawssdk.sts)
 
