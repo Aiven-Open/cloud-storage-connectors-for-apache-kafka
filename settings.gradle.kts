@@ -27,6 +27,8 @@ val stax2ApiVersion by extra("4.2.2")
 val testcontainersVersion by extra("1.19.8")
 val zstdVersion by extra("1.5.6-3")
 val wireMockVersion by extra("2.35.0")
+val velocityCoreVersion by extra("2.4.1")
+val velocityToolsVersion by extra("3.1")
 
 dependencyResolutionManagement {
   versionCatalogs {
@@ -46,6 +48,11 @@ dependencyResolutionManagement {
           "hadoop-mapreduce-client-core",
           "org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion")
       library("parquet-avro", "org.apache.parquet:parquet-avro:$parquetVersion")
+      library(
+          "velocity-engine-core", "org.apache.velocity:velocity-engine-core:${velocityCoreVersion}")
+      library(
+          "velocity-tools",
+          "org.apache.velocity.tools:velocity-tools-generic:${velocityToolsVersion}")
     }
     create("amazonawssdk") {
       library("authentication", "software.amazon.awssdk:auth:$amazonAwsSdkV2Version")

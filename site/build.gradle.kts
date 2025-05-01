@@ -4,9 +4,10 @@ plugins {
 }
 
 dependencies {
-  compileOnly("org.apache.kafka:connect-api:1.1.0")
-  implementation("org.apache.velocity:velocity-engine-core:2.4.1")
-  implementation("org.apache.velocity.tools:velocity-tools-generic:3.1")
+  compileOnly(apache.kafka.connect.api)
+  implementation(tools.spotbugs.annotations)
+  implementation(apache.velocity.engine.core)
+  implementation(apache.velocity.tools)
 }
 
 repositories {
@@ -38,27 +39,27 @@ tasks.register<Exec>("execVale") {
 }
 
 tasks.register<Copy>("copySiteAssets") {
-    outputs.upToDateWhen { false }
-    println("Copying projects")
-    rootProject.subprojects
-        .filter { s -> s.name != "site" }
-        .filter { s -> s.tasks.findByName("buildDocs") != null }
-        .forEach { s ->
-            println("Project: " + s.name)
-            dependsOn(s.tasks.getByName("buildDocs"))
-        }
+  outputs.upToDateWhen { false }
+  println("Copying projects")
+  rootProject.subprojects
+      .filter { s -> s.name != "site" }
+      .filter { s -> s.tasks.findByName("buildDocs") != null }
+      .forEach { s ->
+        println("Project: " + s.name)
+        dependsOn(s.tasks.getByName("buildDocs"))
+      }
 
-    rootProject.subprojects
-        .filter { s -> s.name != "site" }
-        .filter { s -> s.tasks.findByName("copySiteAssets") != null }
-        .forEach { s ->
-            println("Project: " + s.name)
-            dependsOn(s.tasks.getByName("copySiteAssets"))
-            from(s.tasks.getByName("copySiteAssets").outputs.files)
-        }
-    from("${project.layout.projectDirectory}/src/site")
-    into("${project.layout.buildDirectory.asFile.get()}/site")
-    println("")
+  rootProject.subprojects
+      .filter { s -> s.name != "site" }
+      .filter { s -> s.tasks.findByName("copySiteAssets") != null }
+      .forEach { s ->
+        println("Project: " + s.name)
+        dependsOn(s.tasks.getByName("copySiteAssets"))
+        from(s.tasks.getByName("copySiteAssets").outputs.files)
+      }
+  from("${project.layout.projectDirectory}/src/site")
+  into("${project.layout.buildDirectory.asFile.get()}/site")
+  println("")
 }
 
 tasks.register<Exec>("createSite") {
@@ -92,4 +93,3 @@ tasks.register<Copy>("populateSite") {
         }
       }
 }
-
