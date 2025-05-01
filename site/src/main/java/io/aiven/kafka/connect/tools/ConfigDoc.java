@@ -94,14 +94,14 @@ public class ConfigDoc {
      * Executes the generation of documentation from a configuration definition. THis method takes three (3) or four (4)
      * arguments.
      *
-     * <h4>Three argument version</h4>
+     * Three argument version
      * <ol>
      * <li>Class name - Name of the class to generate the documentation from. Must implement {@link ConfigDef}</li>
      * <li>Template - The file name of the Velocity template</li>
      * <li>Output - THe file name for the generated document</li>
      * </ol>
      *
-     * <h4>Four argument version</h4>
+     * Four argument version
      * <ol>
      * <li>Class name - Name of the class to generate the documentation from.</li>
      * <li>Static method name - The name of a static method on the class that produces a {@link ConfigDef} object.</li>
