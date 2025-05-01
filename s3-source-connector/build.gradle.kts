@@ -317,12 +317,9 @@ signing {
   signatureTypes = ASCSignatureProvider()
 }
 
-
 /** ******************************* */
 /* Documentation building section */
 /** ******************************* */
-
-
 tasks.register("buildDocs") {
   dependsOn("buildConfigMd")
   dependsOn("buildConfigYml")
@@ -330,27 +327,35 @@ tasks.register("buildDocs") {
 
 tasks.register<JavaExec>("buildConfigMd") {
   mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
-  classpath = sourceSets.main.get().compileClasspath.plus(files(tasks.jar)).plus(sourceSets.main.get().runtimeClasspath)
-  args = listOf(
-    "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
-    "configDef",
-    "src/templates/configData.md.vm",
-    "build/site/markdown/s3-source-connector/S3SourceConfig.md"
-  )
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
+          "configDef",
+          "src/templates/configData.md.vm",
+          "build/site/markdown/s3-source-connector/S3SourceConfig.md")
 }
 
 tasks.register<JavaExec>("buildConfigYml") {
   mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
-  classpath = sourceSets.main.get().compileClasspath.plus(files(tasks.jar)).plus(sourceSets.main.get().runtimeClasspath)
-  args = listOf(
-    "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
-    "configDef",
-    "src/templates/configData.yml.vm",
-    "build/site/s3-source-connector/S3SourceConfig.yml"
-  )
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
+          "configDef",
+          "src/templates/configData.yml.vm",
+          "build/site/s3-source-connector/S3SourceConfig.yml")
 }
-
-
 
 /** ****************************** */
 /*  End of documentation section */
