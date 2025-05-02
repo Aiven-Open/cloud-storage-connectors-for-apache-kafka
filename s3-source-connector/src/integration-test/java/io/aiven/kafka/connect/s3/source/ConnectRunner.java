@@ -77,7 +77,7 @@ final class ConnectRunner {
         final Map<String, String> workerProps = new HashMap<>();
 
         workerProps.put("offset.flush.interval.ms", Integer.toString(offsetFlushIntervalMs));
-
+        // small change
         // These don't matter much (each connector sets its own converters), but need to be filled with valid classes.
         workerProps.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         workerProps.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
