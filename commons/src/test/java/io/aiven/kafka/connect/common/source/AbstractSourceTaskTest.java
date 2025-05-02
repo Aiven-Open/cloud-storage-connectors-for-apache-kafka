@@ -162,6 +162,13 @@ class AbstractSourceTaskTest {
         }
     }
 
+    /**
+     * THis test creates the condition where the delay increases until the expected delay will cause the maxDelay to be
+     * exceeded. The result is that the total delay should be the maxDelay not the higher calculated expected value.
+     *
+     * @throws InterruptedException
+     *             on interruption.
+     */
     @Test
     void backoffIncrementalTimeTest() throws InterruptedException {
         final AtomicBoolean abortTrigger = new AtomicBoolean();
@@ -181,11 +188,12 @@ class AbstractSourceTaskTest {
 
         final AbstractSourceTask.Backoff backoff = new AbstractSourceTask.Backoff(config);
         long expected = 2;
+        // estimated delay is the delay without jitter
         while (backoff.estimatedDelay() < maxDelay) {
             assertThat(backoff.estimatedDelay()).isEqualTo(expected);
+            // delay may exit early due to induced jitter.
             backoff.delay();
             expected *= 2;
-            assertThat(abortTrigger).isFalse();
         }
         assertThat(backoff.estimatedDelay()).isEqualTo(maxDelay);
     }
