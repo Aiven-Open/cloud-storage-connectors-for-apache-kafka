@@ -68,7 +68,7 @@ final class ConnectRunner {
         }
         LOGGER.info("connectCluster stopped");
     }
-
+    // Just a small comment
     String configureConnector(final String connName, final Map<String, String> connConfig) {
         return connectCluster.configureConnector(connName, connConfig);
     }
