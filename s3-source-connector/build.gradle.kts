@@ -191,7 +191,7 @@ dependencies {
     exclude(group = "io.netty", module = "netty")
   }
 
-   integrationTestImplementation(apache.kafka.connect.runtime)
+  integrationTestImplementation(apache.kafka.connect.runtime)
   integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation(testFixtures(project(":s3-source-connector")))
 
