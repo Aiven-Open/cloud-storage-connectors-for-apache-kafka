@@ -25,6 +25,7 @@ import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import io.aiven.kafka.connect.common.util.StateChangeLogger;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -34,6 +35,8 @@ import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 /**
  * This class handles extracting records from an iterator and returning them to Kafka. It uses an exponential backoff
@@ -53,23 +56,25 @@ import org.slf4j.LoggerFactory;
  *
  */
 public abstract class AbstractSourceTask extends SourceTask {
+    private final Logger LOGGER = LoggerFactory.getLogger(AbstractSourceTask.class);
 
     public static final List<SourceRecord> NULL_RESULT = null;
 
     /**
-     * The maximum time to spend polling. This is set to 5 seconds as that is the time that is allotted to a system for
+     * The maximum time to spend polling. Should be set to less than 5 seconds as that is the time that is allotted to a system for
      * shutdown.
      */
-    public static final Duration MAX_POLL_TIME = Duration.ofSeconds(5);
+    public static final Duration MAX_POLL_TIME = Duration.ofSeconds(3);
+
+    /**
+     * The maximum time to poll for the back end.  Will scale up to this value and then delay this long until a file is found.
+     */
+    public static final Duration MAX_STORAGE_POLL_TIME = Duration.ofMinutes(10);
+
     /**
      * The boolean that indicates the connector is stopped.
      */
     private final AtomicBoolean connectorStopped;
-
-    /**
-     * The logger to use. Set from the class implementing AbstractSourceTask.
-     */
-    private final Logger logger;
 
     /**
      * The maximum number of records to put in a poll. Specified in the configuration.
@@ -86,14 +91,12 @@ public abstract class AbstractSourceTask extends SourceTask {
      */
     private final Thread implemtationPollingThread;
 
-    /**
-     * The Backoff implementation that executes the delay in the poll loop.
-     */
-    private final Backoff backoff;
-
-    private final BackoffConfig backoffConfig;
-
     private Iterator<SourceRecord> sourceRecordIterator;
+
+    private final StateChangeLogger<Boolean> pollLogger;
+    private final StateChangeLogger<Boolean> tryAddLogger;
+    private boolean pollHadData = false;
+    private boolean tryAddHadData = false;
 
     /**
      * Constructor.
@@ -103,44 +106,12 @@ public abstract class AbstractSourceTask extends SourceTask {
      */
     protected AbstractSourceTask(final Logger logger) {
         super();
-        this.logger = logger;
         connectorStopped = new AtomicBoolean();
-        backoffConfig = new BackoffConfig() {
-            @Override
-            public SupplierOfLong getSupplierOfTimeRemaining() {
-                return MAX_POLL_TIME::toMillis;
-            }
 
-            @Override
-            public AbortTrigger getAbortTrigger() {
-                return () -> {
-                };
-            }
+        pollLogger = new StateChangeLogger<>(() -> "Polling logger queue "+queue.hashCode()+". records: "+queue.size(), () -> pollHadData);
+        tryAddLogger = new StateChangeLogger<>(() -> "Try add logger queue "+queue.hashCode()+". records: "+queue.size(), () -> tryAddHadData);
 
-            @Override
-            public boolean applyTimerRule() {
-                return false;
-            }
-        };
-        backoff = new Backoff(backoffConfig);
-        implemtationPollingThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    while (stillPolling()) {
-                        if (!tryAdd()) {
-                            logger.debug("Attempting {}", backoff);
-                            backoff.cleanDelay();
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    logger.warn("{} interrupted -- EXITING", this.toString());
-                } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
-                    logger.error("{} failed -- EXITING", this.toString(), e);
-                }
-
-            }
-        }, this.getClass().getName() + " polling thread");
+        implemtationPollingThread = new Thread(new ImplementationPollingTask(logger.getName()), this.getClass().getName() + " polling thread");
     }
 
     /**
@@ -169,11 +140,27 @@ public abstract class AbstractSourceTask extends SourceTask {
 
     @Override
     public final void start(final Map<String, String> props) {
-        logger.debug("Starting");
+        LOGGER.debug("Starting");
         final SourceCommonConfig config = configure(props);
         maxPollRecords = config.getMaxPollRecords();
         queue = new LinkedBlockingQueue<>(maxPollRecords * 2);
-        sourceRecordIterator = getIterator(backoffConfig);
+        sourceRecordIterator = getIterator(new BackoffConfig() {
+            @Override
+            public SupplierOfLong getSupplierOfTimeRemaining() {
+                return MAX_STORAGE_POLL_TIME::toMillis;
+            }
+
+            @Override
+            public AbortTrigger getAbortTrigger() {
+                return () -> {
+                };
+            }
+
+            @Override
+            public boolean applyTimerRule() {
+                return false;
+            }
+        });
         implemtationPollingThread.start();
     }
 
@@ -182,20 +169,17 @@ public abstract class AbstractSourceTask extends SourceTask {
      *
      * @return true if successful, false if the iterator is empty.
      */
-    private boolean tryAdd() throws InterruptedException {
+    private boolean tryAdd(Logger logger) throws InterruptedException {
+        String name = Thread.currentThread().getName();
         if (queue.remainingCapacity() > 0) {
             if (sourceRecordIterator.hasNext()) {
-                backoff.reset();
                 final SourceRecord sourceRecord = sourceRecordIterator.next();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("tryAdd() : read record {}", sourceRecord.sourceOffset());
-                }
                 queue.put(sourceRecord);
                 return true;
             }
-            logger.info("No records found in tryAdd call");
+            logger.debug("No records found in tryAdd call");
         } else {
-            logger.info("No space in queue");
+            logger.info("No space in queue. {} {} records {} remaining", queue.hashCode(), queue.size(), queue.remainingCapacity());
         }
         return false;
     }
@@ -207,25 +191,40 @@ public abstract class AbstractSourceTask extends SourceTask {
      */
     protected final boolean stillPolling() {
         final boolean result = !connectorStopped.get();
-        logger.debug("Still polling: {}", result);
+        LOGGER.debug("Still polling: {}", result);
         return result;
     }
 
     @Override
     public final List<SourceRecord> poll() {
-        logger.debug("Polling");
         if (stillPolling()) {
+            Timer timer = new Timer(MAX_POLL_TIME);
+            Backoff backoff = new Backoff(new BackoffConfig() {
+                @Override
+                public SupplierOfLong getSupplierOfTimeRemaining() {
+                    return () -> timer.millisecondsRemaining();
+                }
+
+                @Override
+                public AbortTrigger getAbortTrigger() {
+                    return () -> timer.abort();
+                }
+            });
             List<SourceRecord> results = new ArrayList<>(maxPollRecords);
-            results = 0 == queue.drainTo(results, maxPollRecords) ? NULL_RESULT : results;
-            if (logger.isDebugEnabled()) {
-                logger.debug("Poll() returning {} SourceRecords.", results == null ? null : results.size());
+            int count = queue.drainTo(results, maxPollRecords);
+            while (count == 0 && !timer.isExpired()) {
+                backoff.cleanDelay();
+                count = queue.drainTo(results, maxPollRecords);
             }
+            results = 0 == count ? NULL_RESULT : results;
+            pollHadData = results != null;
+            pollLogger.info();
             if (results == null && !implemtationPollingThread.isAlive()) {
                 throw new ConnectException(implemtationPollingThread.getName() + " has died");
             }
             return results;
         } else {
-            logger.info("Stopping");
+            LOGGER.info("Not polling ... Stopping");
             closeResources();
             return NULL_RESULT;
         }
@@ -233,7 +232,7 @@ public abstract class AbstractSourceTask extends SourceTask {
 
     @Override
     public final void stop() {
-        logger.debug("Stopping");
+        LOGGER.debug("Stopping");
         connectorStopped.set(true);
     }
 
@@ -356,6 +355,11 @@ public abstract class AbstractSourceTask extends SourceTask {
      * {@link #reset()}. Delay increases exponentially but never exceeds the time remaining by more than 0.512 seconds.
      */
     public static class Backoff {
+        /**
+         * Log base 10 of 2.  Calculated here once and used below in tight calculation.
+         */
+        private static final double LOG10_2 = Math.log10(2);
+
         /** The logger to write to */
         private static final Logger LOGGER = LoggerFactory.getLogger(Backoff.class);
         /**
@@ -412,7 +416,7 @@ public abstract class AbstractSourceTask extends SourceTask {
             // if the remaining time is 0 or negative the maxCount will be infinity
             // so make sure that it is 0 in that case.
             final long remainingTime = timeRemaining.get();
-            maxCount = remainingTime < 1L ? 0 : (int) (Math.log10(remainingTime) / Math.log10(2));
+            maxCount = remainingTime < 1L ? 0 : (int) (Math.log10(remainingTime) / LOG10_2);
             waitCount = 0;
             LOGGER.debug("Reset {}", this);
         }
@@ -490,7 +494,7 @@ public abstract class AbstractSourceTask extends SourceTask {
                         LOGGER.debug("Backoff aborting timer");
                         abortTrigger.apply();
                     } else {
-                        LOGGER.debug("Backoff sleeping {}", nextSleep);
+                        LOGGER.info("Backoff sleeping {}", nextSleep);
                         Thread.sleep(nextSleep);
                     }
                 }
@@ -559,6 +563,55 @@ public abstract class AbstractSourceTask extends SourceTask {
          */
         default boolean applyTimerRule() {
             return true;
+        }
+    }
+
+    private class ImplementationPollingTask implements Runnable {
+        private final Logger LOGGER;
+        private final Backoff backoff;
+
+        private ImplementationPollingTask(String implClassName) {
+            LOGGER = LoggerFactory.getLogger(implClassName+".ImplementationPollingTask");
+            backoff = new Backoff(new BackoffConfig() {
+                @Override
+                public SupplierOfLong getSupplierOfTimeRemaining() {
+                    return MAX_STORAGE_POLL_TIME::toMillis;
+                }
+
+                @Override
+                public AbortTrigger getAbortTrigger() {
+                    return () -> {
+                    };
+                }
+
+                @Override
+                public boolean applyTimerRule() {
+                    return false;
+                }
+            });
+        }
+
+        @Override
+        public void run() {
+            try {
+                while (stillPolling()) {
+                    tryAddHadData = tryAdd(LOGGER);
+                    tryAddLogger.info();
+                    if (tryAddHadData) {
+                        backoff.reset();
+                    } else {
+                        LOGGER.debug("Attempting {}", backoff);
+                        backoff.cleanDelay();
+                    }
+                }
+            } catch (InterruptedException e) {
+                LOGGER.warn("interrupted -- EXITING");
+            } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
+                LOGGER.error("failed -- EXITING", e);
+                throw e;
+            } finally {
+                LOGGER.warn("EXITING");
+            }
         }
     }
 }
