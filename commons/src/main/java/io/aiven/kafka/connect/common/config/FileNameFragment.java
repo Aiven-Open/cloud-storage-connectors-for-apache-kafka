@@ -47,7 +47,6 @@ public final class FileNameFragment extends ConfigFragment {
     static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
 
     public static final String FILE_PATH_PREFIX_TEMPLATE_CONFIG = "file.prefix.template";
-    static final String DEFAULT_FILE_PATH_PREFIX_TEMPLATE = "topics/{{topic}}/partition={{partition}}/";
 
     public FileNameFragment(final AbstractConfig cfg) {
         super(cfg);

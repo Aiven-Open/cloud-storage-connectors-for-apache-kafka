@@ -36,13 +36,11 @@ import java.util.Queue;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
-import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -62,7 +60,6 @@ final class SourceRecordIteratorTest {
     private S3SourceConfig mockConfig;
     private OffsetManager mockOffsetManager;
     private Transformer mockTransformer;
-    private FileNameFragment mockFileNameFrag;
 
     private AWSV2SourceClient sourceApiClient;
 
@@ -71,7 +68,6 @@ final class SourceRecordIteratorTest {
         mockConfig = mock(S3SourceConfig.class);
         mockOffsetManager = mock(OffsetManager.class);
         mockTransformer = mock(Transformer.class);
-        mockFileNameFrag = mock(FileNameFragment.class);
     }
 
     private S3SourceConfig getConfig(final Map<String, String> data) {
@@ -85,8 +81,7 @@ final class SourceRecordIteratorTest {
         when(s3SourceConfig.getDistributionType()).thenReturn(DistributionType.OBJECT_HASH);
         when(s3SourceConfig.getTaskId()).thenReturn(taskId);
         when(s3SourceConfig.getMaxTasks()).thenReturn(maxTasks);
-        when(s3SourceConfig.getS3FileNameFragment()).thenReturn(mockFileNameFrag);
-        when(mockFileNameFrag.getFilenameTemplate()).thenReturn(Template.of(filePattern));
+        when(s3SourceConfig.getSourcename()).thenReturn(filePattern);
         when(mockConfig.getTargetTopic()).thenReturn(targetTopic);
         when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
         when(mockConfig.getS3FetchBufferSize()).thenReturn(1);

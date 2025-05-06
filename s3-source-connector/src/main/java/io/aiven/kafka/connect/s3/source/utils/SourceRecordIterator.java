@@ -169,8 +169,7 @@ public final class SourceRecordIterator implements Iterator<S3SourceRecord> {
         final DistributionType distributionType = s3SourceConfig.getDistributionType();
         final int maxTasks = s3SourceConfig.getMaxTasks();
         this.taskId = s3SourceConfig.getTaskId() % maxTasks;
-        this.filePattern = new FilePatternUtils(
-                s3SourceConfig.getS3FileNameFragment().getFilenameTemplate().toString());
+        this.filePattern = new FilePatternUtils(s3SourceConfig.getSourcename());
         return distributionType.getDistributionStrategy(maxTasks);
     }
 
