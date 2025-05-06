@@ -200,15 +200,17 @@ final class IntegrationTest implements IntegrationBase {
         offsetKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "1", localS3Prefix));
         offsetKeys.add(writeToS3(topic, new byte[0], "3"));
 
+        assertThat(testBucketAccessor.listObjects()).hasSize(5);
+
         // Start the Connector
         connectRunner.configureConnector(CONNECTOR_NAME, connectorConfig);
 
-        assertThat(testBucketAccessor.listObjects()).hasSize(5);
         // Poll messages from the Kafka topic and verify the consumed data
         final List<String> records = IntegrationBase.consumeByteMessages(topic, 4, connectRunner.getBootstrapServers());
 
         // Verify that the correct data is read from the S3 bucket and pushed to Kafka
         assertThat(records).containsOnly(testData1, testData2);
+
 
         // Verify offset positions
         final Map<String, Long> expectedOffsetRecords = offsetKeys.subList(0, offsetKeys.size() - 1)
@@ -432,6 +434,8 @@ final class IntegrationTest implements IntegrationBase {
         if (addPrefix) {
             config.put(FILE_PATH_PREFIX_TEMPLATE_CONFIG, prefixPattern);
         }
+        config.put("offset.flush.interval.ms", Integer.toString(OFFSET_FLUSH_INTERVAL_MS));
+
         return config;
     }
 
@@ -457,6 +461,7 @@ final class IntegrationTest implements IntegrationBase {
             consumer.subscribe(Collections.singletonList("connect-offset-topic-" + CONNECTOR_NAME));
             await().atMost(Duration.ofMinutes(1)).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
                 offsetRecs.putAll(IntegrationBase.consumeOffsetMessages(consumer));
+                System.out.println(offsetRecs);
                 assertThat(offsetRecs).containsExactlyInAnyOrderEntriesOf(expectedRecords);
             });
         }

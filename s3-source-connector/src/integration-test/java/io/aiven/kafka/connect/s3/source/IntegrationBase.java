@@ -80,6 +80,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.TestInfo;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -313,6 +314,7 @@ public interface IntegrationBase {
         // Poll messages from the topic
         final Map<String, Object> messages = new HashMap<>();
         final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofSeconds(1));
+        LoggerFactory.getLogger(IntegrationBase.class).info("Consumed {} records", records.count());
         for (final ConsumerRecord<byte[], byte[]> record : records) {
             final Map<String, Long> offsetRec = OBJECT_MAPPER.readValue(record.value(), new TypeReference<>() { // NOPMD
             });
@@ -338,7 +340,7 @@ public interface IntegrationBase {
             Class<? extends Deserializer<K>> keyDeserializer, Class<? extends Deserializer<V>> valueDeserializer) {
         final Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-group-here-we-are");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer.getName());
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");

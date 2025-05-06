@@ -57,6 +57,10 @@ final class ConnectRunner {
         return connectCluster.kafka().bootstrapServers();
     }
 
+    void restartConnector(final String connectorName) {
+        connectCluster.restartConnector(connectorName);
+    }
+
     void deleteConnector(final String connectorName) {
         connectCluster.deleteConnector(connectorName);
     }
