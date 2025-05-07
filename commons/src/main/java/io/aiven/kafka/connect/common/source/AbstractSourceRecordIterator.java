@@ -209,7 +209,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      *            THe native key to create an offset manager key for.
      * @return An offset manager key.
      */
-    abstract protected OffsetManager.OffsetManagerKey getOffsetManagerKey(@NotNull K nativeKey);
+    abstract protected OffsetManager.OffsetManagerKey getOffsetManagerKey(K nativeKey);
 
     @Override
     final public boolean hasNext() {
