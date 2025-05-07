@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.common.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,12 +38,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class FileNameFragmentTest {// NOPMD
+class FileNameFragmentTest {
 
     /**
      * An enumeration to expose the FileNameFragment properties names to test cases
      */
-    public enum FileNameArgs {
+    private enum FileNameArgs {
         GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
                 FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
                         FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
@@ -94,30 +95,29 @@ public class FileNameFragmentTest {// NOPMD
         argList.remove(FileNameArgs.GROUP_FILE);
         argList.remove(FileNameArgs.DEFAULT_FILENAME_TEMPLATE);
         configDefSource().map(a -> (FileNameArgs) (a.get()[0])).forEach(argList::remove);
-        assertThat(argList.isEmpty())
-                .as(() -> "Tests do not process the following arguments: "
-                        + String.join(", ", argList.stream().map(arg -> arg.toString()).collect(Collectors.toList())))
-                .isTrue();
+        assertThat(argList.isEmpty()).as(() -> "Tests do not process the following arguments: "
+                + argList.stream().map(Enum::toString).collect(Collectors.joining(", "))).isTrue();
     }
 
     private static Stream<Arguments> configDefSource() {
         final List<Arguments> args = new ArrayList<>();
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, true,
-                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 0, ConfigDef.Width.LONG, false));
+                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 1, ConfigDef.Width.LONG, false));
 
-        args.add(Arguments.of(FileNameArgs.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
-                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 1, ConfigDef.Width.NONE, true));
+        args.add(Arguments.of(FileNameArgs.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
+                CompressionType.NONE.toString(), true, ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 3,
+                ConfigDef.Width.NONE, true));
 
         args.add(Arguments.of(FileNameArgs.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM,
-                FileNameArgs.GROUP_FILE.key(), 2, ConfigDef.Width.SHORT, false));
+                FileNameArgs.GROUP_FILE.key(), 4, ConfigDef.Width.SHORT, false));
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
-                ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 3,
+                ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 5,
                 ConfigDef.Width.SHORT, false));
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING,
-                TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 4,
+                TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 6,
                 ConfigDef.Width.SHORT, false));
 
         return args.stream();
@@ -131,7 +131,7 @@ public class FileNameFragmentTest {// NOPMD
         props.put(FileNameFragment.FILE_MAX_RECORDS, "50");
         final AbstractConfig cfg = new AbstractConfig(configDef, props);
         final FileNameFragment underTest = new FileNameFragment(cfg);
-        assertThatThrownBy(() -> underTest.validate()).isInstanceOf(ConfigException.class);
+        assertThatThrownBy(underTest::validate).isInstanceOf(ConfigException.class);
     }
 
     @ParameterizedTest(name = "{index} {0}")
@@ -157,13 +157,13 @@ public class FileNameFragmentTest {// NOPMD
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.CSV.name,
-                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + ".avro" + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.AVRO.name,
-                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         return args.stream();
@@ -240,4 +240,93 @@ public class FileNameFragmentTest {// NOPMD
 
     }
 
+    @Test
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    void compressionTypeTest() {
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+        for (final CompressionType compressionType : CompressionType.values()) {
+            setter.fileCompression(compressionType);
+            final FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+            assertThat(underTest.getCompressionType()).isEqualTo(compressionType);
+        }
+    }
+
+    @Test
+    void maxRecordsTest() {
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+        setter.maxRecordsPerFile(0);
+        FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getMaxRecordsPerFile()).isEqualTo(0);
+        setter.maxRecordsPerFile(50);
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getMaxRecordsPerFile()).isEqualTo(50);
+        setter.maxRecordsPerFile(Integer.MAX_VALUE);
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getMaxRecordsPerFile()).isEqualTo(Integer.MAX_VALUE);
+    }
+
+    @Test
+    void timezoneTest() {
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+        setter.timestampTimeZone(ZoneOffset.UTC);
+        FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimezone()).isEqualTo(ZoneOffset.UTC);
+        setter.timestampTimeZone(ZoneId.of("GMT"));
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimezone()).isEqualTo(ZoneId.of("GMT"));
+        setter.timestampTimeZone(ZoneId.of("CET"));
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimezone()).isEqualTo(ZoneId.of("CET"));
+    }
+
+    @Test
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    void timestampTest() {
+        FileNameFragment underTest;
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+        for (final TimestampSource.Type timestampType : TimestampSource.Type.values()) {
+            setter.timestampSource(timestampType);
+            underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+            assertThat(underTest.getFilenameTimestampSource().type()).isEqualTo(timestampType);
+        }
+
+        TimestampSource source = TimestampSource.of(TimestampSource.Type.WALLCLOCK);
+        setter.timestampSource(source);
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimestampSource().type()).isEqualTo(TimestampSource.Type.WALLCLOCK);
+
+        source = TimestampSource.of(TimestampSource.Type.EVENT);
+        setter.timestampSource(source);
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimestampSource().type()).isEqualTo(TimestampSource.Type.EVENT);
+    }
+
+    @Test
+    void filenameTest() {
+
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+
+        setter.template("{{key}}-aFileName.txt");
+        final FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+
+        assertThat(underTest.getFilename()).isEqualTo("{{key}}-aFileName.txt");
+        assertThat(underTest.getFilenameTemplate().toString()).isEqualTo("{{key}}-aFileName.txt");
+
+    }
+
+    @Test
+    void filenamePrefixTest() {
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+
+        setter.prefixTemplate("{{key}}-SomePrefix");
+        final FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+
+        assertThat(underTest.getPrefixTemplate()).isEqualTo("{{key}}-SomePrefix");
+    }
 }

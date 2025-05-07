@@ -23,9 +23,9 @@ import java.util.Map;
 import org.apache.kafka.connect.source.SourceRecord;
 
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
-import io.aiven.kafka.connect.common.utils.VersionInfo;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
+import io.aiven.kafka.connect.common.utils.VersionInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

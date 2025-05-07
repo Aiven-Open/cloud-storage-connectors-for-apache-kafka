@@ -94,7 +94,7 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
 
     @Override
     public OffsetManager.OffsetManagerKey getManagerKey() {
-        return () -> Map.of(KEY, data.get(KEY), GROUPING_KEY, data.get(GROUPING_KEY));
+        return new OffsetManager.OffsetManagerKey(Map.of(KEY, data.get(KEY), GROUPING_KEY, data.get(GROUPING_KEY)));
     }
 
     @Override

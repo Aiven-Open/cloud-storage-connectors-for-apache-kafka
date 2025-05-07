@@ -50,14 +50,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
 @Testcontainers
 final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
     private static final String CONNECTOR_NAME = "aiven-azure-sink-connector-avro";
-
 
     private final Schema avroInputDataSchema = new Schema.Parser().parse(
             "{\"type\":\"record\",\"name\":\"input_data\"," + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
