@@ -16,7 +16,11 @@
 
 package io.aiven.kafka.connect.s3.source;
 
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+
+import org.apache.kafka.connect.connector.Connector;
 
 import io.aiven.kafka.connect.common.integration.source.AbstractSourceIteratorIntegrationTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;

@@ -21,11 +21,13 @@ import static java.lang.String.format;
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Fail.fail;
+import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.json.JsonConverter;
@@ -350,6 +353,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
             final Map<String, String> connectorConfig = createConfig(localPrefix, topic, TASK_NOT_SET, 1,
                     InputFormat.BYTES);
             KafkaFragment.setter(connectorConfig)
+                    .name(getConnectorName())
                     .keyConverter(ByteArrayConverter.class)
                     .valueConverter(ByteArrayConverter.class);
             SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.PARTITION);

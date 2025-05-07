@@ -167,7 +167,6 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
 
         // verify empty is empty.
         createClientMutator().build();
-
         final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
                 transformer);
         assertThat(iterator).isExhausted();
@@ -183,7 +182,6 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
 
         // verify one data has one data
         createClientMutator().reset().addObject(key, ByteBuffer.wrap(data)).endOfBlock().build();
-
         final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
                 transformer);
         assertThat(iterator).hasNext();
@@ -246,7 +244,6 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
         final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(config.getTransformerMaxBufferSize()).thenReturn(4096);
         when(config.getInputFormat()).thenReturn(format);
-
         final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
                 transformer);
 
@@ -320,7 +317,6 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
         final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(config.getTransformerMaxBufferSize()).thenReturn(4096);
         when(config.getInputFormat()).thenReturn(InputFormat.BYTES);
-
         final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
                 transformer);
 

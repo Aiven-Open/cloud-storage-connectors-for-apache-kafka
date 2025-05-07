@@ -18,9 +18,9 @@ package io.aiven.kafka.connect.azure.source.utils;
 
 import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 
 import com.azure.storage.blob.models.BlobItem;
-import io.aiven.kafka.connect.common.storage.NativeInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

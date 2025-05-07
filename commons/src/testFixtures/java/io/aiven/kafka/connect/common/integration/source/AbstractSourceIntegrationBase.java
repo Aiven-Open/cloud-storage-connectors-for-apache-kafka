@@ -44,6 +44,7 @@ import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.integration.ConsumerPropertiesBuilder;
 import io.aiven.kafka.connect.common.integration.KafkaManager;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
+import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.utils.CasedString;
@@ -225,6 +226,10 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
      * @return a KafkaManager instance. This is equivalent of calling @{code setupKafka(false)}.
      * @throws IOException
      *             on IO error.
+     * @throws ExecutionException
+     *             on execution error.
+     * @throws InterruptedException
+     *             on interrupted thread.
      */
     final protected KafkaManager setupKafka(final boolean forceRestart) throws IOException {
         KafkaManager kafkaManager = KAFKA_MANAGER_THREAD_LOCAL.get();
@@ -372,6 +377,7 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
          * constructor. use {@link AbstractSourceIntegrationBase#messageConsumer()}
          */
         private MessageConsumer() {
+            // use AbstractSourceIntegrationBase.messageConsumer();
         }
 
         /**
@@ -588,4 +594,47 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
         }
     }
 
+    /**
+     * The result of a successful write.
+     *
+     * @param <K>
+     *            the native key type.
+     */
+    public static final class WriteResult<K extends Comparable<K>> {
+        /** the OffsetManagerKey for the result */
+        private final OffsetManager.OffsetManagerKey offsetKey;
+        /** The native Key for the result */
+        private final K nativeKey;
+
+        /**
+         * Constructor.
+         *
+         * @param offsetKey
+         *            the OffsetManagerKey for the result.
+         * @param nativeKey
+         *            the native key for the result.
+         */
+        public WriteResult(final OffsetManager.OffsetManagerKey offsetKey, final K nativeKey) {
+            this.offsetKey = offsetKey;
+            this.nativeKey = nativeKey;
+        }
+
+        /**
+         * Gets the OffsetManagerKey.
+         *
+         * @return the OffsetManagerKey
+         */
+        public OffsetManager.OffsetManagerKey getOffsetManagerKey() {
+            return offsetKey;
+        }
+
+        /**
+         * Gets the native key.
+         *
+         * @return the native key.
+         */
+        K getNativeKey() {
+            return nativeKey;
+        }
+    }
 }

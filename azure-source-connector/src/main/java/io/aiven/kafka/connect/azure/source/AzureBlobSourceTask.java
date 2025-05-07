@@ -27,10 +27,10 @@ import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecord;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
-import io.aiven.kafka.connect.common.utils.VersionInfo;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
+import io.aiven.kafka.connect.common.utils.VersionInfo;
 
 import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;

@@ -20,12 +20,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.source.SourceRecord;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
-import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
@@ -46,21 +46,23 @@ public class S3SourceTask extends AbstractSourceTask {
     /** The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
 
-    /** An iterator or S3SourceRecords */
+    /** An iterator of S3SourceRecords. Package private for testing */
     Iterator<S3SourceRecord> s3SourceRecordIterator;
-    /**
-     * The transformer that we are using TODO move this to AbstractSourceTask
-     */
-    private Transformer transformer;
-    /** The AWS Source client */
 
+    /** The AWS Source client */
     private AWSV2SourceClient awsv2SourceClient;
     /** The offset manager this task uses */
     private OffsetManager<S3OffsetManagerEntry> offsetManager;
+    /** The configuration for this run */
     private S3SourceConfig s3SourceConfig;
 
     public S3SourceTask() {
         super(LOGGER);
+    }
+
+    S3SourceTask(final Iterator<S3SourceRecord> iterator) {
+        this();
+        this.s3SourceRecordIterator = iterator;
     }
 
     @Override
@@ -93,8 +95,6 @@ public class S3SourceTask extends AbstractSourceTask {
                                 throw exception;
                             }
                         } else {
-                            // TODO validate that the iterator does not lose an S3Object. Add test to
-                            // S3ObjectIterator.
                             throw exception;
                         }
                     }
@@ -113,13 +113,12 @@ public class S3SourceTask extends AbstractSourceTask {
 
     @Override
     protected SourceCommonConfig configure(final Map<String, String> props) {
-        LOGGER.info("S3 Source task started.");
+        LOGGER.info("Configuring S3 Source task.");
         this.s3SourceConfig = new S3SourceConfig(props);
-        this.transformer = s3SourceConfig.getTransformer();
         offsetManager = new OffsetManager<>(context);
         awsv2SourceClient = new AWSV2SourceClient(s3SourceConfig);
-        setS3SourceRecordIterator(
-                new S3SourceRecordIterator(s3SourceConfig, offsetManager, this.transformer, awsv2SourceClient));
+        s3SourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, offsetManager,
+                s3SourceConfig.getTransformer(), awsv2SourceClient);
         return s3SourceConfig;
     }
 
@@ -129,36 +128,18 @@ public class S3SourceTask extends AbstractSourceTask {
     }
 
     @Override
-    public void commitRecord(final SourceRecord record) {
+    public void commitRecord(final SourceRecord record, final RecordMetadata metadata) {
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Kafka Acked record {}, see readme for details", (Map<String, Object>) record.sourceOffset());
+            if (metadata == null) {
+                LOGGER.debug("Kafka filtered record {}, see readme for details", record.sourceOffset());
+            } else {
+                LOGGER.debug("Kafka Acked record {}, see readme for details", record.sourceOffset());
+            }
         }
-    }
-
-    /**
-     * Set the S3 source record iterator that this task is using. Protected to be overridden in testing implementation.
-     *
-     * @param iterator
-     *            The S3SourceRecord iterator to use.
-     */
-    protected void setS3SourceRecordIterator(final Iterator<S3SourceRecord> iterator) {
-        s3SourceRecordIterator = iterator;
     }
 
     @Override
     protected void closeResources() {
         awsv2SourceClient.shutdown();
     }
-
-    // below for visibility in tests
-
-    /**
-     * Get the transformer that we are using.
-     *
-     * @return the transformer that we are using.
-     */
-    public Transformer getTransformer() {
-        return transformer;
-    }
-
 }

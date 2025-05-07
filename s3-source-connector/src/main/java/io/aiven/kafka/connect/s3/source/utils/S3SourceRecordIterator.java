@@ -55,8 +55,7 @@ public final class S3SourceRecordIterator
     public S3SourceRecordIterator(final S3SourceConfig s3SourceConfig,
             final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer,
             final AWSV2SourceClient sourceClient) {
-
-        super(s3SourceConfig, offsetManager, transformer, s3SourceConfig.getRingBufferSize());
+        super(s3SourceConfig, offsetManager, transformer);
         this.bucket = s3SourceConfig.getAwsS3BucketName();
         this.sourceClient = sourceClient;
     }

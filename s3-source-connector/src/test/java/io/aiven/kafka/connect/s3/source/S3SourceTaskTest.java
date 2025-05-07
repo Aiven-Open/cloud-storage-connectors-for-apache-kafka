@@ -247,6 +247,8 @@ final class S3SourceTaskTest {
             public boolean hasNext() {
                 return inner.hasNext();
             }
+            return innerIterator.hasNext();
+        }
 
             @Override
             public S3SourceRecord next() {
@@ -292,10 +294,8 @@ final class S3SourceTaskTest {
                 counter[0] += results.size();
                 counter[1]++;
             }
-            return counter[0] == 3;
-        });
-        assertThat(counter[1]).isEqualTo(2);
-    }
+            return innerIterator.next();
+        }
 
     @Test
     void testPollWhenConnectorStopped() {
