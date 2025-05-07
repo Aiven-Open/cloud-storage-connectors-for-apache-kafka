@@ -52,18 +52,22 @@ idea {
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
+  compileOnly(apache.kafka.connect.runtime)
+  compileOnly(apache.kafka.connect.api)
 
   implementation("commons-io:commons-io:2.18.0")
   implementation("org.apache.commons:commons-lang3:3.17.0")
   implementation(project(":commons"))
+  implementation(project(":azure-commons"))
   implementation(apache.commons.collection4)
-  implementation("com.azure:azure-storage-blob:12.29.0")
+  implementation(azure.storage.blob)
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
   implementation(apache.commons.collection4)
 
   testImplementation(testFixtures(project(":commons")))
+  testImplementation(testFixtures(project(":azure-commons")))
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.hamcrest)
   testImplementation(testinglibs.assertj.core)
@@ -72,10 +76,17 @@ dependencies {
   testImplementation(testinglibs.jqwik)
   // is provided by "jqwik", but need this in testImplementation scope
   testImplementation(testinglibs.jqwik.engine)
-
+  testImplementation(testinglibs.awaitility)
+  testImplementation(testcontainers.junit.jupiter)
+  testImplementation(testcontainers.kafka) // this is not Kafka version
+  testImplementation(testcontainers.azure) // this is not Kafka version
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
+
+  testImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
@@ -122,7 +133,11 @@ dependencies {
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
+  integrationTestImplementation(testcontainers.azure) // this is not Kafka version
   integrationTestImplementation(testinglibs.awaitility)
+  integrationTestImplementation(apache.kafka.connect.runtime)
+  integrationTestImplementation(testFixtures(project(":commons")))
+  integrationTestImplementation(testFixtures(project(":azure-commons")))
 
   integrationTestImplementation(apache.kafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
@@ -132,6 +147,23 @@ dependencies {
 
   // Make test utils from "test" available in "integration-test"
   integrationTestImplementation(sourceSets["test"].output)
+
+  testFixturesImplementation(tools.spotbugs.annotations)
+  testFixturesImplementation(azure.storage.blob)
+  testFixturesImplementation(testFixtures(project(":commons")))
+  testFixturesImplementation(testFixtures(project(":azure-commons")))
+  testFixturesImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
+  testFixturesImplementation(testcontainers.junit.jupiter)
+  testFixturesImplementation(testcontainers.localstack)
+  testFixturesImplementation(testcontainers.azure)
+  testFixturesImplementation(testinglibs.junit.jupiter)
+  testFixturesImplementation(testinglibs.assertj.core)
+  testFixturesImplementation(compressionlibs.snappy)
+  testFixturesImplementation(compressionlibs.zstd.jni)
+  testFixturesImplementation(tools.spotbugs.annotations)
+  testFixturesImplementation(apache.kafka.connect.api)
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {
