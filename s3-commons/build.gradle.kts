@@ -19,12 +19,10 @@ plugins {
   id("aiven-apache-kafka-connectors-all.docs")
 }
 
-val amazonS3Version by extra("1.12.777")
-val amazonSTSVersion by extra("1.12.777")
 
 dependencies {
-  implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
-  implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
+  implementation(amazonoldawssdk.s3)
+  implementation(amazonoldawssdk.sts)
   implementation(amazonawssdk.authentication)
   implementation(amazonawssdk.sts)
 
@@ -99,9 +97,12 @@ dependencies {
   testImplementation(testinglibs.woodstox.stax2.api)
   testImplementation(apache.hadoop.mapreduce.client.core)
   testImplementation(confluent.kafka.connect.avro.converter)
+  testImplementation(testcontainers.kafka) // this is not Kafka version
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
+
+  testFixturesImplementation(testFixtures(project(":commons")))
 }
 
 tasks.withType<Jar> { archiveBaseName.set(project.name + "-for-apache-kafka-connect") }

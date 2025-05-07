@@ -153,7 +153,6 @@ dependencies {
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testFixtures(project(":s3-commons")))
   integrationTestImplementation(testcontainers.localstack)
-
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
