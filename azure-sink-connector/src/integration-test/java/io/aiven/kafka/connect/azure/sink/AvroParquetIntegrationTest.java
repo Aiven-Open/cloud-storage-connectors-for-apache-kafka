@@ -48,19 +48,17 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     private static final String CONNECTOR_NAME = "aiven-azure-sink-connector-parquet";
 
-    @Container
-    private final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(KAFKA);
 
     @BeforeEach
     void setUp() throws ExecutionException, InterruptedException {
         testBlobAccessor.clear(azurePrefix);
         final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getKafkaManager().bootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        producerProps.put("schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
+        producerProps.put("schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
         startConnectRunner(producerProps);
     }
 
@@ -70,7 +68,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset,timestamp,headers");
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -138,7 +136,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -202,7 +200,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -280,9 +278,9 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         config.put(AzureBlobSinkConfig.NAME_CONFIG, CONNECTOR_NAME);
         config.put("connector.class", AzureBlobSinkConnector.class.getName());
         config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("key.converter.schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
+        config.put("key.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
         config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("value.converter.schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
+        config.put("value.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
         config.put("tasks.max", "1");
         if (useFakeAzure()) {
             config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONNECTION_STRING_CONFIG, azureEndpoint);

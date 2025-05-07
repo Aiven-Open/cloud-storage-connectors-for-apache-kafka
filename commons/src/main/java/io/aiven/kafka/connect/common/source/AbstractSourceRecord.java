@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.source;
 
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
@@ -261,34 +262,4 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
         }
     }
 
-    /**
-     * Information about the Native object.
-     *
-     * @param <N>
-     *            The native object type.
-     * @param <K>
-     *            the native key type
-     */
-    public interface NativeInfo<N, K> {
-        /**
-         * Gets the native item.
-         *
-         * @return The native item.
-         */
-        N getNativeItem();
-
-        /**
-         * Gets the native key
-         *
-         * @return The Native key.
-         */
-        K getNativeKey();
-
-        /**
-         * Gets the number of bytes in the input stream extracted from the native object.
-         *
-         * @return The number of bytes in the input stream extracted from the native object.
-         */
-        long getNativeItemSize();
-    }
 }

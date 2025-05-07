@@ -154,14 +154,14 @@ class AwsIntegrationTest implements IntegrationBase {
         final List<String> offsetKeys = new ArrayList<>();
         final List<String> expectedKeys = new ArrayList<>();
         // write 2 objects to s3
-        expectedKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
-        expectedKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
-        expectedKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00001"));
-        expectedKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00001"));
+        expectedKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000", s3Prefix));
+        expectedKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000", s3Prefix));
+        expectedKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00001", s3Prefix));
+        expectedKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00001", s3Prefix));
 
         // we don't expext the empty one.
         offsetKeys.addAll(expectedKeys);
-        offsetKeys.add(writeToS3(topic, new byte[0], "00003"));
+        offsetKeys.add(writeToS3(topic, new byte[0], "00003", s3Prefix));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
@@ -224,12 +224,12 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final Set<String> offsetKeys = new HashSet<>();
 
-        offsetKeys.add(writeToS3(topic, outputStream1, "00001"));
-        offsetKeys.add(writeToS3(topic, outputStream2, "00001"));
+        offsetKeys.add(writeToS3(topic, outputStream1, "00001", s3Prefix));
+        offsetKeys.add(writeToS3(topic, outputStream2, "00001", s3Prefix));
 
-        offsetKeys.add(writeToS3(topic, outputStream3, "00002"));
-        offsetKeys.add(writeToS3(topic, outputStream4, "00002"));
-        offsetKeys.add(writeToS3(topic, outputStream5, "00002"));
+        offsetKeys.add(writeToS3(topic, outputStream3, "00002", s3Prefix));
+        offsetKeys.add(writeToS3(topic, outputStream4, "00002", s3Prefix));
+        offsetKeys.add(writeToS3(topic, outputStream5, "00002", s3Prefix));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
@@ -289,8 +289,8 @@ class AwsIntegrationTest implements IntegrationBase {
         final List<String> actualKeys = new ArrayList<>();
 
         // write 2 objects to s3
-        expectedKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000"));
-        expectedKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000"));
+        expectedKeys.add(writeToS3(topic, testData1.getBytes(StandardCharsets.UTF_8), "00000", s3Prefix));
+        expectedKeys.add(writeToS3(topic, testData2.getBytes(StandardCharsets.UTF_8), "00000", s3Prefix));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(2);
 
@@ -309,7 +309,7 @@ class AwsIntegrationTest implements IntegrationBase {
         assertThat(actualKeys).containsAll(expectedKeys);
 
         // write 3rd object to s3
-        expectedKeys.add(writeToS3(topic, testData3.getBytes(StandardCharsets.UTF_8), "00000"));
+        expectedKeys.add(writeToS3(topic, testData3.getBytes(StandardCharsets.UTF_8), "00000", s3Prefix));
         assertThat(testBucketAccessor.listObjects()).hasSize(3);
 
         assertThat(iterator).hasNext();

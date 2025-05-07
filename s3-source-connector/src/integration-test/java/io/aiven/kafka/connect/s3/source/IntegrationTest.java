@@ -58,6 +58,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -244,7 +245,7 @@ final class IntegrationTest implements IntegrationBase {
         }
         final List<String> offsetKeys = new ArrayList<>();
 
-        offsetKeys.add(writeToS3(topic, testData1, "0", s3Prefix));
+        offsetKeys.add(writeToS3(topic, testData1, "0"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(1);
 
@@ -426,7 +427,7 @@ final class IntegrationTest implements IntegrationBase {
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(MAX_TASKS, String.valueOf(maxTasks));
-        config.put(DISTRIBUTION_TYPE, taskDistributionConfig.value());
+        SourceConfigFragment.setter(config).distributionType(taskDistributionConfig);
         config.put(FILE_NAME_TEMPLATE_CONFIG,
                 "{{topic}}" + fileNameSeparator + "{{partition}}" + fileNameSeparator + "{{start_offset}}");
         if (addPrefix) {
