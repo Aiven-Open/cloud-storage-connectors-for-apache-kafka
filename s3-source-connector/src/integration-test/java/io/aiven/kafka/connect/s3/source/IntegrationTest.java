@@ -244,7 +244,7 @@ final class IntegrationTest implements IntegrationBase {
         }
         final List<String> offsetKeys = new ArrayList<>();
 
-        offsetKeys.add(writeToS3(topic, testData1, "0", s3Prefix));
+        offsetKeys.add(writeToS3(topic, testData1, "0"));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(1);
 
