@@ -161,6 +161,16 @@ public final class KafkaManager {
     }
 
     /**
+     * Creates topics on the admin client. Uses a partition count of 4, and a replication factor of 1.
+     *
+     * @param topics
+     *            the list of topics to create.
+     */
+    public void createTopics(final List<String> topics) {
+        createTopics(topics, DEFAULT_PARTITION_COUNT, DEFAULT_REPLICATION_FACTOR);
+    }
+
+    /**
      * Creates topics on the admin client.
      *
      * @param topics

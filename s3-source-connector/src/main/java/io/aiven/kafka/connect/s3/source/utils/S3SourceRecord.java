@@ -20,6 +20,7 @@ import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.storage.NativeInfo;
 
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;
