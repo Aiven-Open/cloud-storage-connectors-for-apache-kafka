@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.common.source.impl;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.storage.NativeInfo;
 
-import io.aiven.kafka.connect.common.storage.NativeInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

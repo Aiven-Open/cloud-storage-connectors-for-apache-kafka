@@ -193,7 +193,6 @@ class AbstractSourceTaskTest {
             assertThat(backoff.estimatedDelay()).isEqualTo(expected);
             // delay may exit early due to induced jitter.
             backoff.delay();
-            // delay may exit early due to induced jitter.
             expected *= 2;
         }
         assertThat(backoff.estimatedDelay()).isEqualTo(maxDelay);
