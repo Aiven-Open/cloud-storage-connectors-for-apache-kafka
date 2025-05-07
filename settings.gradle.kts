@@ -71,6 +71,7 @@ dependencyResolutionManagement {
     }
 
     create("azure") { library("storage-blob", "com.azure:azure-storage-blob:${azureVersion}") }
+
     create("compressionlibs") {
       library("snappy", "org.xerial.snappy:snappy-java:$snappyVersion")
       library("zstd-jni", "com.github.luben:zstd-jni:$zstdVersion")
@@ -124,13 +125,13 @@ dependencyResolutionManagement {
 
 include("commons")
 
-include("gcs-sink-connector")
-
 include("azure-commons")
 
 include("azure-sink-connector")
 
 include("azure-source-connector")
+
+include("gcs-sink-connector")
 
 include("s3-commons")
 

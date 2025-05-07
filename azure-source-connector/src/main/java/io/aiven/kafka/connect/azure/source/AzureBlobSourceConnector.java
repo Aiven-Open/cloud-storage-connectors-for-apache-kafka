@@ -29,7 +29,7 @@ import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
-import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
+import io.aiven.kafka.connect.common.utils.VersionInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -160,7 +160,7 @@ class AwsIntegrationTest implements IntegrationBase {
 
         // we don't expext the empty one.
         offsetKeys.addAll(expectedKeys);
-        offsetKeys.add(writeToS3(topic, new byte[0], "00003"));
+        offsetKeys.add(writeToS3(topic, new byte[0], "00003", s3Prefix));
 
         assertThat(testBucketAccessor.listObjects()).hasSize(5);
 
