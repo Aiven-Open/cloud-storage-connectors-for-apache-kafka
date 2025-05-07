@@ -16,7 +16,7 @@
 
 plugins {
   id("aiven-apache-kafka-connectors-all.java-conventions")
-  id("aiven-apache-kafka-connectors-all.docs")
+  id("java-test-fixtures")
 }
 
 

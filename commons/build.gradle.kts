@@ -19,6 +19,8 @@ plugins {
   id("aiven-apache-kafka-connectors-all.docs")
 }
 
+val kafkaTestingVersion by extra("3.3.1")
+
 dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
