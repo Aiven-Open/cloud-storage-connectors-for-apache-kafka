@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -402,9 +403,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 getNewBlobName(topicName, 1, 0, compression), getNewBlobName(topicName, 2, 0, compression),
                 getNewBlobName(topicName, 3, 0, compression));
 
-        for (final String blobName : expectedBlobs) {
-            assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
-        }
+        waitForStorage(Duration.ofMinutes(1), () -> testBucketAccessor.listObjects(), expectedBlobs);
 
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
