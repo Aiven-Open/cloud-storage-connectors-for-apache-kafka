@@ -498,17 +498,10 @@ final class S3SinkConfigTest {
     }
 
     private CompressionType determineExpectedCompressionType(final String compression) {
-        if (Objects.isNull(compression) || CompressionType.GZIP.name.equals(compression)) {
+        if (compression == null) {
             return CompressionType.GZIP;
-        } else if (CompressionType.NONE.name.equals(compression)) {
-            return CompressionType.NONE;
-        } else if (CompressionType.SNAPPY.name.equals(compression)) {
-            return CompressionType.SNAPPY;
-        } else if (CompressionType.ZSTD.name.equals(compression)) {
-            return CompressionType.ZSTD;
-        } else {
-            throw new RuntimeException("Shouldn't be here"); // NOPMD AvoidThrowingRawExceptionTypes
         }
+        return compression == null ? CompressionType.GZIP : CompressionType.valueOf(compression.toUpperCase());
     }
 
     @Test
