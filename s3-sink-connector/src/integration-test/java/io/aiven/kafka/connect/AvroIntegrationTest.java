@@ -23,12 +23,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
+import com.typesafe.config.ConfigException;
+import io.aiven.kafka.connect.common.integration.KafkaIntegrationTestBase;
+import io.aiven.kafka.connect.common.integration.KafkaManager;
+import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -57,6 +63,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
 
     private final Schema avroInputDataSchema = new Schema.Parser().parse(
             "{\"type\":\"record\",\"name\":\"input_data\",\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
+
 
     private static Stream<Arguments> compressionAndCodecTestParameters() {
         return Stream.of(Arguments.of("bzip2", "none"), Arguments.of("deflate", "none"), Arguments.of("null", "none"),
