@@ -18,26 +18,17 @@ package io.aiven.kafka.connect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.File;
 import java.io.IOException;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
-import com.typesafe.config.ConfigException;
-import io.aiven.kafka.connect.common.integration.KafkaIntegrationTestBase;
-import io.aiven.kafka.connect.common.integration.KafkaManager;
-import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -45,10 +36,7 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
-import io.aiven.kafka.connect.s3.SchemaRegistryContainer;
-import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
 
-import com.amazonaws.services.s3.AmazonS3;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableByteArrayInput;
@@ -57,17 +45,11 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
@@ -75,7 +57,6 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
 
     private final Schema avroInputDataSchema = new Schema.Parser().parse(
             "{\"type\":\"record\",\"name\":\"input_data\",\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
-
 
     private static Stream<Arguments> compressionAndCodecTestParameters() {
         return Stream.of(Arguments.of("bzip2", "none"), Arguments.of("deflate", "none"), Arguments.of("null", "none"),

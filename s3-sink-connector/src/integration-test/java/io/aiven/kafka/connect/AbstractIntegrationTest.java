@@ -1,26 +1,20 @@
-package io.aiven.kafka.connect;
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import io.aiven.kafka.connect.common.integration.KafkaIntegrationTestBase;
-import io.aiven.kafka.connect.common.integration.KafkaManager;
-import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
-import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
+package io.aiven.kafka.connect;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
@@ -30,8 +24,29 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.kafka.clients.producer.KafkaProducer;
+
+import io.aiven.kafka.connect.common.integration.KafkaIntegrationTestBase;
+import io.aiven.kafka.connect.common.integration.KafkaManager;
+import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
+import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
+
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
+
 @Testcontainers
-abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase  {
+abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
     protected static final String S3_ACCESS_KEY_ID = "test-key-id0";
     protected static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
     protected static final String TEST_BUCKET_NAME = "test-bucket0";
@@ -45,7 +60,6 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase  {
     protected static BucketAccessor testBucketAccessor;
 
     private static final Set<String> CONNECTOR_NAMES = new HashSet<>();
-
 
     protected KafkaManager kafkaManager;
 
@@ -71,13 +85,12 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase  {
                 .build();
     }
 
-
     static String topicName(final TestInfo testInfo) {
         return testInfo.getTestMethod().get().getName() + "-" + testInfo.getDisplayName().hashCode();
     }
 
     @BeforeAll
-    static void setUpAll()  {
+    static void setUpAll() {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
         final AmazonS3 s3Client = createS3Client(LOCALSTACK);
@@ -95,13 +108,11 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase  {
         kafkaManager.createTopic(topicName);
     }
 
-
     @AfterEach
     void tearDown() {
         producer.close();
 
     }
-
 
     protected void createConnector(final Map<String, String> connectorConfig) {
         CONNECTOR_NAMES.add(connectorConfig.get("name"));
