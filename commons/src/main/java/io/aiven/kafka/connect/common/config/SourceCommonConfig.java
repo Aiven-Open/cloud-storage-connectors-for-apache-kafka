@@ -42,7 +42,7 @@ public class SourceCommonConfig extends CommonConfig {
         fileNameFragment = new FileNameFragment(this);
         outputFormatFragment = new OutputFormatFragment(this);
 
-        validate();
+        validate(); // NOPMD ConstructorCallsOverridableMethod
     }
 
     private void validate() {
@@ -95,4 +95,8 @@ public class SourceCommonConfig extends CommonConfig {
     public String getFilenamePrefixTemplate() {
         return fileNameFragment.getPrefixTemplate();
     }
+    public String getSourcename() {
+        return sourceConfigFragment.getSourceName();
+    }
+
 }
