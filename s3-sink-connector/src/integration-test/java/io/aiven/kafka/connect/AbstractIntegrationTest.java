@@ -97,7 +97,6 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         final AmazonS3 s3Client = createS3Client(LOCALSTACK);
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
-        testBucketAccessor.createBucket();
     }
 
     @BeforeEach
