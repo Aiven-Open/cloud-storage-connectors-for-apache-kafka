@@ -90,4 +90,8 @@ public class SourceCommonConfig extends CommonConfig {
     public String getFilenamePrefixTemplate() {
         return fileNameFragment.getPrefixTemplate();
     }
+    public String getSourcename() {
+        return sourceConfigFragment.getSourceName();
+    }
+
 }
