@@ -279,6 +279,7 @@ class AwsIntegrationTest implements IntegrationBase {
         configData.put(TASK_ID, "0");
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
+        configData.put(FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}");
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";

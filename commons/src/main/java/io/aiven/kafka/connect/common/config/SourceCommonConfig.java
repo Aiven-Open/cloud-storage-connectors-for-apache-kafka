@@ -30,7 +30,6 @@ public class SourceCommonConfig extends CommonConfig {
 
     private final TransformerFragment transformerFragment;
     private final SourceConfigFragment sourceConfigFragment;
-    private final FileNameFragment fileNameFragment;
     private final OutputFormatFragment outputFormatFragment;
 
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
@@ -38,7 +37,6 @@ public class SourceCommonConfig extends CommonConfig {
         // Construct Fragments
         transformerFragment = new TransformerFragment(this);
         sourceConfigFragment = new SourceConfigFragment(this);
-        fileNameFragment = new FileNameFragment(this);
         outputFormatFragment = new OutputFormatFragment(this);
 
         validate(); // NOPMD ConstructorCallsOverridableMethod
@@ -47,7 +45,6 @@ public class SourceCommonConfig extends CommonConfig {
     private void validate() {
         transformerFragment.validate();
         sourceConfigFragment.validate();
-        fileNameFragment.validate();
         outputFormatFragment.validate();
     }
 
@@ -81,6 +78,10 @@ public class SourceCommonConfig extends CommonConfig {
 
     public int getTransformerMaxBufferSize() {
         return transformerFragment.getTransformerMaxBufferSize();
+    }
+
+    public String getSourcename() {
+        return sourceConfigFragment.getSourceName();
     }
 
 }
