@@ -163,7 +163,7 @@ class AbstractSourceTaskTest {
     }
 
     /**
-     * THis test creates the condition where the delay increases until the expected delay will cause the maxDelay to be
+     * This test creates the condition where the delay increases until the expected delay will cause the maxDelay to be
      * exceeded. The result is that the total delay should be the maxDelay not the higher calculated expected value.
      *
      * @throws InterruptedException

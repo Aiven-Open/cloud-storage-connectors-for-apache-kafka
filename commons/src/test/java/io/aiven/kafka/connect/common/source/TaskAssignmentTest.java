@@ -71,7 +71,7 @@ class TaskAssignmentTest {
         final SourceCommonConfig config = configureMockConfig(taskId, maxTasks, DistributionType.OBJECT_HASH);
         final ExampleNativeClient nativeClient = mock(ExampleNativeClient.class);
         final ExampleSourceRecordIterator iterator = new ExampleSourceRecordIterator(config, offsetManager, transformer,
-                4096, nativeClient);
+                nativeClient);
 
         final Predicate<Optional<ExampleSourceRecord>> pred = iterator.taskAssignment;
         final ExampleSourceRecord record = mock(ExampleSourceRecord.class);
@@ -99,7 +99,7 @@ class TaskAssignmentTest {
         final SourceCommonConfig config = configureMockConfig(taskId, maxTasks, DistributionType.PARTITION);
         final ExampleNativeClient nativeClient = mock(ExampleNativeClient.class);
         final ExampleSourceRecordIterator iterator = new ExampleSourceRecordIterator(config, offsetManager, transformer,
-                4096, nativeClient);
+                nativeClient);
 
         final Predicate<Optional<ExampleSourceRecord>> pred = iterator.taskAssignment;
         final ExampleSourceRecord record = mock(ExampleSourceRecord.class);
@@ -127,7 +127,7 @@ class TaskAssignmentTest {
         for (int taskId = 0; taskId < maxTasks; taskId++) {
             final SourceCommonConfig config = configureMockConfig(taskId, maxTasks, DistributionType.OBJECT_HASH);
             final ExampleSourceRecordIterator iterator = new ExampleSourceRecordIterator(config, offsetManager,
-                    transformer, 4096, nativeClient);
+                    transformer, nativeClient);
             final Predicate<Optional<ExampleSourceRecord>> pred = iterator.taskAssignment;
             final Context<String> context = new Context<>(null); // NOPMD AvoidInstantiatingObjectsInLoops
             when(record.getContext()).thenReturn(context);
@@ -146,7 +146,7 @@ class TaskAssignmentTest {
         for (int taskId = 0; taskId < maxTasks; taskId++) {
             final SourceCommonConfig config = configureMockConfig(taskId, maxTasks, DistributionType.PARTITION);
             final ExampleSourceRecordIterator iterator = new ExampleSourceRecordIterator(config, offsetManager,
-                    transformer, 4096, nativeClient);
+                    transformer, nativeClient);
             final Predicate<Optional<ExampleSourceRecord>> pred = iterator.taskAssignment;
             assertThat(pred.test(Optional.empty())).isFalse();
         }

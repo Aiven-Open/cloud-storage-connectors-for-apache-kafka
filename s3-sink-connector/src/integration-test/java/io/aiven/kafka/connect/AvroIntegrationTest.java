@@ -26,12 +26,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
+import com.typesafe.config.ConfigException;
+import io.aiven.kafka.connect.common.integration.KafkaIntegrationTestBase;
+import io.aiven.kafka.connect.common.integration.KafkaManager;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -66,68 +71,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-final class AvroIntegrationTest implements IntegrationBase {
-    private static final String S3_ACCESS_KEY_ID = "test-key-id0";
-    private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
-    private static final String TEST_BUCKET_NAME = "test-bucket0";
-
-    private static final String CONNECTOR_NAME = "aiven-s3-sink-connector";
-    private static final String COMMON_PREFIX = "s3-connector-for-apache-kafka-test-";
-    private static final int OFFSET_FLUSH_INTERVAL_MS = 5000;
-
-    private static String s3Endpoint;
-    private static String s3Prefix;
-    private static BucketAccessor testBucketAccessor;
-    private static File pluginDir;
-
-    @Container
-    public static final LocalStackContainer LOCALSTACK = IntegrationBase.createS3Container();
-    @Container
-    private static final KafkaContainer KAFKA = IntegrationBase.createKafkaContainer();
-    @Container
-    private static final SchemaRegistryContainer SCHEMA_REGISTRY = new SchemaRegistryContainer(KAFKA);
-    private AdminClient adminClient;
-    private KafkaProducer<String, GenericRecord> producer;
-    private ConnectRunner connectRunner;
+final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
 
     private final Schema avroInputDataSchema = new Schema.Parser().parse(
             "{\"type\":\"record\",\"name\":\"input_data\",\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
 
-    @BeforeAll
-    static void setUpAll() throws IOException, InterruptedException {
-        s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
-
-        final AmazonS3 s3Client = IntegrationBase.createS3Client(LOCALSTACK);
-        s3Endpoint = LOCALSTACK.getEndpoint().toString();
-        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
-        testBucketAccessor.createBucket();
-
-        pluginDir = IntegrationBase.getPluginDir();
-        IntegrationBase.extractConnectorPlugin(pluginDir);
-
-        IntegrationBase.waitForRunningContainer(KAFKA);
-    }
-
-    @BeforeEach
-    void setUp(final TestInfo testInfo) throws ExecutionException, InterruptedException {
-        adminClient = newAdminClient(KAFKA);
-        producer = newProducer();
-
-        final var topicName = IntegrationBase.topicName(testInfo);
-        IntegrationBase.createTopics(adminClient, List.of(topicName));
-
-        connectRunner = newConnectRunner(KAFKA, pluginDir, OFFSET_FLUSH_INTERVAL_MS);
-        connectRunner.start();
-    }
-
-    @AfterEach
-    void tearDown() {
-        connectRunner.stop();
-        adminClient.close();
-        producer.close();
-
-        connectRunner.awaitStop();
-    }
 
     private static Stream<Arguments> compressionAndCodecTestParameters() {
         return Stream.of(Arguments.of("bzip2", "none"), Arguments.of("deflate", "none"), Arguments.of("null", "none"),
@@ -139,13 +87,13 @@ final class AvroIntegrationTest implements IntegrationBase {
     @MethodSource("compressionAndCodecTestParameters")
     void avroOutput(final String avroCodec, final String compression, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put("file.compression.type", compression);
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.type", "avro");
         connectorConfig.put("avro.codec", avroCodec);
-        connectRunner.createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final int recordCountPerPartition = 10;
         produceRecords(recordCountPerPartition, topicName);
@@ -200,7 +148,7 @@ final class AvroIntegrationTest implements IntegrationBase {
 
     @Test
     void jsonlAvroOutputTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         final String compression = "none";
         final String contentType = "jsonl";
@@ -211,7 +159,7 @@ final class AvroIntegrationTest implements IntegrationBase {
         connectorConfig.put("value.converter.schemas.enable", "false");
         connectorConfig.put("file.compression.type", compression);
         connectorConfig.put("format.output.type", contentType);
-        connectRunner.createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final int recordCountPerPartition = 10;
         produceRecords(recordCountPerPartition, topicName);
@@ -273,14 +221,14 @@ final class AvroIntegrationTest implements IntegrationBase {
         }
     }
 
-    private KafkaProducer<String, GenericRecord> newProducer() {
+    protected KafkaProducer<String, GenericRecord> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        producerProps.put("schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        producerProps.put("schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         return new KafkaProducer<>(producerProps);
     }
 
@@ -294,9 +242,9 @@ final class AvroIntegrationTest implements IntegrationBase {
         final Map<String, String> config = new HashMap<>();
         config.put("name", connectorName);
         config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("key.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("tasks.max", "1");
         return config;
     }
@@ -309,8 +257,8 @@ final class AvroIntegrationTest implements IntegrationBase {
         config.put("aws.s3.bucket.name", TEST_BUCKET_NAME);
         config.put("aws.s3.prefix", s3Prefix);
         config.put("topics", topicName);
-        config.put("key.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
-        config.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
+        config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("tasks.max", "1");
         return config;
     }

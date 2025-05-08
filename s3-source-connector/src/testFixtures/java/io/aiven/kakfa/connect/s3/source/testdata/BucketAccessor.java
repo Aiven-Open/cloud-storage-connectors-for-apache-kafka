@@ -19,8 +19,9 @@ package io.aiven.kakfa.connect.s3.source.testdata;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.aiven.kafka.connect.common.storage.NativeInfo;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
