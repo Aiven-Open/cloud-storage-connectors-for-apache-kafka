@@ -19,8 +19,6 @@ package io.aiven.kafka.connect.azure.source.utils;
 import java.io.InputStream;
 import java.util.stream.Stream;
 
-import org.apache.kafka.common.utils.ByteBufferInputStream;
-
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.OffsetManager;
@@ -51,7 +49,7 @@ public final class AzureBlobSourceRecordIterator
     public AzureBlobSourceRecordIterator(final AzureBlobSourceConfig azureBlobSourceConfig,
             final OffsetManager<AzureBlobOffsetManagerEntry> offsetManager, final Transformer transformer,
             final AzureBlobClient azureBlobClient) {
-        super(azureBlobSourceConfig, offsetManager, transformer, azureBlobSourceConfig.getFetchBufferSize());
+        super(azureBlobSourceConfig, offsetManager, transformer);
         this.azureBlobClient = azureBlobClient;
         this.container = azureBlobSourceConfig.getAzureContainerName();
     }
@@ -68,7 +66,7 @@ public final class AzureBlobSourceRecordIterator
 
     @Override
     protected IOSupplier<InputStream> getInputStream(final AzureBlobSourceRecord sourceRecord) {
-        return () -> new ByteBufferInputStream(azureBlobClient.getBlob(sourceRecord.getNativeKey()).blockFirst());
+        return () -> azureBlobClient.getBlob(sourceRecord.getNativeKey());
     }
 
     @Override

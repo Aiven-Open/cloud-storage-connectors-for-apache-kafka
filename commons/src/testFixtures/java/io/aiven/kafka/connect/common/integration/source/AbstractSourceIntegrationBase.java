@@ -47,6 +47,7 @@ import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 import io.aiven.kafka.connect.common.utils.CasedString;
 
 import com.fasterxml.jackson.core.type.TypeReference;

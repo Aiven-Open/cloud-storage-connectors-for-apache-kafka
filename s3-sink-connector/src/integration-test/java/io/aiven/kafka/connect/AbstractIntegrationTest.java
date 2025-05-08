@@ -36,6 +36,14 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import io.aiven.kafka.connect.common.integration.KafkaIntegrationTestBase;
+import io.aiven.kafka.connect.common.integration.KafkaManager;
+import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
+import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +52,14 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+
+import java.io.IOException;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 @Testcontainers
 @SuppressWarnings("PMD.MutableStaticState")
@@ -61,6 +77,7 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
     protected static BucketAccessor testBucketAccessor;
 
     private static final Set<String> CONNECTOR_NAMES = new HashSet<>();
+
 
     protected KafkaManager kafkaManager;
 
@@ -86,6 +103,7 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
                 .build();
     }
 
+
     static String topicName(final TestInfo testInfo) {
         return testInfo.getTestMethod().get().getName() + "-" + testInfo.getDisplayName().hashCode();
     }
@@ -97,6 +115,7 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         final AmazonS3 s3Client = createS3Client(LOCALSTACK);
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
+        testBucketAccessor.createBucket();
     }
 
     @BeforeEach
@@ -109,6 +128,7 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         kafkaManager.createTopic(topicName);
     }
 
+
     @AfterEach
     void tearDown() {
         producer.close();
@@ -116,6 +136,7 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         CONNECTOR_NAMES.forEach(kafkaManager::deleteConnector);
         CONNECTOR_NAMES.clear();
     }
+
 
     protected void createConnector(final Map<String, String> connectorConfig) {
         CONNECTOR_NAMES.add(connectorConfig.get("name"));

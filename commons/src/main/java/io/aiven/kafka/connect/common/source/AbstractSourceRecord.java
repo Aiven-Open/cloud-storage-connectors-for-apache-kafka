@@ -24,6 +24,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.task.Context;
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 
 import org.slf4j.Logger;
 
