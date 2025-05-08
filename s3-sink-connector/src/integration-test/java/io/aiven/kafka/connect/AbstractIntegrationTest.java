@@ -46,6 +46,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
+@SuppressWarnings("PMD.MutableStaticState")
 abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
     protected static final String S3_ACCESS_KEY_ID = "test-key-id0";
     protected static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";

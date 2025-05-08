@@ -54,6 +54,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
     @TempDir
     Path tmpDir;
 
+    @Override
     protected KafkaProducer<byte[], byte[]> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());

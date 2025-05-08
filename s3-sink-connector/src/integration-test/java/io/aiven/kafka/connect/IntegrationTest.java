@@ -455,6 +455,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         return wireMockServer;
     }
 
+    @Override
     protected KafkaProducer<byte[], byte[]> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());

@@ -278,6 +278,7 @@ class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, Generic
         assertThat(blobContents).containsExactlyInAnyOrderElementsOf(expectedRecords);
     }
 
+    @Override
     protected KafkaProducer<String, GenericRecord> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
