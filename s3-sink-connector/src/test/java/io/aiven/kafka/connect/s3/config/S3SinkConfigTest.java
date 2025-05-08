@@ -498,10 +498,7 @@ final class S3SinkConfigTest {
     }
 
     private CompressionType determineExpectedCompressionType(final String compression) {
-        if (compression == null) {
-            return CompressionType.GZIP;
-        }
-        return compression == null ? CompressionType.GZIP : CompressionType.valueOf(compression.toUpperCase());
+        return compression == null ? CompressionType.GZIP : CompressionType.forName(compression);
     }
 
     @Test
