@@ -8,6 +8,10 @@
 - [Aiven Azure Blob Sink Connector](./azure-sink-connector/README.md)
 - [Aiven S3 Source Connector](./s3-source-connector/README.md)
 
+# Documentation
+
+The javadocs, design notes, and usage information can be found on our [documentation site](https://aiven-open.github.io/cloud-storage-connectors-for-apache-kafka/index.html).
+
 # Development
 
 This is a combined repository for Aiven Apache Kafka Connectors.  This repository uses [semantic versioning](https://semver.org/) with the caveat that all connectors are released together, thus it is possible that the version number on a connector may change without any associated programattic changes.  Please read the release notes for information about specific connectors.

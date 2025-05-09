@@ -8,6 +8,7 @@ val awaitilityVersion by extra("4.2.1")
 val amazonAwsSdkV2Version by extra("2.29.34")
 val commonsTextVersion by extra("1.11.0")
 val commonsCollections4Version by extra("4.4")
+val commonsIOVersion by extra("2.18.0")
 val hadoopVersion by extra("3.4.0")
 val hamcrestVersion by extra("2.2")
 val jacksonVersion by extra("2.15.3")
@@ -26,6 +27,8 @@ val stax2ApiVersion by extra("4.2.2")
 val testcontainersVersion by extra("1.19.8")
 val zstdVersion by extra("1.5.6-3")
 val wireMockVersion by extra("2.35.0")
+val velocityCoreVersion by extra("2.4.1")
+val velocityToolsVersion by extra("3.1")
 
 dependencyResolutionManagement {
   versionCatalogs {
@@ -35,6 +38,7 @@ dependencyResolutionManagement {
       library(
           "commons-collection4",
           "org.apache.commons:commons-collections4:$commonsCollections4Version")
+      library("commons-io", "commons-io:commons-io:$commonsIOVersion")
       library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaVersion")
       library("kafka-connect-json", "org.apache.kafka:connect-json:$kafkaVersion")
       library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:$kafkaVersion")
@@ -44,6 +48,11 @@ dependencyResolutionManagement {
           "hadoop-mapreduce-client-core",
           "org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion")
       library("parquet-avro", "org.apache.parquet:parquet-avro:$parquetVersion")
+      library(
+          "velocity-engine-core", "org.apache.velocity:velocity-engine-core:${velocityCoreVersion}")
+      library(
+          "velocity-tools",
+          "org.apache.velocity.tools:velocity-tools-generic:${velocityToolsVersion}")
     }
     create("amazonawssdk") {
       library("authentication", "software.amazon.awssdk:auth:$amazonAwsSdkV2Version")
@@ -109,3 +118,5 @@ include("s3-sink-connector")
 include("azure-sink-connector")
 
 include("s3-source-connector")
+
+include("site")
