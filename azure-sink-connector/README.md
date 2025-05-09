@@ -1,4 +1,4 @@
-# Aiven's Azure Blob Storage Sink Connector for Apache Kafka®
+# Microsoft Azure Blob Storage connector for Apache Kafka®
 
 This is a sink
 [Apache Kafka Connect](https://kafka.apache.org/documentation/#connect)

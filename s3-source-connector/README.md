@@ -1,4 +1,4 @@
-# Aiven's S3 Source Connector for Apache Kafka
+# Amazon S3 Storage (S3) source connector for Apache Kafka®
 
 This is a source Apache Kafka Connect connector that takes stored AWS S3 bucket objects and places them onto an Apache Kafka topic.
 

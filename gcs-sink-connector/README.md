@@ -1,4 +1,4 @@
-# Aiven's GCS Sink Connector for Apache Kafka®
+# Google Cloud Storage (GCS) sink connector for Apache Kafka®
 
 This is a sink
 [Apache Kafka Connect](https://kafka.apache.org/documentation/#connect)
