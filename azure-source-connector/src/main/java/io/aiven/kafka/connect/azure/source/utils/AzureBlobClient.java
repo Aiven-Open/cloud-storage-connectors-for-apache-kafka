@@ -74,7 +74,7 @@ public class AzureBlobClient {
      *
      * @param blobName
      *            Name of the blob which is to be retrieved from Azure.
-     * @return An input stram created from the blob stored in Azure.
+     * @return An input stream created from the blob stored in Azure.
      */
     public InputStream getBlob(final String blobName) {
         return new FluxToInputStream(getBlobAsyncClient(blobName).downloadStream());
