@@ -94,7 +94,7 @@ dependencies {
   testImplementation(testinglibs.woodstox.stax2.api)
   testImplementation(apache.hadoop.mapreduce.client.core)
   testImplementation(confluent.kafka.connect.avro.converter)
-  testImplementation("org.mockito:mockito-junit-jupiter:5.15.2")
+  testImplementation("org.mockito:mockito-junit-jupiter:5.17.0")
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
