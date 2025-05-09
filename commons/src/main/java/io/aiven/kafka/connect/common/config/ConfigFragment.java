@@ -16,7 +16,11 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import static java.lang.String.format;
+
 import org.apache.kafka.common.config.AbstractConfig;
+
+import org.slf4j.Logger;
 
 /**
  * Config fragments encapsulate logical fragments of configuration that may be used across multiple Connectors or across
@@ -40,7 +44,48 @@ public class ConfigFragment {
     protected final AbstractConfig cfg;
 
     /**
-     * Construct the ConfigFragment..
+     * Logs a deprecated message for a deprecated configuration key.
+     *
+     * @param logger
+     *            the logger to log to.
+     * @param old
+     *            the deprecated configuration key.
+     * @param replacement
+     *            the replacement configuration key.
+     */
+    public static void logDeprecated(final Logger logger, final String old, final String replacement) {
+        logDeprecated(logger, old, "Use property %s instead", replacement);
+    }
+
+    /**
+     * Logs a deprecated message for a deprecated configuration key. This method should only be used when the key does
+     * not have a replacement and the documentation describes what to do.
+     *
+     * @param logger
+     *            the logger to log to.
+     * @param old
+     *            the deprecated configuration key.
+     */
+    public static void logDeprecated(final Logger logger, final String old, final String formatStr,
+            final Object... args) {
+        logger.warn("{} property is deprecated. {}", old, format(formatStr, args));
+    }
+
+    /**
+     * Logs a deprecated message for a deprecated configuration key. This method should only be used when the key does
+     * not have a replacement and the documentation describes what to do.
+     *
+     * @param logger
+     *            the logger to log to.
+     * @param old
+     *            the deprecated configuration key.
+     */
+    public static void logDeprecated(final Logger logger, final String old) {
+        logger.warn("{} property is deprecated please read documentation for the new name.", old);
+    }
+
+    /**
+     * Construct the ConfigFragment.
      *
      * @param cfg
      *            the configuration that this fragment is associated with.

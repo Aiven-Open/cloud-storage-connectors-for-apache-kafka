@@ -18,7 +18,7 @@
  * under the License.                                           *
  */
 
-package io.aiven.kafka.connect.azure.source.utils;
+package io.aiven.kafka.connect.common.utils;
 /**
  * This class was originally developed by the Apache RAT project
  * A formatter for Package information about a class.

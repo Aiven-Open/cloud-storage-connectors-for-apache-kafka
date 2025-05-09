@@ -41,8 +41,8 @@ final public class ExampleSourceRecordIterator
 
     public ExampleSourceRecordIterator(final SourceCommonConfig sourceConfig,
             final OffsetManager<ExampleOffsetManagerEntry> offsetManager, final Transformer transformer,
-            final int bufferSize, final ExampleNativeClient nativeClient) {
-        super(sourceConfig, offsetManager, transformer, bufferSize);
+            final ExampleNativeClient nativeClient) {
+        super(sourceConfig, offsetManager, transformer);
         this.nativeClient = nativeClient;
     }
 
@@ -53,7 +53,7 @@ final public class ExampleSourceRecordIterator
 
     @Override
     protected Stream<ExampleNativeObject> getNativeItemStream(final String offset) {
-        return nativeClient.listObjects().stream();
+        return nativeClient.listObjects(offset).stream();
     }
 
     @Override
