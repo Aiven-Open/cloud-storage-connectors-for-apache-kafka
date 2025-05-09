@@ -91,6 +91,12 @@ under the License.
                 </item>
             </item>
         </menu>
+
+        <menu name="Design Notes">
+            <item name="Site Documentation" href="design/site.html" />
+            <item name="Source Processing" href="design/source.html"/>
+        </menu>
+
     </body>
     <skin>
         <groupId>org.apache.maven.skins</groupId>
