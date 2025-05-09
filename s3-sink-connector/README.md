@@ -1,4 +1,4 @@
-# Aiven's S3 Sink Connector for Apache Kafka
+# Amazon S3 Storage (S3) sink connector for Apache Kafka®
 
 This is a sink Apache Kafka Connect connector that stores Apache Kafka messages in an AWS S3 bucket.
 

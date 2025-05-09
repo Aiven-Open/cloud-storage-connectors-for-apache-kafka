@@ -1,6 +1,6 @@
 [![Main and pull request checks](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml/badge.svg)](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml)
 
-# Aiven's Apache Kafka Connectors
+#  Cloud Storage Connectors for Apache Kafka®
 
 - [Aiven Connector Commons](./commons/README.md)
 - [Aiven GCS Sink Connector](./gcs-sink-connector/README.md)
