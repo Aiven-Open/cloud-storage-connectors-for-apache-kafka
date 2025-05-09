@@ -32,6 +32,8 @@ jobs:
         run: ./gradlew :site:build :copySiteAssets createSite javadoc
       - name: Populate the site
         run: ./gradlew populateSite
+      - name: List html
+        run: ls -l ./site/target/site/s3-source-connector 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
