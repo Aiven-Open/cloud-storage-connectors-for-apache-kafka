@@ -39,7 +39,7 @@ public class SourceCommonConfig extends CommonConfig {
         sourceConfigFragment = new SourceConfigFragment(this);
         outputFormatFragment = new OutputFormatFragment(this);
 
-        validate(); // NOPMD ConstructorCallsOverridableMethod
+        validate();
     }
 
     private void validate() {
