@@ -18,9 +18,6 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
 
-// val kafkaVersion by extra("3.3.1")
-// val kafkaAPIVersion by extra("1.1.0")
-
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
       java { srcDir("src/integration-test/java") }

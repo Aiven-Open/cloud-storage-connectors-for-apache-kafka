@@ -27,8 +27,6 @@ import org.apache.commons.text.WordUtils;
 
 /**
  * Handles converting from one string case to another (e.g. camel case to snake case).
- *
- * @since 0.17
  */
 public class CasedString {
     /** the string of the cased format. */

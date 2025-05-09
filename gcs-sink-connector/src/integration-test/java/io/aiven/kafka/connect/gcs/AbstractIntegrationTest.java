@@ -163,6 +163,7 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         producer.close();
         testBucketAccessor.clear(gcsPrefix);
         CONNECTOR_NAMES.forEach(kafkaManager::deleteConnector);
+        CONNECTOR_NAMES.clear();
     }
 
     protected static boolean useFakeGCS() {
@@ -204,7 +205,7 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
             throws ExecutionException, InterruptedException {
         testBucketAccessor.clear(gcsPrefix);
 
-        kafkaManager.createTopic(testTopic0, testTopic1);
+        kafkaManager.createTopics(testTopic0, testTopic1);
 
         final Map<String, Object> producerProps = new HashMap<>(testSpecificProducerProperties);
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());

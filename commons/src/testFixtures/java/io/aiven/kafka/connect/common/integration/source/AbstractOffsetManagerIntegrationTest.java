@@ -115,7 +115,7 @@ public abstract class AbstractOffsetManagerIntegrationTest<K extends Comparable<
             SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.PARTITION);
 
             final KafkaManager kafkaManager = setupKafka();
-            kafkaManager.createTopic(topic);
+            kafkaManager.createTopics(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
             assertThat(getNativeStorage()).hasSize(4);

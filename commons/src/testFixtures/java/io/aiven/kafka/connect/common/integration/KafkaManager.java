@@ -39,6 +39,17 @@ import io.aiven.kafka.connect.common.source.SchemaRegistryContainer;
  */
 public final class KafkaManager {
     /**
+     * Default partition count if not specified when creating topics. NOTE: if this is changed, update the javadocs in
+     * the methods where this is used.
+     */
+    private final static int DEFAULT_PARTITION_COUNT = 4;
+
+    /**
+     * Default replication factor if not specified when creating topics. NOTE: if this is changed, update the javadocs
+     * in the methods where this is used.
+     */
+    private final static short DEFAULT_REPLICATION_FACTOR = 1;
+    /**
      * The topic administrator.
      */
     private final TopicAdmin topicAdmin;
@@ -145,18 +156,8 @@ public final class KafkaManager {
      * @throws InterruptedException
      *             if operation is interrupted.
      */
-    public void createTopic(final String... topic) throws ExecutionException, InterruptedException {
-        createTopics(List.of(topic), 4, (short) 1);
-    }
-
-    /**
-     * Creates topics on the admin client. Uses a partition count of 4, and a replication factor of 1.
-     *
-     * @param topics
-     *            the list of topics to create.
-     */
-    public void createTopics(final List<String> topics) {
-        createTopics(topics, 4, (short) 1);
+    public void createTopics(final String... topic) throws ExecutionException, InterruptedException {
+        createTopics(List.of(topic), DEFAULT_PARTITION_COUNT, DEFAULT_REPLICATION_FACTOR);
     }
 
     /**

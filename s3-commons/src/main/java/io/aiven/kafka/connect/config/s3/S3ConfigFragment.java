@@ -107,8 +107,6 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     public static final String AWS_CREDENTIALS_PROVIDER_CONFIG = "aws.credentials.provider";
-    // public static final String AWS_CREDENTIAL_PROVIDER_DEFAULT =
-    // DefaultAWSCredentialsProviderChain.class.getCanonicalName();
     public static final String AWS_S3_BUCKET_NAME_CONFIG = "aws.s3.bucket.name";
     public static final String AWS_S3_SSE_ALGORITHM_CONFIG = "aws.s3.sse.algorithm";
     public static final String AWS_S3_ENDPOINT_CONFIG = "aws.s3.endpoint";
