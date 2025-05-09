@@ -33,9 +33,13 @@ public class FileCompressionTypeValidator implements ConfigDef.Validator {
         if (Objects.nonNull(value)) {
             final String valueStr = (String) value;
             if (!CompressionType.names().contains(valueStr.toLowerCase(Locale.ROOT))) {
-                throw new ConfigException(name, valueStr,
-                        "supported values are: " + CompressionType.SUPPORTED_COMPRESSION_TYPES);
+                throw new ConfigException(name, valueStr, toString());
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        return CompressionType.SUPPORTED_COMPRESSION_TYPES;
     }
 }

@@ -16,7 +16,11 @@ import com.github.spotbugs.snom.SpotBugsTask
  * limitations under the License.
  */
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+  id("aiven-apache-kafka-connectors-all.java-conventions")
+  id("com.bmuschko.docker-remote-api") version "9.4.0"
+  id("aiven-apache-kafka-connectors-all.docs")
+}
 
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
@@ -59,6 +63,10 @@ idea {
 dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
+  compileOnly(project(":site"))
+
+  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
+  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
   implementation(apache.commons.collection4)
   implementation(project(":commons"))
@@ -159,6 +167,7 @@ dependencies {
     exclude(group = "org.apache.commons", module = "commons-math3")
     exclude(group = "org.apache.httpcomponents", module = "httpclient")
     exclude(group = "commons-codec", module = "commons-codec")
+    exclude(group = "commons-io", module = "commons-io")
     exclude(group = "commons-net", module = "commons-net")
     exclude(group = "org.eclipse.jetty")
     exclude(group = "org.eclipse.jetty.websocket")
@@ -329,3 +338,47 @@ signing {
   }
   signatureTypes = ASCSignatureProvider()
 }
+
+/** ******************************* */
+/* Documentation building section */
+/** ******************************* */
+tasks.register("buildDocs") {
+  dependsOn("buildConfigMd")
+  dependsOn("buildConfigYml")
+}
+
+tasks.register<JavaExec>("buildConfigMd") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
+          "configDef",
+          "src/templates/configData.md.vm",
+          "build/site/markdown/s3-source-connector/S3SourceConfig.md")
+}
+
+tasks.register<JavaExec>("buildConfigYml") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
+          "configDef",
+          "src/templates/configData.yml.vm",
+          "build/site/s3-source-connector/S3SourceConfig.yml")
+}
+
+/** ****************************** */
+/*  End of documentation section */
+/** ****************************** */

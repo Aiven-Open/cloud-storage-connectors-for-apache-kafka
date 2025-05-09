@@ -175,7 +175,7 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         @Override
         public String toString() {
-            return "One of " + Arrays.toString(DistributionType.values());
+            return "One of " + Arrays.stream(DistributionType.values()).map(DistributionType::name).collect(Collectors.toList());
         }
     }
 
