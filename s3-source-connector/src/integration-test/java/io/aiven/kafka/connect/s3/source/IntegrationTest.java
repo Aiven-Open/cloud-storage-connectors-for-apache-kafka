@@ -75,6 +75,7 @@ import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
+import org.codehaus.plexus.util.StringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -222,15 +223,19 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @ParameterizedTest
-    @CsvSource({ "4096", "3000", "4101" })
-    void bytesBufferTest(final int maxBufferSize) {
+    @CsvSource({ "4096,'',object_hash", "3000,'',object_hash", "4101,'',object_hash",
+            "4113,'{{topic}}-{{partition}}-.*',partition", "4113,'.*',object_hash" })
+    void bytesBufferTest(final int maxBufferSize, final String overrideFileNameTemplate,
+            final String distributionTypeName) {
         final var topic = IntegrationBase.getTopic(testInfo);
-        final DistributionType distributionType;
-        final String prefixPattern = "topics/{{topic}}/partition={{partition}}/";
-        distributionType = DistributionType.PARTITION;
+        final DistributionType distributionType = DistributionType.forName(distributionTypeName);
 
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 1, distributionType, false, null,
-                prefixPattern, "-");
+                null, "-");
+
+        if (StringUtils.isNotBlank(overrideFileNameTemplate)) {
+            connectorConfig.put(FILE_NAME_TEMPLATE_CONFIG, overrideFileNameTemplate);
+        }
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
         connectorConfig.put(TRANSFORMER_MAX_BUFFER_SIZE, String.valueOf(maxBufferSize));
