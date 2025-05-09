@@ -113,6 +113,8 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
     void tearDown() {
         producer.close();
         testBucketAccessor.removeBucket();
+        CONNECTOR_NAMES.forEach(kafkaManager::deleteConnector);
+        CONNECTOR_NAMES.clear();
     }
 
     protected void createConnector(final Map<String, String> connectorConfig) {
