@@ -189,7 +189,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
             SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.PARTITION);
 
             final KafkaManager kafkaManager = setupKafka();
-            kafkaManager.createTopic(topic);
+            kafkaManager.createTopics(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
             assertThat(getNativeStorage()).hasSize(4);
@@ -252,7 +252,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
             SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.PARTITION);
 
             final KafkaManager kafkaManager = setupKafka();
-            kafkaManager.createTopic(topic);
+            kafkaManager.createTopics(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
             assertThat(getNativeStorage()).hasSize(4);
@@ -297,7 +297,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
                 .build();
         try {
             final KafkaManager kafkaManager = setupKafka();
-            kafkaManager.createTopic(topic);
+            kafkaManager.createTopics(topic);
 
             // Start the Connector
             final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 1, inputFormat);
@@ -362,7 +362,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
             }
 
             final KafkaManager kafkaManager = setupKafka();
-            kafkaManager.createTopic(topic);
+            kafkaManager.createTopics(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
             assertThat(getNativeStorage()).hasSize(4);
@@ -417,7 +417,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
 
             // configure/start Kafka
             final KafkaManager kafkaManager = setupKafka();
-            kafkaManager.createTopic(topic);
+            kafkaManager.createTopics(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
             // Poll messages from the Kafka topic and verify the consumed data
@@ -482,7 +482,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
             SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.OBJECT_HASH);
 
             // finish configuring the manager
-            kafkaManager.createTopic(topic);
+            kafkaManager.createTopics(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
             // Poll Avro messages from the Kafka topic and deserialize them
@@ -554,7 +554,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
                     .valueConverterSchemaRegistry(getKafkaManager().getSchemaRegistryUrl())
                     .schemaRegistry(getKafkaManager().getSchemaRegistryUrl());
 
-            kafkaManager.createTopic(topic);
+            kafkaManager.createTopics(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
 
             final List<GenericRecord> records = messageConsumer().consumeAvroMessages(topic, 100,
@@ -593,7 +593,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
             SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.PARTITION);
 
             final KafkaManager kafkaManager = setupKafka();
-            kafkaManager.createTopic(topic);
+            kafkaManager.createTopics(topic);
             kafkaManager.configureConnector(getConnectorName(), connectorConfig);
             // Poll Json messages from the Kafka topic and deserialize them
             final List<JsonNode> records = messageConsumer().consumeJsonMessages(topic, 500, Duration.ofSeconds(60));

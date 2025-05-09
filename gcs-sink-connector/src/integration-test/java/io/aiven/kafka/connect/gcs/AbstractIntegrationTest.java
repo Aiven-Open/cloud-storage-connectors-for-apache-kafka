@@ -205,7 +205,7 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
             throws ExecutionException, InterruptedException {
         testBucketAccessor.clear(gcsPrefix);
 
-        kafkaManager.createTopics(Arrays.asList(testTopic0, testTopic1));
+        kafkaManager.createTopics(testTopic0, testTopic1);
 
         final Map<String, Object> producerProps = new HashMap<>(testSpecificProducerProperties);
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());

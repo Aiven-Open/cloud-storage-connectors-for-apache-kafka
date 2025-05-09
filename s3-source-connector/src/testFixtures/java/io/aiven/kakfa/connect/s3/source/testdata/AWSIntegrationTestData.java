@@ -44,6 +44,8 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
  */
 @SuppressFBWarnings({ "EI_EXPOSE_REP2", "EI_EXPOSE_REP" })
 public final class AWSIntegrationTestData {
+    /** The container version to use for AWS testing */
+    private static final String CONTAINER_VERSION = "localstack/localstack:2.0.2";
     /** The default bucket name */
     static final String BUCKET_NAME = "test-bucket";
     /** The S3 Access Key ID */
@@ -65,7 +67,7 @@ public final class AWSIntegrationTestData {
      * @return the constructed local stack container.
      */
     public static LocalStackContainer createS3Container() {
-        return new LocalStackContainer(DockerImageName.parse("localstack/localstack:2.0.2"))
+        return new LocalStackContainer(DockerImageName.parse(CONTAINER_VERSION))
                 .withServices(LocalStackContainer.Service.S3);
     }
 

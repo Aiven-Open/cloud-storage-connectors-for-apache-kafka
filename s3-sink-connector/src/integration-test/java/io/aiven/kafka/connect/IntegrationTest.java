@@ -226,7 +226,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
             throws ExecutionException, InterruptedException, IOException {
         final var topicName0 = topicName(testInfo);
         final var topicName1 = topicName(testInfo) + "_1";
-        kafkaManager.createTopics(Arrays.asList(topicName0, topicName1));
+        kafkaManager.createTopics(topicName0, topicName1);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME),
                 List.of(topicName0, topicName1));
         final CompressionType compressionType = CompressionType.forName(compression);

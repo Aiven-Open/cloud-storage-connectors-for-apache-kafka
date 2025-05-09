@@ -106,7 +106,7 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         producer = newProducer();
 
         final var topicName = topicName(testInfo);
-        kafkaManager.createTopic(topicName);
+        kafkaManager.createTopics(topicName);
     }
 
     @AfterEach
