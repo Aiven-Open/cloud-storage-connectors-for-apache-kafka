@@ -28,10 +28,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build
-        run: |
-          ./gradlew :site:build :copySiteAssets createSite javadoc
-          ./gradlew populateSite
+      - name: Build module site components
+        run: ./gradlew :site:build :copySiteAssets createSite javadoc
+      - name: Populate the site
+        run: ./gradlew populateSite
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
