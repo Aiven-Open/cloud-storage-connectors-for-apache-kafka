@@ -157,7 +157,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      * streaming from a specific previously returned key.
      *
      * @param offset
-     *            the native key to start from. May be {@code null} ot indicate start at the beginning.
+     *            the native key to start from. May be {@code null} to indicate start at the beginning.
      * @return A stream of native objects. May be empty but not {@code null}.
      */
     abstract protected Stream<N> getNativeItemStream(K offset);
