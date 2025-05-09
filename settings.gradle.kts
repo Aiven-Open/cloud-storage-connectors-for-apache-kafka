@@ -21,7 +21,7 @@ val kafkaAPIVersion by extra("1.1.0") // because we want the lowest possible API
 val logbackVersion by extra("1.5.6")
 val localstackVersion by extra("0.2.23")
 val mockitoVersion by extra("5.15.2")
-val parquetVersion by extra("1.15.0")
+val parquetVersion by extra("1.15.1")
 val slf4jVersion by extra("1.7.36")
 val snappyVersion by extra("1.1.10.5")
 val spotbugsAnnotationsVersion by extra("4.8.1")
