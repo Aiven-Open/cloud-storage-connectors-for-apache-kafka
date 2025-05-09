@@ -28,12 +28,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build module site components
+      - name: Check for S3SourceConfig
+        run: find . -name S3SourceConfig.\*
+      - name: Build site tools
+        run: ./gradlew :site:build
+      - name: Check for S3SourceConfig
+        run: find . -name S3SourceConfig.\*
+      - name: copy site assets
+        run: ./gradlew :copySiteAssets
+      - name: Check for S3SourceConfig
+        run: find . -name S3SourceConfig.\*
+      - name: create site
+        run: ./gradlew createSite
+      - name: Check for S3SourceConfig
+        run: find . -name S3SourceConfig.\*
+      - name: generate javadoc
         run: ./gradlew :site:build :copySiteAssets createSite javadoc
+      - name: Check for S3SourceConfig
+        run: find . -name S3SourceConfig.\*
       - name: Populate the site
         run: ./gradlew populateSite
-      - name: List html
-        run: ls -l ./site/target/site/s3-source-connector 
+      - name: Check for S3SourceConfig
+        run: find . -name S3SourceConfig.\*
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
