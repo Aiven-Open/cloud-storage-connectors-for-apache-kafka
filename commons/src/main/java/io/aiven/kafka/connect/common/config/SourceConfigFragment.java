@@ -149,5 +149,6 @@ public final class SourceConfigFragment extends ConfigFragment {
             return "Must be one of: "
                     + Arrays.stream(DistributionType.values()).map(DistributionType::name).collect(Collectors.toList());
         }
+
     }
 }

@@ -6,7 +6,6 @@ val avroConverterVersion by extra("7.2.2")
 val avroDataVersion by extra("7.2.2")
 val awaitilityVersion by extra("4.2.1")
 val amazonAwsSdkV2Version by extra("2.29.34")
-val commonsTextVersion by extra("1.11.0")
 val commonsCollections4Version by extra("4.4")
 val commonsIOVersion by extra("2.18.0")
 val commonsLang3Version by extra("3.17.0")
@@ -125,3 +124,4 @@ include("s3-source-connector")
 include("azure-source-connector")
 
 include("site")
+
