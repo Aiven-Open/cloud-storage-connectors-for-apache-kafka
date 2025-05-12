@@ -16,24 +16,23 @@
 
 package io.aiven.kafka.connect.azure.source;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.kafka.connect.source.SourceRecord;
+
+import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecord;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
-import io.aiven.kafka.connect.common.source.OffsetManager;
-import org.apache.commons.collections4.IteratorUtils;
-import org.apache.kafka.connect.source.SourceRecord;
-
-import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
+import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.utils.VersionInfo;
 
+import org.apache.commons.collections4.IteratorUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,8 +44,6 @@ public class AzureBlobSourceTask extends AbstractSourceTask {
     /** The configuration for this run */
     private AzureBlobSourceConfig azureBlobSourceConfig; // NOPMD only called once, when used in the future this can be
     // removed
-
-    private AzureBlobClient azureBlobClient;
 
     /**
      * Iterator to read. protected for testing.
@@ -83,11 +80,10 @@ public class AzureBlobSourceTask extends AbstractSourceTask {
     protected SourceCommonConfig configure(final Map<String, String> props) {
         this.azureBlobSourceConfig = new AzureBlobSourceConfig(props);
         offsetManager = new OffsetManager<>(context);
-        azureBlobClient = new AzureBlobClient(azureBlobSourceConfig);
+        final AzureBlobClient azureBlobClient = new AzureBlobClient(azureBlobSourceConfig);
         azureBlobSourceRecordIterator = new AzureBlobSourceRecordIterator(azureBlobSourceConfig, offsetManager,
                 azureBlobSourceConfig.getTransformer(), azureBlobClient);
         return azureBlobSourceConfig;
-
     }
 
     @Override
