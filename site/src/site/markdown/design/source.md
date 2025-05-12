@@ -4,13 +4,57 @@ This document describes the design for source connectors and how to think about 
 
 ## Overview
 
-The `AbstractSourceTask` handles most of the issues around synchronization and communicating with the upstream connector framework.  Implementors of concrete SourceTasks need only concern themselves with reading data from the data storage and an iterator of SourceRecord objects from that.  Concrete implementation need only implement three (3) methods:
+### Flow Diagram
+
+```
+   /---------\        /------------ \     /--------------\      /--------------\
+   | cloud   |        | read stored |     | split item   |      | send records |
+   | storage | -----> | item        |---> | into records | ---> | to Kafka     |
+   \---------/        \-------------/     \--------------/      \--------------/
+                        
+```
+
+### Cloud storage
+
+Each connector provides the interface to the cloud storage.  The implementation must define: 
+ * The native object type as defined by the cloud storage.  Commonly thought of as files.
+ * The native key type as defined by the cloud storage.  This is the key structure used by the storage to identify the native objects.  This type must implement the `Comparable` interface.
+ * An `OffsetManager.OffsetManagerEntry` implementation.
+ * An `AbstractSourceRecord` implementation.
+
+The connector must implement the following methods: 
+ *  `Stream<NativeObject> getNativeItemStream(final NativeKey offset)` -- Returns a stream of NativeObjects available on the cloud storage platform.  If the `offset` parameter is specified then only NativeObjects that are "after" the `offset` should be returned.  The term "after" is defined by the natural sort order of the items returned f rom the cloud storage.  If the cloud storage does not have such a concept, the implementation should impose one and document it.  
+
+ * `IOSupplier<InputStream> getInputStream(final NativeObject nativeObject)` -- Returns an input stream containing the data from the native object. 
+
+ * `NativeKey getNativeKey(final NativeObject nativeObject)` -- Returns the native key that references the native object.
+
+ * `AbstractSourceRecord createSourceRecord(final NativeObject nativeObject)` -- Returns an instance of the `AbstractSourceRecord` populated from the native object.
+
+ * `OffsetManager.OffsetManagerEntry createOffsetManagerEntry(final NativeObject nativeObject)` -- Returns an instance of OffsetManager.OffsetManagerEntry for the native object.
+
+ * `OffsetManager.OffsetManagerKey getOffsetManagerKey(final String nativeKey)` -- Returns an instance of `OffsetManager.OffsetManagerKey` equivalent to the native key.
+    
+### Read stored item
+
+Connectors must provide an implementation of the `AbstractSourceRecordIterator`.  The implementation uses the methods described above to read the data from the cloud storage service. 
+
+### Split item into records
+
+The `AbstractSourceRecordIterator` class applies a `Transformer` to the input stream returned in the `IOSupplier<InputStream> getInputStream(final NativeObject nativeObject)` method mentioned above.  This stage allows systems to split out multiple records from files that are written in Avro, JSONL or Parquet file format.  Each of those records has a record number associating it to the native object and indicating which record from the object it is. If the connector fails for any reason, this tracking allows it to restart with the first record that Kafka indicates has not been processed.
+
+### Send records to Kafka
+
+Connectors must provide an implementation of the `AbstractSourceTask`.  This implementaiton       
+
+### Common Classes
+The `AbstractSourceTask` handles most of the issues around synchronization and communicating with the upstream connector framework.  Implementors of concrete SourceTasks need only concern themselves with reading data from the data storage and an iterator of SourceRecord objects from that.  Concrete implementation must implement three (3) methods:
 
  * `SourceCommonConfig configure(Map<String, String> props)`
  * `Iterator<SourceRecord> getIterator(BackoffConfig config)`
  * `void closeResources()`
 
-In addition, implementations will want to implement an `OffsetManager.OffsetManagerEntry`.  This class maps the information about the stored object to information describing how far the processing has progressed.  In general, the values that are needed to locate the original object in the object store are placed in the 'key' and data describing the processing is placed in the data.  There are no restrictions on either key or data elements except that they must be natively serializable by the Kafka process. See the [Kafka documentation](https://github.com/a0x8o/kafka/blob/master/connect/runtime/src/main/java/org/apache/kafka/connect/storage/OffsetStorageReaderImpl.java) for more information.  The `io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry` class provides a good example of an `OffsetManagerEntry`.  The `S3OffsetManagerEntry` has a particular need to track and update a record count, thus it is maintained outside the data map.  Also notice that the `getProperties()` and `getManagerKey()` methods return defensive copies of the internal data and that the `fromProperties(final Map<String, Object> properties)` method makes a defensive copy of the `properties` argument value. 
+In addition, implementations must implement an `OffsetManager.OffsetManagerEntry`.  This class maps the information about the stored object to information describing how far the processing has progressed.  In general, the values that are needed to locate the original object in the object store are placed in the 'key' and data describing the processing is placed in the data.  There are no restrictions on either key or data elements except that they must be natively serializable by the Kafka process. See the [Kafka documentation](https://github.com/a0x8o/kafka/blob/master/connect/runtime/src/main/java/org/apache/kafka/connect/storage/OffsetStorageReaderImpl.java) for more information.  The `io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry` class provides a good example of an `OffsetManagerEntry`.  The `S3OffsetManagerEntry` has a particular need to track and update a record count, thus it is maintained outside the data map.  Also notice that the `getProperties()` and `getManagerKey()` methods return defensive copies of the internal data and that the `fromProperties(final Map<String, Object> properties)` method makes a defensive copy of the `properties` argument value. 
 
 ### Helper classes
 
