@@ -1,6 +1,8 @@
 import com.github.spotbugs.snom.SpotBugsTask
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins { id("aiven-apache-kafka-connectors-all.java-conventions")
+  id("aiven-apache-kafka-connectors-all.docs")
+}
 
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
@@ -52,6 +54,9 @@ idea {
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
+  compileOnly(project(":site"))
+  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
+  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
   implementation("commons-io:commons-io:2.18.0")
   implementation("org.apache.commons:commons-lang3:3.17.0")
@@ -230,3 +235,47 @@ signing {
   }
   signatureTypes = ASCSignatureProvider()
 }
+
+/** ******************************* */
+/* Documentation building section */
+/** ******************************* */
+tasks.register("buildDocs") {
+  dependsOn("buildConfigMd")
+  dependsOn("buildConfigYml")
+}
+
+tasks.register<JavaExec>("buildConfigMd") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+    sourceSets.main
+      .get()
+      .compileClasspath
+      .plus(files(tasks.jar))
+      .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+    listOf(
+      "io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig",
+      "configDef",
+      "src/templates/configData.md.vm",
+      "build/site/markdown/azure-source-connector/AzureBlobSourceConfig.md")
+}
+
+tasks.register<JavaExec>("buildConfigYml") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+    sourceSets.main
+      .get()
+      .compileClasspath
+      .plus(files(tasks.jar))
+      .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+    listOf(
+      "io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig",
+      "configDef",
+      "src/templates/configData.yml.vm",
+      "build/site/azure-source-connector/AzureBlobSourceConfig.yml")
+}
+
+/** ****************************** */
+/*  End of documentation section */
+/** ****************************** */
