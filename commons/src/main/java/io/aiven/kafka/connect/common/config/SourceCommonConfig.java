@@ -25,7 +25,6 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
-import io.aiven.kafka.connect.common.templating.Template;
 
 public class SourceCommonConfig extends CommonConfig {
 
