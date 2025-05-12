@@ -159,7 +159,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("inputFormatList")
-    void testEmptyClientReturnsEmptyIterator(final InputFormat format, final byte[] ignore) throws Exception {
+    void testEmptyClientReturnsEmptyIterator(final InputFormat format, final byte[] ignore) {
         Transformer transformer = TransformerFactory.getTransformer(format);
 
         SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
@@ -175,7 +175,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("inputFormatList")
-    void testOneObjectReturnsOneObject(final InputFormat format, final byte[] data) throws Exception {
+    void testOneObjectReturnsOneObject(final InputFormat format, final byte[] data) {
         Transformer transformer = TransformerFactory.getTransformer(format);
         SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(mockConfig.getInputFormat()).thenReturn(format);
@@ -191,7 +191,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
     }
 
     @Test
-    void testThrowsExceptionWhenNextOnEmptyIterator() throws Exception {
+    void testThrowsExceptionWhenNextOnEmptyIterator() {
         Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
         SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(mockConfig.getInputFormat()).thenReturn(InputFormat.BYTES);
@@ -238,7 +238,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("multiInputFormatList")
-    void testMultipleRecordsReturned(final InputFormat format, final byte[] data) throws Exception {
+    void testMultipleRecordsReturned(final InputFormat format, final byte[] data)  {
         createClientMutator().reset().addObject(key, ByteBuffer.wrap(data)).endOfBlock().build();
         Transformer transformer = TransformerFactory.getTransformer(format);
         final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
@@ -299,13 +299,10 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
     /**
      * This test sends 6000 bytes to a ByteArrayTransformer that only returns 4096 byte blocks, so this test should
      * return 2 results.
-     *
-     * @throws Exception
-     *             if data can not be created.
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     @Test
-    void testIteratorProcessesMultipleObjectsFromByteArrayTransformer() throws Exception {
+    void testIteratorProcessesMultipleObjectsFromByteArrayTransformer() {
         final int byteArraySize = 6000;
         final byte[] testData = new byte[byteArraySize];
         for (int i = 0; i < byteArraySize; i++) {
