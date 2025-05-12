@@ -238,7 +238,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("multiInputFormatList")
-    void testMultipleRecordsReturned(final InputFormat format, final byte[] data)  {
+    void testMultipleRecordsReturned(final InputFormat format, final byte[] data) {
         createClientMutator().reset().addObject(key, ByteBuffer.wrap(data)).endOfBlock().build();
         Transformer transformer = TransformerFactory.getTransformer(format);
         final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);

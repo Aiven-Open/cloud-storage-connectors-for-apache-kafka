@@ -81,6 +81,9 @@ public final class SourceConfigFragment extends ConfigFragment {
                 "The largest record batch size allowed by Kafka config max.message.bytes", GROUP_OTHER,
                 ++sourcePollingConfigCounter, ConfigDef.Width.NONE, EXPECTED_MAX_MESSAGE_BYTES);
 
+
+        // step on earlier definition.
+        configDef.configKeys().remove(FILE_NAME_TEMPLATE_CONFIG);
         configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, null, ConfigDef.Importance.MEDIUM,
                 "The template for file names on S3. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
