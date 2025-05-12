@@ -18,38 +18,87 @@ package io.aiven.kafka.connect.common.source;
 
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.commons.collections4.queue.SynchronizedQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/**
+ * Implements a ring buffer of items.
+ *
+ * @param <K>
+ *            the type of item in the queue. Must support equality check.
+ */
 public final class RingBuffer<K> extends SynchronizedQueue<K> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RingBuffer.class);
 
     /**
-     * Create a Ring Buffer of a maximum Size
+     * Flag to indicate ring buffer should always be empty.
+     */
+    private final boolean isEmpty;
+
+    /**
+     * Create a Ring Buffer of a maximum Size. If the size is less than or equal to 0 then the buffer is always empty.
      *
      * @param size
      *            The size that the linked list should be.
      */
     public RingBuffer(final int size) {
-        super(new CircularFifoQueue<>(size));
+        // TODO explore if this should be backed by some sort of LRU cache.
+        super(new CircularFifoQueue<>(size > 0 ? size : 1));
+        isEmpty = size <= 0;
     }
 
     /**
-     * Add a new item if it is not already present in the ring buffer to the ring buffer and removes the last entry from
-     * the linked list. Null values are ignored.
+     * Adds a new item if it is not already present.
+     * <ul>
+     * <li>If the buffer is always empty the item is ignored and not enqueued.</li>
+     * <li>If the buffer already contains the item it is ignored and not enqueued.</li>
+     * <li>If the buffer is full the oldest entry in the list is removed.</li>
+     * </ul>
      *
      * @param item
      *            Item T which is to be added to the Queue
      */
     public void enqueue(final K item) {
-        if (item != null && !contains(item)) {
+        if (!isEmpty && item != null && !contains(item)) {
+            if (isFull()) {
+                LOGGER.debug("Ring buffer is full");
+                poll();
+            }
             add(item);
+            LOGGER.debug("Ring buffer added item {} record count {}", item, size());
         }
     }
 
+    /**
+     * Returns {@code true} if the buffer is full.
+     *
+     * @return {@code true} if the buffer is full.
+     */
+    public boolean isFull() {
+        return ((CircularFifoQueue<K>) decorated()).isAtFullCapacity();
+    }
     /**
      * Get the last value in the Ring buffer
      *
      * @return A value T from the last place in the list, returns null if list is not full.
      */
     public K getOldest() {
-        return ((CircularFifoQueue<K>) decorated()).isAtFullCapacity() ? poll() : null;
+        final K oldest = isFull() ? peek() : null;
+        LOGGER.debug("Ring buffer getOldest {}", oldest);
+        return oldest;
+    }
+
+    @Override
+    public boolean equals(final Object object) {
+        if (object == this) {
+            return true;
+        }
+        return super.equals(object);
+    }
+
+    @SuppressWarnings("PMD.UselessOverridingMethod")
+    @Override
+    public int hashCode() {
+        return super.hashCode();
     }
 }

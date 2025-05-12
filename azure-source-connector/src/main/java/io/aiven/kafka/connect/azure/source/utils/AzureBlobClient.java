@@ -16,7 +16,10 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -63,13 +66,14 @@ public class AzureBlobClient {
     }
 
     /**
+     * Gets the InputStream for the blob name.
      *
      * @param blobName
-     *            Name of the blob which is to be downloaded from Azure.
-     * @return A Flux ByteArray, this Flux is an asynchronous implementation which returns 0..N parts
+     *            Name of the blob which is to be retrieved from Azure.
+     * @return An input stream created from the blob stored in Azure.
      */
-    public Flux<ByteBuffer> getBlob(final String blobName) {
-        return getBlobAsyncClient(blobName).downloadStream();
+    public InputStream getBlob(final String blobName) {
+        return new FluxToInputStream(getBlobAsyncClient(blobName).downloadStream());
     }
 
     /**
@@ -81,5 +85,63 @@ public class AzureBlobClient {
      */
     private BlobAsyncClient getBlobAsyncClient(final String blobName) {
         return containerAsyncClient.getBlobAsyncClient(blobName);
+    }
+
+    /**
+     * Converts a Flux ByteBuffer into an input stream that reads the data from start to finish.
+     */
+    private static class FluxToInputStream extends InputStream {
+        private static final Object NONE = null;
+        private static final int EOF = -1;
+        private Iterator<ByteBuffer> iterator;
+        private ByteBuffer current;
+
+        private FluxToInputStream(final Flux<ByteBuffer> flux) {
+            super();
+            iterator = flux.toStream().iterator();
+        }
+
+        /**
+         * Check that the current Byte buffer is not null and has data.
+         */
+        private void checkCurrent() {
+            if (current == null) {
+                if (iterator.hasNext()) {
+                    current = iterator.next();
+                } else {
+                    current = ByteBuffer.allocate(0);
+                }
+
+            }
+            if (current != null && !current.hasRemaining() && iterator.hasNext()) {
+                current = iterator.next();
+            }
+        }
+
+        @Override
+        public int read() throws IOException {
+            checkCurrent();
+            return current.hasRemaining() ? current.get() & 0xFF : EOF;
+        }
+
+        @Override
+        public int read(final byte[] buffer, final int off, final int len) throws IOException {
+            if (len == 0) {
+                return 0;
+            }
+            checkCurrent();
+            if (!current.hasRemaining()) {
+                return EOF;
+            }
+            final int copyLen = Math.min(current.remaining(), len);
+            current.get(buffer, off, copyLen);
+            return copyLen;
+        }
+
+        @Override
+        public void close() throws IOException {
+            current = (ByteBuffer) NONE;
+            iterator = (Iterator<ByteBuffer>) NONE;
+        }
     }
 }

@@ -83,7 +83,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      * @return a new instance of OffsetManagerKey
      */
     public static OffsetManager.OffsetManagerKey asKey(final String bucket, final String s3ObjectKey) {
-        return () -> Map.of(BUCKET, bucket, OBJECT_KEY, s3ObjectKey);
+        return new OffsetManager.OffsetManagerKey(Map.of(BUCKET, bucket, OBJECT_KEY, s3ObjectKey));
     }
 
     /**
@@ -170,7 +170,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      */
     @Override
     public OffsetManager.OffsetManagerKey getManagerKey() {
-        return () -> Map.of(BUCKET, bucket, OBJECT_KEY, objectKey);
+        return asKey(bucket, objectKey);
     }
 
     @Override

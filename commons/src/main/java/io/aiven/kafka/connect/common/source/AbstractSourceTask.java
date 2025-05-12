@@ -21,16 +21,19 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
+import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,21 +42,27 @@ import org.slf4j.LoggerFactory;
  * This class handles extracting records from an iterator and returning them to Kafka. It uses an exponential backoff
  * with jitter to reduce the number of calls to the backend when there is no data. This solution:
  * <ul>
- * <li>When polled this implementation moves available records from the SourceRecord iterator to the return array.</li>
- * <li>if there are no records
+ * <li>Uses a thread to check the SoureeRecordIterator and
  * <ul>
- * <li>{@link #poll()} will return null.</li>
- * <li>The poll will delay no more than approx 5 seconds.</li>
+ * <li>Will move available records from the SourceRecord iterator into a queue of records to be returned.</li>
+ * <li>If there are no records delay no more than approx 5 seconds before attempting to retry. Delay is an exponentially
+ * increasing factor up to approx 5 seconds between calls.</li>
+ * <li>Detects and removes duplicates from the iterator.</li>
  * </ul>
- * </li>
- * <li>Upto {@link #maxPollRecords} will be sent in a single poll request</li>
+ * <li>during polling ({@link #poll()})
+ * <ul>
+ * <li>The records available will be returned up to {@link #maxPollRecords} in a poll.</li>
+ * <li>if there are no records {@link #poll()} will return null.</li>
+ * </ul>
  * <li>When the connector is stopped any collected records are returned to kafka before stopping.</li>
  * </ul>
- *
- *
  */
+@SuppressWarnings("PMD.TooManyMethods")
 public abstract class AbstractSourceTask extends SourceTask {
 
+    /**
+     * Value to return when there are no results.
+     */
     public static final List<SourceRecord> NULL_RESULT = null;
 
     /**
@@ -82,6 +91,13 @@ public abstract class AbstractSourceTask extends SourceTask {
     private LinkedBlockingQueue<SourceRecord> queue;
 
     /**
+     * A queue of recently seen SourceRecords. Used to detect recently seen source records that may be generated in
+     * specific edge cases involving slower polling that generation and disabled ring buffer. TODO replace the queue
+     * with a fixed size LRU cache.
+     */
+    private CircularFifoQueue<SourceRecord> deduplicateQueue;
+
+    /**
      * The thread that is running the polling of the implementation.
      */
     private final Thread implemtationPollingThread;
@@ -89,10 +105,16 @@ public abstract class AbstractSourceTask extends SourceTask {
     /**
      * The Backoff implementation that executes the delay in the poll loop.
      */
-    private final Backoff backoff;
+    protected final Backoff backoff;
 
+    /**
+     * The configuration for the backoff calculations.
+     */
     private final BackoffConfig backoffConfig;
 
+    /**
+     * The SourceRecord iterator that we pull new records from.
+     */
     private Iterator<SourceRecord> sourceRecordIterator;
 
     /**
@@ -134,9 +156,9 @@ public abstract class AbstractSourceTask extends SourceTask {
                         }
                     }
                 } catch (InterruptedException e) {
-                    logger.warn("{} interrupted -- EXITING", this.toString());
+                    logger.warn("{} interrupted -- EXITING", this);
                 } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
-                    logger.error("{} failed -- EXITING", this.toString(), e);
+                    logger.error("{} failed -- EXITING", this, e);
                 }
 
             }
@@ -144,10 +166,18 @@ public abstract class AbstractSourceTask extends SourceTask {
     }
 
     /**
-     * Gets the iterator of SourceRecords. The iterator that SourceRecords are extracted from for a poll event. When
-     * this iterator runs out of records it should attempt to reset and read more records from the backend on the next
-     * {@code hasNext()} call. In this way it should detect when new data has been added to the backend and continue
-     * processing.
+     * Gets the iterator of SourceRecords. This is the iterator that SourceRecords are extracted from for a poll event
+     * and should be an implementation of {@link AbstractSourceRecordIterator}. If this iterator is not an instance of
+     * {@link AbstractSourceRecordIterator} then it must guarantee the following:
+     * <ul>
+     * <li>When the iterator runs out of records it should attempt to reset from the underlying store with any newly
+     * created native objects</li>
+     * <li>As long as there are no further native objects to process it must continue to return {@code false} for calls
+     * to {@link Iterator#hasNext()}.</li>
+     * <li>Once a native object is available it must again return {@code true} for calls to
+     * {@link Iterator#hasNext()}.</li>
+     * <li>Should return {@code false} if {@link #stillPolling} returns {@code false}.</li>
+     * </ul>
      * <p>
      * This method should handle any backend exception that can be retried. Any runtime exceptions that are thrown when
      * this iterator executes may cause the task to abort.
@@ -164,6 +194,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      *
      * @param props
      *            the properties to use for configuration.
+     * @return An instance of SourceCommonConfig that is correct for the concrete implementation.
      */
     abstract protected SourceCommonConfig configure(Map<String, String> props);
 
@@ -173,37 +204,92 @@ public abstract class AbstractSourceTask extends SourceTask {
         final SourceCommonConfig config = configure(props);
         maxPollRecords = config.getMaxPollRecords();
         queue = new LinkedBlockingQueue<>(maxPollRecords * 2);
+        deduplicateQueue = new CircularFifoQueue<>(maxPollRecords * 2);
         sourceRecordIterator = getIterator(backoffConfig);
         implemtationPollingThread.start();
     }
 
     /**
-     * Try to add a SourceRecord to the results.
+     * Performs an equality check which accounts for nulls. If both objects are null the equality check passes.
      *
-     * @return true if successful, false if the iterator is empty.
+     * @param lhObject
+     *            the left hand object to test.
+     * @param rhObject
+     *            the right hand object to test.
+     * @return true if the objects are equal.
+     */
+    private boolean equalsNullCheck(final Object lhObject, final Object rhObject) {
+        if (lhObject != null) {
+            if (lhObject instanceof Map && rhObject instanceof Map) {
+                final Map<?, ?> o1Map = (Map<?, ?>) lhObject;
+                final Map<?, ?> o2Map = (Map<?, ?>) rhObject;
+                return Objects.deepEquals(o1Map.keySet().toArray(), o2Map.keySet().toArray())
+                        && Objects.deepEquals(o1Map.values().toArray(), o2Map.values().toArray());
+            } else {
+                return Objects.deepEquals(lhObject, rhObject);
+            }
+        }
+        return rhObject == null;
+    }
+
+    /**
+     * Equivalent to SourceRecord.equals() without the timestamp check. If the record is not in the queue it is added.
+     *
+     * @param record
+     *            the record to attempt to find.
+     * @return true if the record was found in the deduplicateQueue.
+     */
+    private boolean detectDuplicate(final SourceRecord record) {
+        for (final SourceRecord queuedRecord : deduplicateQueue) {
+            if (equalsNullCheck(record.kafkaPartition(), queuedRecord.kafkaPartition())
+                    && equalsNullCheck(record.topic(), queuedRecord.topic())
+                    && equalsNullCheck(record.keySchema(), queuedRecord.keySchema())
+                    && equalsNullCheck(record.key(), queuedRecord.key())
+                    && equalsNullCheck(record.valueSchema(), queuedRecord.valueSchema())
+                    && equalsNullCheck(record.value(), queuedRecord.value())
+                    && equalsNullCheck(record.headers(), queuedRecord.headers())
+                    && equalsNullCheck(record.sourcePartition(), queuedRecord.sourcePartition())
+                    && equalsNullCheck(record.sourceOffset(), queuedRecord.sourceOffset())) {
+                return true;
+            }
+        }
+        deduplicateQueue.add(record);
+        return false;
+    }
+
+    /**
+     * Try to add a SourceRecord to the results. This method is called by the implementationPollingThread to read
+     * available records from the iterator. If this method returns {@code false} the system will execute a backoff and
+     * delay before attempting again.
+     *
+     * @return true if successful, false if the iterator is empty, returned a duplicate or other result that was not
+     *         added to the queue.
      */
     private boolean tryAdd() throws InterruptedException {
         if (queue.remainingCapacity() > 0) {
             if (sourceRecordIterator.hasNext()) {
                 backoff.reset();
                 final SourceRecord sourceRecord = sourceRecordIterator.next();
-                if (logger.isDebugEnabled()) {
-                    logger.debug("tryAdd() : read record {}", sourceRecord.sourceOffset());
+                if (detectDuplicate(sourceRecord)) {
+                    logger.debug("tryAdd() : duplicate queue entry");
+                    return false;
                 }
                 queue.put(sourceRecord);
+                logger.debug("tryAdd() : enqueued record {} {} {}", sourceRecord, sourceRecord.sourceOffset(),
+                        sourceRecord.sourcePartition());
                 return true;
             }
-            logger.info("No records found in tryAdd call");
+            logger.debug("No records found in tryAdd call");
         } else {
-            logger.info("No space in queue");
+            logger.debug("No space in queue");
         }
         return false;
     }
 
     /**
-     * Returns {@code true} if the connector is not stopped and the timer has not expired.
+     * Returns {@code true} if the connector is not stopped.
      *
-     * @return {@code true} if the connector is not stopped and the timer has not expired.
+     * @return {@code true} if the connector is not stopped.
      */
     protected final boolean stillPolling() {
         final boolean result = !connectorStopped.get();
@@ -233,7 +319,7 @@ public abstract class AbstractSourceTask extends SourceTask {
 
     @Override
     public final void stop() {
-        logger.debug("Stopping");
+        logger.info("Stop requested");
         connectorStopped.set(true);
     }
 
@@ -243,7 +329,7 @@ public abstract class AbstractSourceTask extends SourceTask {
      * @return {@code true} if the connector is running, {@code false} otherwise.
      */
     public final boolean isRunning() {
-        return !connectorStopped.get();
+        return !connectorStopped.get() && implemtationPollingThread.isAlive();
     }
 
     /**
@@ -251,10 +337,39 @@ public abstract class AbstractSourceTask extends SourceTask {
      */
     abstract protected void closeResources();
 
+    @Override
+    public void commit() {
+        logger.info("Committed all records through last poll()");
+    }
+
+    @Override
+    public void commitRecord(final SourceRecord record) {
+        this.commitRecord(record, null);
+    }
+
+    /**
+     * Method that is implemented in later versions.
+     *
+     * @param record
+     *            the SourecRecord being committed.
+     * @param metadata
+     *            the metadata for the SourceRecord. May be {@code null}
+     */
+    @Override
+    public void commitRecord(final SourceRecord record, final RecordMetadata metadata) {
+        if (logger.isDebugEnabled()) {
+            if (metadata == null) {
+                logger.debug("Kafka filtered record {}, see readme for details", record.sourceOffset());
+            } else {
+                logger.debug("Kafka Acked record {}, see readme for details", record.sourceOffset());
+            }
+        }
+    }
+
     /**
      * Calculates elapsed time and flags when expired.
      */
-    protected static class Timer extends StopWatch {
+    public static class Timer extends StopWatch {
         /**
          * The length of time that the timer should run.
          */
@@ -271,7 +386,7 @@ public abstract class AbstractSourceTask extends SourceTask {
          * @param duration
          *            the length of time the timer should run.
          */
-        Timer(final Duration duration) {
+        public Timer(final Duration duration) {
             super();
             this.duration = duration.toMillis();
         }
@@ -363,6 +478,9 @@ public abstract class AbstractSourceTask extends SourceTask {
          */
         public static final int MAX_JITTER = 1024;
 
+        /**
+         * The subtrahend for the jitter calculation.
+         */
         public static final int JITTER_SUBTRAHEND = MAX_JITTER / 2;
         /**
          * A supplier of the time remaining (in milliseconds) on the overriding timer.
@@ -451,6 +569,11 @@ public abstract class AbstractSourceTask extends SourceTask {
             return MAX_JITTER - JITTER_SUBTRAHEND;
         }
 
+        /**
+         * Calculates the delay time with jitter. May return a negative number for large jitter and small waitCounts.
+         *
+         * @return the delay time in milliseconds.
+         */
         private long timeWithJitter() {
             // generate approx +/- 0.512 seconds of jitter
             final int jitter = random.nextInt(MAX_JITTER) - JITTER_SUBTRAHEND;
@@ -465,7 +588,7 @@ public abstract class AbstractSourceTask extends SourceTask {
          * @return true if sleep should occur.
          */
         private boolean shouldSleep(final long sleepTime) {
-            // maxcount may have been reset so check and set if necessary.
+            // maxCount may have been reset so check and set if necessary.
             final boolean result = sleepTime > 0
                     && (!applyTimerRule || waitCount < (maxCount == 0 ? getMaxCount() : maxCount));
             if (waitCount < maxCount) {

@@ -39,10 +39,6 @@ final class S3OffsetManagerEntryTest {
 
     static final String TEST_BUCKET = "test-bucket";
 
-    static final String TOPIC = "TOPIC1";
-
-    static final int PARTITION = 1;
-
     static final String OBJECT_KEY = "object_key";
 
     private SourceTaskContext sourceTaskContext;

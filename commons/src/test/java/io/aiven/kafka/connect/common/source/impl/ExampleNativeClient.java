@@ -28,7 +28,7 @@ public interface ExampleNativeClient {
      *
      * @return the list of native objects.
      */
-    List<ExampleNativeObject> listObjects();
+    List<ExampleNativeObject> listObjects(String offset);
 
     /**
      * Gets the ByteBuffer for a key.
