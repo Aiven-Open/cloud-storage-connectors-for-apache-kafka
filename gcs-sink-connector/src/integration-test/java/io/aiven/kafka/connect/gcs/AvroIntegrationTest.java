@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,7 +30,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -151,28 +151,23 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 Arguments.of("zstandard", "none"));
     }
 
-    private byte[] getBlobBytes(final byte[] blobBytes, final String compression) throws IOException {
-        switch (CompressionType.forName(compression)) {
-            case GZIP :
-                final ByteArrayOutputStream out = new ByteArrayOutputStream();
-                IOUtils.copy(new GZIPInputStream(new ByteArrayInputStream(blobBytes)), out);
-                return out.toByteArray();
-            case NONE :
-                return blobBytes;
-            default :
-                throw new IllegalArgumentException("Unsupported compression in test: " + compression);
+    private byte[] getBlobBytes(final byte[] blobBytes, final CompressionType compression) throws IOException {
+        try (InputStream decompressedStream = compression.decompress(new ByteArrayInputStream(blobBytes));
+                ByteArrayOutputStream decompressedBytes = new ByteArrayOutputStream()) {
+            IOUtils.copy(decompressedStream, decompressedBytes);
+            return decompressedBytes.toByteArray();
         }
     }
 
     @ParameterizedTest
     @MethodSource("compressionAndCodecTestParameters")
-    void avroOutputPlainValueWithoutEnvelope(final String avroCodec, final String compression)
+    void avroOutputPlainValueWithoutEnvelope(final String avroCodec, final CompressionType compression)
             throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.envelope", "false");
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.type", "avro");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("avro.codec", avroCodec);
         getConnectRunner().createConnector(connectorConfig);
 
@@ -342,9 +337,8 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         return config;
     }
 
-    protected String getAvroBlobName(final int partition, final int startOffset, final String compression) {
-        return super.getBaseBlobName(partition, startOffset) + ".avro"
-                + CompressionType.forName(compression).extension();
+    protected String getAvroBlobName(final int partition, final int startOffset, final CompressionType compression) {
+        return super.getBaseBlobName(partition, startOffset) + ".avro" + compression.extension();
     }
 
     protected String getAvroBlobName(final int partition, final int startOffset) {
