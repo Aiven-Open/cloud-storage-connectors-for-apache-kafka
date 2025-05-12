@@ -20,6 +20,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobClient;
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecord;
+import io.aiven.kafka.connect.azure.source.utils.AzureBlobSourceRecordIterator;
+import io.aiven.kafka.connect.common.source.OffsetManager;
+import org.apache.commons.collections4.IteratorUtils;
 import org.apache.kafka.connect.source.SourceRecord;
 
 import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
@@ -80,6 +86,7 @@ public class AzureBlobSourceTask extends AbstractSourceTask {
         azureBlobSourceRecordIterator = new AzureBlobSourceRecordIterator(azureBlobSourceConfig, offsetManager,
                 azureBlobSourceConfig.getTransformer(), azureBlobClient);
         return azureBlobSourceConfig;
+
     }
 
     @Override
