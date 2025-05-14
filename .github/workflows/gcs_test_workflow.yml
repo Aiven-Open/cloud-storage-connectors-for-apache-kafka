@@ -1,0 +1,29 @@
+# The workflow to check main after push or pull request.
+name: Main and pull request checks
+on:
+  push:
+    branches:
+      - gcs_integration_fix
+  pull_request:
+    branches:
+      - gcs_integration_fix
+jobs:
+  build:
+    strategy:
+      matrix:
+        java-version: [ 17 ]
+        runs-on: [ubuntu-latest, ubuntu-22.04]
+    name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: "temurin"
+          cache: gradle
+      - name: Build in Linux
+        if: runner.os == 'Linux'
+        run: ./gradlew integrationTest -i
