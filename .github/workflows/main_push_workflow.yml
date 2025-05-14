@@ -9,6 +9,9 @@ on:
     branches:
       - main
       - feat-azure-blob-source
+env:
+  TESTCONTAINERS_REUSE_ENABLE: true
+  
 jobs:
   build:
     strategy:
