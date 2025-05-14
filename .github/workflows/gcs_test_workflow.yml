@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         java-version: [ 17 ]
-        runs-on: [ubuntu-latest, ubuntu-22.04]
+        runs-on: [ubuntu-latest]
     name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
     runs-on: ${{ matrix.runs-on }}
     steps:
@@ -26,4 +26,4 @@ jobs:
           cache: gradle
       - name: Build in Linux
         if: runner.os == 'Linux'
-        run: ./gradlew :gcs-sink-connector:integrationTest -i
+        run: ./gradlew :gcs-sink-connector:test :gcs-sink-connector:integrationTest -i
