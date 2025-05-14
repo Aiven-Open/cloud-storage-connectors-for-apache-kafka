@@ -33,7 +33,6 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -200,6 +199,7 @@ class AbstractIntegrationTest<K, V> {
                 .until(() -> {
                     List<String> blobNames = testBucketAccessor.getBlobNames(gcsPrefix);
                     LOG.warn("read blob Names: {} ", String.join(", ", blobNames));
+                    System.out.println("read blob Names: "+ String.join(", ", blobNames));
                     //testBucketAccessor.getBlobNames(gcsPrefix).size() >= expectedBlobCount
                     return blobNames.size() >= expectedBlobCount;
                 });
