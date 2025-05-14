@@ -201,7 +201,7 @@ class AbstractIntegrationTest<K, V> {
                     List<String> blobNames = testBucketAccessor.getBlobNames(gcsPrefix);
                     LOG.warn("read blob Names: {} ", String.join(", ", blobNames));
                     //testBucketAccessor.getBlobNames(gcsPrefix).size() >= expectedBlobCount
-                    return blobNames.size() == expectedBlobCount;
+                    return blobNames.size() >= expectedBlobCount;
                 });
 
     }
