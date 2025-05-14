@@ -197,10 +197,10 @@ class AbstractIntegrationTest<K, V> {
         await("All expected files stored on GCS").atMost(Duration.ofMillis(OFFSET_FLUSH_INTERVAL_MS * 30))
                 .pollInterval(Duration.ofMillis(300))
                 .until(() -> {
-                    List<String> blobNames = testBucketAccessor.getBlobNames(gcsPrefix);
+                    final List<String> blobNames = testBucketAccessor.getBlobNames(gcsPrefix);
                     LOG.warn("read blob Names: {} ", String.join(", ", blobNames));
-                    System.out.println("read blob Names: "+ String.join(", ", blobNames));
-                    //testBucketAccessor.getBlobNames(gcsPrefix).size() >= expectedBlobCount
+                    System.out.println("read blob Names: " + String.join(", ", blobNames)); // NOPMD
+                    // testBucketAccessor.getBlobNames(gcsPrefix).size() >= expectedBlobCount
                     return blobNames.size() >= expectedBlobCount;
                 });
 

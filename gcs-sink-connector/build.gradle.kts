@@ -81,7 +81,7 @@ dependencies {
 
   implementation(project(":commons"))
 
-  //implementation("com.google.cloud:google-cloud-storage:2.52.2") {
+  // implementation("com.google.cloud:google-cloud-storage:2.52.2") {
   implementation("com.google.cloud:google-cloud-storage:2.49.0") {
     exclude(group = "com.google.guava", module = "guava")
   }
