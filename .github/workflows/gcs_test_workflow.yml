@@ -26,4 +26,4 @@ jobs:
           cache: gradle
       - name: Build in Linux
         if: runner.os == 'Linux'
-        run: ./gradlew integrationTest -i
+        run: ./gradlew :gcs-sink-connector:integrationTest -i
