@@ -25,4 +25,4 @@ jobs:
           distribution: "temurin"
           cache: gradle
       - name: Build in Linux
-        run: ./gradlew clean integrationTest -i
+        run: ./gradlew clean :gcs-sink-connector:integrationTest -i
