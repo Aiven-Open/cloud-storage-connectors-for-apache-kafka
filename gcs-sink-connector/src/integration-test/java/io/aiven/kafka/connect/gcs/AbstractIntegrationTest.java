@@ -97,7 +97,7 @@ class AbstractIntegrationTest<K, V> {
             .withCommand("-port", Integer.toString(GCS_PORT), "-scheme", "http")
             .withReuse(true);
     @Container
-    protected static final KafkaContainer KAFKA = new KafkaContainer("5.2.1")
+    protected static final KafkaContainer KAFKA = new KafkaContainer("7.1.0")
             .withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "false")
             .withNetwork(Network.newNetwork())
             .withExposedPorts(KafkaContainer.KAFKA_PORT, 9092)
