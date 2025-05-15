@@ -52,8 +52,6 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.FixedHostPortGenericContainer;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.KafkaContainer;
@@ -64,7 +62,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SuppressWarnings({ "deprecation", "PMD.TestClassWithoutTestCases" })
 @Testcontainers
 class AbstractIntegrationTest<K, V> {
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractIntegrationTest.class);
 
     protected final String testTopic0;
     protected final String testTopic1;
@@ -196,14 +193,7 @@ class AbstractIntegrationTest<K, V> {
     protected void awaitAllBlobsWritten(final int expectedBlobCount) {
         await("All expected files stored on GCS").atMost(Duration.ofMillis(OFFSET_FLUSH_INTERVAL_MS * 30))
                 .pollInterval(Duration.ofMillis(300))
-                .until(() -> {
-                    final List<String> blobNames = testBucketAccessor.getBlobNames(gcsPrefix);
-                    LOG.warn("read blob Names: {} ", String.join(", ", blobNames));
-                    System.out.println("read blob Names: " + String.join(", ", blobNames)); // NOPMD
-                    // testBucketAccessor.getBlobNames(gcsPrefix).size() >= expectedBlobCount
-                    return blobNames.size() >= expectedBlobCount;
-                });
-
+                .until(() -> testBucketAccessor.getBlobNames(gcsPrefix).size() >= expectedBlobCount);
     }
 
     protected KafkaProducer<K, V> getProducer() {
