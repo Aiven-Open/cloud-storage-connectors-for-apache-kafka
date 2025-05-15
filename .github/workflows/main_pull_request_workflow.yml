@@ -6,4 +6,45 @@ on:
       - main
 jobs:
   build:
-    uses: "./.github/workflows/general_build_workflow.yml"
+    strategy:
+      matrix:
+        java-version: [ 11, 17 ]
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+    name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: "temurin"
+          cache: gradle
+      - name: Build in Windows
+        if: runner.os == 'Windows'
+        run: ./gradlew build test
+      - name: Build in MacOS
+        if: runner.os == 'macOS'
+        run: ./gradlew build test
+      - name: Build in Linux
+        if: runner.os == 'Linux'
+        run: ./gradlew build test
+  integration:
+    needs: build
+    strategy:
+      matrix:
+        java-version: [ 11, 17 ]
+    name: Integration test on ubuntu-latest with jdk ${{ matrix.java-version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: "temurin"
+          cache: gradle
+      - name: Run integration tests
+        run: ./gradlew check integrationTest -i
