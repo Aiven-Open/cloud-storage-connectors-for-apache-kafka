@@ -24,15 +24,8 @@ jobs:
           java-version: ${{ matrix.java-version }}
           distribution: "temurin"
           cache: gradle
-      - name: Build in Windows
-        if: runner.os == 'Windows'
-        run: ./gradlew build test
-      - name: Build in MacOS
-        if: runner.os == 'macOS'
-        run: ./gradlew build test
-      - name: Build in Linux
-        if: runner.os == 'Linux'
-        run: ./gradlew build test
+      - name: Build
+        run: ./gradlew check build test
   integration:
     needs: build
     strategy:
@@ -50,4 +43,4 @@ jobs:
           distribution: "temurin"
           cache: gradle
       - name: Run integration tests
-        run: ./gradlew check integrationTest -i
+        run: ./gradlew integrationTest -i
