@@ -46,4 +46,8 @@ public class UrlValidator implements ConfigDef.Validator {
         }
     }
 
+    @Override
+    public String toString() {
+        return "A valid URL.  Will default to https protocol if not otherwise specified.";
+    }
 }

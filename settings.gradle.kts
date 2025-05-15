@@ -20,7 +20,7 @@ val kafkaVersion by extra("1.1.0")
 val logbackVersion by extra("1.5.6")
 val localstackVersion by extra("0.2.23")
 val mockitoVersion by extra("5.12.0")
-val parquetVersion by extra("1.15.0")
+val parquetVersion by extra("1.15.1")
 val slf4jVersion by extra("1.7.36")
 val snappyVersion by extra("1.1.10.5")
 val spotbugsAnnotationsVersion by extra("4.8.1")
@@ -28,6 +28,8 @@ val stax2ApiVersion by extra("4.2.2")
 val testcontainersVersion by extra("1.19.8")
 val zstdVersion by extra("1.5.6-3")
 val wireMockVersion by extra("2.35.0")
+val velocityCoreVersion by extra("2.4.1")
+val velocityToolsVersion by extra("3.1")
 
 dependencyResolutionManagement {
   versionCatalogs {
@@ -48,6 +50,11 @@ dependencyResolutionManagement {
           "hadoop-mapreduce-client-core",
           "org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion")
       library("parquet-avro", "org.apache.parquet:parquet-avro:$parquetVersion")
+      library(
+          "velocity-engine-core", "org.apache.velocity:velocity-engine-core:${velocityCoreVersion}")
+      library(
+          "velocity-tools",
+          "org.apache.velocity.tools:velocity-tools-generic:${velocityToolsVersion}")
     }
     create("amazonawssdk") {
       library("authentication", "software.amazon.awssdk:auth:$amazonAwsSdkV2Version")
@@ -115,3 +122,5 @@ include("azure-sink-connector")
 include("s3-source-connector")
 
 include("azure-source-connector")
+
+include("site")

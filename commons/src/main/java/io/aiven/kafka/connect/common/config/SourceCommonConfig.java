@@ -84,6 +84,10 @@ public class SourceCommonConfig extends CommonConfig {
         return transformerFragment.getTransformerMaxBufferSize();
     }
 
+    public String getSourcename() {
+        return sourceConfigFragment.getSourceName();
+    }
+
     public Template getFilenameTemplate() {
         return fileNameFragment.getFilenameTemplate();
     }

@@ -1,0 +1,59 @@
+# The workflow to check a pull request onto a branch
+name: Latest pull request
+on:
+  pull_request:
+
+env:
+  TESTCONTAINERS_REUSE_ENABLE: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        java-version: [ 11, 17 ]
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+    name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: "temurin"
+          cache: gradle
+      - name: Build
+        run: ./gradlew check build test
+      - name: Upload logs on fail
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
+          path: "**/build/reports/tests/test/index.html"
+          retention-days: 1
+  integration:
+    needs: build
+    strategy:
+      matrix:
+        java-version: [ 11, 17 ]
+    name: Integration test on ubuntu-latest with jdk ${{ matrix.java-version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: "temurin"
+          cache: gradle
+      - name: Run integration tests
+        run: ./gradlew integrationTest
+      - name: Upload integration logs on fail
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Integration_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
+          path: "**/build/reports/tests/test/index.html"
+          retention-days: 1
