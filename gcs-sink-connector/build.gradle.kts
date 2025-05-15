@@ -80,13 +80,7 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
-
-  implementation("com.google.cloud:google-cloud-storage:2.49.0") {
-    exclude(group = "com.google.guava", module = "guava")
-  }
-  // TODO: document why specific version of guava is required
-  implementation("com.google.guava:guava:33.4.0-jre")
-
+  implementation("com.google.cloud:google-cloud-storage:2.52.2")
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
 

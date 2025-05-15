@@ -1,19 +1,18 @@
-# The workflow to check main after push
-name: Latest build
+# The workflow to check a pull request onto a branch
+name: Latest pull request
 on:
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: "38 20 * * 0-4"
-      
+  pull_request:
+
+env:
+  TESTCONTAINERS_REUSE_ENABLE: true
+
 jobs:
   build:
     strategy:
       matrix:
         java-version: [ 11, 17 ]
         runs-on: [ubuntu-latest, macos-latest, windows-latest]
-    name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}  
+    name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
     runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout code
@@ -58,4 +57,3 @@ jobs:
           name: Integration_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
           path: "**/build/reports/tests/test/index.html"
           retention-days: 1
-
