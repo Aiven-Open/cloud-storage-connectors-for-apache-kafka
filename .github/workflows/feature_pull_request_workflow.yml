@@ -1,12 +1,9 @@
 # The workflow to check main after push or pull request.
 name: Main and pull request checks
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
-      - main
+      - feat-azure-blob-source
 jobs:
   build:
     strategy:
