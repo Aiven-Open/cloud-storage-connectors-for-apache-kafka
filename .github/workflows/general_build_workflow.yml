@@ -1,12 +1,5 @@
 # The workflow to check main after push or pull request.
-name: Latest Build
-on:
-  push:
-    branches:
-      - main
-      - gcs_integration_fix
-  schedule:
-      - cron: "38 20 * * 0-4"
+name: General build workflow
 jobs:
   build:
     strategy:
