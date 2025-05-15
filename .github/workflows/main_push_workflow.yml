@@ -26,6 +26,13 @@ jobs:
           cache: gradle
       - name: Build
         run: ./gradlew check build test
+      - name: Upload logs on fail
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
+          path: "**/build/reports/tests/test/index.html"
+          retention-days: 1
   integration:
     needs: build
     strategy:
@@ -44,3 +51,11 @@ jobs:
           cache: gradle
       - name: Run integration tests
         run: ./gradlew integrationTest
+      - name: Upload integration logs on fail
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Integration_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
+          path: "**/build/reports/tests/test/index.html"
+          retention-days: 1
+
