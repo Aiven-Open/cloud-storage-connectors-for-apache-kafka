@@ -1,10 +1,9 @@
-# The workflow to check main after push or pull request.
+# The workflow to check main after push also nightly build
 name: Latest build
 on:
   push:
     branches:
       - main
-      - feat-azure-blob-source
   schedule:
     - cron: "38 20 * * 0-4"
 
