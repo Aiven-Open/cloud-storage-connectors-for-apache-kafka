@@ -2,6 +2,10 @@
 name: Latest pull request
 on:
   pull_request:
+
+env:
+  TESTCONTAINERS_REUSE_ENABLE: true
+
 jobs:
   build:
     strategy:
@@ -21,6 +25,13 @@ jobs:
           cache: gradle
       - name: Build
         run: ./gradlew check build test
+      - name: Upload logs on fail
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
+          path: "**/build/reports/tests/test/index.html"
+          retention-days: 1
   integration:
     needs: build
     strategy:
@@ -37,7 +48,12 @@ jobs:
           java-version: ${{ matrix.java-version }}
           distribution: "temurin"
           cache: gradle
-      - name: Build
-        run: ./gradlew build
       - name: Run integration tests
-        run: ./gradlew integrationTest -i
+        run: ./gradlew integrationTest
+      - name: Upload integration logs on fail
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Integration_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
+          path: "**/build/reports/tests/test/index.html"
+          retention-days: 1
