@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - feat-azure-blob-source
+  schedule:
+    - cron: "38 20 * * 0-4"
+
 env:
   TESTCONTAINERS_REUSE_ENABLE: true
 
