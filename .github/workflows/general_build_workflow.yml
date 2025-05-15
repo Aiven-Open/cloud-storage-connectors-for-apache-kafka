@@ -1,16 +1,5 @@
 # The workflow to check main after push or pull request.
-name: Latest Build
-on:
-  push:
-    branches:
-      - main
-      - feat-azure-blob-source
-  schedule:
-    - cron: "38 20 * * 0-4"
-
-env:
-  TESTCONTAINERS_REUSE_ENABLE: true
-
+name: General build workflow
 jobs:
   build:
     strategy:
