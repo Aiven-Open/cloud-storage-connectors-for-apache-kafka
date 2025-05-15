@@ -5,13 +5,15 @@ on:
     branches:
       - main
       - gcs_integration_fix
+  schedule:
+      - cron: "38 20 * * 0-4"
 jobs:
   build:
     strategy:
       matrix:
         java-version: [ 11, 17 ]
         runs-on: [ubuntu-latest, macos-latest, windows-latest]
-    name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
+    name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}  
     runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout code
