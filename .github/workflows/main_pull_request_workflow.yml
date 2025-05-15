@@ -1,9 +1,7 @@
-# The workflow to check main after push.  Also used for badge on github site.
+# The workflow to check a pull request onto a branch
 name: Latest pull request
 on:
   pull_request:
-    branches:
-      - main
 jobs:
   build:
     strategy:

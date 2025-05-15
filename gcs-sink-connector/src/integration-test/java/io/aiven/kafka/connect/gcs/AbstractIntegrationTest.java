@@ -62,7 +62,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SuppressWarnings({ "deprecation", "PMD.TestClassWithoutTestCases" })
 @Testcontainers
 class AbstractIntegrationTest<K, V> {
-
     protected final String testTopic0;
     protected final String testTopic1;
 
@@ -194,6 +193,7 @@ class AbstractIntegrationTest<K, V> {
         await("All expected files stored on GCS").atMost(Duration.ofMillis(OFFSET_FLUSH_INTERVAL_MS * 30))
                 .pollInterval(Duration.ofMillis(300))
                 .until(() -> testBucketAccessor.getBlobNames(gcsPrefix).size() >= expectedBlobCount);
+
     }
 
     protected KafkaProducer<K, V> getProducer() {

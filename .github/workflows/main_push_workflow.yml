@@ -1,11 +1,12 @@
-# The workflow to check main after push or pull request.
+# The workflow to check main after push
 name: Latest build
 on:
   push:
     branches:
       - main
   schedule:
-      - cron: "38 20 * * 0-4"
+    - cron: "38 20 * * 0-4"
+      
 jobs:
   build:
     strategy:
