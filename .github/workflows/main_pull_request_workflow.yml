@@ -1,10 +1,9 @@
 # The workflow to check main after push.  Also used for badge on github site.
-name: Latest Build
+name: Latest pull request
 on:
   pull_request:
     branches:
       - main
-      - gcs_integration_fix
 jobs:
   build:
     strategy:
