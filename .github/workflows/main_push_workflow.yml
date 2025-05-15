@@ -1,5 +1,5 @@
 # The workflow to check main after push or pull request.
-name: Main and pull request checks
+name: Latest Build
 on:
   push:
     branches:
