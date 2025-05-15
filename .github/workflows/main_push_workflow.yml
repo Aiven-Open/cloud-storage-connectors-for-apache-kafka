@@ -1,14 +1,12 @@
-# The workflow to check main after push or pull request.
-name: Main and pull request checks
+# The workflow to check main after push
+name: Latest build
 on:
   push:
     branches:
       - main
-      - feat-azure-blob-source
-  pull_request:
-    branches:
-      - main
-      - feat-azure-blob-source
+  schedule:
+    - cron: "38 20 * * 0-4"
+
 jobs:
   build:
     strategy:
@@ -26,12 +24,38 @@ jobs:
           java-version: ${{ matrix.java-version }}
           distribution: "temurin"
           cache: gradle
-      - name: Build in Windows
-        if: runner.os == 'Windows'
-        run: ./gradlew build test
-      - name: Build in MacOS
-        if: runner.os == 'macOS'
-        run: ./gradlew build test
-      - name: Build in Linux
-        if: runner.os == 'Linux'
-        run: ./gradlew build check test integrationTest -i
+      - name: Build
+        run: ./gradlew check build test
+      - name: Upload logs on fail
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
+          path: "**/build/reports/tests/test/index.html"
+          retention-days: 1
+  integration:
+    needs: build
+    strategy:
+      matrix:
+        java-version: [ 11, 17 ]
+    name: Integration test on ubuntu-latest with jdk ${{ matrix.java-version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: "temurin"
+          cache: gradle
+      - name: Run integration tests
+        run: ./gradlew integrationTest
+      - name: Upload integration logs on fail
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Integration_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
+          path: "**/build/reports/tests/test/index.html"
+          retention-days: 1
+

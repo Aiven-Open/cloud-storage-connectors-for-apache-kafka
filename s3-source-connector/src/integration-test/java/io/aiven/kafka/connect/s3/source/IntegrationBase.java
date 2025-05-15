@@ -153,7 +153,7 @@ public interface IntegrationBase {
      *         {@link OffsetManager}
      */
     default String writeToS3(final String topic, final byte[] testDataBytes, final String partitionId) {
-        return writeToS3(topic, testDataBytes, partitionId, getS3Prefix());
+        return writeToS3(topic, testDataBytes, partitionId, null);
 
     }
 

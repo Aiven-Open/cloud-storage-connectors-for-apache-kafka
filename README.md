@@ -1,12 +1,16 @@
-[![Main and pull request checks](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml/badge.svg)](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml)
+[![Build main](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml/badge.svg)](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml)  [![Build site](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/build_site.yml/badge.svg)](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/build_site.yml)
 
-# Aiven's Apache Kafka Connectors
+#  Cloud Storage Connectors for Apache Kafka®
 
 - [Aiven Connector Commons](./commons/README.md)
 - [Aiven GCS Sink Connector](./gcs-sink-connector/README.md)
 - [Aiven S3 Sink Connector](./s3-sink-connector/README.md)
 - [Aiven Azure Blob Sink Connector](./azure-sink-connector/README.md)
 - [Aiven S3 Source Connector](./s3-source-connector/README.md)
+
+# Documentation
+
+The javadocs, design notes, and usage information can be found on our [documentation site](https://aiven-open.github.io/cloud-storage-connectors-for-apache-kafka/index.html).
 
 # Development
 

@@ -33,7 +33,11 @@ public class NonEmptyPassword implements ConfigDef.Validator {
         if (pwd.value() == null || pwd.value().isBlank()) {
             throw new ConfigException(name, pwd, "Password must be non-empty");
         }
+    }
 
+    @Override
+    public String toString() {
+        return "A null, or a non empty String.";
     }
 
 }
