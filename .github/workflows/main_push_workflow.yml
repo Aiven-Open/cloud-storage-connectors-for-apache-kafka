@@ -47,4 +47,4 @@ jobs:
           distribution: "temurin"
           cache: gradle
       - name: Run integration tests
-        run: ./gradlew integrationTest -i
+        run: ./gradlew integrationTest
