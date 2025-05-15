@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - gcs_integration_fix
 jobs:
   build:
     strategy:
