@@ -1,4 +1,4 @@
-[![Main and pull request checks](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml/badge.svg)](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml)
+[![Build main](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml/badge.svg)](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/main_push_workflow.yml)  [![Build site](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/build_site.yml/badge.svg)](https://github.com/Aiven-Open/cloud-storage-connectors-for-apache-kafka/actions/workflows/build_site.yml)
 
 #  Cloud Storage Connectors for Apache Kafka®
 
