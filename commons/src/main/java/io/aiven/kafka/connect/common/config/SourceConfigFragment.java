@@ -54,7 +54,7 @@ public final class SourceConfigFragment extends ConfigFragment {
     }
 
     /**
-     * Construct the ConfigFragment..
+     * Construct the ConfigFragment.
      *
      * @param cfg
      *            the configuration that this fragment is associated with.
@@ -94,6 +94,13 @@ public final class SourceConfigFragment extends ConfigFragment {
                 GROUP_OTHER, ++offsetStorageGroupCounter, ConfigDef.Width.SHORT, DISTRIBUTION_TYPE);
 
         return configDef;
+    }
+
+
+    @Override
+    public void validate() {
+        new SourcenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG, getDistributionType())
+                .ensureValid(FILE_NAME_TEMPLATE_CONFIG, getSourceName());
     }
 
     /**

@@ -30,7 +30,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Build_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
-          path: "**/build/reports/tests/test/index.html"
+          path: "**/build/reports/tests/**"
           retention-days: 1
   integration:
     needs: build
@@ -55,5 +55,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Integration_${{ matrix.runs-on }}_${{ matrix.java-version }}_failure_logs
-          path: "**/build/reports/tests/test/index.html"
+          path: "**/build/reports/tests/**"
           retention-days: 1

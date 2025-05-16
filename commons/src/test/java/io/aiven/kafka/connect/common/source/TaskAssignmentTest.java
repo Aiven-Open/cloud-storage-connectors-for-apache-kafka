@@ -33,7 +33,6 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
-import io.aiven.kafka.connect.common.templating.Template;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -54,7 +53,7 @@ class TaskAssignmentTest {
         when(mockConfig.getMaxTasks()).thenReturn(maxTasks);
         when(mockConfig.getTargetTopic()).thenReturn("topic");
         when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
-        when(mockConfig.getFilenameTemplate()).thenReturn(Template.of("{{topic}}-{{partition}}-{{start_offset}}"));
+        when(mockConfig.getSourcename()).thenReturn("{{topic}}-{{partition}}-{{start_offset}}");
         return mockConfig;
     }
 
