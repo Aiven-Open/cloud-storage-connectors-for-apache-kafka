@@ -86,6 +86,13 @@ public final class SourceConfigFragment extends ConfigFragment {
         return configDef;
     }
 
+
+    @Override
+    public void validate() {
+        new SourcenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG, getDistributionType())
+                .ensureValid(FILE_NAME_TEMPLATE_CONFIG, getSourceName());
+    }
+
     /**
      * Gets the target topic.
      *
