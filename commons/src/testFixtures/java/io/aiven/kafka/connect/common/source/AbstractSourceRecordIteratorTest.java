@@ -47,7 +47,6 @@ import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
-import io.aiven.kafka.connect.common.templating.Template;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
@@ -154,7 +153,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
         when(mockConfig.getMaxTasks()).thenReturn(maxTasks);
         when(mockConfig.getTargetTopic()).thenReturn(targetTopic);
         when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
-        when(mockConfig.getFilenameTemplate()).thenReturn(Template.of(filePattern));
+        when(mockConfig.getSourcename()).thenReturn(filePattern);
         return mockConfig;
     }
 
