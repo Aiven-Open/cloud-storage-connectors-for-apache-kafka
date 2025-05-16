@@ -33,7 +33,6 @@ public class Context<K extends Comparable<K>> {
     private K storageKey;
 
     public Context(final K storageKey) {
-
         this.storageKey = storageKey;
     }
 

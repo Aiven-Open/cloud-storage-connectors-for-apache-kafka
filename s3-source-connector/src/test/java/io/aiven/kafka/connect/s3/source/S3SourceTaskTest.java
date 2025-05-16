@@ -50,7 +50,6 @@ import io.aiven.kafka.connect.common.source.input.ByteArrayTransformer;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
@@ -102,7 +101,6 @@ final class S3SourceTaskTest {
                 "http://localhost:" + s3Port, S3ConfigFragment.AWS_S3_REGION_CONFIG, "us-west-2",
                 FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, ".*");
 
-        final AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
         final S3SourceConfig config = new S3SourceConfig(commonProperties);
         final ClientOverrideConfiguration clientOverrideConfiguration = ClientOverrideConfiguration.builder()
                 .retryStrategy(RetryMode.STANDARD)
@@ -113,7 +111,7 @@ final class S3SourceTaskTest {
                 .region(config.getAwsS3Region())
                 .endpointOverride(URI.create(config.getAwsS3EndPoint()))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
-                .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                .credentialsProvider(config.getAwsV2Provider())
                 .build();
     }
 

@@ -76,7 +76,7 @@ tasks.withType<Jar> {
 }
 
 jacoco {
-    toolVersion = "0.8.7"
+    toolVersion = "0.8.13"
 }
 
 repositories {
@@ -152,7 +152,7 @@ spotless {
 
     java {
         // LocalInputFile.java has a different license file and needs to be ignored until it is removed in a future release
-        targetExclude("**/LocalInputFile.java")
+        targetExclude("**/LocalInputFile.java", "**/VersionInfo.java")
         licenseHeaderFile(file("${project.rootDir}/gradle-config/java.header"))
         importOrder("javax", "java", "org.apache.kafka", "io.aiven", "")
         removeUnusedImports()

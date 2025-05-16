@@ -57,7 +57,7 @@ import io.aiven.kafka.connect.s3.source.testutils.BucketAccessor;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
-import io.aiven.kafka.connect.s3.source.utils.SourceRecordIterator;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
 
 import org.apache.avro.Schema;
 import org.jetbrains.annotations.NotNull;
@@ -175,13 +175,13 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
 
-        final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
+        final Iterator<S3SourceRecord> sourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, offsetManager,
                 TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient);
 
         final HashSet<String> seenKeys = new HashSet<>();
         while (sourceRecordIterator.hasNext()) {
             final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
-            final String key = s3SourceRecord.getObjectKey();
+            final String key = s3SourceRecord.getNativeKey();
             assertThat(offsetKeys).contains(key);
             seenKeys.add(key);
         }
@@ -243,14 +243,14 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
 
-        final Iterator<S3SourceRecord> sourceRecordIterator = new SourceRecordIterator(s3SourceConfig, offsetManager,
+        final Iterator<S3SourceRecord> sourceRecordIterator = new S3SourceRecordIterator(s3SourceConfig, offsetManager,
                 TransformerFactory.getTransformer(InputFormat.AVRO), sourceClient);
 
         final HashSet<String> seenKeys = new HashSet<>();
         final Map<String, List<Long>> seenRecords = new HashMap<>();
         while (sourceRecordIterator.hasNext()) {
             final S3SourceRecord s3SourceRecord = sourceRecordIterator.next();
-            final String key = s3SourceRecord.getObjectKey();
+            final String key = s3SourceRecord.getNativeKey();
             seenRecords.compute(key, (k, v) -> {
                 final List<Long> lst = v == null ? new ArrayList<>() : v; // NOPMD new object inside loop
                 lst.add(s3SourceRecord.getOffsetManagerEntry().getRecordCount());
@@ -297,15 +297,15 @@ class AwsIntegrationTest implements IntegrationBase {
 
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configData);
         final AWSV2SourceClient sourceClient = new AWSV2SourceClient(s3SourceConfig);
-        final Iterator<S3SourceRecord> iterator = new SourceRecordIterator(s3SourceConfig, createOffsetManager(),
+        final Iterator<S3SourceRecord> iterator = new S3SourceRecordIterator(s3SourceConfig, createOffsetManager(),
                 TransformerFactory.getTransformer(InputFormat.BYTES), sourceClient);
 
         assertThat(iterator).hasNext();
         S3SourceRecord s3SourceRecord = iterator.next();
-        actualKeys.add(s3SourceRecord.getObjectKey());
+        actualKeys.add(s3SourceRecord.getNativeKey());
         assertThat(iterator).hasNext();
         s3SourceRecord = iterator.next();
-        actualKeys.add(s3SourceRecord.getObjectKey());
+        actualKeys.add(s3SourceRecord.getNativeKey());
         assertThat(iterator).isExhausted();
         assertThat(actualKeys).containsAll(expectedKeys);
 
@@ -315,7 +315,7 @@ class AwsIntegrationTest implements IntegrationBase {
 
         assertThat(iterator).hasNext();
         s3SourceRecord = iterator.next();
-        actualKeys.add(s3SourceRecord.getObjectKey());
+        actualKeys.add(s3SourceRecord.getNativeKey());
         assertThat(iterator).isExhausted();
         assertThat(actualKeys).containsAll(expectedKeys);
 
