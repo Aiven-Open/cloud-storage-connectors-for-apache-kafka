@@ -41,7 +41,7 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static final String DISTRIBUTION_TYPE = "distribution.type";
 
     /**
-     * Construct the ConfigFragment..
+     * Construct the ConfigFragment.
      *
      * @param cfg
      *            the configuration that this fragment is associated with.
@@ -150,5 +150,4 @@ public final class SourceConfigFragment extends ConfigFragment {
                     + Arrays.stream(DistributionType.values()).map(DistributionType::name).collect(Collectors.toList());
         }
     }
-
 }
