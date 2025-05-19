@@ -33,7 +33,7 @@ import org.apache.kafka.common.config.ConfigException;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.common.templating.Template;
 
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 public final class SourcenameTemplateValidator implements ConfigDef.Validator {
 

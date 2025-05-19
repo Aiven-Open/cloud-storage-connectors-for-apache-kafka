@@ -87,8 +87,4 @@ public class SourceCommonConfig extends CommonConfig {
     public int getRingBufferSize() {
         return sourceConfigFragment.getRingBufferSize();
     }
-
-    public String getFilenamePrefixTemplate() {
-        return fileNameFragment.getPrefixTemplate();
-    }
 }

@@ -234,8 +234,8 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
 
         configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, for example cluster-1/", GROUP_AWS, ++awsGroupCounter,
-                ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
+                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, for example cluster-1/", GROUP_AWS,
+                ++awsGroupCounter, ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
         configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, ++awsGroupCounter,

@@ -1,6 +1,9 @@
 import com.github.spotbugs.snom.SpotBugsTask
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+  id("aiven-apache-kafka-connectors-all.java-conventions")
+  id("aiven-apache-kafka-connectors-all.docs")
+}
 
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
