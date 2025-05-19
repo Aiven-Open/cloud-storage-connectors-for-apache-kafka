@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.source;
 
+import io.aiven.kafka.connect.common.NativeInfo;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
@@ -38,7 +39,7 @@ import org.slf4j.Logger;
  * @param <E>
  *            the implementation class for AbstractSourceRecord.
  */
-public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, E extends AbstractSourceRecord<N, K, O, E>> {
+public abstract class AbstractSourceRecord<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, E extends AbstractSourceRecord<K, N, O, E>> {
     /** The logger from the implementation class */
     private final Logger logger;
     /** the key for the source record */
@@ -50,7 +51,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
     /** The context associated with this record */
     private Context<K> context;
     /** The native info for this record. */
-    private final NativeInfo<N, K> nativeInfo;
+    private final NativeInfo<K, N> nativeInfo;
 
     /**
      * Construct a source record from a native item.
@@ -60,7 +61,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
      * @param nativeInfo
      *            the native information for the native that his record represents.
      */
-    public AbstractSourceRecord(final Logger logger, final NativeInfo<N, K> nativeInfo) {
+    public AbstractSourceRecord(final Logger logger, final NativeInfo<K, N> nativeInfo) {
         this.logger = logger;
         this.nativeInfo = nativeInfo;
     }
@@ -71,7 +72,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
      * @param sourceRecord
      *            the source record to copy.
      */
-    protected AbstractSourceRecord(final AbstractSourceRecord<N, K, O, E> sourceRecord) {
+    protected AbstractSourceRecord(final AbstractSourceRecord<K, N, O, E> sourceRecord) {
         this(sourceRecord.logger, sourceRecord.nativeInfo);
         this.offsetManagerEntry = sourceRecord.offsetManagerEntry
                 .fromProperties(sourceRecord.getOffsetManagerEntry().getProperties());
@@ -261,34 +262,4 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
         }
     }
 
-    /**
-     * Information about the Native object.
-     *
-     * @param <N>
-     *            The native object type.
-     * @param <K>
-     *            the native key type
-     */
-    public interface NativeInfo<N, K> {
-        /**
-         * Gets the native item.
-         *
-         * @return The native item.
-         */
-        N getNativeItem();
-
-        /**
-         * Gets the native key
-         *
-         * @return The Native key.
-         */
-        K getNativeKey();
-
-        /**
-         * Gets the number of bytes in the input stream extracted from the native object.
-         *
-         * @return The number of bytes in the input stream extracted from the native object.
-         */
-        long getNativeItemSize();
-    }
 }
