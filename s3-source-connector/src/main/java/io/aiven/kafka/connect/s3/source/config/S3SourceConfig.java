@@ -47,7 +47,6 @@ final public class S3SourceConfig extends SourceCommonConfig {
         super(configDef(), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
         awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
-
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
     }
 

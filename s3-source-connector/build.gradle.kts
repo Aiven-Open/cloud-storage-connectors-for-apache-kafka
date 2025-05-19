@@ -67,7 +67,6 @@ dependencies {
   compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
   compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
   compileOnly(project(":site"))
-
   compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
   compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
