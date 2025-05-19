@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+  id("aiven-apache-kafka-connectors-all.java-conventions")
+  id("aiven-apache-kafka-connectors-all.docs")
+}
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
