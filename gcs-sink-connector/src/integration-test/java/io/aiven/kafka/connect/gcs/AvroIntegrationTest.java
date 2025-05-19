@@ -146,9 +146,14 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     }
 
     private static Stream<Arguments> compressionAndCodecTestParameters() {
-        return Stream.of(Arguments.of("bzip2", "none"), Arguments.of("deflate", "none"), Arguments.of("null", "none"),
-                Arguments.of("snappy", "gzip"), // single test for codec and compression when both set.
-                Arguments.of("zstandard", "none"));
+        return Stream.of(Arguments.of("bzip2", CompressionType.NONE), Arguments.of("deflate", CompressionType.NONE),
+                Arguments.of("null", CompressionType.NONE), Arguments.of("snappy", CompressionType.GZIP), // single test
+                                                                                                          // for codec
+                                                                                                          // and
+                                                                                                          // compression
+                                                                                                          // when both
+                                                                                                          // set.
+                Arguments.of("zstandard", CompressionType.NONE));
     }
 
     private byte[] getBlobBytes(final byte[] blobBytes, final CompressionType compression) throws IOException {
@@ -167,7 +172,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         connectorConfig.put("format.output.envelope", "false");
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.type", "avro");
-        connectorConfig.put("file.compression.type", compression.name());
+        connectorConfig.put("file.compression.type", compression.name);
         connectorConfig.put("avro.codec", avroCodec);
         getConnectRunner().createConnector(connectorConfig);
 
