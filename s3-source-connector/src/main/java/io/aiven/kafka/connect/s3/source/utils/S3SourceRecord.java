@@ -16,17 +16,18 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
+import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
-public class S3SourceRecord extends AbstractSourceRecord<S3Object, String, S3OffsetManagerEntry, S3SourceRecord> {
+public class S3SourceRecord extends AbstractSourceRecord<String, S3Object, S3OffsetManagerEntry, S3SourceRecord> {
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceRecord.class);
 
     public S3SourceRecord(final S3Object s3Object) {
-        super(LOGGER, new NativeInfo<S3Object, String>() {
+        super(LOGGER, new NativeInfo<String, S3Object>() {
             @Override
             public S3Object getNativeItem() {
                 return s3Object;

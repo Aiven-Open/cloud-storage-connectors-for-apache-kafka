@@ -44,7 +44,7 @@ import org.junit.jupiter.api.Test;
  * @param <T>
  *            The concrete implementation of the {@link AbstractSourceRecord} .
  */
-public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>> {
+public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>> {
 
     public static final String TEST_OBJECT_KEY_TXT = "test-object-key.txt";
     private static final String TEST_TOPIC = "test-topic";
