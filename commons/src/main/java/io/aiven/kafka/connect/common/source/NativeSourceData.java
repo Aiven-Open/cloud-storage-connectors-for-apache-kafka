@@ -1,10 +1,27 @@
-package io.aiven.kafka.connect.common.source;
+/*
+ * Copyright 2025 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import io.aiven.kafka.connect.common.NativeInfo;
-import org.apache.commons.io.function.IOSupplier;
+package io.aiven.kafka.connect.common.source;
 
 import java.io.InputStream;
 import java.util.stream.Stream;
+
+import io.aiven.kafka.connect.common.NativeInfo;
+
+import org.apache.commons.io.function.IOSupplier;
 
 public interface NativeSourceData<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>> {
     /**

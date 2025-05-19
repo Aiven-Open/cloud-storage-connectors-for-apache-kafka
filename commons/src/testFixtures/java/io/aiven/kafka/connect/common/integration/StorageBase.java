@@ -19,10 +19,11 @@ package io.aiven.kafka.connect.common.integration;
 import java.io.InputStream;
 import java.util.List;
 
-import io.aiven.kafka.connect.common.NativeInfo;
-import org.apache.commons.io.function.IOSupplier;
 import org.apache.kafka.connect.connector.Connector;
 
+import io.aiven.kafka.connect.common.NativeInfo;
+
+import org.apache.commons.io.function.IOSupplier;
 
 /**
  * The base class for Sink and Source storage.
