@@ -43,8 +43,8 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
 
         final var configDef = new AzureBlobSourceConfigDef();
 
-        SourceConfigFragment.update(configDef);
         FileNameFragment.update(configDef);
+        SourceConfigFragment.update(configDef);
         TransformerFragment.update(configDef);
         OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
         AzureBlobConfigFragment.update(configDef);
@@ -68,4 +68,5 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
     public String getAzureContainerName() {
         return azureBlobConfigFragment.getContainerName();
     }
+
 }
