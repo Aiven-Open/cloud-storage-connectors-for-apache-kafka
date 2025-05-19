@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.zip.GZIPOutputStream;
 
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -36,9 +35,7 @@ import io.aiven.kafka.connect.common.output.jsonwriter.JsonOutputWriter;
 import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
 import io.aiven.kafka.connect.common.output.plainwriter.PlainOutputWriter;
 
-import com.github.luben.zstd.ZstdOutputStream;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.xerial.snappy.SnappyOutputStream;
 
 public abstract class OutputWriter implements AutoCloseable {
 
@@ -150,14 +147,14 @@ public abstract class OutputWriter implements AutoCloseable {
                     if (Objects.isNull(externalProperties)) {
                         externalProperties = Collections.emptyMap();
                     }
-                    return new AvroOutputWriter(outputFields, getCompressedStream(out), externalProperties,
+                    return new AvroOutputWriter(outputFields, compressionType.compress(out), externalProperties,
                             envelopeEnabled);
                 case CSV :
-                    return new PlainOutputWriter(outputFields, getCompressedStream(out));
+                    return new PlainOutputWriter(outputFields, compressionType.compress(out));
                 case JSONL :
-                    return new JsonLinesOutputWriter(outputFields, getCompressedStream(out), envelopeEnabled);
+                    return new JsonLinesOutputWriter(outputFields, compressionType.compress(out), envelopeEnabled);
                 case JSON :
-                    return new JsonOutputWriter(outputFields, getCompressedStream(out), envelopeEnabled);
+                    return new JsonOutputWriter(outputFields, compressionType.compress(out), envelopeEnabled);
                 case PARQUET :
                     if (Objects.isNull(externalProperties)) {
                         externalProperties = Collections.emptyMap();
@@ -169,20 +166,6 @@ public abstract class OutputWriter implements AutoCloseable {
                     throw new ConnectException("Unsupported format type " + formatType);
             }
         }
-
-        private OutputStream getCompressedStream(final OutputStream outputStream) throws IOException {
-            switch (compressionType) {
-                case ZSTD :
-                    return new ZstdOutputStream(outputStream);
-                case GZIP :
-                    return new GZIPOutputStream(outputStream);
-                case SNAPPY :
-                    return new SnappyOutputStream(outputStream);
-                default :
-                    return outputStream;
-            }
-        }
-
     }
 
 }

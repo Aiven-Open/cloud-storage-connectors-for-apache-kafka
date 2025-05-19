@@ -34,43 +34,93 @@ import org.xerial.snappy.SnappyInputStream;
 import org.xerial.snappy.SnappyOutputStream;
 
 public enum CompressionType {
-    NONE("none", "", in -> in, out -> out), GZIP("gzip", ".gz", GZIPInputStream::new,
-            out -> new GZIPOutputStream(out, true)), SNAPPY("snappy", ".snappy", SnappyInputStream::new,
-                    SnappyOutputStream::new), ZSTD("zstd", ".zst", ZstdInputStream::new, ZstdOutputStream::new);
+    /** No compression */
+    NONE("none", "", in -> in, out -> out),
+    /** GZIP compression */
+    GZIP("gzip", ".gz", GZIPInputStream::new, out -> new GZIPOutputStream(out, true)),
+    /** Snappy compression */
+    SNAPPY("snappy", ".snappy", SnappyInputStream::new, SnappyOutputStream::new),
+    /** Zstandard compression */
+    ZSTD("zstd", ".zst", ZstdInputStream::new, ZstdOutputStream::new);
 
+    /**
+     * A list of supported compression types for display.
+     */
     public static final String SUPPORTED_COMPRESSION_TYPES = CompressionType.names()
             .stream()
             .map(c -> String.format("'%s'", c))
             .collect(Collectors.joining(", "));
 
+    /**
+     * The common name of the compression.
+     */
     public final String name;
+    /**
+     * The file extension associated with the compression.
+     */
     private final String extensionStr;
-    private final IOFunction<InputStream, InputStream> inputCreator;
-    private final IOFunction<OutputStream, OutputStream> outputCreator;
+    /**
+     * A function that will return an input stream that decompresses the data in a provided input stream.
+     */
+    private final IOFunction<InputStream, InputStream> decompressor;
+    /**
+     * A function that will return an output stream that compresses the data in a provided output stream.
+     */
+    private final IOFunction<OutputStream, OutputStream> compressor;
 
+    /**
+     * Coinstructor
+     *
+     * @param name
+     *            The common name of the compression
+     * @param extensionStr
+     *            The file extension associated with the compression.
+     * @param decompressor
+     *            A function that will return an input stream that decompresses the data in a provided input stream.
+     * @param compressor
+     *            A function that will return an output stream that compresses the data in a provided output stream.
+     */
     CompressionType(final String name, final String extensionStr,
-            final IOFunction<InputStream, InputStream> inputCreator,
-            final IOFunction<OutputStream, OutputStream> outputCreator) {
+            final IOFunction<InputStream, InputStream> decompressor,
+            final IOFunction<OutputStream, OutputStream> compressor) {
         this.name = name;
         this.extensionStr = extensionStr;
-        this.inputCreator = inputCreator;
-        this.outputCreator = outputCreator;
+        this.decompressor = decompressor;
+        this.compressor = compressor;
     }
 
+    /**
+     * Gets the compression type for the specified name.
+     *
+     * @param name
+     *            the name to lookup
+     * @throws IllegalArgumentException
+     *             if the name is unknown.
+     * @return the Compression type.
+     */
     public static CompressionType forName(final String name) {
         Objects.requireNonNull(name, "name cannot be null");
-        for (final CompressionType ct : CompressionType.values()) {
-            if (ct.name.equalsIgnoreCase(name.toLowerCase(Locale.ROOT))) {
-                return ct;
-            }
+        try {
+            return CompressionType.valueOf(name.toUpperCase(Locale.ROOT));
+        } catch (final IllegalArgumentException ignored) {
+            throw new IllegalArgumentException("Unknown compression type: " + name);
         }
-        throw new IllegalArgumentException("Unknown compression type: " + name);
     }
 
+    /**
+     * The list of all names.
+     *
+     * @return the list of names.
+     */
     public static Collection<String> names() {
         return Arrays.stream(values()).map(v -> v.name).collect(Collectors.toList());
     }
 
+    /**
+     * Gets the file name extension associated with the compression.
+     *
+     * @return the file name extension.
+     */
     public final String extension() {
         return extensionStr;
     }
@@ -80,12 +130,12 @@ public enum CompressionType {
      *
      * @param input
      *            the input stream to read compressed data from.
-     * @return and input stream that returns decompressed data.
+     * @return An input stream that returns decompressed data.
      * @throws IOException
      *             on error.
      */
     public final InputStream decompress(final InputStream input) throws IOException {
-        return inputCreator.apply(input);
+        return decompressor.apply(input);
     }
 
     /**
@@ -93,12 +143,11 @@ public enum CompressionType {
      *
      * @param output
      *            the output stream to write compressed data to.
-     * @return an output stream that writes compressed data.
+     * @return An output stream that writes compressed data.
      * @throws IOException
      *             on error.
      */
     public final OutputStream compress(final OutputStream output) throws IOException {
-        return outputCreator.apply(output);
+        return compressor.apply(output);
     }
-
 }
