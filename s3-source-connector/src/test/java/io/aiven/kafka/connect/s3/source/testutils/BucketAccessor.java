@@ -28,15 +28,13 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.zip.GZIPInputStream;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 
-import com.github.luben.zstd.ZstdInputStream;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Delete;
@@ -99,7 +97,7 @@ public class BucketAccessor {
         }
     }
 
-    public final List<List<String>> readAndDecodeLines(final String blobName, final String compression,
+    public final List<List<String>> readAndDecodeLines(final String blobName, final CompressionType compression,
             final int... fieldsToDecode) throws IOException {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         Objects.requireNonNull(fieldsToDecode, "fieldsToDecode cannot be null");
@@ -110,29 +108,22 @@ public class BucketAccessor {
                 .collect(Collectors.toList());
     }
 
-    public final byte[] readBytes(final String blobName, final String compression) throws IOException {
+    public final byte[] readBytes(final String blobName, final CompressionType compression) throws IOException {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         final byte[] blobBytes = s3Client.getObjectAsBytes(builder -> builder.key(blobName).bucket(bucketName).build())
                 .asByteArray();
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
-                InputStream decompressedStream = getDecompressedStream(bais, compression);
+        try (InputStream decompressedStream = compression.decompress(new ByteArrayInputStream(blobBytes));
                 ByteArrayOutputStream decompressedBytes = new ByteArrayOutputStream()) {
-            final byte[] readBuffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = decompressedStream.read(readBuffer)) != -1) { // NOPMD AssignmentInOperand
-                decompressedBytes.write(readBuffer, 0, bytesRead);
-            }
+            IOUtils.copy(decompressedStream, decompressedBytes);
             return decompressedBytes.toByteArray();
-        } catch (final IOException e) {
-            throw new RuntimeException(e); // NOPMD AvoidThrowingRawExceptionTypes
         }
     }
 
     public final byte[] readBytes(final String blobName) throws IOException {
-        return readBytes(blobName, "none");
+        return readBytes(blobName, CompressionType.NONE);
     }
 
-    public final List<String> readLines(final String blobName, final String compression) throws IOException {
+    public final List<String> readLines(final String blobName, final CompressionType compression) throws IOException {
         final byte[] blobBytes = readBytes(blobName, compression);
         try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
                 InputStreamReader reader = new InputStreamReader(bais, StandardCharsets.UTF_8);
@@ -150,24 +141,6 @@ public class BucketAccessor {
                 .stream()
                 .map(S3Object::key)
                 .collect(Collectors.toList());
-    }
-
-    private InputStream getDecompressedStream(final InputStream inputStream, final String compression)
-            throws IOException {
-        Objects.requireNonNull(inputStream, "inputStream cannot be null");
-        Objects.requireNonNull(compression, "compression cannot be null");
-
-        final CompressionType compressionType = CompressionType.forName(compression);
-        switch (compressionType) {
-            case ZSTD :
-                return new ZstdInputStream(inputStream);
-            case GZIP :
-                return new GZIPInputStream(inputStream);
-            case SNAPPY :
-                return new SnappyInputStream(inputStream);
-            default :
-                return inputStream;
-        }
     }
 
     private List<String> decodeRequiredFields(final String[] originalFields, final int[] fieldsToDecode) {

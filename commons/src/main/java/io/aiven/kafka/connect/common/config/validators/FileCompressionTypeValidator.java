@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.config.validators;
 
+import java.util.Locale;
 import java.util.Objects;
 
 import org.apache.kafka.common.config.ConfigDef;
@@ -31,7 +32,7 @@ public class FileCompressionTypeValidator implements ConfigDef.Validator {
         // The reason is that for different connectors there is the different compression type
         if (Objects.nonNull(value)) {
             final String valueStr = (String) value;
-            if (!CompressionType.names().contains(valueStr)) {
+            if (!CompressionType.names().contains(valueStr.toLowerCase(Locale.ROOT))) {
                 throw new ConfigException(name, valueStr, toString());
             }
         }
