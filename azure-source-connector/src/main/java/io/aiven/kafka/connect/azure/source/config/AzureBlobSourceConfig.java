@@ -34,7 +34,7 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
     // TODO AzureBlobFragment needs to be extracted from Azure Sink.
     private final AzureBlobConfigFragment azureBlobConfigFragment;
     public AzureBlobSourceConfig(final Map<?, ?> properties) {
-        super(new ConfigDef(), properties);
+        super(configDef(), properties);
         azureBlobConfigFragment = new AzureBlobConfigFragment(this);
         validate();
     }
