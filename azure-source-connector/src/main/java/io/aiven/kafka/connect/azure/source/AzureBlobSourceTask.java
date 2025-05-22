@@ -33,11 +33,12 @@ import org.slf4j.LoggerFactory;
 public class AzureBlobSourceTask extends AbstractSourceTask {
     /* The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceTask.class);
+
     /**
-     * Constructor to set the Logger used.
+     * Constructor to set the Logger used. This constructor is required by Connect.
      *
      */
-    protected AzureBlobSourceTask() {
+    public AzureBlobSourceTask() {
         super(LOGGER);
     }
     private AzureBlobSourceConfig azureBlobSourceConfig; // NOPMD only called once, when used in the future this can be
