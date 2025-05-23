@@ -52,7 +52,7 @@ import org.slf4j.Logger;
  *            The source record for the client type.
  *
  */
-public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>>
+public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>>
         implements
             Iterator<T> {
     /** The OffsetManager that we are using */
@@ -250,7 +250,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      * @param <T>
      *            The source record for the client type.
      */
-    static class Mapper<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>>
+    static class Mapper<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>>
             implements
                 Function<SchemaAndValue, T> {
         /**

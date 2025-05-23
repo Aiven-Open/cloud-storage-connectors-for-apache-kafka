@@ -86,7 +86,9 @@ dependencies {
   testFixturesImplementation(testinglibs.mockito.core)
   testFixturesImplementation(testinglibs.assertj.core)
   testFixturesImplementation(apache.commons.lang3)
+  testFixturesImplementation(apache.commons.io)
   testFixturesImplementation(apache.avro)
+  testFixturesImplementation(testinglibs.wiremock)
   testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
 
   testImplementation(apache.kafka.connect.api)
