@@ -530,6 +530,7 @@ final class IntegrationTest implements IntegrationBase {
                 "org.apache.kafka.common.serialization.ByteArraySerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "org.apache.kafka.common.serialization.ByteArraySerializer");
+        producerProps.put("linger.ms", 1000);
         return new KafkaProducer<>(producerProps);
     }
 

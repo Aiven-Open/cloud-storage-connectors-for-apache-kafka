@@ -16,13 +16,13 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.data.Schema;
@@ -38,13 +38,13 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
 
     private final Template filenameTemplate;
 
-    private final Map<TopicPartitionKey, SinkRecord> currentHeadRecords = new HashMap<>();
+    private final Map<TopicPartitionKey, PartitionOffset> currentHeadRecords = new HashMap<>();
 
-    private final Map<String, List<SinkRecord>> fileBuffers = new HashMap<>();
+    private final Map<String, SinkRecordsBatch> fileBuffers = new HashMap<>();
 
     private final StableTimeFormatter timeFormatter;
 
-    private final Rotator<List<SinkRecord>> rotator;
+    private final Rotator<SinkRecordsBatch> rotator;
 
     TopicPartitionKeyRecordGrouper(final Template filenameTemplate, final Integer maxRecordsPerFile,
             final TimestampSource tsSource) {
@@ -59,7 +59,7 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
             if (unlimited) {
                 return false;
             } else {
-                return buffer == null || buffer.size() >= maxRecordsPerFile;
+                return buffer == null || buffer.getNumberOfRecords() >= maxRecordsPerFile;
             }
         };
     }
@@ -68,7 +68,7 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
     public void put(final SinkRecord record) {
         Objects.requireNonNull(record, "record cannot be null");
         final String recordKey = resolveRecordKeyFor(record);
-        fileBuffers.computeIfAbsent(recordKey, ignored -> new ArrayList<>()).add(record);
+        fileBuffers.computeIfAbsent(recordKey, ignored -> new SinkRecordsBatch(recordKey)).addSinkRecord(record);
     }
 
     protected String resolveRecordKeyFor(final SinkRecord record) {
@@ -76,7 +76,8 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
 
         final TopicPartitionKey tpk = new TopicPartitionKey(new TopicPartition(record.topic(), record.kafkaPartition()),
                 key);
-        final SinkRecord currentHeadRecord = currentHeadRecords.computeIfAbsent(tpk, ignored -> record);
+        final PartitionOffset currentHeadRecord = currentHeadRecords.computeIfAbsent(tpk,
+                ignored -> new PartitionOffset(record.kafkaPartition(), record.kafkaOffset()));
         String objectKey = generateObjectKey(tpk, currentHeadRecord, record);
         if (rotator.rotate(fileBuffers.get(objectKey))) {
             // Create new file using this record as the head record.
@@ -97,14 +98,14 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
         return key;
     }
 
-    public String generateObjectKey(final TopicPartitionKey tpk, final SinkRecord headRecord,
+    public String generateObjectKey(final TopicPartitionKey tpk, final PartitionOffset headRecord,
             final SinkRecord currentRecord) {
         final Function<Parameter, String> setKafkaOffset = usePaddingParameter -> usePaddingParameter.asBoolean()
-                ? String.format("%020d", headRecord.kafkaOffset())
-                : Long.toString(headRecord.kafkaOffset());
+                ? String.format("%020d", headRecord.getOffset())
+                : Long.toString(headRecord.getOffset());
         final Function<Parameter, String> setKafkaPartition = usePaddingParameter -> usePaddingParameter.asBoolean()
-                ? String.format("%010d", headRecord.kafkaPartition())
-                : Long.toString(headRecord.kafkaPartition());
+                ? String.format("%010d", headRecord.getPartition())
+                : Long.toString(headRecord.getPartition());
 
         return filenameTemplate.instance()
                 .bindVariable(FilenameTemplateVariable.TOPIC.name, tpk.topicPartition::topic)
@@ -118,8 +119,8 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
     protected String generateNewRecordKey(final SinkRecord record) {
         final var key = recordKey(record);
         final var tpk = new TopicPartitionKey(new TopicPartition(record.topic(), record.kafkaPartition()), key);
-        currentHeadRecords.put(tpk, record);
-        return generateObjectKey(tpk, record, record);
+        currentHeadRecords.put(tpk, new PartitionOffset(record.kafkaPartition(), record.kafkaOffset()));
+        return generateObjectKey(tpk, new PartitionOffset(record.kafkaPartition(), record.kafkaOffset()), record);
     }
 
     @Override
@@ -129,8 +130,19 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
     }
 
     @Override
+    public void clearProcessedRecords(final String identifier, final List<SinkRecord> records) {
+        final SinkRecordsBatch grouperRecord = fileBuffers.getOrDefault(identifier, null);
+        if (Objects.isNull(grouperRecord)) {
+            return;
+        }
+        grouperRecord.removeSinkRecords(records);
+    }
+
+    @Override
     public Map<String, List<SinkRecord>> records() {
-        return Collections.unmodifiableMap(fileBuffers);
+        return Collections.unmodifiableMap(fileBuffers.values()
+                .stream()
+                .collect(Collectors.toMap(SinkRecordsBatch::getFilename, SinkRecordsBatch::getSinkRecords)));
     }
 
     public static class TopicPartitionKey {
