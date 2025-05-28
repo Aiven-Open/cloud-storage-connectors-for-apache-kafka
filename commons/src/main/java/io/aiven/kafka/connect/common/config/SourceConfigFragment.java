@@ -32,7 +32,6 @@ import io.aiven.kafka.connect.common.source.task.DistributionType;
 import org.apache.commons.lang3.StringUtils;
 
 public final class SourceConfigFragment extends ConfigFragment {
-    private static final String GROUP_OTHER = "OTHER_CFG";
     public static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String EXPECTED_MAX_MESSAGE_BYTES = "expected.max.message.bytes";
     public static final String TARGET_TOPIC = "topic";
@@ -53,33 +52,25 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static ConfigDef update(final ConfigDef configDef) {
 
         // Offset Storage config group includes target topics
-        int offsetStorageGroupCounter = 0;
         configDef.define(TARGET_TOPIC, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : logging-topic", GROUP_OTHER, offsetStorageGroupCounter++,
-                ConfigDef.Width.NONE, TARGET_TOPIC);
+                ConfigDef.Importance.MEDIUM, "eg : logging-topic");
         configDef.define(DISTRIBUTION_TYPE, ConfigDef.Type.STRING, OBJECT_HASH.name(),
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
                 "Based on tasks.max config and the type of strategy selected, objects are processed in distributed"
                         + " way by Kafka connect workers, supported values : "
                         + Arrays.stream(DistributionType.values())
                                 .map(DistributionType::value)
-                                .collect(Collectors.joining(", ")),
-                GROUP_OTHER, ++offsetStorageGroupCounter, ConfigDef.Width.NONE, DISTRIBUTION_TYPE);
-
-        int sourcePollingConfigCounter = 0;
+                                .collect(Collectors.joining(", ")));
 
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, ++sourcePollingConfigCounter,
-                ConfigDef.Width.NONE, MAX_POLL_RECORDS);
+                ConfigDef.Importance.MEDIUM, "Max poll records");
         // KIP-298 Error Handling in Connect
         configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, ErrorsTolerance.NONE.name(),
                 new ErrorsToleranceValidator(), ConfigDef.Importance.MEDIUM,
-                "Indicates to the connector what level of exceptions are allowed before the connector stops, supported values : none,all",
-                GROUP_OTHER, ++sourcePollingConfigCounter, ConfigDef.Width.NONE, ERRORS_TOLERANCE);
+                "Indicates to the connector what level of exceptions are allowed before the connector stops, supported values : none,all");
 
         configDef.define(EXPECTED_MAX_MESSAGE_BYTES, ConfigDef.Type.INT, 1_048_588, ConfigDef.Importance.MEDIUM,
-                "The largest record batch size allowed by Kafka config max.message.bytes", GROUP_OTHER,
-                ++sourcePollingConfigCounter, ConfigDef.Width.NONE, EXPECTED_MAX_MESSAGE_BYTES);
+                "The largest record batch size allowed by Kafka config max.message.bytes");
 
         // step on earlier definition.
         configDef.configKeys().remove(FILE_NAME_TEMPLATE_CONFIG);
@@ -91,7 +82,7 @@ public final class SourceConfigFragment extends ConfigFragment {
                         + "Only some combinations of variables are valid, which currently are:\n"
                         + "- `topic`, `partition`, `start_offset`."
                         + "There is also `*` only available when using `hash` distribution.",
-                GROUP_OTHER, ++sourcePollingConfigCounter, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
+                "", -1, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
         return configDef;
     }
