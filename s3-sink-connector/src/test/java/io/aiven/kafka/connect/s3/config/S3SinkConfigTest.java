@@ -521,13 +521,15 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.OUTPUT_COMPRESSION, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value unsupported for configuration output_compression: 'none', 'gzip', 'snappy', 'zstd'");
+                .hasMessage(
+                        "Invalid value unsupported for configuration output_compression: 'none', 'gzip', 'snappy', 'zstd'");
 
         props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
         props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value unsupported for configuration file.compression.type: 'none', 'gzip', 'snappy', 'zstd'");
+                .hasMessage(
+                        "Invalid value unsupported for configuration file.compression.type: 'none', 'gzip', 'snappy', 'zstd'");
     }
 
     @ParameterizedTest

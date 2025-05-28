@@ -94,8 +94,8 @@ public class AzureBlobConfigFragment extends ConfigFragment {
 
         configDef.define(AZURE_STORAGE_CONTAINER_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE,
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.HIGH,
-                "The Azure Blob container that files will be written to or read from.", GROUP_AZURE, azureGroupCounter++,
-                ConfigDef.Width.NONE, AZURE_STORAGE_CONTAINER_NAME_CONFIG);
+                "The Azure Blob container that files will be written to or read from.", GROUP_AZURE,
+                azureGroupCounter++, ConfigDef.Width.NONE, AZURE_STORAGE_CONTAINER_NAME_CONFIG);
         configDef.define(AZURE_FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "Azure fetch page size", GROUP_AZURE, azureGroupCounter++,
                 ConfigDef.Width.NONE, AZURE_FETCH_PAGE_SIZE);

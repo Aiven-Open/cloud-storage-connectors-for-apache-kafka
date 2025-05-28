@@ -63,8 +63,7 @@ public final class FileNameFragment extends ConfigFragment {
 
         configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
                 new FilenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
-                "The template for file names. "
-                        + "Supports `{{ variable }}` placeholders for substituting variables. "
+                "The template for file names. " + "Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "
                         + "(the offset of the first record in the file). "
                         + "Only some combinations of variables are valid, which currently are:\n"
@@ -73,8 +72,8 @@ public final class FileNameFragment extends ConfigFragment {
                 GROUP_FILE, fileGroupCounter++, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
         configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, new FileCompressionTypeValidator(),
-                ConfigDef.Importance.MEDIUM, "The compression type used for files.", GROUP_FILE,
-                fileGroupCounter++, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
+                ConfigDef.Importance.MEDIUM, "The compression type used for files.", GROUP_FILE, fileGroupCounter++,
+                ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(CompressionType.names()));
 
         configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, ConfigDef.Range.atLeast(0),
