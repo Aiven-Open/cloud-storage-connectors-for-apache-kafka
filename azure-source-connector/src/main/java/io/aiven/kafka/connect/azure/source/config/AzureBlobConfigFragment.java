@@ -48,7 +48,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
     public static final String AZURE_USER_AGENT = "azure.user.agent";
 
     private static final String GROUP_AZURE_RETRY_BACKOFF_POLICY = "Azure retry backoff policy";
-
+    private static final String AZURE_FETCH_BUFFER_SIZE = "azure.blob.fetch.buffer.size";
     public static final String AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG = "azure.retry.backoff.initial.delay.ms";
     public static final String AZURE_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG = "azure.retry.backoff.max.delay.ms";
     public static final String AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG = "azure.retry.backoff.max.attempts";
@@ -97,11 +97,18 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                 "The Azure Blob container name to store output files in.", GROUP_AZURE, azureGroupCounter++,
                 ConfigDef.Width.NONE, AZURE_STORAGE_CONTAINER_NAME_CONFIG);
         configDef.define(AZURE_FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AZURE, azureGroupCounter++,
+                ConfigDef.Importance.MEDIUM, "Azure fetch page size", GROUP_AZURE, azureGroupCounter++,
                 ConfigDef.Width.NONE, AZURE_FETCH_PAGE_SIZE);
         configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AZURE,
                 azureGroupCounter++, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG); // NOPMD increment value never used
+
+        configDef.define(AZURE_FETCH_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(1),
+                ConfigDef.Importance.MEDIUM,
+                "Azure fetch buffer size, this is the number of object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
+                GROUP_AZURE, azureGroupCounter++, // NOPMD
+                // UnusedAssignment
+                ConfigDef.Width.NONE, AZURE_FETCH_BUFFER_SIZE);
     }
 
     private static void addAzureRetryPolicies(final ConfigDef configDef) {
@@ -167,6 +174,10 @@ public class AzureBlobConfigFragment extends ConfigFragment {
 
     public String getUserAgent() {
         return cfg.getString(AZURE_USER_AGENT);
+    }
+
+    public int getFetchBufferSize() {
+        return cfg.getInt(AZURE_FETCH_BUFFER_SIZE);
     }
 
     public RetryOptions getAzureRetryOptions() {

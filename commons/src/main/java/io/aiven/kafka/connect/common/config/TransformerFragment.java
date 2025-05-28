@@ -20,7 +20,6 @@ import java.util.Locale;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 
@@ -57,7 +56,7 @@ public final class TransformerFragment extends ConfigFragment {
                 "Input format of messages read from source avro/json/parquet/bytes", TRANSFORMER_GROUP,
                 transformerCounter++, ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
         configDef.define(TRANSFORMER_MAX_BUFFER_SIZE, ConfigDef.Type.INT, DEFAULT_MAX_BUFFER_SIZE,
-                new ByteArrayTransformerMaxBufferSizeValidator(), ConfigDef.Importance.MEDIUM,
+                ConfigDef.Range.between(1, Integer.MAX_VALUE), ConfigDef.Importance.MEDIUM,
                 "Max Size of the byte buffer when using the BYTE Transformer", TRANSFORMER_GROUP, transformerCounter++,
                 ConfigDef.Width.NONE, TRANSFORMER_MAX_BUFFER_SIZE);
         configDef.define(AVRO_VALUE_SERIALIZER, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM,
@@ -83,16 +82,4 @@ public final class TransformerFragment extends ConfigFragment {
         return cfg.getInt(TRANSFORMER_MAX_BUFFER_SIZE);
     }
 
-    private static class ByteArrayTransformerMaxBufferSizeValidator implements ConfigDef.Validator {
-        @Override
-        public void ensureValid(final String name, final Object value) {
-
-            // ConfigDef will throw an error if this is not an int that is supplied
-            if ((int) value <= 0) {
-                throw new ConfigException(
-                        String.format("%s must be larger then 0 and less then %s", name, Integer.MAX_VALUE));
-            }
-
-        }
-    }
 }
