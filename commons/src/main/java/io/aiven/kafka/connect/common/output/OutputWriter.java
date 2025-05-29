@@ -23,17 +23,11 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
-import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputField;
-import io.aiven.kafka.connect.common.output.avro.AvroOutputWriter;
-import io.aiven.kafka.connect.common.output.jsonwriter.JsonLinesOutputWriter;
-import io.aiven.kafka.connect.common.output.jsonwriter.JsonOutputWriter;
-import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
-import io.aiven.kafka.connect.common.output.plainwriter.PlainOutputWriter;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
@@ -142,29 +136,12 @@ public abstract class OutputWriter implements AutoCloseable {
         public OutputWriter build(final OutputStream out, final FormatType formatType) throws IOException {
             Objects.requireNonNull(outputFields, "Output fields haven't been set");
             Objects.requireNonNull(out, "Output stream hasn't been set");
-            switch (formatType) {
-                case AVRO :
-                    if (Objects.isNull(externalProperties)) {
-                        externalProperties = Collections.emptyMap();
-                    }
-                    return new AvroOutputWriter(outputFields, compressionType.compress(out), externalProperties,
-                            envelopeEnabled);
-                case CSV :
-                    return new PlainOutputWriter(outputFields, compressionType.compress(out));
-                case JSONL :
-                    return new JsonLinesOutputWriter(outputFields, compressionType.compress(out), envelopeEnabled);
-                case JSON :
-                    return new JsonOutputWriter(outputFields, compressionType.compress(out), envelopeEnabled);
-                case PARQUET :
-                    if (Objects.isNull(externalProperties)) {
-                        externalProperties = Collections.emptyMap();
-                    }
-                    // parquet has its own way for compression,
-                    // CompressionType passes by to writer and set explicitly to AvroParquetWriter
-                    return new ParquetOutputWriter(outputFields, out, externalProperties, envelopeEnabled);
-                default :
-                    throw new ConnectException("Unsupported format type " + formatType);
+            if (Objects.requireNonNull(formatType) == FormatType.PARQUET) {// parquet has its own way for compression,
+                // CompressionType passes by to writer and set explicitly to AvroParquetWriter
+                return formatType.getOutputWriter(out, outputFields, externalProperties, envelopeEnabled);
             }
+            return formatType.getOutputWriter(getCompressedStream(out), outputFields, externalProperties,
+                    envelopeEnabled);
         }
     }
 
