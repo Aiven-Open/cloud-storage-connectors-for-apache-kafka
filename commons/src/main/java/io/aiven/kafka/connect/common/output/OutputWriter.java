@@ -136,11 +136,14 @@ public abstract class OutputWriter implements AutoCloseable {
         public OutputWriter build(final OutputStream out, final FormatType formatType) throws IOException {
             Objects.requireNonNull(outputFields, "Output fields haven't been set");
             Objects.requireNonNull(out, "Output stream hasn't been set");
-            if (Objects.requireNonNull(formatType) == FormatType.PARQUET) {// parquet has its own way for compression,
-                // CompressionType passes by to writer and set explicitly to AvroParquetWriter
+            if (Objects.requireNonNull(formatType) == FormatType.PARQUET) {
+                /*
+                 * parquet has its own way for compression, CompressionType passes by "file. compression. type"
+                 * parameter in externalProperties to writer and set explicitly to AvroParquetWriter
+                 */
                 return formatType.getOutputWriter(out, outputFields, externalProperties, envelopeEnabled);
             }
-            return formatType.getOutputWriter(getCompressedStream(out), outputFields, externalProperties,
+            return formatType.getOutputWriter(compressionType.compress(out), outputFields, externalProperties,
                     envelopeEnabled);
         }
     }
