@@ -47,7 +47,7 @@ public class S3SourceTask extends AbstractSourceTask {
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceTask.class);
 
     /** An iterator or S3SourceRecords */
-    private Iterator<S3SourceRecord> s3SourceRecordIterator;
+    Iterator<S3SourceRecord> s3SourceRecordIterator;
     /**
      * The transformer that we are using TODO move this to AbstractSourceTask
      */

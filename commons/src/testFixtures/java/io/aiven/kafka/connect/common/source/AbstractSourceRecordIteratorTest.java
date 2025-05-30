@@ -40,14 +40,15 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.format.JsonTestDataFixture;
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,7 +76,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
     /** The file name for testing */
     private final static String FILE_NAME = "topic-00001-1741965423180.txt";
     /** The file pattern for the file name */
-    private final static String FILE_PATTERN = "{{topic}}-{{partition}}-{{start_offset}}";
+    public final static String FILE_PATTERN = "{{topic}}-{{partition}}-{{start_offset}}";
 
     // The abstract methods that must be implemented
 
@@ -88,7 +89,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
      *            the key value as a string.
      * @return the native key equivalent of the {@code key} parameter.
      */
-    abstract protected K createKFrom(final String key);
+    abstract protected K createKFrom(String key);
 
     /**
      * Create the instance of the source record iterator to be tested.
@@ -101,8 +102,8 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
      *            The trnasformer to use for the test.
      * @return A configured AbstractSourceRecordIterator.
      */
-    abstract protected AbstractSourceRecordIterator<N, K, O, T> createSourceRecordIterator(
-            final SourceCommonConfig mockConfig, final OffsetManager<O> offsetManager, final Transformer transformer);
+    abstract protected AbstractSourceRecordIterator<K, N, O, T> createSourceRecordIterator(
+            SourceCommonConfig mockConfig, OffsetManager<O> offsetManager, Transformer transformer);
 
     /**
      * Create a client mutator that will add testing data to the iterator under test.
@@ -122,8 +123,8 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
 
     @BeforeEach
     public void setUp() {
-        SourceTaskContext sourceTaskContext = mock(SourceTaskContext.class);
-        OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
+        final SourceTaskContext sourceTaskContext = mock(SourceTaskContext.class);
+        final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
         when(offsetStorageReader.offset(anyMap())).thenReturn(Collections.emptyMap());
         when(offsetStorageReader.offsets(anyCollection())).thenReturn(Collections.emptyMap());
         when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
@@ -147,7 +148,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
      */
     protected SourceCommonConfig mockSourceConfig(final String filePattern, final int taskId, final int maxTasks,
             final String targetTopic) {
-        SourceCommonConfig mockConfig = createMockedConfig();
+        final SourceCommonConfig mockConfig = createMockedConfig();
         when(mockConfig.getDistributionType()).thenReturn(DistributionType.OBJECT_HASH);
         when(mockConfig.getTaskId()).thenReturn(taskId);
         when(mockConfig.getMaxTasks()).thenReturn(maxTasks);
@@ -159,15 +160,14 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("inputFormatList")
-    void testEmptyClientReturnsEmptyIterator(final InputFormat format, final byte[] ignore) {
-        Transformer transformer = TransformerFactory.getTransformer(format);
-
-        SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
+    void testEmptyClientReturnsEmptyIterator(final InputFormat format, final byte[] ignore) throws Exception {
+        final Transformer transformer = TransformerFactory.getTransformer(format);
+        final SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(mockConfig.getInputFormat()).thenReturn(format);
 
         // verify empty is empty.
         createClientMutator().build();
-        AbstractSourceRecordIterator<N, K, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
+        final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
                 transformer);
         assertThat(iterator).isExhausted();
         assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
@@ -175,14 +175,14 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("inputFormatList")
-    void testOneObjectReturnsOneObject(final InputFormat format, final byte[] data) {
-        Transformer transformer = TransformerFactory.getTransformer(format);
-        SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
+    void testOneObjectReturnsOneObject(final InputFormat format, final byte[] data) throws Exception {
+        final Transformer transformer = TransformerFactory.getTransformer(format);
+        final SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(mockConfig.getInputFormat()).thenReturn(format);
 
         // verify one data has one data
         createClientMutator().reset().addObject(key, ByteBuffer.wrap(data)).endOfBlock().build();
-        AbstractSourceRecordIterator<N, K, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
+        final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
                 transformer);
         assertThat(iterator).hasNext();
         assertThat(iterator.next()).isNotNull();
@@ -191,14 +191,14 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
     }
 
     @Test
-    void testThrowsExceptionWhenNextOnEmptyIterator() {
-        Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
-        SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
+    void testThrowsExceptionWhenNextOnEmptyIterator() throws Exception {
+        final Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        final SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(mockConfig.getInputFormat()).thenReturn(InputFormat.BYTES);
 
         // verify empty is empty.
         createClientMutator().build();
-        AbstractSourceRecordIterator<N, K, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
+        final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
                 transformer);
         assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
     }
@@ -212,21 +212,21 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     static List<Arguments> inputFormatList() throws IOException {
-        List<Arguments> result = new ArrayList<>();
+        final List<Arguments> result = new ArrayList<>();
         byte[] bytes;
-        for (InputFormat format : InputFormat.values()) {
+        for (final InputFormat format : InputFormat.values()) {
             switch (format) {
                 case BYTES :
                     bytes = "Hello World".getBytes(StandardCharsets.UTF_8);
                     break;
                 case AVRO :
-                    bytes = AvroTestDataFixture.generateMockAvroData(1);
+                    bytes = AvroTestDataFixture.generateAvroData(1);
                     break;
                 case JSONL :
-                    bytes = JsonTestDataFixture.getJsonRecs(1).getBytes(StandardCharsets.UTF_8);
+                    bytes = JsonTestDataFixture.generateJsonRecs(1).getBytes(StandardCharsets.UTF_8);
                     break;
                 case PARQUET :
-                    bytes = ParquetTestDataFixture.generateMockParquetData("name", 1);
+                    bytes = ParquetTestDataFixture.generateParquetData("name", 1);
                     break;
                 default :
                     throw new IllegalArgumentException("Unsupported format: " + format);
@@ -238,24 +238,24 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("multiInputFormatList")
-    void testMultipleRecordsReturned(final InputFormat format, final byte[] data) {
+    void testMultipleRecordsReturned(final InputFormat format, final byte[] data) throws Exception {
         createClientMutator().reset().addObject(key, ByteBuffer.wrap(data)).endOfBlock().build();
-        Transformer transformer = TransformerFactory.getTransformer(format);
+        final Transformer transformer = TransformerFactory.getTransformer(format);
         final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(config.getTransformerMaxBufferSize()).thenReturn(4096);
         when(config.getInputFormat()).thenReturn(format);
-        AbstractSourceRecordIterator<N, K, O, T> iterator = createSourceRecordIterator(config, offsetManager,
+        final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
                 transformer);
 
         // check first entry
         assertThat(iterator.hasNext()).isTrue();
-        T t = iterator.next();
-        assertThat(t.getRecordCount()).isEqualTo(1);
+        T sourceRecord = iterator.next();
+        assertThat(sourceRecord.getRecordCount()).isEqualTo(1);
 
         // check 2nd entry
         assertThat(iterator.hasNext()).isTrue();
-        t = iterator.next();
-        assertThat(t.getRecordCount()).isEqualTo(2);
+        sourceRecord = iterator.next();
+        assertThat(sourceRecord.getRecordCount()).isEqualTo(2);
 
         // check complete
         assertThat(iterator).isExhausted();
@@ -269,24 +269,24 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
      * @throws IOException
      *             on data creation error.
      */
-    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    @SuppressWarnings({ "PMD.DataflowAnomalyAnalysis", "PMD.AvoidInstantiatingObjectsInLoops" })
     static List<Arguments> multiInputFormatList() throws IOException {
-        List<Arguments> result = new ArrayList<>();
+        final List<Arguments> result = new ArrayList<>();
         byte[] bytes;
-        for (InputFormat format : InputFormat.values()) {
+        for (final InputFormat format : InputFormat.values()) {
             switch (format) {
                 case BYTES :
                     bytes = new byte[4096 * 2];
                     Arrays.fill(bytes, (byte) 5);
                     break;
                 case AVRO :
-                    bytes = AvroTestDataFixture.generateMockAvroData(2);
+                    bytes = AvroTestDataFixture.generateAvroData(2);
                     break;
                 case JSONL :
-                    bytes = JsonTestDataFixture.getJsonRecs(2).getBytes(StandardCharsets.UTF_8);
+                    bytes = JsonTestDataFixture.generateJsonRecs(2).getBytes(StandardCharsets.UTF_8);
                     break;
                 case PARQUET :
-                    bytes = ParquetTestDataFixture.generateMockParquetData("name", 2);
+                    bytes = ParquetTestDataFixture.generateParquetData("name", 2);
                     break;
                 default :
                     throw new IllegalArgumentException("Unsupported format: " + format);
@@ -299,10 +299,13 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
     /**
      * This test sends 6000 bytes to a ByteArrayTransformer that only returns 4096 byte blocks, so this test should
      * return 2 results.
+     *
+     * @throws Exception
+     *             if data can not be created.
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     @Test
-    void testIteratorProcessesMultipleObjectsFromByteArrayTransformer() {
+    void testIteratorProcessesMultipleObjectsFromByteArrayTransformer() throws Exception {
         final int byteArraySize = 6000;
         final byte[] testData = new byte[byteArraySize];
         for (int i = 0; i < byteArraySize; i++) {
@@ -310,25 +313,25 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
         }
         createClientMutator().reset().addObject(key, ByteBuffer.wrap(testData)).endOfBlock().build();
 
-        Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        final Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
         final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(config.getTransformerMaxBufferSize()).thenReturn(4096);
         when(config.getInputFormat()).thenReturn(InputFormat.BYTES);
-        AbstractSourceRecordIterator<N, K, O, T> iterator = createSourceRecordIterator(config, offsetManager,
+        final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
                 transformer);
 
         // check first entry
         assertThat(iterator.hasNext()).isTrue();
-        T t = iterator.next();
-        assertThat(t.getRecordCount()).isEqualTo(1);
-        byte[] value = (byte[]) t.getValue().value();
+        T abstractSourceRecord = iterator.next();
+        assertThat(abstractSourceRecord.getRecordCount()).isEqualTo(1);
+        byte[] value = (byte[]) abstractSourceRecord.getValue().value();
         assertThat(value).as("Initial block match the first 4096 bytes").isEqualTo(Arrays.copyOf(testData, 4096));
 
         // check 2nd entry
         assertThat(iterator.hasNext()).isTrue();
-        t = iterator.next();
-        assertThat(t.getRecordCount()).isEqualTo(2);
-        value = (byte[]) t.getValue().value();
+        abstractSourceRecord = iterator.next();
+        assertThat(abstractSourceRecord.getRecordCount()).isEqualTo(2);
+        value = (byte[]) abstractSourceRecord.getValue().value();
         assertThat(value).as("Second block should match the remaining bytes")
                 .isEqualTo(Arrays.copyOfRange(testData, 4096, 6000));
 
@@ -383,13 +386,14 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
      *            the concrete Mutator class.
      *
      */
+    @SuppressFBWarnings({ "EI_EXPOSE_REP", "EI_EXPOSE_REP2" })
     abstract public static class ClientMutator<N, K extends Comparable<K>, T extends ClientMutator<N, K, T>> {
         /**
          * A queue of native objects and associated data.
          */
         protected Queue<Pair<List<N>, Map<K, ByteBuffer>>> blocks = new LinkedList<>();
         /**
-         * The a list of native objects found in a single block.
+         * The list of native objects found in a single block.
          */
         protected List<N> objects = new ArrayList<>();
         /**
@@ -406,7 +410,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
          *            the data to associate with the object.
          * @return An object of type N.
          */
-        abstract protected N createObject(final K key, final ByteBuffer data);
+        abstract protected N createObject(K key, ByteBuffer data);
 
         /**
          * Extracts the blocks from the mutator and creates a client that will return the blocks in order on calls to

@@ -18,12 +18,9 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins {
   id("aiven-apache-kafka-connectors-all.java-conventions")
-  id("com.bmuschko.docker-remote-api") version "9.4.0"
+  /*id("com.bmuschko.docker-remote-api") version "9.4.0"*/
   id("aiven-apache-kafka-connectors-all.docs")
 }
-
-val s3mockVersion by extra("0.2.6")
-val kafkaVersion by extra("3.3.0")
 
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
@@ -64,11 +61,11 @@ idea {
 }
 
 dependencies {
-  compileOnly("org.apache.kafka:connect-api:$kafkaVersion")
-  compileOnly("org.apache.kafka:connect-runtime:$kafkaVersion")
+  compileOnly(apache.kafka.connect.api)
+  compileOnly(apache.kafka.connect.runtime)
   compileOnly(project(":site"))
-  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
-  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
+  compileOnly(apache.velocity.engine.core)
+  compileOnly(apache.velocity.tools)
 
   implementation(apache.commons.collection4)
   implementation(project(":commons"))
@@ -84,19 +81,28 @@ dependencies {
   }
 
   testImplementation(testFixtures(project(":commons")))
+  testImplementation(testFixtures(project(":s3-commons")))
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(testinglibs.awaitility)
 
-  testImplementation("org.apache.kafka:connect-api:$kafkaVersion")
-  testImplementation("org.apache.kafka:connect-runtime:$kafkaVersion")
-  testImplementation("org.apache.kafka:connect-json:$kafkaVersion")
+  testImplementation(apache.kafka.connect.api)
+  testImplementation(apache.kafka.connect.runtime)
+  testImplementation(apache.kafka.connect.json)
+
+  testImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
+  testImplementation(testcontainers.junit.jupiter)
+  testImplementation(testcontainers.kafka) // this is not Kafka version
+  testImplementation(testcontainers.junit.jupiter)
+  testImplementation(testcontainers.localstack)
+
 
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
 
   testImplementation(testinglibs.mockito.core)
-  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testImplementation(testinglibs.mockito.junit.jupiter)
@@ -146,10 +152,13 @@ dependencies {
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testcontainers.localstack)
   integrationTestImplementation(testinglibs.wiremock)
+  integrationTestImplementation(testFixtures(project(":s3-commons")))
+  integrationTestImplementation(testcontainers.localstack)
 
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
+  integrationTestImplementation(apache.kafka.connect.api)
 
   testImplementation(apache.hadoop.mapreduce.client.core) {
     exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
@@ -189,16 +198,31 @@ dependencies {
     exclude(group = "io.netty", module = "netty")
   }
 
-  integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:connect-runtime:${kafkaVersion}")
-  integrationTestImplementation("org.apache.kafka:kafka-clients:${kafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}:test")
-  integrationTestImplementation("org.apache.kafka:kafka_2.13:${kafkaVersion}")
+  integrationTestImplementation(apache.kafka.connect.runtime)
+  integrationTestImplementation(apache.kafka.clients)
   integrationTestImplementation(testFixtures(project(":commons")))
+  integrationTestImplementation(testFixtures(project(":s3-source-connector")))
 
   // Make test utils from 'test' available in 'integration-test'
   integrationTestImplementation(sourceSets["test"].output)
   integrationTestImplementation(testinglibs.awaitility)
+
+  testFixturesImplementation(amazonawssdk.s3)
+  testFixturesImplementation(amazonawssdk.sts)
+  testFixturesImplementation(testFixtures(project(":commons")))
+  testFixturesImplementation(project(":s3-commons"))
+  testFixturesImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
+  testFixturesImplementation(testcontainers.junit.jupiter)
+  testFixturesImplementation(testcontainers.localstack)
+  testFixturesImplementation(testinglibs.junit.jupiter)
+  testFixturesImplementation(testinglibs.assertj.core)
+  testFixturesImplementation(compressionlibs.snappy)
+  testFixturesImplementation(compressionlibs.zstd.jni)
+  testFixturesImplementation(tools.spotbugs.annotations)
+  testFixturesImplementation(apache.kafka.connect.api)
+  testFixturesImplementation(apache.commons.io)
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {
@@ -258,7 +282,7 @@ publishing {
         licenses {
           license {
             name = "Apache 2.0"
-            url = "http://www.apache.org/licenses/LICENSE-2.0"
+            url = "https://www.apache.org/licenses/LICENSE-2.0"
             distribution = "repo"
           }
         }

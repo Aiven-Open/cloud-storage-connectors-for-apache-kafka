@@ -53,12 +53,11 @@ public class ParquetTestDataFixture {
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public static byte[] generateMockParquetData(final String name, final int numOfRecords) throws IOException {
-        Schema schema = ParquetTestingFixture.testSchema();
 
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
-            allParquetRecords.add(new Struct(schema).put("name", name + i).put("age", 30).put("email", name + "@test"));
+            allParquetRecords.add(new Struct(ParquetTestingFixture.PARQUET_SCHEMA).put("name", name + i).put("age", 30).put("email", name + "@test"));
         }
 
         // Create a Parquet writer
@@ -70,7 +69,7 @@ public class ParquetTestDataFixture {
             final var sinkRecords = new ArrayList<SinkRecord>();
             for (final var r : allParquetRecords) {
                 final var sinkRecord = new SinkRecord( // NOPMD AvoidInstantiatingObjectsInLoops
-                        "some-topic", 1, STRING_SCHEMA, "some-key-" + counter, schema, r, 100L, 1000L + counter,
+                        "some-topic", 1, STRING_SCHEMA, "some-key-" + counter, ParquetTestingFixture.PARQUET_SCHEMA, r, 100L, 1000L + counter,
                         TimestampType.CREATE_TIME, null);
                 sinkRecords.add(sinkRecord);
                 counter++;

@@ -38,7 +38,6 @@ public class SourceCommonConfig extends CommonConfig {
         transformerFragment = new TransformerFragment(this);
         sourceConfigFragment = new SourceConfigFragment(this);
         fileNameFragment = new FileNameFragment(this);
-
         validate(); // NOPMD ConstructorCallsOverridableMethod
     }
 

@@ -20,6 +20,7 @@ import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYy
 
 import java.util.Map;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
@@ -38,12 +39,13 @@ import software.amazon.awssdk.regions.Region;
 final public class S3SourceConfig extends SourceCommonConfig {
 
     private final S3ConfigFragment s3ConfigFragment;
-
+    private final SourceConfigFragment sourceConfigFragment;
     private final AwsCredentialProviderFactory awsCredentialsProviderFactory;
 
     public S3SourceConfig(final Map<String, String> properties) {
         super(configDef(), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
+        sourceConfigFragment = new SourceConfigFragment(this);
         awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
     }
@@ -54,6 +56,7 @@ final public class S3SourceConfig extends SourceCommonConfig {
         S3ConfigFragment.update(configDef);
         SourceConfigFragment.update(configDef);
         TransformerFragment.update(configDef);
+        FileNameFragment.update(configDef);
 
         return configDef;
     }
@@ -123,8 +126,8 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
     }
 
-    public int getS3FetchBufferSize() {
-        return s3ConfigFragment.getS3FetchBufferSize();
+    public int getRingBufferSize() {
+        return sourceConfigFragment.getRingBufferSize();
     }
 
     public int getFetchPageSize() {
