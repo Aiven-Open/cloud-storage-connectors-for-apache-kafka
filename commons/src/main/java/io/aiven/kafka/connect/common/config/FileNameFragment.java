@@ -20,17 +20,17 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.config.validators.SourcenameTemplateValidator;
-import io.aiven.kafka.connect.common.source.task.DistributionType;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
+import io.aiven.kafka.connect.common.config.validators.SourcenameTemplateValidator;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.common.templating.Template;
 
 /**
@@ -56,9 +56,11 @@ public final class FileNameFragment extends ConfigFragment {
 
     /**
      * Validate the distribution type works with the file name template.
-     * @param distributionType the distribution type for the validator
+     *
+     * @param distributionType
+     *            the distribution type for the validator
      */
-    public void validateDistributionType(DistributionType distributionType) {
+    public void validateDistributionType(final DistributionType distributionType) {
         new SourcenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG, distributionType).ensureValid("", getSourceName());
     }
 
@@ -144,7 +146,6 @@ public final class FileNameFragment extends ConfigFragment {
     public void validate() {
         throw new ConfigException("Do not call FileNameFragment.validate() -- call sink/source specific validator");
     }
-
 
     /**
      * Returns the text of the filename template. May throw {@link ConfigException} if the property
