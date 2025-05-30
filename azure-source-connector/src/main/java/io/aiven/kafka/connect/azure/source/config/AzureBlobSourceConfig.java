@@ -21,8 +21,6 @@ import java.util.Map;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
@@ -46,7 +44,6 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
         FileNameFragment.update(configDef);
         SourceConfigFragment.update(configDef);
         TransformerFragment.update(configDef);
-        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
         AzureBlobConfigFragment.update(configDef);
         return configDef;
     }
@@ -67,6 +64,10 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
 
     public String getAzureContainerName() {
         return azureBlobConfigFragment.getContainerName();
+    }
+
+    public int getFetchBufferSize() {
+        return azureBlobConfigFragment.getFetchBufferSize();
     }
 
 }

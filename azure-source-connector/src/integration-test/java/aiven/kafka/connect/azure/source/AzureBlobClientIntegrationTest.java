@@ -79,7 +79,7 @@ final class AzureBlobClientIntegrationTest extends AbstractIntegrationTest<byte[
         }
         assertThat(testBlobAccessor.getBlobNames()).hasSize(500);
 
-        assertThat(client.getAzureBlobStream().collect(Collectors.toList())).hasSize(500);
+        assertThat(client.getAzureBlobStream(null).collect(Collectors.toList())).hasSize(500);
     }
 
     @Test
@@ -106,7 +106,7 @@ final class AzureBlobClientIntegrationTest extends AbstractIntegrationTest<byte[
         }
         assertThat(testBlobAccessor.getBlobNames()).hasSize(10);
 
-        client.getAzureBlobStream().forEach(blobitem -> {
+        client.getAzureBlobStream(null).forEach(blobitem -> {
 
             assertThat(blobitem.getName()).isEqualTo(azurePrefix + new String(
                     Objects.requireNonNull(client.getBlob(blobitem.getName()).blockFirst()).array(), UTF_8));// NOPMD
@@ -129,7 +129,7 @@ final class AzureBlobClientIntegrationTest extends AbstractIntegrationTest<byte[
         when(config.getAzureFetchPageSize()).thenReturn(1);
         when(config.getAzurePrefix()).thenReturn(null);
 
-        assertThat(client.getAzureBlobStream()).isNullOrEmpty();
+        assertThat(client.getAzureBlobStream(null)).isNullOrEmpty();
 
     }
 

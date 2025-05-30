@@ -105,7 +105,7 @@ final public class AzureBlobSourceRecordIteratorTest
             }
 
             azureBlobClient = mock(AzureBlobClient.class);
-            when(azureBlobClient.getAzureBlobStream()).thenAnswer(env -> dequeueData());
+            when(azureBlobClient.getAzureBlobStream(null)).thenAnswer(env -> dequeueData());
             when(azureBlobClient.getBlob(anyString())).thenAnswer(env -> getStream(env.getArgument(0)));
         }
     }

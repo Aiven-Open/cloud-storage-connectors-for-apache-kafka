@@ -39,6 +39,6 @@ public class FileCompressionTypeValidator implements ConfigDef.Validator {
 
     @Override
     public String toString() {
-        return "Supported values are: " + CompressionType.SUPPORTED_COMPRESSION_TYPES;
+        return CompressionType.SUPPORTED_COMPRESSION_TYPES;
     }
 }

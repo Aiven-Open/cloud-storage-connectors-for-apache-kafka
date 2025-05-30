@@ -46,10 +46,10 @@ class TransformerFragmentTest {
     @ParameterizedTest
     @CsvSource({
             "21474836471,Invalid value 21474836471 for configuration transformer.max.buffer.size: Not a number of type INT",
-            "-1,transformer.max.buffer.size must be larger then 0 and less then 2147483647",
+            "-1,Invalid value -1 for configuration transformer.max.buffer.size: Value must be at least 1",
             "MAX,Invalid value MAX for configuration transformer.max.buffer.size: Not a number of type INT",
-            "0,transformer.max.buffer.size must be larger then 0 and less then 2147483647",
-            "-9000,transformer.max.buffer.size must be larger then 0 and less then 2147483647",
+            "0,Invalid value 0 for configuration transformer.max.buffer.size: Value must be at least 1",
+            "-9000,Invalid value -9000 for configuration transformer.max.buffer.size: Value must be at least 1",
             "MTA=,Invalid value MTA= for configuration transformer.max.buffer.size: Not a number of type INT" })
     void validateInvalidBufferSizeThrowsConfigException(final String value, final String expectedMessage) {
         final ConfigDef configDef = TransformerFragment.update(new ConfigDef());

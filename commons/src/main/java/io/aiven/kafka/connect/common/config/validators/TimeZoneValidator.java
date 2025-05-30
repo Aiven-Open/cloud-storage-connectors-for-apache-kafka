@@ -32,4 +32,9 @@ public class TimeZoneValidator implements ConfigDef.Validator {
         }
     }
 
+    @Override
+    public String toString() {
+        return ZoneId.getAvailableZoneIds().toString();
+    }
+
 }

@@ -22,8 +22,6 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
@@ -56,7 +54,6 @@ final public class S3SourceConfig extends SourceCommonConfig {
         S3ConfigFragment.update(configDef);
         SourceConfigFragment.update(configDef);
         TransformerFragment.update(configDef);
-        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
 
         return configDef;
     }

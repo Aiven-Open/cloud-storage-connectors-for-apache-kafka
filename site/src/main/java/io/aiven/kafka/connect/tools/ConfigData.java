@@ -72,7 +72,7 @@ public class ConfigData {
      * @return The default value for the entry. May be {@code null}.
      */
     public final Object getDefaultValue() {
-        return key.defaultValue;
+        return ConfigDef.NO_DEFAULT_VALUE.equals(key.defaultValue) ? null : key.defaultValue;
     }
 
     /**
