@@ -89,7 +89,7 @@ dependencies {
   testFixturesImplementation(apache.commons.io)
   testFixturesImplementation(apache.avro)
   testFixturesImplementation(testinglibs.wiremock)
-  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
+  testFixturesImplementation("org.mockito:mockito-junit-jupiter:5.18.0")
 
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
@@ -103,7 +103,7 @@ dependencies {
   testImplementation(testinglibs.woodstox.stax2.api)
   testImplementation(apache.hadoop.mapreduce.client.core)
   testImplementation(confluent.kafka.connect.avro.converter)
-  testImplementation("org.mockito:mockito-junit-jupiter:5.15.2")
+  testImplementation("org.mockito:mockito-junit-jupiter:5.18.0")
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
