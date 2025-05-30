@@ -130,18 +130,23 @@ final class AvroIntegrationTest implements IntegrationBase {
     }
 
     private static Stream<Arguments> compressionAndCodecTestParameters() {
-        return Stream.of(Arguments.of("bzip2", "none"), Arguments.of("deflate", "none"), Arguments.of("null", "none"),
-                Arguments.of("snappy", "gzip"), // single test for codec and compression when both set.
-                Arguments.of("zstandard", "none"));
+        return Stream.of(Arguments.of("bzip2", CompressionType.NONE), Arguments.of("deflate", CompressionType.NONE),
+                Arguments.of("null", CompressionType.NONE), Arguments.of("snappy", CompressionType.GZIP), // single test
+                                                                                                          // for codec
+                                                                                                          // and
+                                                                                                          // compression
+                                                                                                          // when both
+                                                                                                          // set.
+                Arguments.of("zstandard", CompressionType.NONE));
     }
 
     @ParameterizedTest
     @MethodSource("compressionAndCodecTestParameters")
-    void avroOutput(final String avroCodec, final String compression, final TestInfo testInfo)
+    void avroOutput(final String avroCodec, final CompressionType compression, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.type", "avro");
         connectorConfig.put("avro.codec", avroCodec);
@@ -202,14 +207,14 @@ final class AvroIntegrationTest implements IntegrationBase {
     void jsonlAvroOutputTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        final String compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final String contentType = "jsonl";
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("format.output.type", contentType);
         connectRunner.createConnector(connectorConfig);
 
@@ -239,7 +244,7 @@ final class AvroIntegrationTest implements IntegrationBase {
                 final String value = "{" + "\"name\":\"user-" + cnt + "\"}";
                 cnt += 1;
 
-                final String blobName = getBlobName(topicName, partition, 0, "none");
+                final String blobName = getBlobName(topicName, partition, 0, CompressionType.NONE);
                 final String expectedLine = "{\"value\":" + value + ",\"key\":\"" + key + "\"}";
 
                 assertThat(blobContents.get(blobName).get(i)).isEqualTo(expectedLine);
@@ -316,15 +321,15 @@ final class AvroIntegrationTest implements IntegrationBase {
     }
 
     private String getAvroBlobName(final String topicName, final int partition, final int startOffset,
-            final String compression) {
+            final CompressionType compression) {
         final String result = String.format("%s%s-%d-%020d.avro", s3Prefix, topicName, partition, startOffset);
-        return result + CompressionType.forName(compression).extension();
+        return result + compression.extension();
     }
 
     // WARN: different from GCS
     private String getBlobName(final String topicName, final int partition, final int startOffset,
-            final String compression) {
+            final CompressionType compression) {
         final String result = String.format("%s%s-%d-%020d", s3Prefix, topicName, partition, startOffset);
-        return result + CompressionType.forName(compression).extension();
+        return result + compression.extension();
     }
 }

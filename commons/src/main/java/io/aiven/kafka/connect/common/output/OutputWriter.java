@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.zip.GZIPOutputStream;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -30,9 +29,7 @@ import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputField;
 
-import com.github.luben.zstd.ZstdOutputStream;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.xerial.snappy.SnappyOutputStream;
 
 public abstract class OutputWriter implements AutoCloseable {
 
@@ -139,27 +136,16 @@ public abstract class OutputWriter implements AutoCloseable {
         public OutputWriter build(final OutputStream out, final FormatType formatType) throws IOException {
             Objects.requireNonNull(outputFields, "Output fields haven't been set");
             Objects.requireNonNull(out, "Output stream hasn't been set");
-            if (Objects.requireNonNull(formatType) == FormatType.PARQUET) {// parquet has its own way for compression,
-                // CompressionType passes by to writer and set explicitly to AvroParquetWriter
+            if (Objects.requireNonNull(formatType) == FormatType.PARQUET) {
+                /*
+                 * parquet has its own way for compression, CompressionType passes by "file. compression. type"
+                 * parameter in externalProperties to writer and set explicitly to AvroParquetWriter
+                 */
                 return formatType.getOutputWriter(out, outputFields, externalProperties, envelopeEnabled);
             }
-            return formatType.getOutputWriter(getCompressedStream(out), outputFields, externalProperties,
+            return formatType.getOutputWriter(compressionType.compress(out), outputFields, externalProperties,
                     envelopeEnabled);
         }
-
-        private OutputStream getCompressedStream(final OutputStream outputStream) throws IOException {
-            switch (compressionType) {
-                case ZSTD :
-                    return new ZstdOutputStream(outputStream);
-                case GZIP :
-                    return new GZIPOutputStream(outputStream);
-                case SNAPPY :
-                    return new SnappyOutputStream(outputStream);
-                default :
-                    return outputStream;
-            }
-        }
-
     }
 
 }

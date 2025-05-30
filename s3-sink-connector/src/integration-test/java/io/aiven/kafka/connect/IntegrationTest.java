@@ -62,7 +62,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -131,13 +131,13 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void basicTest(final String compression, final TestInfo testInfo)
+    @EnumSource(CompressionType.class)
+    void basicTest(final CompressionType compression, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("aws.s3.prefix", s3Prefix);
         connectRunner.createConnector(connectorConfig);
 
@@ -181,13 +181,13 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void groupByTimestampVariable(final String compression, final TestInfo testInfo)
+    @EnumSource(CompressionType.class)
+    void groupByTimestampVariable(final CompressionType compression, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("file.name.template", s3Prefix + "{{topic}}-{{partition}}-{{start_offset}}-"
                 + "{{timestamp:unit=yyyy}}-{{timestamp:unit=MM}}-{{timestamp:unit=dd}}");
         connectRunner.createConnector(connectorConfig);
@@ -238,13 +238,13 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void oneFilePerRecordWithPlainValues(final String compression, final TestInfo testInfo)
+    @EnumSource(CompressionType.class)
+    void oneFilePerRecordWithPlainValues(final CompressionType compression, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put("format.output.fields", "value");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("file.max.records", "1");
         connectRunner.createConnector(connectorConfig);
@@ -288,19 +288,18 @@ final class IntegrationTest implements IntegrationBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void groupByKey(final String compression, final TestInfo testInfo)
+    @EnumSource(CompressionType.class)
+    void groupByKey(final CompressionType compression, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
         final var topicName0 = IntegrationBase.topicName(testInfo);
         final var topicName1 = IntegrationBase.topicName(testInfo) + "_1";
         IntegrationBase.createTopics(adminClient, List.of(topicName1));
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME),
                 List.of(topicName0, topicName1));
-        final CompressionType compressionType = CompressionType.forName(compression);
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("file.compression.type", compression);
-        connectorConfig.put("file.name.template", s3Prefix + "{{key}}" + compressionType.extension());
+        connectorConfig.put("file.compression.type", compression.name());
+        connectorConfig.put("file.name.template", s3Prefix + "{{key}}" + compression.extension());
         connectRunner.createConnector(connectorConfig);
 
         final Map<TopicPartition, List<String>> keysPerTopicPartition = new HashMap<>();
@@ -352,7 +351,7 @@ final class IntegrationTest implements IntegrationBase {
                     .stream()
                     .map(fields -> String.join(",", fields))
                     .collect(Collectors.joining());
-            final String keyInBlobName = blobName.replace(s3Prefix, "").replace(compressionType.extension(), "");
+            final String keyInBlobName = blobName.replace(s3Prefix, "").replace(compression.extension(), "");
             final String value;
             final String expectedBlobContent;
             if ("null".equals(keyInBlobName)) {
@@ -370,14 +369,14 @@ final class IntegrationTest implements IntegrationBase {
     void jsonlOutputTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = IntegrationBase.topicName(testInfo);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        final String compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final String contentType = "jsonl";
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("format.output.type", contentType);
         connectRunner.createConnector(connectorConfig);
 
@@ -421,7 +420,7 @@ final class IntegrationTest implements IntegrationBase {
                 final String value = "[{" + "\"name\":\"user-" + cnt + "\"}]";
                 cnt += 1;
 
-                final String blobName = getNewBlobName(topicName, partition, 0, "none");
+                final String blobName = getNewBlobName(topicName, partition, 0, CompressionType.NONE);
                 final String expectedLine = "{\"value\":" + value + ",\"key\":\"" + key + "\"}";
 
                 assertThat(blobContents.get(blobName).get(i)).isEqualTo(expectedLine);
@@ -435,14 +434,14 @@ final class IntegrationTest implements IntegrationBase {
         final var faultyProxy = enableFaultyProxy(topicName);
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
         connectorConfig.put("aws.s3.endpoint", faultyProxy.baseUrl());
-        final String compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final String contentType = "json";
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name());
         connectorConfig.put("format.output.type", contentType);
         connectRunner.createConnector(connectorConfig);
 
@@ -566,19 +565,19 @@ final class IntegrationTest implements IntegrationBase {
 
     // WARN: different from GCS
     private String getOldBlobName(final String topicName, final int partition, final int startOffset,
-            final String compression) {
+            final CompressionType compression) {
         final String result = String.format("%s%s-%d-%020d", s3Prefix, topicName, partition, startOffset);
-        return result + CompressionType.forName(compression).extension();
+        return result + compression.extension();
     }
 
     private String getNewBlobName(final String topicName, final int partition, final int startOffset,
-            final String compression) {
+            final CompressionType compression) {
         final String result = String.format("%s-%d-%d", topicName, partition, startOffset);
-        return result + CompressionType.forName(compression).extension();
+        return result + compression.extension();
     }
 
-    private String getKeyBlobName(final String key, final String compression) {
+    private String getKeyBlobName(final String key, final CompressionType compression) {
         final String result = String.format("%s%s", s3Prefix, key);
-        return result + CompressionType.forName(compression).extension();
+        return result + compression.extension();
     }
 }

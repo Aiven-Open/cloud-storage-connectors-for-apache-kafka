@@ -30,16 +30,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import java.util.zip.GZIPInputStream;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobItem;
-import com.github.luben.zstd.ZstdInputStream;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.xerial.snappy.SnappyInputStream;
 
 public final class AzureBlobAccessor {
     private final BlobContainerClient containerClient;
@@ -138,9 +135,9 @@ public final class AzureBlobAccessor {
 
     private String readStringContent0(final String blobName, final String compression) {
         final BlobClient blobClient = containerClient.getBlobClient(blobName);
+        final CompressionType compressionType = CompressionType.valueOf(compression);
         final byte[] blobBytes = blobClient.downloadContent().toBytes();
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
-                InputStream decompressedStream = getDecompressedStream(bais, compression);
+        try (InputStream decompressedStream = compressionType.decompress(new ByteArrayInputStream(blobBytes));
                 InputStreamReader reader = new InputStreamReader(decompressedStream, StandardCharsets.UTF_8);
                 BufferedReader bufferedReader = new BufferedReader(reader)) {
             return bufferedReader.readLine();
@@ -166,32 +163,14 @@ public final class AzureBlobAccessor {
     private List<String> readLines0(final String blobName, final String compression) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         final byte[] blobBytes = readBytes(blobName);
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
-                InputStream decompressedStream = getDecompressedStream(bais, compression);
+        final CompressionType compressionType = CompressionType.valueOf(compression);
+        try (InputStream decompressedStream = compressionType.decompress(new ByteArrayInputStream(blobBytes));
                 InputStreamReader reader = new InputStreamReader(decompressedStream, StandardCharsets.UTF_8);
                 BufferedReader bufferedReader = new BufferedReader(reader)) {
 
             return bufferedReader.lines().collect(Collectors.toList());
         } catch (final IOException e) {
             throw new RuntimeException(e); // NOPMD
-        }
-    }
-
-    private InputStream getDecompressedStream(final InputStream inputStream, final String compression)
-            throws IOException {
-        Objects.requireNonNull(inputStream, "inputStream cannot be null");
-        Objects.requireNonNull(compression, "compression cannot be null");
-
-        final CompressionType compressionType = CompressionType.forName(compression);
-        switch (compressionType) {
-            case ZSTD :
-                return new ZstdInputStream(inputStream);
-            case GZIP :
-                return new GZIPInputStream(inputStream);
-            case SNAPPY :
-                return new SnappyInputStream(inputStream);
-            default :
-                return inputStream;
         }
     }
 

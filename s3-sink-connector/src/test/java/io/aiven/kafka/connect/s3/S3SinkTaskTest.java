@@ -454,8 +454,8 @@ final class S3SinkTaskTest {
     void supportStringValuesForJsonL() throws IOException {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compression = CompressionType.NONE;
+        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
@@ -480,12 +480,10 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         final List<String> expectedBlobs = Lists.newArrayList(
-                "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
-                "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
-                "prefix-topic1-0-00000000000000000030" + compressionType.extension());
+                "prefix-topic0-0-00000000000000000010" + compression.extension(),
+                "prefix-topic0-1-00000000000000000020" + compression.extension(),
+                "prefix-topic1-0-00000000000000000030" + compression.extension());
 
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
@@ -524,8 +522,8 @@ final class S3SinkTaskTest {
     void supportStructValuesForJsonL() throws IOException {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compression = CompressionType.NONE;
+        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
@@ -551,12 +549,10 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         final List<String> expectedBlobs = Lists.newArrayList(
-                "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
-                "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
-                "prefix-topic1-0-00000000000000000030" + compressionType.extension());
+                "prefix-topic0-0-00000000000000000010" + compression.extension(),
+                "prefix-topic0-1-00000000000000000020" + compression.extension(),
+                "prefix-topic1-0-00000000000000000030" + compression.extension());
 
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
@@ -572,8 +568,8 @@ final class S3SinkTaskTest {
 
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndJsonL() throws IOException {
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compression = CompressionType.NONE;
+        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
@@ -601,12 +597,10 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         final List<String> expectedBlobs = Lists.newArrayList(
-                "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
-                "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
-                "prefix-topic1-0-00000000000000000030" + compressionType.extension());
+                "prefix-topic0-0-00000000000000000010" + compression.extension(),
+                "prefix-topic0-1-00000000000000000020" + compression.extension(),
+                "prefix-topic1-0-00000000000000000030" + compression.extension());
         assertThat(expectedBlobs).allMatch(blobName -> testBucketAccessor.doesObjectExist(blobName));
 
         assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compression))
@@ -621,8 +615,8 @@ final class S3SinkTaskTest {
     void supportStructValuesForClassicJson() throws IOException {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compression = CompressionType.NONE;
+        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
         task.start(properties);
@@ -635,10 +629,8 @@ final class S3SinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
-        final List<String> expectedBlobs = Lists.newArrayList("topic0-0-10" + compressionType.extension(),
-                "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
+        final List<String> expectedBlobs = Lists.newArrayList("topic0-0-10" + compression.extension(),
+                "topic0-1-20" + compression.extension(), "topic1-0-30" + compression.extension());
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
         }
@@ -653,8 +645,8 @@ final class S3SinkTaskTest {
 
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndClassicJson() throws IOException {
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compression = CompressionType.NONE;
+        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
@@ -682,12 +674,10 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         final List<String> expectedBlobs = Lists.newArrayList(
-                "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
-                "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
-                "prefix-topic1-0-00000000000000000030" + compressionType.extension());
+                "prefix-topic0-0-00000000000000000010" + compression.extension(),
+                "prefix-topic0-1-00000000000000000020" + compression.extension(),
+                "prefix-topic1-0-00000000000000000030" + compression.extension());
         assertThat(expectedBlobs).allMatch(blobName -> testBucketAccessor.doesObjectExist(blobName));
 
         assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compression))
