@@ -131,7 +131,7 @@ public class FileNameFragmentTest {// NOPMD
         props.put(FileNameFragment.FILE_MAX_RECORDS, "50");
         final AbstractConfig cfg = new AbstractConfig(configDef, props);
         final FileNameFragment underTest = new FileNameFragment(cfg);
-        assertThatThrownBy(() -> underTest.validate()).isInstanceOf(ConfigException.class);
+        assertThatThrownBy(underTest::validateRecordGrouper).isInstanceOf(ConfigException.class);
     }
 
     @ParameterizedTest(name = "{index} {0}")

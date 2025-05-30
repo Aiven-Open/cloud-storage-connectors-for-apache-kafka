@@ -119,7 +119,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
         this.targetTopics = Optional.ofNullable(sourceConfig.getTargetTopic());
         this.taskId = sourceConfig.getTaskId() % maxTasks;
         this.taskAssignment = new TaskAssignment(distributionType.getDistributionStrategy(maxTasks));
-        this.fileMatching = new FileMatching(new FilePatternUtils(sourceConfig.getSourcename()));
+        this.fileMatching = new FileMatching(new FilePatternUtils(sourceConfig.getSourceName()));
         this.inner = Collections.emptyIterator();
         this.outer = Collections.emptyIterator();
         this.ringBuffer = new RingBuffer<>(Math.max(1, bufferSize));

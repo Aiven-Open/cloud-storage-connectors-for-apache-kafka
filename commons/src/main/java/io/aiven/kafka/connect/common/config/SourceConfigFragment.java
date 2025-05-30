@@ -26,7 +26,6 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
-import io.aiven.kafka.connect.common.config.validators.SourcenameTemplateValidator;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 
 import org.apache.commons.lang3.StringUtils;
@@ -87,15 +86,10 @@ public final class SourceConfigFragment extends ConfigFragment {
         return configDef;
     }
 
-    @Override
-    public void validate() {
-        new SourcenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG, getDistributionType())
-                .ensureValid(FILE_NAME_TEMPLATE_CONFIG, getSourceName());
-    }
-
     public String getTargetTopic() {
         return cfg.getString(TARGET_TOPIC);
     }
+
     public String getSourceName() {
         return cfg.getString(FILE_NAME_TEMPLATE_CONFIG);
     }
