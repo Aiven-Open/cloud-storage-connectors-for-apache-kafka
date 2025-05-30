@@ -20,6 +20,8 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.common.config.validators.SourcenameTemplateValidator;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -50,6 +52,30 @@ public final class FileNameFragment extends ConfigFragment {
 
     public FileNameFragment(final AbstractConfig cfg) {
         super(cfg);
+    }
+
+    /**
+     * Validate the distribution type works with the file name template.
+     * @param distributionType the distribution type for the validator
+     */
+    public void validateDistributionType(DistributionType distributionType) {
+        new SourcenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG, distributionType).ensureValid("", getSourceName());
+    }
+
+    /**
+     * Validate that the record grouper works with the fileNameTemplate and the max records per file.
+     */
+    public void validateRecordGrouper() {
+        // Special checks for {{key}} filename template.
+        final Template filenameTemplate = getFilenameTemplate();
+        final String groupType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
+        final boolean isKeyBased = RecordGrouperFactory.KEY_RECORD.equals(groupType)
+                || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
+        if (isKeyBased && getMaxRecordsPerFile() > 1) {
+            final String msg = String.format("When %s is %s, %s must be either 1 or not set", FILE_NAME_TEMPLATE_CONFIG,
+                    filenameTemplate, FILE_MAX_RECORDS);
+            throw new ConfigException(msg);
+        }
     }
 
     /**
@@ -116,20 +142,9 @@ public final class FileNameFragment extends ConfigFragment {
 
     @Override
     public void validate() {
-        // Special checks for {{key}} filename template.
-        final Template filenameTemplate = getFilenameTemplate();
-        final String groupType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        if (isKeyBased(groupType) && getMaxRecordsPerFile() > 1) {
-            final String msg = String.format("When %s is %s, %s must be either 1 or not set", FILE_NAME_TEMPLATE_CONFIG,
-                    filenameTemplate, FILE_MAX_RECORDS);
-            throw new ConfigException(msg);
-        }
+        throw new ConfigException("Do not call FileNameFragment.validate() -- call sink/source specific validator");
     }
 
-    private Boolean isKeyBased(final String groupType) {
-        return RecordGrouperFactory.KEY_RECORD.equals(groupType)
-                || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
-    }
 
     /**
      * Returns the text of the filename template. May throw {@link ConfigException} if the property
@@ -183,4 +198,9 @@ public final class FileNameFragment extends ConfigFragment {
     public int getMaxRecordsPerFile() {
         return cfg.getInt(FILE_MAX_RECORDS);
     }
+
+    public String getSourceName() {
+        return cfg.getString(FILE_NAME_TEMPLATE_CONFIG);
+    }
+
 }

@@ -27,13 +27,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.common.templating.Template;
 
-import org.codehaus.plexus.util.StringUtils;
 
 public final class SourcenameTemplateValidator implements ConfigDef.Validator {
 
@@ -76,7 +76,7 @@ public final class SourcenameTemplateValidator implements ConfigDef.Validator {
         } else if (StringUtils.isBlank(valueStr)) {
             throw new ConfigException(configName, "Can not be a blank or empty string");
         }
-        // if using partition distribution it require the partition to be available.
+        // if using partition distribution it requires the partition to be available.
         try {
             final Template template = Template.of((String) value);
             validateVariables(template.variablesSet());
