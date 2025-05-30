@@ -102,6 +102,12 @@ public final class KeyAndTopicPartitionRecordGrouper implements RecordGrouper {
     }
 
     @Override
+    public void clearProcessedRecords(final String identifier, final List<SinkRecord> records) {
+        // One entry per file, so the entire file can be removed to reduce memory overhead.
+        fileBuffers.remove(identifier);
+    }
+
+    @Override
     public Map<String, List<SinkRecord>> records() {
         return Collections.unmodifiableMap(fileBuffers);
     }
