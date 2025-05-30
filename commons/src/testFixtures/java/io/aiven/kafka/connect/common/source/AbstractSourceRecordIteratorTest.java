@@ -67,7 +67,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @param <T>
  *            The concrete implementation of the {@link AbstractSourceRecord} .
  */
-public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>> {
+public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>> {
     /** The offset manager */
     private OffsetManager<O> offsetManager;
     /** The key based on the file name */
