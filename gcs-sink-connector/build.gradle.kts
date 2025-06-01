@@ -95,7 +95,7 @@ dependencies {
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
-  testImplementation("com.google.cloud:google-cloud-nio:0.127.32")
+  testImplementation("com.google.cloud:google-cloud-nio:0.127.36")
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
