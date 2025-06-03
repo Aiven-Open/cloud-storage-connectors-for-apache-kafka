@@ -115,7 +115,7 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
      *            the partition for the key.
      * @return the native Key.
      */
-    final protected K createKey(String prefix, String topic, int partition) {
+    final protected K createKey(final String prefix, final String topic, final int partition) {
         return getSourceStorage().createKey(prefix, topic, partition);
     }
 
@@ -129,7 +129,7 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
      */
     final protected SourceStorage.WriteResult<K> writeWithKey(final K nativeKey, final byte[] testDataBytes) {
         return getSourceStorage().writeWithKey(nativeKey, testDataBytes);
-    };
+    }
 
     /**
      * Retrieves a list of {@link NativeInfo} implementations, one for each item in native storage.

@@ -37,7 +37,9 @@ import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
 /**
  * A testing feature to generate Parquet data.
  */
-public class ParquetTestDataFixture {
+final public class ParquetTestDataFixture {
+    private ParquetTestDataFixture() {
+    }
     /**
      * Generate the specified number of parquet records in a byte array.
      *
@@ -62,7 +64,7 @@ public class ParquetTestDataFixture {
         }
 
         // Create a Parquet writer
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try (var parquetWriter = new ParquetOutputWriter(
                 List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
                 Collections.emptyMap(), false)) {

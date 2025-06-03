@@ -70,6 +70,7 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
     private static final int TASK_NOT_SET = -1;
 
     protected AbstractSourceIteratorIntegrationTest() {
+        super();
     }
 
     @Override

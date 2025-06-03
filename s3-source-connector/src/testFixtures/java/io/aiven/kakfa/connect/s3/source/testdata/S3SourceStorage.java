@@ -28,6 +28,7 @@ import io.aiven.kafka.connect.common.integration.source.SourceStorage;
 import io.aiven.kafka.connect.s3.source.S3SourceConnector;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.function.IOSupplier;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
@@ -35,29 +36,30 @@ public class S3SourceStorage implements SourceStorage<String, S3Object, S3Offset
     AWSIntegrationTestData awsIntegrationTestData;
     BucketAccessor bucketAccessor;
 
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable AWSIntegrationTestData object")
     public S3SourceStorage(final AWSIntegrationTestData awsIntegrationTestData) {
         this.awsIntegrationTestData = awsIntegrationTestData;
         this.bucketAccessor = awsIntegrationTestData.getDefaultBucketAccessor();
     }
 
-    public void tearDown() {
+    public void cleanup() {
         bucketAccessor.removeBucket();
         awsIntegrationTestData.tearDown();
 
     }
 
     @Override
-    public String createKey(String prefix, String topic, int partition) {
+    public String createKey(final String prefix, final String topic, final int partition) {
         return awsIntegrationTestData.createKey(prefix, topic, partition);
     }
 
     @Override
-    public WriteResult<String> writeWithKey(String nativeKey, byte[] testDataBytes) {
+    public WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
         return awsIntegrationTestData.writeWithKey(nativeKey, testDataBytes);
     }
 
     @Override
-    public Map<String, String> createConnectorConfig(String localPrefix) {
+    public Map<String, String> createConnectorConfig(final String localPrefix) {
         return awsIntegrationTestData.createConnectorConfig(localPrefix, bucketAccessor.getBucketName());
     }
 
@@ -87,7 +89,7 @@ public class S3SourceStorage implements SourceStorage<String, S3Object, S3Offset
     }
 
     @Override
-    public IOSupplier<InputStream> getInputStream(String nativeKey) {
+    public IOSupplier<InputStream> getInputStream(final String nativeKey) {
         return null;
     }
 

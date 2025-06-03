@@ -105,7 +105,8 @@ public class FileNameFragmentTest {// NOPMD
         args.add(Arguments.of(FileNameArgs.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
                 ConfigDef.Importance.MEDIUM, true));
 
-        args.add(Arguments.of(FileNameArgs.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM, false));
+        args.add(Arguments.of(FileNameArgs.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM,
+                false));
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
                 ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, false));

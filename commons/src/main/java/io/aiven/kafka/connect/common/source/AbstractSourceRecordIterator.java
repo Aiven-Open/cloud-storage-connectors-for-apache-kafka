@@ -335,13 +335,13 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
         }
 
         /**
-         * Sets the target topic in the context if it has been set from configuration.
+         * Sets the target topic in the context.
          *
          * @param context
          *            the context to set the topic in if found.
          */
         private void overrideContextTopic(final Context<K> context) {
-            String targetTopic = sourceConfig.getTargetTopic();
+            final String targetTopic = sourceConfig.getTargetTopic();
             if (targetTopic != null) {
                 if (context.getTopic().isPresent()) {
                     getLogger().debug(

@@ -166,7 +166,7 @@ public final class AWSIntegrationTestData {
      *
      * @return the data map of the configuration options for to talk to the container.
      */
-    public Map<String, String> createConnectorConfig(final String localPrefix, String bucketName) {
+    public Map<String, String> createConnectorConfig(final String localPrefix, final String bucketName) {
         final Map<String, String> data = new HashMap<>();
 
         SourceConfigFragment.setter(data).ringBufferSize(10);

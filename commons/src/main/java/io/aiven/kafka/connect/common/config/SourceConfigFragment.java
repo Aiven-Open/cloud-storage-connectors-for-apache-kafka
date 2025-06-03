@@ -63,8 +63,6 @@ public final class SourceConfigFragment extends ConfigFragment {
     }
 
     public static ConfigDef update(final ConfigDef configDef) {
-        int sourcePollingConfigCounter = 0;
-
         configDef.define(RING_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(0),
                 ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.");
 

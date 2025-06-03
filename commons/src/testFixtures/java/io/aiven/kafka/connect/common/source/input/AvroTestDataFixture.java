@@ -32,6 +32,10 @@ import org.apache.avro.io.DatumWriter;
  * A testing fixture to generate Avro test data.
  */
 public final class AvroTestDataFixture {
+
+    private AvroTestDataFixture() {
+    }
+
     /**
      * Generates a byte array containing the specified number of records.
      *

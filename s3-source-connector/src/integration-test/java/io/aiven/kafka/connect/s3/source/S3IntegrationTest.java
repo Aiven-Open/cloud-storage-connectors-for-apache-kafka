@@ -63,6 +63,6 @@ public final class S3IntegrationTest
 
     @AfterEach
     void tearDownAWS() {
-        sourceStorage.tearDown();
+        sourceStorage.cleanup();
     }
 }

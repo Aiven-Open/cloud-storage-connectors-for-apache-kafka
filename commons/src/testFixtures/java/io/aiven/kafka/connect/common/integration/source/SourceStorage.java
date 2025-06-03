@@ -36,38 +36,11 @@ public interface SourceStorage<K extends Comparable<K>, N, O extends OffsetManag
         extends
             StorageBase<K, N> {
 
-    // /**
-    // * Convert a string into the key value for the native object. In most cases the underlying system uses a string so
-    // * returning the {@code key} argument is appropriate. However, this method provides an opportunity to convert the
-    // * key into something that the native system would produce.
-    // *
-    // * @param key
-    // * the key value as a string.
-    // * @return the native key equivalent of the {@code key} parameter.
-    // */
-    // K createKFrom(String key);
-    //
-    // /**
-    // * Create an offset manager entry from the string key value,
-    // *
-    // * @param key
-    // * the key value as a string.
-    // * @return an OffsetManager entry.
-    // */
-    // O createOffsetManagerEntry(String key);
-    //
-    // /**
-    // * Creates the source record under test.
-    // *
-    // * @return the source record under test.
-    // */
-    // T createSourceRecord();
+    K createKey(String prefix, String topic, int partition);
 
-    K createKey(final String prefix, final String topic, final int partition);
+    WriteResult<K> writeWithKey(K nativeKey, byte[] testDataBytes);
 
-    WriteResult<K> writeWithKey(final K nativeKey, final byte[] testDataBytes);
-
-    Map<String, String> createConnectorConfig(final String localPrefix);
+    Map<String, String> createConnectorConfig(String localPrefix);
 
     BiFunction<Map<String, Object>, Map<String, Object>, O> offsetManagerEntryFactory();
 
