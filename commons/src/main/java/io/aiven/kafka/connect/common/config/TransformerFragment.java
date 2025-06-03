@@ -22,9 +22,9 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.source.input.InputFormat;
-import org.apache.kafka.common.config.ConfigException;
 
 public final class TransformerFragment extends ConfigFragment {
     private static final String TRANSFORMER_GROUP = "Transformer group";
@@ -55,9 +55,8 @@ public final class TransformerFragment extends ConfigFragment {
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", TRANSFORMER_GROUP,
                 transformerCounter++, ConfigDef.Width.NONE, VALUE_CONVERTER_SCHEMA_REGISTRY_URL);
         configDef.define(INPUT_FORMAT_KEY, ConfigDef.Type.STRING, InputFormat.BYTES.getValue(),
-                new InputFormatValidator(), ConfigDef.Importance.MEDIUM,
-                "Input format of messages read from source", TRANSFORMER_GROUP,
-                transformerCounter++, ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
+                new InputFormatValidator(), ConfigDef.Importance.MEDIUM, "Input format of messages read from source",
+                TRANSFORMER_GROUP, transformerCounter++, ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
         configDef.define(TRANSFORMER_MAX_BUFFER_SIZE, ConfigDef.Type.INT, DEFAULT_MAX_BUFFER_SIZE,
                 ConfigDef.Range.between(1, Integer.MAX_VALUE), ConfigDef.Importance.MEDIUM,
                 "Max Size of the byte buffer when using the BYTE Transformer", TRANSFORMER_GROUP, transformerCounter++,
@@ -85,7 +84,7 @@ public final class TransformerFragment extends ConfigFragment {
         return cfg.getInt(TRANSFORMER_MAX_BUFFER_SIZE);
     }
 
-    public static class InputFormatValidator extends ConfigDef.NonEmptyString  {
+    public static class InputFormatValidator extends ConfigDef.NonEmptyString {
 
         @Override
         public void ensureValid(final String name, final Object value) {
@@ -100,7 +99,9 @@ public final class TransformerFragment extends ConfigFragment {
 
         @Override
         public String toString() {
-            return Arrays.stream(InputFormat.values()).map(f -> "'" + f.getValue() + "'").collect(Collectors.joining(", "));
+            return Arrays.stream(InputFormat.values())
+                    .map(f -> "'" + f.getValue() + "'")
+                    .collect(Collectors.joining(", "));
         }
     }
 }
