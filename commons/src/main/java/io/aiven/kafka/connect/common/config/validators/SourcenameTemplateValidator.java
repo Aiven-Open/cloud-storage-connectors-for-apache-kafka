@@ -48,41 +48,36 @@ public final class SourcenameTemplateValidator implements ConfigDef.Validator {
         SUPPORTED_VARIABLE_PARAMETERS.put(TOPIC.name, TOPIC.parameterDescriptor);
     }
 
-    private final String configName;
     private final DistributionType distributionType;
 
-    public SourcenameTemplateValidator(final String configName, final DistributionType distributionType) {
-        this.configName = configName;
+    public SourcenameTemplateValidator(final DistributionType distributionType) {
         this.distributionType = distributionType;
     }
 
     @Override
     public void ensureValid(final String name, final Object value) {
-        if (value == null) {
-            return;
+        final String valueStr = value == null ? null : value.toString();
+        if (StringUtils.isBlank(valueStr)) {
+            throw new ConfigException(name, value, "can not be empty or not set");
         }
-
-        assert value instanceof String;
-
         // See https://cloud.google.com/storage/docs/naming
-        final String valueStr = (String) value;
         if (valueStr.startsWith(".well-known/acme-challenge")) {
-            throw new ConfigException(configName, value, "cannot start with '.well-known/acme-challenge'");
+            throw new ConfigException(name, value, "cannot start with '.well-known/acme-challenge'");
         }
 
-        if (StringUtils.isNotBlank(valueStr) && distributionType.equals(DistributionType.OBJECT_HASH)) {
-            // accepts any string or regex to match on.
-            return;
-        } else if (StringUtils.isBlank(valueStr)) {
-            throw new ConfigException(configName, "Can not be a blank or empty string");
-        }
-        // if using partition distribution it requires the partition to be available.
-        try {
-            final Template template = Template.of((String) value);
-            validateVariables(template.variablesSet());
-            validateVariablesWithRequiredParameters(template.toString());
-        } catch (final IllegalArgumentException e) {
-            throw new ConfigException(configName, value, e.getMessage());
+        switch (distributionType) {
+            case OBJECT_HASH:
+                return;
+            case PARTITION:
+                // partition distribution requires the partition to be available.
+                try {
+                    final Template template = Template.of((String) value);
+                    validateVariables(template.variablesSet());
+                    validateVariablesWithRequiredParameters(template.toString());
+                } catch (final IllegalArgumentException e) {
+                    throw new ConfigException(name, value, e.getMessage());
+                }
+                break;
         }
     }
 

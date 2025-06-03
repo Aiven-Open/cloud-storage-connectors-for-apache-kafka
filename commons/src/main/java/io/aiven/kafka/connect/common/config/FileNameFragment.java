@@ -78,7 +78,7 @@ public final class FileNameFragment extends ConfigFragment {
      *            the distribution type for the validator
      */
     public void validateDistributionType(final DistributionType distributionType) {
-        new SourcenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG, distributionType).ensureValid("", getSourceName());
+        new SourcenameTemplateValidator(distributionType).ensureValid(FILE_NAME_TEMPLATE_CONFIG,  getSourceName());
     }
 
     /**
@@ -121,7 +121,7 @@ public final class FileNameFragment extends ConfigFragment {
         int fileGroupCounter = 0;
 
         configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-                new FilenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
+                null, ConfigDef.Importance.MEDIUM,
                 "The template for file names on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "
@@ -132,7 +132,7 @@ public final class FileNameFragment extends ConfigFragment {
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
         configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-                new FilenameTemplateValidator(FILE_PATH_PREFIX_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
+                null, ConfigDef.Importance.MEDIUM,
                 "The template for file names prefixes on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "

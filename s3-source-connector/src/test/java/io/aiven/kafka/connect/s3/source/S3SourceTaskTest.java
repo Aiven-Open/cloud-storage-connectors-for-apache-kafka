@@ -30,6 +30,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -159,7 +160,7 @@ final class S3SourceTaskTest {
                 .name(name);
         CommonConfigFragment.setter(props).taskId(0);
         SourceConfigFragment.setter(props).targetTopic(getTopic()).maxPollRecords(50);
-
+        FileNameFragment.setter(props).template("any-old-file");
         return props;
     }
 

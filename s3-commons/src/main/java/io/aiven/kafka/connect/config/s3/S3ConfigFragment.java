@@ -48,7 +48,6 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.internal.BucketNameUtils;
@@ -57,6 +56,7 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
+import software.amazon.awssdk.regions.Region;
 
 /**
  * The configuration fragment that defines the S3 specific characteristics.
@@ -447,8 +447,7 @@ public final class S3ConfigFragment extends ConfigFragment {
         public void ensureValid(final String name, final Object value) {
             if (Objects.nonNull(value)) {
                 final String valueStr = (String) value;
-                final Region region = RegionUtils.getRegion(valueStr);
-                if (!RegionUtils.getRegions().contains(region)) {
+                if (!RegionUtils.getRegions().contains(RegionUtils.getRegion(valueStr))) {
                     throw new ConfigException(name, valueStr, "supported values are: " + SUPPORTED_AWS_REGIONS);
                 }
             }
@@ -540,7 +539,7 @@ public final class S3ConfigFragment extends ConfigFragment {
      *             of maintenance in December 2025
      */
     @Deprecated
-    public Region getAwsS3Region() {
+    public com.amazonaws.regions.Region getAwsS3Region() {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
         if (Objects.nonNull(cfg.getString(AWS_S3_REGION_CONFIG))) {
@@ -552,7 +551,7 @@ public final class S3ConfigFragment extends ConfigFragment {
         }
     }
 
-    public software.amazon.awssdk.regions.Region getAwsS3RegionV2() {
+    public Region getAwsS3RegionV2() {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
         if (Objects.nonNull(cfg.getString(AWS_S3_REGION_CONFIG))) {
