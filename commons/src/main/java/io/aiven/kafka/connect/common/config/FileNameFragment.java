@@ -55,11 +55,9 @@ public final class FileNameFragment extends ConfigFragment {
 
     /**
      * Validate the distribution type works with the file name template.
-     *
-     * @param distributionType
-     *            the distribution type for the validator
+     * @param distributionType the distribution type for the validator
      */
-    public void validateDistributionType(final DistributionType distributionType) {
+    public void validateDistributionType(DistributionType distributionType) {
         new SourcenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG, distributionType).ensureValid("", getSourceName());
     }
 

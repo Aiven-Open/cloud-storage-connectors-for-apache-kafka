@@ -32,7 +32,6 @@ public class SourceCommonConfig extends CommonConfig {
     private final SourceConfigFragment sourceConfigFragment;
     private final FileNameFragment fileNameFragment;
 
-
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
         super(definition, originals);
         // Construct Fragments

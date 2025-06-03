@@ -27,13 +27,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.common.templating.Template;
-
-import org.apache.commons.lang3.StringUtils;
 
 public final class SourcenameTemplateValidator implements ConfigDef.Validator {
 
