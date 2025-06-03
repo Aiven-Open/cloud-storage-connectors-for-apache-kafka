@@ -64,8 +64,7 @@ public class FileNameFragmentTest {// NOPMD
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("configDefSource")
     void configDefTest(final FileNameArgs arg, final ConfigDef.Type type, final Object defaultValue,
-            final boolean validatorPresent, final ConfigDef.Importance importance, final String group,
-            final int orderInGroup, final ConfigDef.Width width, final boolean recommenderPresent) {
+            final boolean validatorPresent, final ConfigDef.Importance importance, final boolean recommenderPresent) {
         final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
         final ConfigDef.ConfigKey key = configDef.configKeys().get(arg.key());
 
@@ -77,9 +76,6 @@ public class FileNameFragmentTest {// NOPMD
                 .isEqualTo(key.validator != null);
         assertThat(importance).as("Wrong importance").isEqualTo(key.importance);
         assertThat(key.documentation).as("Documenttion not included").isNotNull();
-        assertThat(group).as("Wrong group").isEqualTo(key.group);
-        assertThat(orderInGroup).as("Wrong order in group").isEqualTo(key.orderInGroup);
-        assertThat(width).as("Wrong width").isEqualTo(key.width);
         assertThat(key.name).isEqualTo(key.displayName);
         assertThat(recommenderPresent)
                 .as(() -> String.format("Recommender was %spresent.", key.recommender == null ? "not " : ""))
@@ -104,21 +100,18 @@ public class FileNameFragmentTest {// NOPMD
         final List<Arguments> args = new ArrayList<>();
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, true,
-                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 0, ConfigDef.Width.LONG, false));
+                ConfigDef.Importance.MEDIUM, false));
 
         args.add(Arguments.of(FileNameArgs.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
-                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 1, ConfigDef.Width.NONE, true));
+                ConfigDef.Importance.MEDIUM, true));
 
-        args.add(Arguments.of(FileNameArgs.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM,
-                FileNameArgs.GROUP_FILE.key(), 2, ConfigDef.Width.SHORT, false));
+        args.add(Arguments.of(FileNameArgs.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM, false));
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
-                ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 3,
-                ConfigDef.Width.SHORT, false));
+                ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, false));
 
         args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING,
-                TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 4,
-                ConfigDef.Width.SHORT, false));
+                TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, false));
 
         return args.stream();
     }
@@ -237,7 +230,5 @@ public class FileNameFragmentTest {// NOPMD
 
         props.put(FileNameFragment.FILE_MAX_RECORDS, "-1");
         assertThatThrownBy(() -> new AbstractConfig(configDef, props)).isInstanceOf(ConfigException.class);
-
     }
-
 }

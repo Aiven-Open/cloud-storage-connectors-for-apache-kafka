@@ -80,7 +80,6 @@ public class SourceCommonConfig extends CommonConfig {
     }
 
     public String getSourceName() {
-        return sourceConfigFragment.getSourceName();
+        return fileNameFragment.getFilename();
     }
-
 }
