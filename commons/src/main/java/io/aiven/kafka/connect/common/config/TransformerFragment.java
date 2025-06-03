@@ -88,9 +88,9 @@ public final class TransformerFragment extends ConfigFragment {
     public static class InputFormatValidator extends ConfigDef.NonEmptyString  {
 
         @Override
-        public void ensureValid(String name, Object value) {
+        public void ensureValid(final String name, final Object value) {
             super.ensureValid(name, value);
-            String inputFormat = value.toString().toUpperCase(Locale.ROOT);
+            final String inputFormat = value.toString().toUpperCase(Locale.ROOT);
             try {
                 InputFormat.valueOf(inputFormat);
             } catch (final IllegalArgumentException e) {
