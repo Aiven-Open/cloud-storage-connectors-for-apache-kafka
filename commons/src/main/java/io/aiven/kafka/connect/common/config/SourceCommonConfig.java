@@ -30,14 +30,12 @@ public class SourceCommonConfig extends CommonConfig {
 
     private final TransformerFragment transformerFragment;
     private final SourceConfigFragment sourceConfigFragment;
-    private final OutputFormatFragment outputFormatFragment;
 
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
         super(definition, originals);
         // Construct Fragments
         transformerFragment = new TransformerFragment(this);
         sourceConfigFragment = new SourceConfigFragment(this);
-        outputFormatFragment = new OutputFormatFragment(this);
 
         validate(); // NOPMD ConstructorCallsOverridableMethod
     }
@@ -45,7 +43,6 @@ public class SourceCommonConfig extends CommonConfig {
     private void validate() {
         transformerFragment.validate();
         sourceConfigFragment.validate();
-        outputFormatFragment.validate();
     }
 
     public InputFormat getInputFormat() {
