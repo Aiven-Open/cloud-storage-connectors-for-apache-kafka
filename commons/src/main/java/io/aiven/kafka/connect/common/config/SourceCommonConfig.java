@@ -30,12 +30,14 @@ public class SourceCommonConfig extends CommonConfig {
 
     private final TransformerFragment transformerFragment;
     private final SourceConfigFragment sourceConfigFragment;
+    private final FileNameFragment fileNameFragment;
 
     public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
         super(definition, originals);
         // Construct Fragments
         transformerFragment = new TransformerFragment(this);
         sourceConfigFragment = new SourceConfigFragment(this);
+        fileNameFragment = new FileNameFragment(this);
 
         validate(); // NOPMD ConstructorCallsOverridableMethod
     }
@@ -43,6 +45,7 @@ public class SourceCommonConfig extends CommonConfig {
     private void validate() {
         transformerFragment.validate();
         sourceConfigFragment.validate();
+        fileNameFragment.validateDistributionType(getDistributionType());
     }
 
     public InputFormat getInputFormat() {
@@ -77,7 +80,7 @@ public class SourceCommonConfig extends CommonConfig {
         return transformerFragment.getTransformerMaxBufferSize();
     }
 
-    public String getSourcename() {
+    public String getSourceName() {
         return sourceConfigFragment.getSourceName();
     }
 

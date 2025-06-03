@@ -153,7 +153,7 @@ public abstract class AbstractSourceRecordIteratorTest<N, K extends Comparable<K
         when(mockConfig.getMaxTasks()).thenReturn(maxTasks);
         when(mockConfig.getTargetTopic()).thenReturn(targetTopic);
         when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
-        when(mockConfig.getSourcename()).thenReturn(filePattern);
+        when(mockConfig.getSourceName()).thenReturn(filePattern);
         return mockConfig;
     }
 
