@@ -57,10 +57,7 @@ public final class SourceConfigFragment extends ConfigFragment {
         configDef.define(DISTRIBUTION_TYPE, ConfigDef.Type.STRING, OBJECT_HASH.name(),
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
                 "Based on tasks.max config and the type of strategy selected, objects are processed in distributed"
-                        + " way by Kafka connect workers."
-                        + Arrays.stream(DistributionType.values())
-                                .map(DistributionType::value)
-                                .collect(Collectors.joining(", ")));
+                        + " way by Kafka connect workers.");
 
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "Max poll records");

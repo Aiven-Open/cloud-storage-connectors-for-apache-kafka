@@ -54,7 +54,7 @@ public class AzureBlobClient {
      * returns a stream of BlobItems listing each object in lexical order. It handles paging of data within the client.
      *
      * @param offset
-     *            the offset to start the list from.
+     *            the offset to start the list from. May be {@code null} to start at beginning of list.
      * @return A Stream of BlobItems in the container.
      *
      */

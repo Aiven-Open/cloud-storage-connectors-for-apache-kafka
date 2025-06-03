@@ -63,7 +63,7 @@ public final class FileNameFragment extends ConfigFragment {
 
         configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
                 new FilenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
-                "The template for file names. " + "Supports `{{ variable }}` placeholders for substituting variables. "
+                "The template for file names. Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "
                         + "(the offset of the first record in the file). "
                         + "Only some combinations of variables are valid, which currently are:\n"
