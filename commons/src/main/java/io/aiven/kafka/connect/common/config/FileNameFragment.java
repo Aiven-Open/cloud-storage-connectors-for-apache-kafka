@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.common.config;
 
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -92,8 +91,7 @@ public final class FileNameFragment extends ConfigFragment {
 
         configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
                 new FilenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
-                "The template for file names on S3. "
-                        + "Supports `{{ variable }}` placeholders for substituting variables. "
+                "The template for file names. Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "
                         + "(the offset of the first record in the file). "
                         + "Only some combinations of variables are valid, which currently are:\n"
@@ -101,27 +99,13 @@ public final class FileNameFragment extends ConfigFragment {
                         + "There is also `key` only variable {{key}} for grouping by keys",
                 GROUP_FILE, fileGroupCounter++, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
-        final String supportedCompressionTypes = CompressionType.names()
-                .stream()
-                .map(f -> "'" + f + "'")
-                .collect(Collectors.joining(", "));
-
         configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, new FileCompressionTypeValidator(),
-                ConfigDef.Importance.MEDIUM,
-                "The compression type used for files put on S3. " + "The supported values are: "
-                        + supportedCompressionTypes + ".",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
+                ConfigDef.Importance.MEDIUM, "The compression type used for files.", GROUP_FILE, fileGroupCounter++,
+                ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(CompressionType.names()));
 
-        configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, new ConfigDef.Validator() {
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                assert value instanceof Integer;
-                if ((Integer) value < 0) {
-                    throw new ConfigException(FILE_MAX_RECORDS, value, "must be a non-negative integer number");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM,
+        configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, ConfigDef.Range.atLeast(0),
+                ConfigDef.Importance.MEDIUM,
                 "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.",
                 GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);

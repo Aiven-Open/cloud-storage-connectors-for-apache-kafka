@@ -56,17 +56,14 @@ public final class SourceConfigFragment extends ConfigFragment {
         configDef.define(DISTRIBUTION_TYPE, ConfigDef.Type.STRING, OBJECT_HASH.name(),
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
                 "Based on tasks.max config and the type of strategy selected, objects are processed in distributed"
-                        + " way by Kafka connect workers, supported values : "
-                        + Arrays.stream(DistributionType.values())
-                                .map(DistributionType::value)
-                                .collect(Collectors.joining(", ")));
+                        + " way by Kafka connect workers.");
 
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "Max poll records");
         // KIP-298 Error Handling in Connect
         configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, ErrorsTolerance.NONE.name(),
                 new ErrorsToleranceValidator(), ConfigDef.Importance.MEDIUM,
-                "Indicates to the connector what level of exceptions are allowed before the connector stops, supported values : none,all");
+                "Indicates to the connector what level of exceptions are allowed before the connector stops.");
 
         configDef.define(EXPECTED_MAX_MESSAGE_BYTES, ConfigDef.Type.INT, 1_048_588, ConfigDef.Importance.MEDIUM,
                 "The largest record batch size allowed by Kafka config max.message.bytes");
@@ -119,6 +116,14 @@ public final class SourceConfigFragment extends ConfigFragment {
                 ErrorsTolerance.forName(errorsTolerance);
             }
         }
+
+        @Override
+        public String toString() {
+            return Arrays.stream(ErrorsTolerance.values())
+                    .map(ErrorsTolerance::toString)
+                    .collect(Collectors.joining(", "));
+        }
+
     }
 
     private static class ObjectDistributionStrategyValidator implements ConfigDef.Validator {
@@ -133,8 +138,10 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         @Override
         public String toString() {
-            return "Must be one of: "
-                    + Arrays.stream(DistributionType.values()).map(DistributionType::name).collect(Collectors.toList());
+            return Arrays.stream(DistributionType.values())
+                    .map(DistributionType::name)
+                    .collect(Collectors.joining(", "));
         }
     }
+
 }

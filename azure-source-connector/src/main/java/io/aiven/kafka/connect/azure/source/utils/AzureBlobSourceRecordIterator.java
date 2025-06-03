@@ -51,14 +51,14 @@ public final class AzureBlobSourceRecordIterator
     public AzureBlobSourceRecordIterator(final AzureBlobSourceConfig azureBlobSourceConfig,
             final OffsetManager<AzureBlobOffsetManagerEntry> offsetManager, final Transformer transformer,
             final AzureBlobClient azureBlobClient) {
-        super(azureBlobSourceConfig, offsetManager, transformer, 0);
+        super(azureBlobSourceConfig, offsetManager, transformer, azureBlobSourceConfig.getFetchBufferSize());
         this.azureBlobClient = azureBlobClient;
         this.container = azureBlobSourceConfig.getAzureContainerName();
     }
 
     @Override
     protected Stream<BlobItem> getNativeItemStream(final String offset) {
-        return azureBlobClient.getAzureBlobStream();
+        return azureBlobClient.getAzureBlobStream(offset);
     }
 
     @Override
