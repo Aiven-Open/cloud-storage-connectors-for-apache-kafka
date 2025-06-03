@@ -54,11 +54,10 @@ dependencyResolutionManagement {
           "org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion")
       library("parquet-avro", "org.apache.parquet:parquet-avro:$parquetVersion")
       library(
-            "velocity-engine-core", "org.apache.velocity:velocity-engine-core:${velocityCoreVersion}")
+          "velocity-engine-core", "org.apache.velocity:velocity-engine-core:${velocityCoreVersion}")
       library(
-            "velocity-tools",
-            "org.apache.velocity.tools:velocity-tools-generic:${velocityToolsVersion}")
-
+          "velocity-tools",
+          "org.apache.velocity.tools:velocity-tools-generic:${velocityToolsVersion}")
     }
     create("amazonawssdk") {
       library("authentication", "software.amazon.awssdk:auth:$amazonAwsSdkV2Version")

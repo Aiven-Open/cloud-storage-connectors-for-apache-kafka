@@ -98,7 +98,6 @@ dependencies {
   testImplementation(testcontainers.junit.jupiter)
   testImplementation(testcontainers.localstack)
 
-
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
 

@@ -33,7 +33,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -41,11 +40,11 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.json.JsonDeserializer;
 
+import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.integration.ConsumerPropertiesBuilder;
 import io.aiven.kafka.connect.common.integration.KafkaManager;
-import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
+import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
-import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.utils.CasedString;
 
@@ -91,9 +90,9 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
     protected AbstractSourceIntegrationBase() {
     }
 
-
     /**
-     * Create the SourceStorage.  Should create the source storage once and then return it.
+     * Create the SourceStorage. Should create the source storage once and then return it.
+     *
      * @return the current SourceStorage object.
      */
     abstract protected SourceStorage<K, N, O> getSourceStorage();
@@ -337,7 +336,8 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
      *            the partition id fo the file.
      * @return the WriteResult for the operation.
      */
-    protected final SourceStorage.WriteResult<K> write(final String topic, final byte[] testDataBytes, final int partition) {
+    protected final SourceStorage.WriteResult<K> write(final String topic, final byte[] testDataBytes,
+            final int partition) {
         return write(topic, testDataBytes, partition, null);
     }
 
@@ -354,8 +354,8 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
      *            the prefix for the key.
      * @return the WriteResult for the result.
      */
-    protected final SourceStorage.WriteResult<K> write(final String topic, final byte[] testDataBytes, final int partition,
-                                                       final String prefix) {
+    protected final SourceStorage.WriteResult<K> write(final String topic, final byte[] testDataBytes,
+            final int partition, final String prefix) {
         final K objectKey = createKey(prefix, topic, partition);
         return writeWithKey(objectKey, testDataBytes);
     }

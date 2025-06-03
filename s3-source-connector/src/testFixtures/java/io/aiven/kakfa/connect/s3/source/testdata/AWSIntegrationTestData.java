@@ -20,10 +20,10 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.integration.source.SourceStorage;
 import org.apache.kafka.connect.connector.Connector;
 
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.integration.source.SourceStorage;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.S3SourceConnector;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
@@ -39,12 +39,11 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-
 /**
  * Generates data for AWS tests.
  */
 @SuppressFBWarnings({ "EI_EXPOSE_REP2", "EI_EXPOSE_REP" })
-public final class AWSIntegrationTestData  {
+public final class AWSIntegrationTestData {
     /** The default bucket name */
     static final String BUCKET_NAME = "test-bucket";
     /** The S3 Access Key ID */
@@ -144,7 +143,8 @@ public final class AWSIntegrationTestData  {
     public SourceStorage.WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
         final PutObjectRequest request = PutObjectRequest.builder().bucket(BUCKET_NAME).key(nativeKey).build();
         s3Client.putObject(request, RequestBody.fromBytes(testDataBytes));
-        return new SourceStorage.WriteResult<>(new S3OffsetManagerEntry(BUCKET_NAME, nativeKey).getManagerKey(), nativeKey);
+        return new SourceStorage.WriteResult<>(new S3OffsetManagerEntry(BUCKET_NAME, nativeKey).getManagerKey(),
+                nativeKey);
     }
 
     /**

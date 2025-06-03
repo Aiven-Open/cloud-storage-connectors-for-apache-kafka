@@ -44,11 +44,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
@@ -198,7 +198,8 @@ class AwsIntegrationTest implements IntegrationBase {
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
         configData.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
-        configData.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
+        configData.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                "io.confluent.kafka.serializers.KafkaAvroSerializer");
         FileNameFragment.setter(configData).template("{{topic}}-{{partition}}-{{start_offset}}");
         configData.put(TASK_ID, String.valueOf(taskId));
         configData.put(MAX_TASKS, String.valueOf(maxTasks));

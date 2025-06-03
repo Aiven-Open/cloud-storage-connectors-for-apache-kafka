@@ -36,7 +36,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -52,7 +51,7 @@ import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
 import io.aiven.kafka.connect.common.format.JsonTestDataFixture;
 import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import io.aiven.kafka.connect.common.integration.KafkaManager;
-import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
+import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.task.DistributionType;

@@ -16,21 +16,16 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
-import io.aiven.kakfa.connect.s3.source.testdata.S3SourceStorage;
-
-
 import io.aiven.kafka.connect.common.integration.source.AbstractSourceIntegrationTest;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;
-
+import io.aiven.kakfa.connect.s3.source.testdata.S3SourceStorage;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;

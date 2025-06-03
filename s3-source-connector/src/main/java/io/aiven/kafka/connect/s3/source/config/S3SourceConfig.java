@@ -20,9 +20,9 @@ import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYy
 
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;

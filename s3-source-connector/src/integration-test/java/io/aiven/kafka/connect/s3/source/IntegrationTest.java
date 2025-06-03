@@ -53,9 +53,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.config.TransformerFragment;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -64,7 +61,10 @@ import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetBackingStore;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.ParquetTestingFixture;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
@@ -378,11 +378,12 @@ final class IntegrationTest implements IntegrationBase {
 
         TransformerFragment.setter(connectorConfig)
                 .inputFormat(inputFormat)
-                        .schemaRegistry(schemaRegistry.getSchemaRegistryUrl())
-                                .valueConverterSchemaRegistry(schemaRegistry.getSchemaRegistryUrl());
+                .schemaRegistry(schemaRegistry.getSchemaRegistryUrl())
+                .valueConverterSchemaRegistry(schemaRegistry.getSchemaRegistryUrl());
 
         connectorConfig.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
-        connectorConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroSerializer");
+        connectorConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                "io.confluent.kafka.serializers.KafkaAvroSerializer");
         return connectorConfig;
     }
 
@@ -433,7 +434,8 @@ final class IntegrationTest implements IntegrationBase {
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(MAX_TASKS, String.valueOf(maxTasks));
         SourceConfigFragment.setter(config).distributionType(taskDistributionConfig);
-        FileNameFragment.setter(config).template("{{topic}}" + fileNameSeparator + "{{partition}}" + fileNameSeparator + "{{start_offset}}");
+        FileNameFragment.setter(config)
+                .template("{{topic}}" + fileNameSeparator + "{{partition}}" + fileNameSeparator + "{{start_offset}}");
         if (addPrefix) {
             config.put(FILE_PATH_PREFIX_TEMPLATE_CONFIG, prefixPattern);
         }

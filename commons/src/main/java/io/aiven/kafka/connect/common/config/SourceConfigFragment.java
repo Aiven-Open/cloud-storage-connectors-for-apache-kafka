@@ -34,7 +34,7 @@ import org.apache.commons.lang3.StringUtils;
  * Defines properties that are shared across all Source implementations.
  */
 public final class SourceConfigFragment extends ConfigFragment {
-   private static final String MAX_POLL_RECORDS = "max.poll.records";
+    private static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String TARGET_TOPIC = "topic";
     private static final String ERRORS_TOLERANCE = "errors.tolerance";
     private static final String DISTRIBUTION_TYPE = "distribution.type";
@@ -66,8 +66,7 @@ public final class SourceConfigFragment extends ConfigFragment {
         int sourcePollingConfigCounter = 0;
 
         configDef.define(RING_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(0),
-                ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.", GROUP_OTHER,
-                ++sourcePollingConfigCounter, ConfigDef.Width.SHORT, RING_BUFFER_SIZE);
+                ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.");
 
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "Max poll records");

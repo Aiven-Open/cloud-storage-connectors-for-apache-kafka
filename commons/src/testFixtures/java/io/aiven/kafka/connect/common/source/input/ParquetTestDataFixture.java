@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.kafka.common.record.TimestampType;
-import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -57,7 +56,9 @@ public class ParquetTestDataFixture {
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
-            allParquetRecords.add(new Struct(ParquetTestingFixture.PARQUET_SCHEMA).put("name", name + i).put("age", 30).put("email", name + "@test"));
+            allParquetRecords.add(new Struct(ParquetTestingFixture.PARQUET_SCHEMA).put("name", name + i)
+                    .put("age", 30)
+                    .put("email", name + "@test"));
         }
 
         // Create a Parquet writer
@@ -69,8 +70,8 @@ public class ParquetTestDataFixture {
             final var sinkRecords = new ArrayList<SinkRecord>();
             for (final var r : allParquetRecords) {
                 final var sinkRecord = new SinkRecord( // NOPMD AvoidInstantiatingObjectsInLoops
-                        "some-topic", 1, STRING_SCHEMA, "some-key-" + counter, ParquetTestingFixture.PARQUET_SCHEMA, r, 100L, 1000L + counter,
-                        TimestampType.CREATE_TIME, null);
+                        "some-topic", 1, STRING_SCHEMA, "some-key-" + counter, ParquetTestingFixture.PARQUET_SCHEMA, r,
+                        100L, 1000L + counter, TimestampType.CREATE_TIME, null);
                 sinkRecords.add(sinkRecord);
                 counter++;
             }
