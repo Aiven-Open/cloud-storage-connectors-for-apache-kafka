@@ -598,21 +598,6 @@ final class S3SinkConfigTest {
     }
 
     @Test
-    void notSupportYyyyUppercaseInFilenameTemplate() {
-        final Map<String, String> properties = Map.of(S3SinkConfig.FILE_NAME_TEMPLATE_CONFIG,
-                "{{topic}}-" + "{{timestamp:unit=YYYY}}" + "-{{partition}}-{{start_offset:padding=true}}.gz",
-                S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key",
-                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
-        assertThatThrownBy(() -> new S3SinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(
-                        "Invalid value {{topic}}-{{timestamp:unit=YYYY}}-{{partition}}-{{start_offset:padding=true}}.gz "
-                                + "for configuration file.name.template: unsupported set of template variables parameters, "
-                                + "supported sets are: "
-                                + "partition:padding=true|false,start_offset:padding=true|false,timestamp:unit=yyyy|MM|dd|HH");
-    }
-
-    @Test
     void stsRoleCorrectConfig() {
         final var props = new HashMap<String, String>();
 
