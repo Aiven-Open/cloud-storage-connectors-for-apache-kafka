@@ -29,19 +29,18 @@ import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.regions.Region;
 
-
 final class S3SourceConfigTest {
     @Test
     void correctFullConfig() {
         final var props = new HashMap<String, String>();
 
-        S3ConfigFragment.setter(props).accessKeyId("AWS_ACCESS_KEY_ID")
+        S3ConfigFragment.setter(props)
+                .accessKeyId("AWS_ACCESS_KEY_ID")
                 .accessKeySecret("AWS_SECRET_ACCESS_KEY")
                 .bucketName("the-bucket")
                 .endpoint("AWS_S3_ENDPOINT")
                 .region(Region.US_EAST_1);
-        TransformerFragment.setter(props).inputFormat(InputFormat.AVRO)
-                .schemaRegistry("localhost:8081");
+        TransformerFragment.setter(props).inputFormat(InputFormat.AVRO).schemaRegistry("localhost:8081");
         SourceConfigFragment.setter(props).targetTopic("testtopic");
         FileNameFragment.setter(props).template("any-old-file");
 

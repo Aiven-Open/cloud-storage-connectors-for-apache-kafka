@@ -16,13 +16,7 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
-
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
-import io.aiven.kakfa.connect.s3.source.testdata.S3SourceStorage;
-import org.apache.kafka.connect.connector.Connector;
 
 import io.aiven.kafka.connect.common.integration.source.AbstractSourceIteratorIntegrationTest;
 import io.aiven.kafka.connect.common.source.OffsetManager;
@@ -30,10 +24,10 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 import io.aiven.kafka.connect.s3.source.utils.AWSV2SourceClient;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
 import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;
-import io.aiven.kakfa.connect.s3.source.testdata.BucketAccessor;
-import io.aiven.kakfa.connect.s3.source.testdata.S3OffsetManagerIntegrationTestData;
+import io.aiven.kakfa.connect.s3.source.testdata.S3SourceStorage;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,69 +71,71 @@ public class S3SourceRecordIteratorIntegrationTest
     }
 
     @Override
-    protected S3SourceRecordIterator getSourceRecordIterator(Map<String, String> configData, OffsetManager<S3OffsetManagerEntry> offsetManager, Transformer transformer) {
+    protected S3SourceRecordIterator getSourceRecordIterator(Map<String, String> configData,
+            OffsetManager<S3OffsetManagerEntry> offsetManager, Transformer transformer) {
         final S3SourceConfig sourceConfig = new S3SourceConfig(configData);
         return new S3SourceRecordIterator(sourceConfig, offsetManager, transformer,
                 new AWSV2SourceClient(sourceConfig));
     }
-//    @Container
-//    static final LocalStackContainer LOCALSTACK = AWSIntegrationTestData.createS3Container();
-//
-//    private AWSIntegrationTestData testData;
-//    private BucketAccessor bucketAccessor;
-//
-//    @Override
-//    protected Logger getLogger() {
-//        return LOGGER;
-//    }
-//
-//    @BeforeEach
-//    void setupAWS() {
-//        testData = new AWSIntegrationTestData(LOCALSTACK);
-//        bucketAccessor = testData.getDefaultBucketAccessor();
-//    }
-//
-//    @AfterEach
-//    void tearDownAWS() {
-//        bucketAccessor.removeBucket();
-//        testData.tearDown();
-//    }
-//
-//    @Override
-//    protected String createKey(final String prefix, final String topic, final int partition) {
-//        return testData.createKey(prefix, topic, partition);
-//    }
-//
-//    @Override
-//    protected List<BucketAccessor.S3NativeInfo> getNativeStorage() {
-//        return bucketAccessor.getNativeStorage();
-//    }
-//
-//    @Override
-//    protected Class<? extends Connector> getConnectorClass() {
-//        return testData.getConnectorClass();
-//    }
-//
-//    @Override
-//    protected WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
-//        return testData.writeWithKey(nativeKey, testDataBytes);
-//    }
-//
-//    @Override
-//    protected Map<String, String> createConnectorConfig(final String localPrefix) {
-//        return testData.createConnectorConfig(localPrefix, bucketAccessor.getBucketName());
-//    }
-//
-//    @Override
-//    protected BiFunction<Map<String, Object>, Map<String, Object>, S3OffsetManagerEntry> offsetManagerEntryFactory() {
-//        return S3OffsetManagerIntegrationTestData.offsetManagerEntryFactory();
-//    }
-//
-//    @Override
-//    protected S3SourceRecordIterator getSourceRecordIterator(final Map<String, String> configData,
-//            final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer) {
-//        final S3SourceConfig sourceConfig = new S3SourceConfig(configData);
-//        return new S3SourceRecordIterator(sourceConfig, offsetManager, transformer,
-//                new AWSV2SourceClient(sourceConfig));
-//    }
+    // @Container
+    // static final LocalStackContainer LOCALSTACK = AWSIntegrationTestData.createS3Container();
+    //
+    // private AWSIntegrationTestData testData;
+    // private BucketAccessor bucketAccessor;
+    //
+    // @Override
+    // protected Logger getLogger() {
+    // return LOGGER;
+    // }
+    //
+    // @BeforeEach
+    // void setupAWS() {
+    // testData = new AWSIntegrationTestData(LOCALSTACK);
+    // bucketAccessor = testData.getDefaultBucketAccessor();
+    // }
+    //
+    // @AfterEach
+    // void tearDownAWS() {
+    // bucketAccessor.removeBucket();
+    // testData.tearDown();
+    // }
+    //
+    // @Override
+    // protected String createKey(final String prefix, final String topic, final int partition) {
+    // return testData.createKey(prefix, topic, partition);
+    // }
+    //
+    // @Override
+    // protected List<BucketAccessor.S3NativeInfo> getNativeStorage() {
+    // return bucketAccessor.getNativeStorage();
+    // }
+    //
+    // @Override
+    // protected Class<? extends Connector> getConnectorClass() {
+    // return testData.getConnectorClass();
+    // }
+    //
+    // @Override
+    // protected WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
+    // return testData.writeWithKey(nativeKey, testDataBytes);
+    // }
+    //
+    // @Override
+    // protected Map<String, String> createConnectorConfig(final String localPrefix) {
+    // return testData.createConnectorConfig(localPrefix, bucketAccessor.getBucketName());
+    // }
+    //
+    // @Override
+    // protected BiFunction<Map<String, Object>, Map<String, Object>, S3OffsetManagerEntry> offsetManagerEntryFactory()
+    // {
+    // return S3OffsetManagerIntegrationTestData.offsetManagerEntryFactory();
+    // }
+    //
+    // @Override
+    // protected S3SourceRecordIterator getSourceRecordIterator(final Map<String, String> configData,
+    // final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer) {
+    // final S3SourceConfig sourceConfig = new S3SourceConfig(configData);
+    // return new S3SourceRecordIterator(sourceConfig, offsetManager, transformer,
+    // new AWSV2SourceClient(sourceConfig));
+    // }
 }

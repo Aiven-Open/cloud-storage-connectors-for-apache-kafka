@@ -25,7 +25,6 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
-import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
 import io.aiven.kafka.connect.common.config.validators.SourcenameTemplateValidator;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
@@ -78,7 +77,7 @@ public final class FileNameFragment extends ConfigFragment {
      *            the distribution type for the validator
      */
     public void validateDistributionType(final DistributionType distributionType) {
-        new SourcenameTemplateValidator(distributionType).ensureValid(FILE_NAME_TEMPLATE_CONFIG,  getSourceName());
+        new SourcenameTemplateValidator(distributionType).ensureValid(FILE_NAME_TEMPLATE_CONFIG, getSourceName());
     }
 
     /**
@@ -120,8 +119,7 @@ public final class FileNameFragment extends ConfigFragment {
     public static ConfigDef update(final ConfigDef configDef, final CompressionType defaultCompressionType) {
         int fileGroupCounter = 0;
 
-        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-                null, ConfigDef.Importance.MEDIUM,
+        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, null, ConfigDef.Importance.MEDIUM,
                 "The template for file names on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "
@@ -131,8 +129,8 @@ public final class FileNameFragment extends ConfigFragment {
                         + "There is also `key` only variable {{key}} for grouping by keys",
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
-        configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-                null, ConfigDef.Importance.MEDIUM,
+        configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, null,
+                ConfigDef.Importance.MEDIUM,
                 "The template for file names prefixes on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "
@@ -239,7 +237,6 @@ public final class FileNameFragment extends ConfigFragment {
     public String getSourceName() {
         return cfg.getString(FILE_NAME_TEMPLATE_CONFIG);
     }
-
 
     public String getPrefixTemplate() {
         return cfg.getString(FILE_PATH_PREFIX_TEMPLATE_CONFIG);

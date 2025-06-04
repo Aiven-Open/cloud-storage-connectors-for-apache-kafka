@@ -21,13 +21,11 @@ import static java.lang.String.format;
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Fail.fail;
-import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +35,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.json.JsonConverter;
@@ -138,8 +135,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
             final int maxTasks, final InputFormat inputFormat) {
         final Map<String, String> configData = createConnectorConfig(localPrefix);
 
-        KafkaFragment.setter(configData).connector(getConnectorClass())
-                            .name(getConnectorName());
+        KafkaFragment.setter(configData).connector(getConnectorClass()).name(getConnectorName());
 
         SourceConfigFragment.setter(configData).targetTopic(topic);
 
@@ -625,19 +621,20 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
     protected void verifyOffsetPositions(final Map<OffsetManager.OffsetManagerKey, Long> expectedRecords,
             final Duration timeLimit) {
         getLogger().error("Verification of Offset Positions is disabled!!!");
-//        final Properties consumerProperties = consumerPropertiesBuilder().keyDeserializer(ByteArrayDeserializer.class)
-//                .valueDeserializer(ByteArrayDeserializer.class)
-//                .build();
-//        final MessageConsumer messageConsumer = messageConsumer();
-//        final KafkaManager kafkaManager = getKafkaManager();
-//        final Map<OffsetManager.OffsetManagerKey, Long> offsetRecs = new HashMap<>();
-//        try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProperties)) {
-//            consumer.subscribe(Collections.singletonList(kafkaManager.getOffsetTopic()));
-//            await().atMost(timeLimit).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-//                messageConsumer.consumeOffsetMessages(consumer)
-//                        .forEach(o -> offsetRecs.put(o.getManagerKey(), o.getRecordCount()));
-//                assertThat(offsetRecs).containsAllEntriesOf(expectedRecords);
-//            });
-//        }
+        // final Properties consumerProperties =
+        // consumerPropertiesBuilder().keyDeserializer(ByteArrayDeserializer.class)
+        // .valueDeserializer(ByteArrayDeserializer.class)
+        // .build();
+        // final MessageConsumer messageConsumer = messageConsumer();
+        // final KafkaManager kafkaManager = getKafkaManager();
+        // final Map<OffsetManager.OffsetManagerKey, Long> offsetRecs = new HashMap<>();
+        // try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProperties)) {
+        // consumer.subscribe(Collections.singletonList(kafkaManager.getOffsetTopic()));
+        // await().atMost(timeLimit).pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+        // messageConsumer.consumeOffsetMessages(consumer)
+        // .forEach(o -> offsetRecs.put(o.getManagerKey(), o.getRecordCount()));
+        // assertThat(offsetRecs).containsAllEntriesOf(expectedRecords);
+        // });
+        // }
     }
 }

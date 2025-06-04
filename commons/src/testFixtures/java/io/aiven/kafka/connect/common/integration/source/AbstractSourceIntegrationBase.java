@@ -226,8 +226,7 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
      * @throws IOException
      *             on IO error.
      */
-    final protected KafkaManager setupKafka(final boolean forceRestart)
-            throws IOException {
+    final protected KafkaManager setupKafka(final boolean forceRestart) throws IOException {
         KafkaManager kafkaManager = KAFKA_MANAGER_THREAD_LOCAL.get();
         if (kafkaManager != null && forceRestart) {
             tearDownKafka();
@@ -369,8 +368,8 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, 
      * Handles reading messages from the local kafka.
      */
     public class MessageConsumer {
-        /** constructor.
-         * use {@link AbstractSourceIntegrationBase#messageConsumer()}
+        /**
+         * constructor. use {@link AbstractSourceIntegrationBase#messageConsumer()}
          */
         private MessageConsumer() {
         }
