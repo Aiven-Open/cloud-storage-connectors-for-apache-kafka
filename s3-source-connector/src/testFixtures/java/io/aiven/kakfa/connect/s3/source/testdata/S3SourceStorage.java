@@ -45,7 +45,6 @@ public class S3SourceStorage implements SourceStorage<String, S3Object, S3Offset
     public void cleanup() {
         bucketAccessor.removeBucket();
         awsIntegrationTestData.tearDown();
-
     }
 
     @Override
@@ -55,7 +54,7 @@ public class S3SourceStorage implements SourceStorage<String, S3Object, S3Offset
 
     @Override
     public WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
-        return awsIntegrationTestData.writeWithKey(nativeKey, testDataBytes);
+        return awsIntegrationTestData.writeWithKey(nativeKey, testDataBytes, bucketAccessor);
     }
 
     @Override
@@ -85,12 +84,12 @@ public class S3SourceStorage implements SourceStorage<String, S3Object, S3Offset
 
     @Override
     public List<? extends NativeInfo<String, S3Object>> getNativeStorage() {
-        return List.of();
+        return bucketAccessor.getNativeStorage();
     }
 
     @Override
     public IOSupplier<InputStream> getInputStream(final String nativeKey) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override

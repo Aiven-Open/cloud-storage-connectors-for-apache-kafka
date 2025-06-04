@@ -16,6 +16,7 @@
 
 package io.aiven.kakfa.connect.s3.source.testdata;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -93,7 +94,7 @@ public final class AWSIntegrationTestData {
      * @return A bucket accessor for the specified bucket.
      */
     public BucketAccessor getBucketAccessor(final String bucketName) {
-        final BucketAccessor result = new BucketAccessor(s3Client, bucketName);
+        BucketAccessor result = new BucketAccessor(s3Client, bucketName);
         result.createBucket();
         return result;
     }
@@ -140,10 +141,10 @@ public final class AWSIntegrationTestData {
      *            the bytes to write.
      * @return A WriteResult.
      */
-    public SourceStorage.WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
-        final PutObjectRequest request = PutObjectRequest.builder().bucket(BUCKET_NAME).key(nativeKey).build();
+    public SourceStorage.WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes, final BucketAccessor bucketAccessor) {
+        final PutObjectRequest request = PutObjectRequest.builder().bucket(bucketAccessor.getBucketName()).key(nativeKey).build();
         s3Client.putObject(request, RequestBody.fromBytes(testDataBytes));
-        return new SourceStorage.WriteResult<>(new S3OffsetManagerEntry(BUCKET_NAME, nativeKey).getManagerKey(),
+        return new SourceStorage.WriteResult<>(new S3OffsetManagerEntry(bucketAccessor.getBucketName(), nativeKey).getManagerKey(),
                 nativeKey);
     }
 
