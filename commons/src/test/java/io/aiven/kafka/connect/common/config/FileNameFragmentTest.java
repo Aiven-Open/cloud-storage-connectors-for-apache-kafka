@@ -43,24 +43,24 @@ public class FileNameFragmentTest {// NOPMD
     /**
      * An enumeration to expose the FileNameFragment properties names to test cases
      */
-//    private enum FileNameArgs {
-//        GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
-//                FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
-//                        FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
-//                                FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(
-//                                        FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE), FILE_NAME_TEMPLATE_CONFIG(
-//                                                FileNameFragment.FILE_NAME_TEMPLATE_CONFIG), DEFAULT_FILENAME_TEMPLATE(
-//                                                        FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
-//        private final String keyValue;
-//
-//        FileNameArgs(final String key) {
-//            this.keyValue = key;
-//        }
-//
-//        public String key() {
-//            return keyValue;
-//        }
-//    }
+    // private enum FileNameArgs {
+    // GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
+    // FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
+    // FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
+    // FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(
+    // FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE), FILE_NAME_TEMPLATE_CONFIG(
+    // FileNameFragment.FILE_NAME_TEMPLATE_CONFIG), DEFAULT_FILENAME_TEMPLATE(
+    // FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
+    // private final String keyValue;
+    //
+    // FileNameArgs(final String key) {
+    // this.keyValue = key;
+    // }
+    //
+    // public String key() {
+    // return keyValue;
+    // }
+    // }
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("configDefSource")
@@ -85,11 +85,13 @@ public class FileNameFragmentTest {// NOPMD
 
     @Test
     void allConfigDefsAccountForTest() {
-        final List<String> names = Arrays.stream(FileNameFragment.class.getDeclaredFields()).filter(field -> Modifier.isStatic(field.getModifiers()) && field.getType().equals(String.class)).map(field -> {
+        final List<String> names = Arrays.stream(FileNameFragment.class.getDeclaredFields())
+                .filter(field -> Modifier.isStatic(field.getModifiers()) && field.getType().equals(String.class))
+                .map(field -> {
                     try {
                         return field.get(null).toString();
                     } catch (IllegalAccessException e) {
-                        throw new RuntimeException(e);
+                        throw new RuntimeException(e); // NOPMD
                     }
                 })
                 .collect(Collectors.toList());
@@ -99,8 +101,7 @@ public class FileNameFragmentTest {// NOPMD
         names.remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
         configDefSource().map(a -> (String) (a.get()[0])).forEach(names::remove);
         assertThat(names.isEmpty())
-                .as(() -> "Tests do not process the following arguments: "
-                        + String.join(", ", names))
+                .as(() -> "Tests do not process the following arguments: " + String.join(", ", names))
                 .isTrue();
     }
 
@@ -113,8 +114,8 @@ public class FileNameFragmentTest {// NOPMD
         args.add(Arguments.of(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
                 ConfigDef.Importance.MEDIUM, true));
 
-        args.add(Arguments.of(FileNameFragment.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM,
-                false));
+        args.add(Arguments.of(FileNameFragment.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true,
+                ConfigDef.Importance.MEDIUM, false));
 
         args.add(Arguments.of(FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
                 ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, false));
