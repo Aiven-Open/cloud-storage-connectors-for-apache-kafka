@@ -31,8 +31,8 @@ public class FileCompressionTypeValidator implements ConfigDef.Validator {
         // is it up to the connector decide how to support default values for compression.
         // The reason is that for different connectors there is the different compression type
         if (Objects.nonNull(value)) {
-            final String valueStr = (String) value;
-            if (!CompressionType.names().contains(valueStr.toLowerCase(Locale.ROOT))) {
+            final String valueStr = value.toString().toLowerCase(Locale.ROOT);
+            if (!CompressionType.names().contains(valueStr)) {
                 throw new ConfigException(name, valueStr, toString());
             }
         }
