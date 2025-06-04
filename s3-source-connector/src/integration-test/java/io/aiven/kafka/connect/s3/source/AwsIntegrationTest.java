@@ -74,7 +74,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 @Testcontainers
 @SuppressWarnings("PMD.ExcessiveImports")
 class AwsIntegrationTest implements IntegrationBase {
-
     private static final String COMMON_PREFIX = "s3-source-connector-for-apache-kafka-AWS-test-";
 
     @Container

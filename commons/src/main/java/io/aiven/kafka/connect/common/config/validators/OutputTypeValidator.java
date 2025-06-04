@@ -43,6 +43,6 @@ public class OutputTypeValidator implements ConfigDef.Validator {
 
     @Override
     public String toString() {
-        return FormatType.names().stream().collect(Collectors.joining(", "));
+        return FormatType.names().stream().map(s -> "'" + s + "'").collect(Collectors.joining(", "));
     }
 }

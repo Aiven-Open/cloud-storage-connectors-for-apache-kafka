@@ -57,7 +57,6 @@ final public class S3SourceConfig extends SourceCommonConfig {
         SourceConfigFragment.update(configDef);
         TransformerFragment.update(configDef);
         FileNameFragment.update(configDef);
-
         return configDef;
     }
 
