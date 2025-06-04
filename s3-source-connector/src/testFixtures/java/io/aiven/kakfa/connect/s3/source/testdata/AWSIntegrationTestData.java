@@ -93,7 +93,7 @@ public final class AWSIntegrationTestData {
      * @return A bucket accessor for the specified bucket.
      */
     public BucketAccessor getBucketAccessor(final String bucketName) {
-        BucketAccessor result = new BucketAccessor(s3Client, bucketName);
+        final BucketAccessor result = new BucketAccessor(s3Client, bucketName);
         result.createBucket();
         return result;
     }

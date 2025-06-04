@@ -71,8 +71,8 @@ public class S3SourceRecordIteratorIntegrationTest
     }
 
     @Override
-    protected S3SourceRecordIterator getSourceRecordIterator(Map<String, String> configData,
-            OffsetManager<S3OffsetManagerEntry> offsetManager, Transformer transformer) {
+    protected S3SourceRecordIterator getSourceRecordIterator(final Map<String, String> configData,
+            final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer) {
         final S3SourceConfig sourceConfig = new S3SourceConfig(configData);
         return new S3SourceRecordIterator(sourceConfig, offsetManager, transformer,
                 new AWSV2SourceClient(sourceConfig));
