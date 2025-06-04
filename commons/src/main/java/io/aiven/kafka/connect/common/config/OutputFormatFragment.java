@@ -117,10 +117,6 @@ public final class OutputFormatFragment extends ConfigFragment {
         return FormatType.forName(cfg.getString(FORMAT_OUTPUT_TYPE_CONFIG));
     }
 
-    public boolean hasFormatType() {
-        return has(FORMAT_OUTPUT_TYPE_CONFIG);
-    }
-
     /**
      * Gets the envelope enabled state.
      *
