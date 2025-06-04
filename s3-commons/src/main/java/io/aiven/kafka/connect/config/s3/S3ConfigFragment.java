@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.connect.config.s3;
 
-import static io.aiven.kafka.connect.common.config.SinkCommonConfig.FILE_COMPRESSION_TYPE_CONFIG;
-
 import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
@@ -36,6 +34,7 @@ import org.apache.kafka.common.utils.Utils;
 import io.aiven.kafka.connect.common.config.AbstractFragmentSetter;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.ConfigFragment;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
@@ -448,7 +447,7 @@ public final class S3ConfigFragment extends ConfigFragment {
             if (Objects.nonNull(value)) {
                 final String valueStr = (String) value;
                 if (!RegionUtils.getRegions().contains(RegionUtils.getRegion(valueStr))) {
-                    throw new ConfigException(name, valueStr, "supported values are: " + SUPPORTED_AWS_REGIONS);
+                    throw new ConfigException(name, valueStr, "Supported values are: " + SUPPORTED_AWS_REGIONS);
                 }
             }
         }
@@ -555,11 +554,11 @@ public final class S3ConfigFragment extends ConfigFragment {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
         if (Objects.nonNull(cfg.getString(AWS_S3_REGION_CONFIG))) {
-            return software.amazon.awssdk.regions.Region.of(cfg.getString(AWS_S3_REGION_CONFIG));
+            return Region.of(cfg.getString(AWS_S3_REGION_CONFIG));
         } else if (Objects.nonNull(cfg.getString(AWS_S3_REGION))) {
-            return software.amazon.awssdk.regions.Region.of(cfg.getString(AWS_S3_REGION));
+            return Region.of(cfg.getString(AWS_S3_REGION));
         } else {
-            return software.amazon.awssdk.regions.Region.of(Regions.US_EAST_1.getName());
+            return Region.of(Regions.US_EAST_1.getName());
         }
     }
 
@@ -632,12 +631,12 @@ public final class S3ConfigFragment extends ConfigFragment {
      */
     public static Map<String, String> handleDeprecatedOptions(final Map<String, String> properties) {
         // we need to have the old OUTPUT_COMPRESSION take priority over the new FILE_COMPRESSION_TYPE_CONFIG
-        final String newValue = properties.get(FILE_COMPRESSION_TYPE_CONFIG);
+        final String newValue = properties.get(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG);
         final String oldValue = properties.get(OUTPUT_COMPRESSION);
         if (oldValue != null) {
-            logDeprecated(LOGGER, OUTPUT_COMPRESSION, FILE_COMPRESSION_TYPE_CONFIG);
+            logDeprecated(LOGGER, OUTPUT_COMPRESSION, FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG);
             if (newValue == null) {
-                properties.put(FILE_COMPRESSION_TYPE_CONFIG, oldValue);
+                properties.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, oldValue);
             }
         }
         return properties;

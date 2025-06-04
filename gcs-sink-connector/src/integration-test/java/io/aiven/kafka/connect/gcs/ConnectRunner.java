@@ -81,7 +81,8 @@ final class ConnectRunner {
         final Plugins plugins = new Plugins(workerProps);
         final StandaloneConfig config = new StandaloneConfig(workerProps);
 
-        final Worker worker = new Worker(workerId, time, plugins, config, new MemoryOffsetBackingStore(), new AllConnectorClientConfigOverridePolicy());
+        final Worker worker = new Worker(workerId, time, plugins, config, new MemoryOffsetBackingStore(),
+                new AllConnectorClientConfigOverridePolicy());
         herder = new StandaloneHerder(worker, kafkaClusterId, new AllConnectorClientConfigOverridePolicy());
 
         final RestServer rest = new RestServer(config);

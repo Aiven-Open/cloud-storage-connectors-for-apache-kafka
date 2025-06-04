@@ -40,11 +40,11 @@ public final class FileNameFragment extends ConfigFragment {
 
     // package private so that testing can access.
     static final String GROUP_FILE = "File";
-    static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
+    public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     static final String FILE_MAX_RECORDS = "file.max.records";
     static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
-    static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
+    public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
 
     public static final String FILE_PATH_PREFIX_TEMPLATE_CONFIG = "file.prefix.template";

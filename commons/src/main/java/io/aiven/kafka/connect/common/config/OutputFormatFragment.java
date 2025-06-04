@@ -165,7 +165,7 @@ public final class OutputFormatFragment extends ConfigFragment {
         final List<String> fields = cfg.getList(configEntry);
         return fields.stream().map(fieldName -> {
             final var type = OutputFieldType.forName(fieldName);
-            final var encoding = type == OutputFieldType.VALUE
+            final var encoding = type == OutputFieldType.KEY || type == OutputFieldType.VALUE
                     ? getOutputFieldEncodingType()
                     : OutputFieldEncodingType.NONE;
             return new OutputField(type, encoding);
