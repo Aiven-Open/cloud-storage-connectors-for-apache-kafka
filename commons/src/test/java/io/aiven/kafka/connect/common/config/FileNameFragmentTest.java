@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.common.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.Modifier;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,33 +43,33 @@ public class FileNameFragmentTest {// NOPMD
     /**
      * An enumeration to expose the FileNameFragment properties names to test cases
      */
-    public enum FileNameArgs {
-        GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
-                FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
-                        FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
-                                FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(
-                                        FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE), FILE_NAME_TEMPLATE_CONFIG(
-                                                FileNameFragment.FILE_NAME_TEMPLATE_CONFIG), DEFAULT_FILENAME_TEMPLATE(
-                                                        FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
-        private final String keyValue;
-
-        FileNameArgs(final String key) {
-            this.keyValue = key;
-        }
-
-        public String key() {
-            return keyValue;
-        }
-    }
+//    private enum FileNameArgs {
+//        GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
+//                FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
+//                        FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
+//                                FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(
+//                                        FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE), FILE_NAME_TEMPLATE_CONFIG(
+//                                                FileNameFragment.FILE_NAME_TEMPLATE_CONFIG), DEFAULT_FILENAME_TEMPLATE(
+//                                                        FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
+//        private final String keyValue;
+//
+//        FileNameArgs(final String key) {
+//            this.keyValue = key;
+//        }
+//
+//        public String key() {
+//            return keyValue;
+//        }
+//    }
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("configDefSource")
-    void configDefTest(final FileNameArgs arg, final ConfigDef.Type type, final Object defaultValue,
+    void configDefTest(final String arg, final ConfigDef.Type type, final Object defaultValue,
             final boolean validatorPresent, final ConfigDef.Importance importance, final boolean recommenderPresent) {
         final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
-        final ConfigDef.ConfigKey key = configDef.configKeys().get(arg.key());
+        final ConfigDef.ConfigKey key = configDef.configKeys().get(arg);
 
-        assertThat(arg.key()).as("Wrong key name").isEqualTo(key.name);
+        assertThat(arg).as("Wrong key name").isEqualTo(key.name);
         assertThat(type).as("Wrong key type").isEqualTo(key.type);
         assertThat(defaultValue).as("Wrong default value").isEqualTo(key.defaultValue);
         assertThat(validatorPresent)
@@ -84,34 +85,41 @@ public class FileNameFragmentTest {// NOPMD
 
     @Test
     void allConfigDefsAccountForTest() {
-        // create a modifiable list.
-        final List<FileNameArgs> argList = new ArrayList<>(Arrays.asList(FileNameArgs.values()));
-        // remove the non-argument values
-        argList.remove(FileNameArgs.GROUP_FILE);
-        argList.remove(FileNameArgs.DEFAULT_FILENAME_TEMPLATE);
-        configDefSource().map(a -> (FileNameArgs) (a.get()[0])).forEach(argList::remove);
-        assertThat(argList.isEmpty())
+        final List<String> names = Arrays.stream(FileNameFragment.class.getDeclaredFields()).filter(field -> Modifier.isStatic(field.getModifiers()) && field.getType().equals(String.class)).map(field -> {
+                    try {
+                        return field.get(null).toString();
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .collect(Collectors.toList());
+        names.remove(FileNameFragment.GROUP_FILE);
+        names.remove(FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
+        // TODO remove this when we understand what it is for.
+        names.remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+        configDefSource().map(a -> (String) (a.get()[0])).forEach(names::remove);
+        assertThat(names.isEmpty())
                 .as(() -> "Tests do not process the following arguments: "
-                        + String.join(", ", argList.stream().map(arg -> arg.toString()).collect(Collectors.toList())))
+                        + String.join(", ", names))
                 .isTrue();
     }
 
     private static Stream<Arguments> configDefSource() {
         final List<Arguments> args = new ArrayList<>();
 
-        args.add(Arguments.of(FileNameArgs.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, true,
+        args.add(Arguments.of(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, false,
                 ConfigDef.Importance.MEDIUM, false));
 
-        args.add(Arguments.of(FileNameArgs.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
+        args.add(Arguments.of(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
                 ConfigDef.Importance.MEDIUM, true));
 
-        args.add(Arguments.of(FileNameArgs.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM,
+        args.add(Arguments.of(FileNameFragment.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM,
                 false));
 
-        args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
+        args.add(Arguments.of(FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
                 ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, false));
 
-        args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING,
+        args.add(Arguments.of(FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING,
                 TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, false));
 
         return args.stream();

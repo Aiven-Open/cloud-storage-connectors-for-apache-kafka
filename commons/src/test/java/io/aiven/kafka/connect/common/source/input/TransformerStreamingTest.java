@@ -50,7 +50,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * Abstract test class to verify that streaming data is closed properly.
+ * Tests to verify that streaming data passing through a transformer is closed properly.
  */
 class TransformerStreamingTest {
 
