@@ -39,29 +39,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 public class FileNameFragmentTest {// NOPMD
-
-    /**
-     * An enumeration to expose the FileNameFragment properties names to test cases
-     */
-    // private enum FileNameArgs {
-    // GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
-    // FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
-    // FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
-    // FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(
-    // FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE), FILE_NAME_TEMPLATE_CONFIG(
-    // FileNameFragment.FILE_NAME_TEMPLATE_CONFIG), DEFAULT_FILENAME_TEMPLATE(
-    // FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
-    // private final String keyValue;
-    //
-    // FileNameArgs(final String key) {
-    // this.keyValue = key;
-    // }
-    //
-    // public String key() {
-    // return keyValue;
-    // }
-    // }
-
+    
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("configDefSource")
     void configDefTest(final String arg, final ConfigDef.Type type, final Object defaultValue,
