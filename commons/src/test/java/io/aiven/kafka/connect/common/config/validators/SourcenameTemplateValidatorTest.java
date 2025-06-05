@@ -33,39 +33,30 @@ class SourcenameTemplateValidatorTest {
     @CsvSource({ "{{topic}}-{{partition}}-{{start_offset}}.avro,partition", "*-{{partition}}.parquet,partition",
             "*.gz,object_hash", "'([a-zA-Z0-9_-]{3,5}.gz',object_hash" })
     void validateBasicSourceNamesPass(final String sourceName, final String distributionType) {
-        assertThatCode(
-                () -> new SourcenameTemplateValidator(TEST_CONFIG_NAME, DistributionType.forName(distributionType))
-                        .ensureValid(null, sourceName))
-                .doesNotThrowAnyException();
+        assertThatCode(() -> new SourcenameTemplateValidator(DistributionType.forName(distributionType))
+                .ensureValid(TEST_CONFIG_NAME, sourceName)).doesNotThrowAnyException();
     }
 
     @ParameterizedTest
     @CsvSource({
-            "{{topic}}-{{start_offset}}.avro,partition,'Invalid value {{topic}}-{{start_offset}}.avro for configuration TEST_CONFIG: parameter partition is required for the the file.name.template'",
-            "*.parquet,partition,'Invalid value *.parquet for configuration TEST_CONFIG: parameter partition is required for the the file.name.template'",
-            "' ',object_hash,'Invalid value Can not be a blank or empty string for configuration TEST_CONFIG'" })
+            "{{topic}}-{{start_offset}}.avro, partition,'Invalid value {{topic}}-{{start_offset}}.avro for configuration TEST_CONFIG: Partition distribution type requires parameter {{partition}} in the file.name.template'",
+            "*.parquet, partition,'Invalid value *.parquet for configuration TEST_CONFIG: Partition distribution type requires parameter {{partition}} in the file.name.template'",
+            "' ', object_hash,'Invalid value must not be empty or not set for configuration TEST_CONFIG'" })
     void validateVariableWithInvalidParameterName(final String sourceName, final String distributionType,
             final String message) {
 
-        assertThatThrownBy(
-                () -> new SourcenameTemplateValidator(TEST_CONFIG_NAME, DistributionType.forName(distributionType))
-                        .ensureValid(null, sourceName))
-                .isInstanceOf(ConfigException.class)
-                .hasMessage(message);
+        assertThatThrownBy(() -> new SourcenameTemplateValidator(DistributionType.forName(distributionType))
+                .ensureValid(TEST_CONFIG_NAME, sourceName)).isInstanceOf(ConfigException.class).hasMessage(message);
     }
 
     @ParameterizedTest
     @CsvSource({
-            "{{topic}}-{{long}}.avro,partition,'Invalid value {{topic}}-{{long}}.avro for configuration TEST_CONFIG: unsupported template variable used, supported values are: [partition, start_offset, timestamp, topic]'",
-            "{{filename}}-{{partition}}.parquet,partition,'Invalid value {{filename}}-{{partition}}.parquet for configuration TEST_CONFIG: unsupported template variable used, supported values are: [partition, start_offset, timestamp, topic]'", })
+            "{{topic}}-{{long}}.avro,partition,'Invalid value {{topic}}-{{long}}.avro for configuration TEST_CONFIG: unsupported template variable used ({{long}}), supported values are: {{partition}}, {{start_offset}}, {{timestamp}}, {{topic}}'",
+            "{{filename}}-{{partition}}.parquet,partition,'Invalid value {{filename}}-{{partition}}.parquet for configuration TEST_CONFIG: unsupported template variable used ({{filename}}), supported values are: {{partition}}, {{start_offset}}, {{timestamp}}, {{topic}}'", })
     void validateCorrectExceptionsOnInvalidTemplates(final String sourceName, final String distributionType,
             final String message) {
 
-        assertThatThrownBy(
-                () -> new SourcenameTemplateValidator(TEST_CONFIG_NAME, DistributionType.forName(distributionType))
-                        .ensureValid(null, sourceName))
-                .isInstanceOf(ConfigException.class)
-                .hasMessage(message);
+        assertThatThrownBy(() -> new SourcenameTemplateValidator(DistributionType.forName(distributionType))
+                .ensureValid(TEST_CONFIG_NAME, sourceName)).isInstanceOf(ConfigException.class).hasMessage(message);
     }
-
 }

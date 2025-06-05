@@ -16,12 +16,12 @@
 
 package io.aiven.kafka.connect.config.s3;
 
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,12 +39,14 @@ public final class S3CommonConfig {
     }
 
     public static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
-        if (!properties.containsKey(AWS_S3_PREFIX_CONFIG)) {
+        final List<String> keysToProcess = List.of(S3ConfigFragment.AWS_S3_PREFIX_CONFIG,
+                FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+        if (keysToProcess.stream().noneMatch(properties::containsKey)) {
             return properties;
         }
 
         final var result = new HashMap<>(properties);
-        for (final var prop : List.of(AWS_S3_PREFIX_CONFIG)) {
+        for (final var prop : keysToProcess) {
             if (properties.containsKey(prop)) {
                 String template = properties.get(prop);
                 final String originalTemplate = template;

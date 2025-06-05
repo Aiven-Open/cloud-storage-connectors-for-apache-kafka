@@ -38,7 +38,6 @@ public class SourceCommonConfig extends CommonConfig {
         transformerFragment = new TransformerFragment(this);
         sourceConfigFragment = new SourceConfigFragment(this);
         fileNameFragment = new FileNameFragment(this);
-
         validate(); // NOPMD ConstructorCallsOverridableMethod
     }
 
@@ -81,7 +80,6 @@ public class SourceCommonConfig extends CommonConfig {
     }
 
     public String getSourceName() {
-        return sourceConfigFragment.getSourceName();
+        return fileNameFragment.getSourceName();
     }
-
 }

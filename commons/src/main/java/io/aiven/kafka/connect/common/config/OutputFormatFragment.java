@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.config;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -52,8 +53,14 @@ public final class OutputFormatFragment extends ConfigFragment {
     public static ConfigDef update(final ConfigDef configDef, final OutputFieldType defaultFieldType) {
         int formatGroupCounter = 0;
 
+        final String supportedFormatTypes = FormatType.names()
+                .stream()
+                .map(f -> "'" + f + "'")
+                .collect(Collectors.joining(", "));
+
         configDef.define(FORMAT_OUTPUT_TYPE_CONFIG, ConfigDef.Type.STRING, FormatType.CSV.name,
-                new OutputTypeValidator(), ConfigDef.Importance.MEDIUM, "The format type of output content.",
+                new OutputTypeValidator(), ConfigDef.Importance.MEDIUM,
+                "The format type of output content" + "The supported values are: " + supportedFormatTypes + ".",
                 GROUP_FORMAT, 0, ConfigDef.Width.NONE, FORMAT_OUTPUT_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(FormatType.names()));
 
@@ -78,6 +85,17 @@ public final class OutputFormatFragment extends ConfigFragment {
         return configDef;
     }
 
+    /**
+     * Creates a setter for this fragment
+     *
+     * @param data
+     *            the data to update
+     * @return the Setter.
+     */
+    public static Setter setter(final Map<String, String> data) {
+        return new Setter(data);
+    }
+
     @Override
     public void validate() {
         // Special checks for output json envelope config.
@@ -89,14 +107,34 @@ public final class OutputFormatFragment extends ConfigFragment {
             throw new ConfigException(msg);
         }
     }
+
+    /**
+     * Gets the defined format type.
+     *
+     * @return the FormatType.
+     */
     public FormatType getFormatType() {
         return FormatType.forName(cfg.getString(FORMAT_OUTPUT_TYPE_CONFIG));
     }
 
+    public boolean hasFormatType() {
+        return has(FORMAT_OUTPUT_TYPE_CONFIG);
+    }
+
+    /**
+     * Gets the envelope enabled state.
+     *
+     * @return the envelope enabled state.
+     */
     public Boolean envelopeEnabled() {
         return cfg.getBoolean(FORMAT_OUTPUT_ENVELOPE_CONFIG);
     }
 
+    /**
+     * Gets the output field encoding type.
+     *
+     * @return the Output field encodging type.
+     */
     public OutputFieldEncodingType getOutputFieldEncodingType() {
         return OutputFieldEncodingType.forName(cfg.getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG));
     }
@@ -136,5 +174,77 @@ public final class OutputFormatFragment extends ConfigFragment {
                     : OutputFieldEncodingType.NONE;
             return new OutputField(type, encoding);
         }).collect(Collectors.toUnmodifiableList());
+    }
+
+    /**
+     * The setter for OutputFormatFragment.
+     */
+    public static class Setter extends AbstractFragmentSetter<Setter> {
+
+        /**
+         * Constructor.
+         *
+         * @param data
+         *            the map of data items being set.
+         */
+        private Setter(final Map<String, String> data) {
+            super(data);
+        }
+
+        /**
+         * Sets the format type.
+         *
+         * @param formatType
+         *            the format type.
+         * @return this
+         */
+        public Setter withFormatType(final FormatType formatType) {
+            return setValue(FORMAT_OUTPUT_TYPE_CONFIG, formatType.name());
+        }
+
+        /**
+         * Sets the output field encoding type.
+         *
+         * @param encodingType
+         *            the output field encoding type.
+         * @return this
+         */
+        public Setter withOutputFieldEncodingType(final OutputFieldEncodingType encodingType) {
+            return setValue(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, encodingType.name());
+        }
+
+        /**
+         * Sets the list of output fields.
+         *
+         * @param outputFields
+         *            the list of output fields
+         * @return this
+         */
+        public Setter withOutputFields(final List<OutputFieldType> outputFields) {
+            return setValue(FORMAT_OUTPUT_FIELDS_CONFIG,
+                    outputFields.stream().map(OutputFieldType::toString).collect(Collectors.joining(",")));
+        }
+
+        /**
+         * Sets the list of output fields.
+         *
+         * @param outputFields
+         *            the list of output fields
+         * @return this
+         */
+        public Setter withOutputFields(final OutputFieldType... outputFields) {
+            return withOutputFields(List.of(outputFields));
+        }
+
+        /**
+         * Sets the envelope enabled flag.
+         *
+         * @param envelopeEnabled
+         *            the desired flag state.
+         * @return this
+         */
+        public Setter envelopeEnabled(final boolean envelopeEnabled) {
+            return setValue(FORMAT_OUTPUT_ENVELOPE_CONFIG, envelopeEnabled);
+        }
     }
 }

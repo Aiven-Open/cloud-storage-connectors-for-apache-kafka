@@ -16,10 +16,10 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_HASH;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
@@ -30,13 +30,27 @@ import io.aiven.kafka.connect.common.source.task.DistributionType;
 
 import org.apache.commons.lang3.StringUtils;
 
+/**
+ * Defines properties that are shared across all Source implementations.
+ */
 public final class SourceConfigFragment extends ConfigFragment {
     public static final String MAX_POLL_RECORDS = "max.poll.records";
-    public static final String EXPECTED_MAX_MESSAGE_BYTES = "expected.max.message.bytes";
     public static final String TARGET_TOPIC = "topic";
-    public static final String ERRORS_TOLERANCE = "errors.tolerance";
-
+    private static final String ERRORS_TOLERANCE = "errors.tolerance";
     public static final String DISTRIBUTION_TYPE = "distribution.type";
+    /* public so that deprecated users can reference it */
+    public static final String RING_BUFFER_SIZE = "ring.buffer.size";
+
+    /**
+     * Gets a setter for this fragment.
+     *
+     * @param data
+     *            the data map to modify.
+     * @return the Setter.
+     */
+    public static Setter setter(final Map<String, String> data) {
+        return new Setter(data);
+    }
 
     /**
      * Construct the ConfigFragment.
@@ -49,6 +63,15 @@ public final class SourceConfigFragment extends ConfigFragment {
     }
 
     public static ConfigDef update(final ConfigDef configDef) {
+        configDef.define(RING_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(0),
+                ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.");
+
+        configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
+                ConfigDef.Importance.MEDIUM, "Max poll records");
+        // KIP-298 Error Handling in Connect
+        configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, ErrorsTolerance.NONE.name(),
+                new ErrorsToleranceValidator(), ConfigDef.Importance.MEDIUM,
+                "Indicates to the connector what level of exceptions are allowed before the connector stops.");
 
         // Offset Storage config group includes target topics
         configDef.define(TARGET_TOPIC, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
@@ -58,55 +81,57 @@ public final class SourceConfigFragment extends ConfigFragment {
                 "Based on tasks.max config and the type of strategy selected, objects are processed in distributed"
                         + " way by Kafka connect workers.");
 
-        configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Max poll records");
-        // KIP-298 Error Handling in Connect
-        configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, ErrorsTolerance.NONE.name(),
-                new ErrorsToleranceValidator(), ConfigDef.Importance.MEDIUM,
-                "Indicates to the connector what level of exceptions are allowed before the connector stops.");
-
-        configDef.define(EXPECTED_MAX_MESSAGE_BYTES, ConfigDef.Type.INT, 1_048_588, ConfigDef.Importance.MEDIUM,
-                "The largest record batch size allowed by Kafka config max.message.bytes");
-
-        // step on earlier definition.
-        configDef.configKeys().remove(FILE_NAME_TEMPLATE_CONFIG);
-        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, null, ConfigDef.Importance.MEDIUM,
-                "The template for file names on S3. "
-                        + "Supports `{{ variable }}` placeholders for substituting variables. "
-                        + "Currently supported variables are `topic`, `partition`, and `start_offset` "
-                        + "(the offset of the first record in the file). "
-                        + "Only some combinations of variables are valid, which currently are:\n"
-                        + "- `topic`, `partition`, `start_offset`."
-                        + "There is also `*` only available when using `hash` distribution.",
-                "", -1, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
-
         return configDef;
     }
 
+    /**
+     * Gets the target topic.
+     *
+     * @return the target topic.
+     */
     public String getTargetTopic() {
         return cfg.getString(TARGET_TOPIC);
     }
 
-    public String getSourceName() {
-        return cfg.getString(FILE_NAME_TEMPLATE_CONFIG);
-    }
-
+    /**
+     * Gets the maximum number of records to poll at one time.
+     *
+     * @return The maximum number of records to poll at one time.
+     */
     public int getMaxPollRecords() {
         return cfg.getInt(MAX_POLL_RECORDS);
     }
 
-    public int getExpectedMaxMessageBytes() {
-        return cfg.getInt(EXPECTED_MAX_MESSAGE_BYTES);
-    }
-
+    /**
+     * Gets the errors tolerance.
+     *
+     * @return the errors tolerance.
+     */
     public ErrorsTolerance getErrorsTolerance() {
         return ErrorsTolerance.forName(cfg.getString(ERRORS_TOLERANCE));
     }
 
+    /**
+     * Gets the distribution type
+     *
+     * @return the distribution type.
+     */
     public DistributionType getDistributionType() {
         return DistributionType.forName(cfg.getString(DISTRIBUTION_TYPE));
     }
 
+    /**
+     * Gets the ring buffer size.
+     *
+     * @return the ring buffer size.
+     */
+    public int getRingBufferSize() {
+        return cfg.getInt(RING_BUFFER_SIZE);
+    }
+
+    /**
+     * The errors tolerance validator.
+     */
     private static class ErrorsToleranceValidator implements ConfigDef.Validator {
         @Override
         public void ensureValid(final String name, final Object value) {
@@ -126,6 +151,9 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     }
 
+    /**
+     * The distribution strategy validator.
+     */
     private static class ObjectDistributionStrategyValidator implements ConfigDef.Validator {
         @Override
         public void ensureValid(final String name, final Object value) {
@@ -144,4 +172,73 @@ public final class SourceConfigFragment extends ConfigFragment {
         }
     }
 
+    /**
+     * The SourceConfigFragment setter.
+     */
+    public static class Setter extends AbstractFragmentSetter<Setter> {
+        /**
+         * Constructor.
+         *
+         * @param data
+         *            the data to modify.
+         */
+        protected Setter(final Map<String, String> data) {
+            super(data);
+        }
+
+        /**
+         * Set the maximum poll records.
+         *
+         * @param maxPollRecords
+         *            the maximum number of records to poll.
+         * @return this
+         */
+        public Setter maxPollRecords(final int maxPollRecords) {
+            return setValue(MAX_POLL_RECORDS, maxPollRecords);
+        }
+
+        /**
+         * Sets the error tolerance.
+         *
+         * @param tolerance
+         *            the error tolerance
+         * @return this.
+         */
+        public Setter errorsTolerance(final ErrorsTolerance tolerance) {
+            return setValue(ERRORS_TOLERANCE, tolerance.name());
+        }
+
+        /**
+         * Sets the target topic.
+         *
+         * @param targetTopic
+         *            the target topic.
+         * @return this.
+         */
+        public Setter targetTopic(final String targetTopic) {
+            return setValue(TARGET_TOPIC, targetTopic);
+        }
+
+        /**
+         * Sets the distribution type.
+         *
+         * @param distributionType
+         *            the distribution type.
+         * @return this
+         */
+        public Setter distributionType(final DistributionType distributionType) {
+            return setValue(DISTRIBUTION_TYPE, distributionType.name());
+        }
+
+        /**
+         * Sets the ring buffer size.
+         *
+         * @param ringBufferSize
+         *            the ring buffer size
+         * @return this.
+         */
+        public Setter ringBufferSize(final int ringBufferSize) {
+            return setValue(RING_BUFFER_SIZE, ringBufferSize);
+        }
+    }
 }
