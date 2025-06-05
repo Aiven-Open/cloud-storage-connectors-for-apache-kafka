@@ -29,4 +29,3 @@ tasks.register<Copy>("copySiteAssets") {
   }
   into("${project.layout.projectDirectory.asFile}/site/build/site/markdown")
 }
-
