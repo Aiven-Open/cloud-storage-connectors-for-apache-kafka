@@ -76,6 +76,14 @@ jobs:
           echo s3_source_tar_path=`realpath ./s3-source-connector/build/distributions/${s3_source_tar_file}` >> $GITHUB_ENV
           echo s3_source_zip_path=`realpath ./s3-source-connector/build/distributions/${s3_source_zip_file}` >> $GITHUB_ENV
 
+          export azure_source_tar_file=$(ls ./azure-source-connector/build/distributions/ | grep tar)
+          export azure_source_zip_file=$(ls ./azure-source-connector/build/distributions/ | grep zip)
+          echo azure_source_tar_file=${azure_source_tar_file} >> $GITHUB_ENV
+          echo azure_source_zip_file=${azure_source_zip_file} >> $GITHUB_ENV
+          echo azure_source_tar_path=`realpath ./azure-source-connector/build/distributions/${azure_source_tar_file}` >> $GITHUB_ENV
+          echo azure_source_zip_path=`realpath ./azure-source-connector/build/distributions/${azure_source_zip_file}` >> $GITHUB_ENV
+          
+
       - name: Create tag
         run: |
           git config --local user.name "GitHub Action"
