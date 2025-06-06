@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -110,7 +109,7 @@ public abstract class OutputWriter implements AutoCloseable {
         protected boolean envelopeEnabled = true;
 
         public Builder withCompressionType(final CompressionType compressionType) {
-            this.compressionType = Optional.ofNullable(compressionType).orElse(CompressionType.NONE);
+            this.compressionType = compressionType == null ? CompressionType.NONE : compressionType;
             return this;
         }
 
