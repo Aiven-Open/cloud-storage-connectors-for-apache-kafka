@@ -33,6 +33,12 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
     private final Map<String, String> dataMap;
 
     /**
+     * A value to return from the setter methods. Support a fluent setter class.
+     */
+    @SuppressWarnings("unchecked")
+    protected T self = (T) this;
+
+    /**
      * Constructor.
      *
      * @param data
@@ -63,7 +69,7 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
      */
     final protected T setValue(final String key, final String value) {
         dataMap.put(key, value);
-        return (T) this;
+        return self;
     }
 
     /**
@@ -75,7 +81,6 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
      *            the value to set.
      * @return this.
      */
-    @SuppressWarnings("unchecked")
     final protected T setValue(final String key, final int value) {
         return setValue(key, Integer.toString(value));
     }
