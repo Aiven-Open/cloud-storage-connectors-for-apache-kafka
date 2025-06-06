@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.connect.common.source;
 
-import javax.validation.constraints.NotNull;
-
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Iterator;
@@ -52,7 +50,7 @@ import org.slf4j.Logger;
  *            The source record for the client type.
  *
  */
-public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>>
+public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>>
         implements
             Iterator<T> {
     /** The OffsetManager that we are using */
@@ -75,10 +73,9 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      * by the inner record.
      */
     private Iterator<T> outer;
-    /** The topic(s) which have been configured with the 'topics' configuration */
-    private final Optional<String> targetTopics;
+
     /** Check if the native item key is part of the 'target' files configured to be extracted from Azure */
-    protected final FileMatching fileMatching;
+    private final FileMatching fileMatching;
     /** The predicate which will determine if an native item should be assigned to this task for processing */
     protected final Predicate<Optional<T>> taskAssignment;
     /**
@@ -102,12 +99,12 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      *            the Offset manager to use.
      * @param transformer
      *            the transformer to use.
-     * @param bufferSize
+     * @param ringBufferSize
      *            the size of the ring buffer.
      */
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
     public AbstractSourceRecordIterator(final SourceCommonConfig sourceConfig, final OffsetManager<O> offsetManager,
-            final Transformer transformer, final int bufferSize) {
+            final Transformer transformer, final int ringBufferSize) {
         super();
 
         final DistributionType distributionType = sourceConfig.getDistributionType();
@@ -116,13 +113,12 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
         this.sourceConfig = sourceConfig;
         this.offsetManager = offsetManager;
         this.transformer = transformer;
-        this.targetTopics = Optional.ofNullable(sourceConfig.getTargetTopic());
         this.taskId = sourceConfig.getTaskId() % maxTasks;
         this.taskAssignment = new TaskAssignment(distributionType.getDistributionStrategy(maxTasks));
         this.fileMatching = new FileMatching(new FilePatternUtils(sourceConfig.getSourceName()));
         this.inner = Collections.emptyIterator();
         this.outer = Collections.emptyIterator();
-        this.ringBuffer = new RingBuffer<>(Math.max(1, bufferSize));
+        this.ringBuffer = new RingBuffer<>(Math.max(1, ringBufferSize));
     }
 
     /**
@@ -184,7 +180,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      *            THe native key to create an offset manager key for.
      * @return An offset manager key.
      */
-    abstract protected OffsetManager.OffsetManagerKey getOffsetManagerKey(@NotNull K nativeKey);
+    abstract protected OffsetManager.OffsetManagerKey getOffsetManagerKey(K nativeKey);
 
     @Override
     final public boolean hasNext() {
@@ -339,19 +335,20 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
         }
 
         /**
-         * Sets the target topic in the context if it has been set from configuration.
+         * Sets the target topic in the context.
          *
          * @param context
          *            the context to set the topic in if found.
          */
         private void overrideContextTopic(final Context<K> context) {
-            if (targetTopics.isPresent()) {
+            final String targetTopic = sourceConfig.getTargetTopic();
+            if (targetTopic != null) {
                 if (context.getTopic().isPresent()) {
                     getLogger().debug(
                             "Overriding topic '{}' extracted from native item name with topic '{}' from configuration 'topics'. ",
-                            context.getTopic().get(), targetTopics.get());
+                            context.getTopic().get(), targetTopic);
                 }
-                context.setTopic(targetTopics.get());
+                context.setTopic(targetTopic);
             }
         }
     }

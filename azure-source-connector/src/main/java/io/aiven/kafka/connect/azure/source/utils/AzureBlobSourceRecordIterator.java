@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class AzureBlobSourceRecordIterator
         extends
-            AbstractSourceRecordIterator<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
+            AbstractSourceRecordIterator<String, BlobItem, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
 
     /** The azure blob client that provides the blobItems */
     private final AzureBlobClient azureBlobClient;

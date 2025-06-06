@@ -72,6 +72,7 @@ import org.apache.kafka.connect.sink.SinkTaskContext;
 
 import io.aiven.kafka.connect.common.config.BackoffPolicyFragmentFixture.BackoffPolicyArgs;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
@@ -431,8 +432,7 @@ final class S3SinkTaskTest {
     void failedForStringValuesByDefault() {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        FileNameFragment.setter(properties).fileCompression(CompressionType.NONE);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(AWS_S3_PREFIX_CONFIG, "any_prefix");
         task.start(properties);
@@ -455,7 +455,7 @@ final class S3SinkTaskTest {
         final S3SinkTask task = new S3SinkTask();
 
         final CompressionType compression = CompressionType.NONE;
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
+        FileNameFragment.setter(properties).fileCompression(compression);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
@@ -501,8 +501,7 @@ final class S3SinkTaskTest {
     void failedForStructValuesByDefault() {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        FileNameFragment.setter(properties).fileCompression(CompressionType.NONE);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
         task.start(properties);
@@ -523,7 +522,7 @@ final class S3SinkTaskTest {
         final S3SinkTask task = new S3SinkTask();
 
         final CompressionType compression = CompressionType.NONE;
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
+        FileNameFragment.setter(properties).fileCompression(compression);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
@@ -569,7 +568,7 @@ final class S3SinkTaskTest {
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndJsonL() throws IOException {
         final CompressionType compression = CompressionType.NONE;
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
+        FileNameFragment.setter(properties).fileCompression(compression);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
@@ -616,7 +615,7 @@ final class S3SinkTaskTest {
         final S3SinkTask task = new S3SinkTask();
 
         final CompressionType compression = CompressionType.NONE;
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
+        FileNameFragment.setter(properties).fileCompression(compression);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
         task.start(properties);
@@ -646,7 +645,7 @@ final class S3SinkTaskTest {
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndClassicJson() throws IOException {
         final CompressionType compression = CompressionType.NONE;
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression.name());
+        FileNameFragment.setter(properties).fileCompression(compression);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");

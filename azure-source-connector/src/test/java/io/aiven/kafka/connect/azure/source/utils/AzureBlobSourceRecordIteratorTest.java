@@ -47,7 +47,7 @@ final public class AzureBlobSourceRecordIteratorTest
     }
 
     @Override
-    protected AbstractSourceRecordIterator<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> createSourceRecordIterator(
+    protected AbstractSourceRecordIterator<String, BlobItem, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> createSourceRecordIterator(
             final SourceCommonConfig mockConfig, final OffsetManager<AzureBlobOffsetManagerEntry> offsetManager,
             final Transformer transformer) {
         return new AzureBlobSourceRecordIterator((AzureBlobSourceConfig) mockConfig, offsetManager, transformer,

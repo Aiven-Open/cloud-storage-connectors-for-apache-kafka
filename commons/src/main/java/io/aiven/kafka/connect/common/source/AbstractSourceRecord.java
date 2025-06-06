@@ -36,10 +36,10 @@ import org.slf4j.Logger;
  *            the key type for the native object.
  * @param <O>
  *            the OffsetManagerEntry for the iterator.
- * @param <E>
+ * @param <T>
  *            the implementation class for AbstractSourceRecord.
  */
-public abstract class AbstractSourceRecord<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, E extends AbstractSourceRecord<K, N, O, E>> {
+public abstract class AbstractSourceRecord<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>> {
     /** The logger from the implementation class */
     private final Logger logger;
     /** the key for the source record */
@@ -72,7 +72,7 @@ public abstract class AbstractSourceRecord<K extends Comparable<K>, N, O extends
      * @param sourceRecord
      *            the source record to copy.
      */
-    protected AbstractSourceRecord(final AbstractSourceRecord<K, N, O, E> sourceRecord) {
+    protected AbstractSourceRecord(final AbstractSourceRecord<K, N, O, T> sourceRecord) {
         this(sourceRecord.logger, sourceRecord.nativeInfo);
         this.offsetManagerEntry = sourceRecord.offsetManagerEntry
                 .fromProperties(sourceRecord.getOffsetManagerEntry().getProperties());
@@ -105,7 +105,7 @@ public abstract class AbstractSourceRecord<K extends Comparable<K>, N, O extends
      *
      * @return A duplicate of this AbstractSourceRecord
      */
-    abstract public E duplicate();
+    abstract public T duplicate();
 
     /**
      * Gets the native item that this source record is working with.
@@ -261,5 +261,4 @@ public abstract class AbstractSourceRecord<K extends Comparable<K>, N, O extends
             }
         }
     }
-
 }

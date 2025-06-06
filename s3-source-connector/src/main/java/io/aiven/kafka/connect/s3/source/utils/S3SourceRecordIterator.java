@@ -37,7 +37,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
  */
 public final class S3SourceRecordIterator
         extends
-            AbstractSourceRecordIterator<S3Object, String, S3OffsetManagerEntry, S3SourceRecord> {
+            AbstractSourceRecordIterator<String, S3Object, S3OffsetManagerEntry, S3SourceRecord> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceRecordIterator.class);
 
@@ -56,7 +56,7 @@ public final class S3SourceRecordIterator
             final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer,
             final AWSV2SourceClient sourceClient) {
 
-        super(s3SourceConfig, offsetManager, transformer, s3SourceConfig.getS3FetchBufferSize());
+        super(s3SourceConfig, offsetManager, transformer, s3SourceConfig.getRingBufferSize());
         this.bucket = s3SourceConfig.getAwsS3BucketName();
         this.sourceClient = sourceClient;
     }
