@@ -145,7 +145,7 @@ jobs:
           asset_name: ${{ env.s3_zip_file }}
           asset_content_type: application/zip
 
-      - name: Upload tar Azure
+      - name: Upload tar Azure Sink
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -154,6 +154,7 @@ jobs:
           asset_path: ${{ env.azure_sink_tar_path }}
           asset_name: ${{ env.azure_sink_tar_file }}}
           asset_content_type: application/tar
+
 
       - name: Upload zip Azure Sink
         uses: actions/upload-release-asset@v1
@@ -164,6 +165,16 @@ jobs:
           asset_path: ${{ env.azure_sink_zip_path }}
           asset_name: ${{ env.azure_sink_zip_file }}
           asset_content_type: application/zip
+
+      - name: Upload tar Azure Source
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.azure_source_tar_path }}
+          asset_name: ${{ env.azure_source_tar_file }}}
+          asset_content_type: application/tar
 
       - name: Upload zip Azure Source
         uses: actions/upload-release-asset@v1
