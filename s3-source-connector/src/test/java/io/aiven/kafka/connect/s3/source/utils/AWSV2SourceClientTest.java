@@ -56,7 +56,6 @@ class AWSV2SourceClientTest {
         FileNameFragment.setter(configMap).template("any-old-file");
         S3ConfigFragment.setter(configMap).bucketName("test-bucket");
 
-
         configMap.put(AWS_S3_BUCKET_NAME_CONFIG, "test-bucket");
         FileNameFragment.setter(configMap).template(".*");
         return configMap;
