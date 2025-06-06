@@ -34,10 +34,12 @@ import org.apache.commons.lang3.StringUtils;
  * Defines properties that are shared across all Source implementations.
  */
 public final class SourceConfigFragment extends ConfigFragment {
+
     private static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String TARGET_TOPIC = "topic";
     private static final String ERRORS_TOLERANCE = "errors.tolerance";
     private static final String DISTRIBUTION_TYPE = "distribution.type";
+
     /* public so that deprecated users can reference it */
     public static final String RING_BUFFER_SIZE = "ring.buffer.size";
 
