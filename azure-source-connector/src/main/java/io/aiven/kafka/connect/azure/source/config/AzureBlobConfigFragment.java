@@ -100,7 +100,8 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM, "Azure fetch page size", GROUP_AZURE, azureGroupCounter++,
                 ConfigDef.Width.NONE, AZURE_FETCH_PAGE_SIZE);
         configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AZURE,
+                ConfigDef.Importance.MEDIUM, "Prefix for storage file names, generally specifies directory like" +
+                        " structures that do not contain any templated fields.", GROUP_AZURE,
                 azureGroupCounter++, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG); // NOPMD increment value never used
 
         configDef.define(AZURE_FETCH_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(1),
