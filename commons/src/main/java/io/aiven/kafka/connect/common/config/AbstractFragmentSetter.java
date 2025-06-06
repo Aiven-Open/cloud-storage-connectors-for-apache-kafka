@@ -75,6 +75,7 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
      *            the value to set.
      * @return this.
      */
+    @SuppressWarnings("unchecked")
     final protected T setValue(final String key, final int value) {
         return setValue(key, Integer.toString(value));
     }
