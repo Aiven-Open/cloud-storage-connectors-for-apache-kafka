@@ -149,6 +149,8 @@ dependencies {
 
   // Make test utils from "test" available in "integration-test"
   integrationTestImplementation(sourceSets["test"].output)
+  // integrationTestImplementation(testFixtures(project(":azure-commons")))
+  integrationTestImplementation(testFixtures(project(":commons")))
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {
