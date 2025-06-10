@@ -357,6 +357,7 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put("schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        producerProps.put("linger.ms", 1000);
         return new KafkaProducer<>(producerProps);
     }
 
