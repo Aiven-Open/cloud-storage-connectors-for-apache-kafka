@@ -103,7 +103,7 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
      * @return A configured AbstractSourceRecordIterator.
      */
     abstract protected AbstractSourceRecordIterator<K, N, O, T> createSourceRecordIterator(
-            final SourceCommonConfig mockConfig, final OffsetManager<O> offsetManager, final Transformer transformer);
+            SourceCommonConfig mockConfig, OffsetManager<O> offsetManager, Transformer transformer);
 
     /**
      * Create a client mutator that will add testing data to the iterator under test.
