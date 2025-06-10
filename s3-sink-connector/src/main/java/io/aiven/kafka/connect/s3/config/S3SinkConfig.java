@@ -137,8 +137,8 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
         // default value is GZIP
-        if (Objects.nonNull(getString(FILE_COMPRESSION_TYPE_CONFIG))) {
-            return CompressionType.forName(getString(FILE_COMPRESSION_TYPE_CONFIG));
+        if (Objects.nonNull(getString(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG))) {
+            return CompressionType.forName(getString(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG));
         }
         if (Objects.nonNull(getString(S3ConfigFragment.OUTPUT_COMPRESSION))) {
             return CompressionType.forName(getString(S3ConfigFragment.OUTPUT_COMPRESSION));

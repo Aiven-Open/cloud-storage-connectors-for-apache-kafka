@@ -33,8 +33,7 @@ import io.aiven.kafka.connect.common.source.input.InputFormat;
 public final class TransformerFragment extends ConfigFragment {
     private static final String TRANSFORMER_GROUP = "Transformer group";
     public static final String SCHEMA_REGISTRY_URL = "schema.registry.url";
-    public static final String VALUE_CONVERTER_SCHEMA_REGISTRY_URL = "value.converter.schema.registry.url";
-    public static final String AVRO_VALUE_SERIALIZER = "value.serializer";
+    private static final String VALUE_CONVERTER_SCHEMA_REGISTRY_URL = "value.converter.schema.registry.url";
     public static final String INPUT_FORMAT_KEY = "input.format";
     public static final String SCHEMAS_ENABLE = "schemas.enable";
     public static final String TRANSFORMER_MAX_BUFFER_SIZE = "transformer.max.buffer.size";

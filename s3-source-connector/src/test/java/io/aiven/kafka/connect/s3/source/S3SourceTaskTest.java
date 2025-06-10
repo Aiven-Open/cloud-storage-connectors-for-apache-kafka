@@ -282,7 +282,7 @@ final class S3SourceTaskTest {
 
         // an iterator that returns records in 6 second intervals.
         final Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
-            Iterator<S3SourceRecord> inner = lst.iterator();
+            final Iterator<S3SourceRecord> inner = lst.iterator();
             @Override
             public boolean hasNext() {
                 return inner.hasNext();
@@ -315,7 +315,7 @@ final class S3SourceTaskTest {
     @Test
     void testPollsWithExcessRecords() {
         // test that multiple polls to get all records succeeds.
-        properties.put(SourceConfigFragment.MAX_POLL_RECORDS, "2");
+        SourceConfigFragment.setter(properties).maxPollRecords(2);
 
         final List<S3SourceRecord> lst = createS3SourceRecords(3);
 
