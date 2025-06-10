@@ -36,7 +36,7 @@ import reactor.core.publisher.Flux;
 
 final public class AzureBlobSourceRecordIteratorTest
         extends
-            AbstractSourceRecordIteratorTest<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> { // NOPMD
+            AbstractSourceRecordIteratorTest<String, BlobItem, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> { // NOPMD
     // TestClassWithoutTestCases
 
     private AzureBlobClient azureBlobClient;

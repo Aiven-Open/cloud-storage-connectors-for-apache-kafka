@@ -43,7 +43,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 @SuppressWarnings("PMD.TestClassWithoutTestCases")
 final class S3SourceRecordIteratorTest
         extends
-            AbstractSourceRecordIteratorTest<S3Object, String, S3OffsetManagerEntry, S3SourceRecord> {
+            AbstractSourceRecordIteratorTest<String, S3Object, S3OffsetManagerEntry, S3SourceRecord> {
 
     /** The client that we build the iterator from */
     private S3Client s3Client;
