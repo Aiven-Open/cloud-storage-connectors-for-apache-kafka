@@ -40,7 +40,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 @SuppressWarnings("PMD.TestClassWithoutTestCases")
 public class ExampleSourceRecordIteratorTest
         extends
-            AbstractSourceRecordIteratorTest<ExampleNativeObject, String, ExampleOffsetManagerEntry, ExampleSourceRecord> {
+            AbstractSourceRecordIteratorTest<String, ExampleNativeObject, ExampleOffsetManagerEntry, ExampleSourceRecord> {
 
     ExampleNativeClient nativeClient;
 
