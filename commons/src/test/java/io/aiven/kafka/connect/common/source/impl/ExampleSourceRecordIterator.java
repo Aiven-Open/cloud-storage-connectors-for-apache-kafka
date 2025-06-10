@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
  */
 final public class ExampleSourceRecordIterator
         extends
-            AbstractSourceRecordIterator<ExampleNativeObject, String, ExampleOffsetManagerEntry, ExampleSourceRecord> {
+            AbstractSourceRecordIterator<String, ExampleNativeObject, ExampleOffsetManagerEntry, ExampleSourceRecord> {
     private final Logger log = LoggerFactory.getLogger(ExampleSourceRecordIterator.class);
 
     private final ExampleNativeClient nativeClient;
