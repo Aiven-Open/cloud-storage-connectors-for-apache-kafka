@@ -16,18 +16,11 @@
 
 package io.aiven.kafka.connect.s3.source;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiFunction;
-
-import org.apache.kafka.connect.connector.Connector;
-
 import io.aiven.kafka.connect.common.integration.source.AbstractOffsetManagerIntegrationTest;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
-import io.aiven.kafka.connect.s3.source.utils.S3SourceRecordIterator;
+import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;
-import io.aiven.kakfa.connect.s3.source.testdata.BucketAccessor;
-import io.aiven.kakfa.connect.s3.source.testdata.S3OffsetManagerIntegrationTestData;
+import io.aiven.kakfa.connect.s3.source.testdata.S3SourceStorage;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,19 +29,24 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 @SuppressWarnings("PMD.TestClassWithoutTestCases")
 @Testcontainers
 public class S3OffsetManagerIntegrationTest
         extends
-            AbstractOffsetManagerIntegrationTest<String, S3OffsetManagerEntry, S3SourceRecordIterator> {
+            AbstractOffsetManagerIntegrationTest<String, S3Object, S3OffsetManagerEntry, S3SourceRecord> {
     private static final Logger LOGGER = LoggerFactory.getLogger(S3OffsetManagerIntegrationTest.class);
 
     @Container
     static final LocalStackContainer LOCALSTACK = AWSIntegrationTestData.createS3Container();
 
-    private AWSIntegrationTestData testData;
-    private BucketAccessor bucketAccessor;
+    private S3SourceStorage sourceStorage;
+
+    @Override
+    protected S3SourceStorage getSourceStorage() {
+        return sourceStorage;
+    }
 
     @Override
     protected Logger getLogger() {
@@ -57,43 +55,11 @@ public class S3OffsetManagerIntegrationTest
 
     @BeforeEach
     void setupAWS() {
-        testData = new AWSIntegrationTestData(LOCALSTACK);
-        bucketAccessor = testData.getDefaultBucketAccessor();
+        sourceStorage = new S3SourceStorage(new AWSIntegrationTestData(LOCALSTACK));
     }
 
     @AfterEach
     void tearDownAWS() {
-        bucketAccessor.removeBucket();
-        testData.tearDown();
-    }
-
-    @Override
-    protected String createKey(final String prefix, final String topic, final int partition) {
-        return testData.createKey(prefix, topic, partition);
-    }
-
-    @Override
-    protected List<BucketAccessor.S3NativeInfo> getNativeStorage() {
-        return bucketAccessor.getNativeStorage();
-    }
-
-    @Override
-    protected Class<? extends Connector> getConnectorClass() {
-        return testData.getConnectorClass();
-    }
-
-    @Override
-    protected WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
-        return testData.writeWithKey(nativeKey, testDataBytes);
-    }
-
-    @Override
-    protected Map<String, String> createConnectorConfig(final String localPrefix) {
-        return testData.createConnectorConfig(localPrefix, bucketAccessor.getBucketName());
-    }
-
-    @Override
-    protected BiFunction<Map<String, Object>, Map<String, Object>, S3OffsetManagerEntry> offsetManagerEntryFactory() {
-        return S3OffsetManagerIntegrationTestData.offsetManagerEntryFactory();
+        sourceStorage.cleanup();
     }
 }

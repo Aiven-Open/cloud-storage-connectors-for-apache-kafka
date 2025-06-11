@@ -481,19 +481,19 @@ final class S3SinkTaskTest {
         task.flush(offsets);
 
         final List<String> expectedBlobs = Lists.newArrayList(
-                "prefix-topic0-0-00000000000000000010" + compression.extension(),
-                "prefix-topic0-1-00000000000000000020" + compression.extension(),
-                "prefix-topic1-0-00000000000000000030" + compression.extension());
+                "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
+                "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
+                "prefix-topic1-0-00000000000000000030" + compressionType.extension());
 
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
         }
 
-        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType))
                 .containsExactly("{\"value\":\"value0\",\"key\":\"key0\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType))
                 .containsExactly("{\"value\":\"value1\",\"key\":\"key1\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType))
                 .containsExactly("{\"value\":\"value2\",\"key\":\"key2\"}");
     }
 
@@ -521,8 +521,8 @@ final class S3SinkTaskTest {
     void supportStructValuesForJsonL() throws IOException {
         final S3SinkTask task = new S3SinkTask();
 
-        final CompressionType compression = CompressionType.NONE;
-        FileNameFragment.setter(properties).fileCompression(compression);
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
@@ -549,26 +549,26 @@ final class S3SinkTaskTest {
         task.flush(offsets);
 
         final List<String> expectedBlobs = Lists.newArrayList(
-                "prefix-topic0-0-00000000000000000010" + compression.extension(),
-                "prefix-topic0-1-00000000000000000020" + compression.extension(),
-                "prefix-topic1-0-00000000000000000030" + compression.extension());
+                "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
+                "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
+                "prefix-topic1-0-00000000000000000030" + compressionType.extension());
 
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
         }
 
-        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType))
                 .containsExactly("{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType))
                 .containsExactly("{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType))
                 .containsExactly("{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}");
     }
 
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndJsonL() throws IOException {
-        final CompressionType compression = CompressionType.NONE;
-        FileNameFragment.setter(properties).fileCompression(compression);
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
@@ -597,16 +597,16 @@ final class S3SinkTaskTest {
         task.flush(offsets);
 
         final List<String> expectedBlobs = Lists.newArrayList(
-                "prefix-topic0-0-00000000000000000010" + compression.extension(),
-                "prefix-topic0-1-00000000000000000020" + compression.extension(),
-                "prefix-topic1-0-00000000000000000030" + compression.extension());
+                "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
+                "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
+                "prefix-topic1-0-00000000000000000030" + compressionType.extension());
         assertThat(expectedBlobs).allMatch(blobName -> testBucketAccessor.doesObjectExist(blobName));
 
-        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType))
                 .containsExactly("{\"name\":\"name0\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType))
                 .containsExactly("{\"name\":\"name1\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType))
                 .containsExactly("{\"name\":\"name2\"}");
     }
 
@@ -614,8 +614,8 @@ final class S3SinkTaskTest {
     void supportStructValuesForClassicJson() throws IOException {
         final S3SinkTask task = new S3SinkTask();
 
-        final CompressionType compression = CompressionType.NONE;
-        FileNameFragment.setter(properties).fileCompression(compression);
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
         task.start(properties);
@@ -628,24 +628,24 @@ final class S3SinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        final List<String> expectedBlobs = Lists.newArrayList("topic0-0-10" + compression.extension(),
-                "topic0-1-20" + compression.extension(), "topic1-0-30" + compression.extension());
+        final List<String> expectedBlobs = Lists.newArrayList("topic0-0-10" + compressionType.extension(),
+                "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
         }
 
-        assertThat(testBucketAccessor.readLines("topic0-0-10", compression.name())).containsExactly("[",
+        assertThat(testBucketAccessor.readLines("topic0-0-10", compressionType)).containsExactly("[",
                 "{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}", "]");
-        assertThat(testBucketAccessor.readLines("topic0-1-20", compression.name())).containsExactly("[",
+        assertThat(testBucketAccessor.readLines("topic0-1-20", compressionType)).containsExactly("[",
                 "{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}", "]");
-        assertThat(testBucketAccessor.readLines("topic1-0-30", compression.name())).containsExactly("[",
+        assertThat(testBucketAccessor.readLines("topic1-0-30", compressionType)).containsExactly("[",
                 "{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}", "]");
     }
 
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndClassicJson() throws IOException {
-        final CompressionType compression = CompressionType.NONE;
-        FileNameFragment.setter(properties).fileCompression(compression);
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
@@ -674,16 +674,16 @@ final class S3SinkTaskTest {
         task.flush(offsets);
 
         final List<String> expectedBlobs = Lists.newArrayList(
-                "prefix-topic0-0-00000000000000000010" + compression.extension(),
-                "prefix-topic0-1-00000000000000000020" + compression.extension(),
-                "prefix-topic1-0-00000000000000000030" + compression.extension());
+                "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
+                "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
+                "prefix-topic1-0-00000000000000000030" + compressionType.extension());
         assertThat(expectedBlobs).allMatch(blobName -> testBucketAccessor.doesObjectExist(blobName));
 
-        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType))
                 .containsExactly("[", "{\"name\":\"name0\"}", "]");
-        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType))
                 .containsExactly("[", "{\"name\":\"name1\"}", "]");
-        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType.name()))
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType))
                 .containsExactly("[", "{\"name\":\"name2\"}", "]");
     }
 

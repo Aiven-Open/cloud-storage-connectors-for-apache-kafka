@@ -19,7 +19,7 @@ package io.aiven.kafka.connect.common.source;
 import java.io.InputStream;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.common.NativeInfo;
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 
 import org.apache.commons.io.function.IOSupplier;
 

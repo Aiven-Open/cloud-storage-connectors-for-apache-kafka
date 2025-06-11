@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.storage.NativeInfo;
 

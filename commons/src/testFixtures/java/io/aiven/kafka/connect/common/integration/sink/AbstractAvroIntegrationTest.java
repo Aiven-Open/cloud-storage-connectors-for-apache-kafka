@@ -55,14 +55,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 /**
  * The collecton of defined tests for Avro Sink.
  *
- * @param <N>
- *            the native storage object type
  * @param <K>
  *            the native storage key type.
+ * @param <N>
+ *            the native storage object type
  */
-public abstract class AbstractAvroIntegrationTest<N, K extends Comparable<K>>
+public abstract class AbstractAvroIntegrationTest<K extends Comparable<K>, N>
         extends
-            AbstractSinkIntegrationTest<N, K> {
+            AbstractSinkIntegrationTest<K, N> {
     /** The @{code null} value used ot clear the KafkaProducer when it is no longer needed */
     private static final KafkaProducer<String, GenericRecord> NULL_PRODUCER = null;
     /** The KafkaProducer that this test uses */

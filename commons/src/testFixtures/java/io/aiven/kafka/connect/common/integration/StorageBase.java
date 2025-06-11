@@ -28,12 +28,12 @@ import org.apache.commons.io.function.IOSupplier;
 /**
  * The base class for Sink and Source storage.
  *
- * @param <N>
- *            the native storage object type
  * @param <K>
  *            the native storage key type.
+ * @param <N>
+ *            the native storage object type
  */
-public interface StorageBase<N, K extends Comparable<K>> {
+public interface StorageBase<K extends Comparable<K>, N> {
     /**
      * Gets the Connector class under test.
      *
@@ -55,7 +55,7 @@ public interface StorageBase<N, K extends Comparable<K>> {
      *
      * @return the list of {@link NativeInfo} implementations, one for each item in native storage.
      */
-    List<? extends NativeInfo<N, K>> getNativeStorage();
+    List<? extends NativeInfo<K, N>> getNativeStorage();
 
     /**
      * Gets an IOSupplier for an InputStream for the specified nativeKey.

@@ -147,16 +147,26 @@ public final class KafkaManager {
     }
 
     /**
-     * Creates topics on the admin client. Uses a partition count of 4, and a replication factor of 1.
+     * Creates a topic on the admin client. Uses a partition count of 4, and a replication factor of 1.
      *
      * @param topic
-     *            one or more topic names to create.
+     *            topic name to create.
      * @throws ExecutionException
      *             on topic creation error.
      * @throws InterruptedException
      *             if operation is interrupted.
      */
-    public void createTopics(final String... topic) throws ExecutionException, InterruptedException {
+    public void createTopic(final String topic) {
+        createTopics(List.of(topic), DEFAULT_PARTITION_COUNT, DEFAULT_REPLICATION_FACTOR);
+    }
+
+    /**
+     * Creates topics on the admin client. Uses a partition count of 4, and a replication factor of 1.
+     *
+     * @param topic
+     *            one or more topic names to create.
+     */
+    public void createTopics(final String... topic) {
         createTopics(List.of(topic), DEFAULT_PARTITION_COUNT, DEFAULT_REPLICATION_FACTOR);
     }
 

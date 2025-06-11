@@ -21,7 +21,6 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 
-import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.storage.NativeInfo;

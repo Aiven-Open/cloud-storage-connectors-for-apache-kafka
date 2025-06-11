@@ -54,9 +54,17 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-public abstract class AbstractByteParquetIntegrationTest<N, K extends Comparable<K>>
+/**
+ * parquet converter read/write parquet test
+ *
+ * @param <K>
+ *            the native key type.
+ * @param <N>
+ *            The native storage type.
+ */
+public abstract class AbstractByteParquetIntegrationTest<K extends Comparable<K>, N>
         extends
-            AbstractSinkIntegrationTest<N, K> {
+            AbstractSinkIntegrationTest<K, N> {
     private static final KafkaProducer<byte[], byte[]> NULL_PRODUCER = null;
     private KafkaProducer<byte[], byte[]> producer;
     @TempDir

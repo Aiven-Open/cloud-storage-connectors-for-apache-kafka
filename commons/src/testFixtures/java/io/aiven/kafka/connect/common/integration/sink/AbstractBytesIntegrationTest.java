@@ -54,9 +54,17 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractBytesIntegrationTest<N, K extends Comparable<K>>
+/**
+ * generic bytes read/write test.
+ *
+ * @param <K>
+ *            the native key type.
+ * @param <N>
+ *            The native storage type.
+ */
+public abstract class AbstractBytesIntegrationTest<K extends Comparable<K>, N>
         extends
-            AbstractSinkIntegrationTest<N, K> {
+            AbstractSinkIntegrationTest<K, N> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractBytesIntegrationTest.class);
     private static final KafkaProducer<byte[], byte[]> NULL_PRODUCER = null;
     protected KafkaProducer<byte[], byte[]> producer;

@@ -23,8 +23,8 @@ import java.util.function.BiFunction;
 
 import org.apache.kafka.connect.connector.Connector;
 
-import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.integration.source.SourceStorage;
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 import io.aiven.kafka.connect.s3.source.S3SourceConnector;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 

@@ -67,7 +67,9 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 @Testcontainers
 final class S3SourceTaskTest {
 
-    /** The default timeout when polling for records */
+    /**
+     * The default timeout when polling for records
+     */
     private static final Duration TIMEOUT = Duration.ofSeconds(2);
     /**
      * The default polling interval.
@@ -243,12 +245,11 @@ final class S3SourceTaskTest {
         // an iterator that returns records in 6 second intervals.
         final Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
             final Iterator<S3SourceRecord> inner = lst.iterator();
+
             @Override
             public boolean hasNext() {
                 return inner.hasNext();
             }
-            return innerIterator.hasNext();
-        }
 
             @Override
             public S3SourceRecord next() {
@@ -294,8 +295,10 @@ final class S3SourceTaskTest {
                 counter[0] += results.size();
                 counter[1]++;
             }
-            return innerIterator.next();
-        }
+            return counter[0] == 3;
+        });
+        assertThat(counter[1]).isEqualTo(2);
+    }
 
     @Test
     void testPollWhenConnectorStopped() {

@@ -59,14 +59,14 @@ import org.slf4j.LoggerFactory;
 /**
  * Avro converter read/write parquet test
  *
- * @param <N>
- *            The native storage type.
  * @param <K>
  *            the native key type.
+ * @param <N>
+ *            The native storage type.
  */
-public abstract class AbstractAvroParquetIntegrationTest<N, K extends Comparable<K>>
+public abstract class AbstractAvroParquetIntegrationTest<K extends Comparable<K>, N>
         extends
-            AbstractSinkIntegrationTest<N, K> {
+            AbstractSinkIntegrationTest<K, N> {
     /** The logger for this class */
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractAvroParquetIntegrationTest.class);
     /** A directory to write parquet files to locally so they can be read */

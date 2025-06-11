@@ -19,12 +19,12 @@ package io.aiven.kafka.connect.common.storage;
 /**
  * Information about the Native object.
  *
- * @param <N>
- *            The native object type.
  * @param <K>
  *            the native key type
+ * @param <N>
+ *            The native object type.
  */
-public interface NativeInfo<N, K> {
+public interface NativeInfo<K, N> {
     /**
      * Gets the native item.
      *

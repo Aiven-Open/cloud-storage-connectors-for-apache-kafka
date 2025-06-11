@@ -26,10 +26,6 @@ import static io.aiven.kafka.connect.common.grouper.RecordGrouperFactory.ALL_SUP
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.LinkedHashMap;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;

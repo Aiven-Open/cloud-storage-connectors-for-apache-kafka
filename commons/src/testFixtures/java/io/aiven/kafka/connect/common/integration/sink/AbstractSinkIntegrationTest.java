@@ -27,11 +27,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.integration.KafkaIntegrationTestBase;
 import io.aiven.kafka.connect.common.integration.KafkaManager;
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 
 import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.compress.utils.IOUtils;
@@ -41,12 +41,12 @@ import org.junit.jupiter.api.BeforeEach;
 /**
  * Defines the general functionality required to run the sink integration tests.
  *
- * @param <N>
- *            the native storage object type
  * @param <K>
  *            the native storage key type.
+ * @param <N>
+ *            the native storage object type
  */
-public abstract class AbstractSinkIntegrationTest<N, K extends Comparable<K>> extends KafkaIntegrationTestBase {
+public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> extends KafkaIntegrationTestBase {
     protected String prefix;
     protected KafkaManager kafkaManager;
     protected SinkStorage<K, N> sinkStorage;
@@ -72,8 +72,11 @@ public abstract class AbstractSinkIntegrationTest<N, K extends Comparable<K>> ex
      * Sets up the sink storage including starting the kafka manager for the connector and definint the connector name.
      *
      * @throws ExecutionException
+     *             on execution error
      * @throws InterruptedException
+     *             on interruption.
      * @throws IOException
+     *             on IO error.
      */
     @BeforeEach
     final void setUp() throws ExecutionException, InterruptedException, IOException {

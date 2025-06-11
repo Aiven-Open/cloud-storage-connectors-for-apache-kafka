@@ -19,7 +19,6 @@ plugins {
   id("aiven-apache-kafka-connectors-all.docs")
 }
 
-
 dependencies {
   implementation(amazonoldawssdk.s3)
   implementation(amazonoldawssdk.sts)

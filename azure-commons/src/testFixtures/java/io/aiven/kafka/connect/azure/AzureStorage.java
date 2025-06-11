@@ -40,7 +40,7 @@ import org.testcontainers.azure.AzuriteContainer;
 /**
  * The abstract base class for all Azure storage implementations.
  */
-public abstract class AzureStorage implements StorageBase<BlobItem, String> {
+public abstract class AzureStorage implements StorageBase<String, BlobItem> {
     /** The logger */
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureStorage.class);
     /** The default container name */
