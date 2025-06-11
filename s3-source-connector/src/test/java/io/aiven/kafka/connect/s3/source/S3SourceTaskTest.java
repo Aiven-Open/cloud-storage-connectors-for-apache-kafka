@@ -30,7 +30,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.commons.lang3.time.StopWatch;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -51,6 +50,7 @@ import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;
 
+import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
