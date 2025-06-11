@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class AWSV2SourceClientTest {
 
     private static Map<String, String> getConfigMap() {
         final Map<String, String> configMap = new HashMap<>();
-
+        FileNameFragment.setter(configMap).template(".*");
         configMap.put(AWS_S3_BUCKET_NAME_CONFIG, "test-bucket");
         return configMap;
     }

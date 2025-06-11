@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
@@ -46,6 +47,7 @@ final class S3SourceConfigTest {
         props.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
         props.put(TARGET_TOPIC, "testtopic");
         props.put(SCHEMA_REGISTRY_URL, "localhost:8081");
+        FileNameFragment.setter(props).template(".*");
 
         final var conf = new S3SourceConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
