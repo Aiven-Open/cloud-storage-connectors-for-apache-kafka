@@ -72,6 +72,7 @@ import org.apache.kafka.connect.sink.SinkTaskContext;
 
 import io.aiven.kafka.connect.common.config.BackoffPolicyFragmentFixture.BackoffPolicyArgs;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
@@ -431,8 +432,7 @@ final class S3SinkTaskTest {
     void failedForStringValuesByDefault() {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        FileNameFragment.setter(properties).fileCompression(CompressionType.NONE);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(AWS_S3_PREFIX_CONFIG, "any_prefix");
         task.start(properties);
@@ -454,8 +454,8 @@ final class S3SinkTaskTest {
     void supportStringValuesForJsonL() throws IOException {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
@@ -480,8 +480,6 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         final List<String> expectedBlobs = Lists.newArrayList(
                 "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
                 "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
@@ -491,11 +489,11 @@ final class S3SinkTaskTest {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
         }
 
-        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType.name()))
                 .containsExactly("{\"value\":\"value0\",\"key\":\"key0\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType.name()))
                 .containsExactly("{\"value\":\"value1\",\"key\":\"key1\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType.name()))
                 .containsExactly("{\"value\":\"value2\",\"key\":\"key2\"}");
     }
 
@@ -503,8 +501,7 @@ final class S3SinkTaskTest {
     void failedForStructValuesByDefault() {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        FileNameFragment.setter(properties).fileCompression(CompressionType.NONE);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
         task.start(properties);
@@ -524,8 +521,8 @@ final class S3SinkTaskTest {
     void supportStructValuesForJsonL() throws IOException {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
         properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
@@ -551,8 +548,6 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         final List<String> expectedBlobs = Lists.newArrayList(
                 "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
                 "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
@@ -562,18 +557,18 @@ final class S3SinkTaskTest {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
         }
 
-        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType.name()))
                 .containsExactly("{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType.name()))
                 .containsExactly("{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType.name()))
                 .containsExactly("{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}");
     }
 
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndJsonL() throws IOException {
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "jsonl");
@@ -601,19 +596,17 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         final List<String> expectedBlobs = Lists.newArrayList(
                 "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
                 "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
                 "prefix-topic1-0-00000000000000000030" + compressionType.extension());
         assertThat(expectedBlobs).allMatch(blobName -> testBucketAccessor.doesObjectExist(blobName));
 
-        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType.name()))
                 .containsExactly("{\"name\":\"name0\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType.name()))
                 .containsExactly("{\"name\":\"name1\"}");
-        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType.name()))
                 .containsExactly("{\"name\":\"name2\"}");
     }
 
@@ -621,8 +614,8 @@ final class S3SinkTaskTest {
     void supportStructValuesForClassicJson() throws IOException {
         final S3SinkTask task = new S3SinkTask();
 
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
         task.start(properties);
@@ -635,26 +628,24 @@ final class S3SinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         final List<String> expectedBlobs = Lists.newArrayList("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
         }
 
-        assertThat(testBucketAccessor.readLines("topic0-0-10", compression)).containsExactly("[",
+        assertThat(testBucketAccessor.readLines("topic0-0-10", compressionType.name())).containsExactly("[",
                 "{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}", "]");
-        assertThat(testBucketAccessor.readLines("topic0-1-20", compression)).containsExactly("[",
+        assertThat(testBucketAccessor.readLines("topic0-1-20", compressionType.name())).containsExactly("[",
                 "{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}", "]");
-        assertThat(testBucketAccessor.readLines("topic1-0-30", compression)).containsExactly("[",
+        assertThat(testBucketAccessor.readLines("topic1-0-30", compressionType.name())).containsExactly("[",
                 "{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}", "]");
     }
 
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndClassicJson() throws IOException {
-        final String compression = "none";
-        properties.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_ENVELOPE_CONFIG.key(), "false");
         properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "json");
@@ -682,19 +673,17 @@ final class S3SinkTaskTest {
         offsets.put(tp10, new OffsetAndMetadata(30));
         task.flush(offsets);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         final List<String> expectedBlobs = Lists.newArrayList(
                 "prefix-topic0-0-00000000000000000010" + compressionType.extension(),
                 "prefix-topic0-1-00000000000000000020" + compressionType.extension(),
                 "prefix-topic1-0-00000000000000000030" + compressionType.extension());
         assertThat(expectedBlobs).allMatch(blobName -> testBucketAccessor.doesObjectExist(blobName));
 
-        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-0-00000000000000000010", compressionType.name()))
                 .containsExactly("[", "{\"name\":\"name0\"}", "]");
-        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic0-1-00000000000000000020", compressionType.name()))
                 .containsExactly("[", "{\"name\":\"name1\"}", "]");
-        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compression))
+        assertThat(testBucketAccessor.readLines("prefix-topic1-0-00000000000000000030", compressionType.name()))
                 .containsExactly("[", "{\"name\":\"name2\"}", "]");
     }
 

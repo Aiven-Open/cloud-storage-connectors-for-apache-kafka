@@ -19,17 +19,17 @@ package io.aiven.kafka.connect.common.config;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
-import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
+import io.aiven.kafka.connect.common.config.validators.SourcenameTemplateValidator;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
+import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.common.templating.Template;
 
 /**
@@ -40,11 +40,11 @@ public final class FileNameFragment extends ConfigFragment {
 
     // package private so that testing can access.
     static final String GROUP_FILE = "File";
-    static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
+    public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     static final String FILE_MAX_RECORDS = "file.max.records";
     static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
-    static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
+    public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
 
     public static final String FILE_PATH_PREFIX_TEMPLATE_CONFIG = "file.prefix.template";
@@ -71,6 +71,32 @@ public final class FileNameFragment extends ConfigFragment {
     }
 
     /**
+     * Validate the distribution type works with the file name template.
+     *
+     * @param distributionType
+     *            the distribution type for the validator
+     */
+    public void validateDistributionType(final DistributionType distributionType) {
+        new SourcenameTemplateValidator(distributionType).ensureValid(FILE_NAME_TEMPLATE_CONFIG, getSourceName());
+    }
+
+    /**
+     * Validate that the record grouper works with the fileNameTemplate and the max records per file.
+     */
+    public void validateRecordGrouper() {
+        // Special checks for {{key}} filename template.
+        final Template filenameTemplate = getFilenameTemplate();
+        final String groupType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
+        final boolean isKeyBased = RecordGrouperFactory.KEY_RECORD.equals(groupType)
+                || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
+        if (isKeyBased && getMaxRecordsPerFile() > 1) {
+            final String msg = String.format("When %s is %s, %s must be either 1 or not set", FILE_NAME_TEMPLATE_CONFIG,
+                    filenameTemplate, FILE_MAX_RECORDS);
+            throw new ConfigException(msg);
+        }
+    }
+
+    /**
      * Adds the FileName properties to the configuration definition.
      *
      * @param configDef
@@ -93,8 +119,7 @@ public final class FileNameFragment extends ConfigFragment {
     public static ConfigDef update(final ConfigDef configDef, final CompressionType defaultCompressionType) {
         int fileGroupCounter = 0;
 
-        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-                new FilenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
+        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, null, ConfigDef.Importance.MEDIUM,
                 "The template for file names on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "
@@ -104,8 +129,8 @@ public final class FileNameFragment extends ConfigFragment {
                         + "There is also `key` only variable {{key}} for grouping by keys",
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
-        configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-                new FilenameTemplateValidator(FILE_PATH_PREFIX_TEMPLATE_CONFIG), ConfigDef.Importance.MEDIUM,
+        configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, null,
+                ConfigDef.Importance.MEDIUM,
                 "The template for file names prefixes on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are `topic`, `partition`, and `start_offset` "
@@ -115,16 +140,10 @@ public final class FileNameFragment extends ConfigFragment {
                         + "There is also `key` only variable {{key}} for grouping by keys",
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_PATH_PREFIX_TEMPLATE_CONFIG);
 
-        final String supportedCompressionTypes = CompressionType.names()
-                .stream()
-                .map(f -> "'" + f + "'")
-                .collect(Collectors.joining(", "));
-
-        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, defaultCompressionType.name(),
-                new FileCompressionTypeValidator(), ConfigDef.Importance.MEDIUM,
-                "The compression type used for files. " + "The supported values are: " + supportedCompressionTypes
-                        + ".",
-                GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
+        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
+                defaultCompressionType == null ? CompressionType.NONE : defaultCompressionType.name(),
+                new FileCompressionTypeValidator(), ConfigDef.Importance.MEDIUM, "The compression type used for files.",
+                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(CompressionType.names()));
 
         configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, ConfigDef.Range.between(0, Integer.MAX_VALUE),
@@ -149,19 +168,7 @@ public final class FileNameFragment extends ConfigFragment {
 
     @Override
     public void validate() {
-        // Special checks for {{key}} filename template.
-        final Template filenameTemplate = getFilenameTemplate();
-        final String groupType = RecordGrouperFactory.resolveRecordGrouperType(filenameTemplate);
-        if (isKeyBased(groupType) && getMaxRecordsPerFile() > 1) {
-            final String msg = String.format("When %s is %s, %s must be either 1 or not set", FILE_NAME_TEMPLATE_CONFIG,
-                    filenameTemplate, FILE_MAX_RECORDS);
-            throw new ConfigException(msg);
-        }
-    }
-
-    private Boolean isKeyBased(final String groupType) {
-        return RecordGrouperFactory.KEY_RECORD.equals(groupType)
-                || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(groupType);
+        throw new ConfigException("Do not call FileNameFragment.validate() -- call sink/source specific validator");
     }
 
     /**
@@ -226,6 +233,10 @@ public final class FileNameFragment extends ConfigFragment {
      */
     public int getMaxRecordsPerFile() {
         return cfg.getInt(FILE_MAX_RECORDS);
+    }
+
+    public String getSourceName() {
+        return cfg.getString(FILE_NAME_TEMPLATE_CONFIG);
     }
 
     public String getPrefixTemplate() {

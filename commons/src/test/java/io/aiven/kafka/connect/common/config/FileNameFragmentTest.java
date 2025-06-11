@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.common.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.Modifier;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -38,39 +39,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-class FileNameFragmentTest {
-
-    /**
-     * An enumeration to expose the FileNameFragment properties names to test cases
-     */
-    private enum FileNameArgs {
-        GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
-                FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
-                        FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
-                                FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(
-                                        FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE), FILE_NAME_TEMPLATE_CONFIG(
-                                                FileNameFragment.FILE_NAME_TEMPLATE_CONFIG), DEFAULT_FILENAME_TEMPLATE(
-                                                        FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
-        private final String keyValue;
-
-        FileNameArgs(final String key) {
-            this.keyValue = key;
-        }
-
-        public String key() {
-            return keyValue;
-        }
-    }
+public class FileNameFragmentTest {// NOPMD
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("configDefSource")
-    void configDefTest(final FileNameArgs arg, final ConfigDef.Type type, final Object defaultValue,
-            final boolean validatorPresent, final ConfigDef.Importance importance, final String group,
-            final int orderInGroup, final ConfigDef.Width width, final boolean recommenderPresent) {
+    void configDefTest(final String arg, final ConfigDef.Type type, final Object defaultValue,
+            final boolean validatorPresent, final ConfigDef.Importance importance, final boolean recommenderPresent) {
         final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
-        final ConfigDef.ConfigKey key = configDef.configKeys().get(arg.key());
+        final ConfigDef.ConfigKey key = configDef.configKeys().get(arg);
 
-        assertThat(arg.key()).as("Wrong key name").isEqualTo(key.name);
+        assertThat(arg).as("Wrong key name").isEqualTo(key.name);
         assertThat(type).as("Wrong key type").isEqualTo(key.type);
         assertThat(defaultValue).as("Wrong default value").isEqualTo(key.defaultValue);
         assertThat(validatorPresent)
@@ -78,9 +56,6 @@ class FileNameFragmentTest {
                 .isEqualTo(key.validator != null);
         assertThat(importance).as("Wrong importance").isEqualTo(key.importance);
         assertThat(key.documentation).as("Documenttion not included").isNotNull();
-        assertThat(group).as("Wrong group").isEqualTo(key.group);
-        assertThat(orderInGroup).as("Wrong order in group").isEqualTo(key.orderInGroup);
-        assertThat(width).as("Wrong width").isEqualTo(key.width);
         assertThat(key.name).isEqualTo(key.displayName);
         assertThat(recommenderPresent)
                 .as(() -> String.format("Recommender was %spresent.", key.recommender == null ? "not " : ""))
@@ -89,36 +64,43 @@ class FileNameFragmentTest {
 
     @Test
     void allConfigDefsAccountForTest() {
-        // create a modifiable list.
-        final List<FileNameArgs> argList = new ArrayList<>(Arrays.asList(FileNameArgs.values()));
-        // remove the non-argument values
-        argList.remove(FileNameArgs.GROUP_FILE);
-        argList.remove(FileNameArgs.DEFAULT_FILENAME_TEMPLATE);
-        configDefSource().map(a -> (FileNameArgs) (a.get()[0])).forEach(argList::remove);
-        assertThat(argList.isEmpty()).as(() -> "Tests do not process the following arguments: "
-                + argList.stream().map(Enum::toString).collect(Collectors.joining(", "))).isTrue();
+        final List<String> names = Arrays.stream(FileNameFragment.class.getDeclaredFields())
+                .filter(field -> Modifier.isStatic(field.getModifiers()) && field.getType().equals(String.class))
+                .map(field -> {
+                    try {
+                        return field.get(null).toString();
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(e); // NOPMD
+                    }
+                })
+                .collect(Collectors.toList());
+        names.remove(FileNameFragment.GROUP_FILE);
+        names.remove(FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
+        // TODO remove this when we understand what it is for.
+        names.remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+        configDefSource().map(a -> (String) (a.get()[0])).forEach(names::remove);
+        assertThat(names.isEmpty())
+                .as(() -> "Tests do not process the following arguments: " + String.join(", ", names))
+                .isTrue();
     }
 
     private static Stream<Arguments> configDefSource() {
         final List<Arguments> args = new ArrayList<>();
 
-        args.add(Arguments.of(FileNameArgs.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, true,
-                ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 1, ConfigDef.Width.LONG, false));
+        args.add(Arguments.of(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, false,
+                ConfigDef.Importance.MEDIUM, false));
 
-        args.add(Arguments.of(FileNameArgs.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
-                CompressionType.NONE.toString(), true, ConfigDef.Importance.MEDIUM, FileNameArgs.GROUP_FILE.key(), 3,
-                ConfigDef.Width.NONE, true));
+        args.add(Arguments.of(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
+                CompressionType.NONE.toString(), true, ConfigDef.Importance.MEDIUM, true));
 
-        args.add(Arguments.of(FileNameArgs.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true, ConfigDef.Importance.MEDIUM,
-                FileNameArgs.GROUP_FILE.key(), 4, ConfigDef.Width.SHORT, false));
+        args.add(Arguments.of(FileNameFragment.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true,
+                ConfigDef.Importance.MEDIUM, false));
 
-        args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
-                ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 5,
-                ConfigDef.Width.SHORT, false));
+        args.add(Arguments.of(FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING,
+                ZoneOffset.UTC.toString(), true, ConfigDef.Importance.LOW, false));
 
-        args.add(Arguments.of(FileNameArgs.FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING,
-                TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, FileNameArgs.GROUP_FILE.key(), 6,
-                ConfigDef.Width.SHORT, false));
+        args.add(Arguments.of(FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING,
+                TimestampSource.Type.WALLCLOCK.name(), true, ConfigDef.Importance.LOW, false));
 
         return args.stream();
     }
@@ -131,7 +113,7 @@ class FileNameFragmentTest {
         props.put(FileNameFragment.FILE_MAX_RECORDS, "50");
         final AbstractConfig cfg = new AbstractConfig(configDef, props);
         final FileNameFragment underTest = new FileNameFragment(cfg);
-        assertThatThrownBy(underTest::validate).isInstanceOf(ConfigException.class);
+        assertThatThrownBy(underTest::validateRecordGrouper).isInstanceOf(ConfigException.class);
     }
 
     @ParameterizedTest(name = "{index} {0}")
@@ -157,13 +139,13 @@ class FileNameFragmentTest {
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.CSV.name,
-                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + ".avro" + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.AVRO.name,
-                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         return args.stream();

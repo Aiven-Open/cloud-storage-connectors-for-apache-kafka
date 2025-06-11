@@ -34,7 +34,7 @@ import org.apache.commons.lang3.StringUtils;
  * Defines properties that are shared across all Source implementations.
  */
 public final class SourceConfigFragment extends ConfigFragment {
-    private static final String GROUP_OTHER = "OTHER_CFG";
+
     private static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String TARGET_TOPIC = "topic";
     private static final String ERRORS_TOLERANCE = "errors.tolerance";
@@ -64,43 +64,25 @@ public final class SourceConfigFragment extends ConfigFragment {
     }
 
     public static ConfigDef update(final ConfigDef configDef) {
-        int sourcePollingConfigCounter = 0;
-
         configDef.define(RING_BUFFER_SIZE, ConfigDef.Type.INT, 1000, ConfigDef.Range.atLeast(0),
-                ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.", GROUP_OTHER,
-                ++sourcePollingConfigCounter, ConfigDef.Width.SHORT, RING_BUFFER_SIZE);
+                ConfigDef.Importance.MEDIUM, "The number of storage key to store in the ring buffer.");
 
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
-                ConfigDef.Importance.MEDIUM, "Max poll records", GROUP_OTHER, ++sourcePollingConfigCounter,
-                ConfigDef.Width.SHORT, MAX_POLL_RECORDS);
+                ConfigDef.Importance.MEDIUM, "Max poll records");
         // KIP-298 Error Handling in Connect
         configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, ErrorsTolerance.NONE.name(),
                 new ErrorsToleranceValidator(), ConfigDef.Importance.MEDIUM,
-                "Indicates to the connector what level of exceptions are allowed before the connector stops, supported values : none,all",
-                GROUP_OTHER, ++sourcePollingConfigCounter, ConfigDef.Width.SHORT, ERRORS_TOLERANCE);
+                "Indicates to the connector what level of exceptions are allowed before the connector stops.");
 
         // Offset Storage config group includes target topics
-        int offsetStorageGroupCounter = 0;
         configDef.define(TARGET_TOPIC, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "eg : logging-topic", GROUP_OTHER, ++offsetStorageGroupCounter,
-                ConfigDef.Width.SHORT, TARGET_TOPIC);
+                ConfigDef.Importance.MEDIUM, "eg : logging-topic");
         configDef.define(DISTRIBUTION_TYPE, ConfigDef.Type.STRING, OBJECT_HASH.name(),
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
                 "Based on tasks.max config and the type of strategy selected, objects are processed in distributed"
-                        + " way by Kafka connect workers, supported values : "
-                        + Arrays.stream(DistributionType.values())
-                                .map(DistributionType::value)
-                                .collect(Collectors.joining(", ")),
-                GROUP_OTHER, ++offsetStorageGroupCounter, ConfigDef.Width.SHORT, DISTRIBUTION_TYPE);
+                        + " way by Kafka connect workers.");
 
         return configDef;
-    }
-
-
-    @Override
-    public void validate() {
-        new SourcenameTemplateValidator(FILE_NAME_TEMPLATE_CONFIG, getDistributionType())
-                .ensureValid(FILE_NAME_TEMPLATE_CONFIG, getSourceName());
     }
 
     /**
@@ -163,7 +145,9 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         @Override
         public String toString() {
-            return "One of " + Arrays.toString(ErrorsTolerance.values());
+            return Arrays.stream(ErrorsTolerance.values())
+                    .map(ErrorsTolerance::toString)
+                    .collect(Collectors.joining(", "));
         }
     }
 
@@ -182,7 +166,9 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         @Override
         public String toString() {
-            return "One of " + Arrays.stream(DistributionType.values()).map(DistributionType::name).collect(Collectors.toList());
+            return Arrays.stream(DistributionType.values())
+                    .map(DistributionType::name)
+                    .collect(Collectors.joining(", "));
         }
     }
 

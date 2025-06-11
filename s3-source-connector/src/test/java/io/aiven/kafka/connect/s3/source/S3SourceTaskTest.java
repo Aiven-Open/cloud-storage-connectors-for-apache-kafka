@@ -38,6 +38,7 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
@@ -159,7 +160,7 @@ final class S3SourceTaskTest {
                 .name(name);
         CommonConfigFragment.setter(props).taskId(0);
         SourceConfigFragment.setter(props).targetTopic(getTopic()).maxPollRecords(50);
-
+        FileNameFragment.setter(props).template(".*");
         return props;
     }
 

@@ -229,7 +229,7 @@ class AbstractSourceTaskTest {
                 .name(name);
         CommonConfigFragment.setter(props).taskId(0);
         SourceConfigFragment.setter(props).targetTopic(TOPIC).maxPollRecords(50);
-
+        FileNameFragment.setter(props).template(".*");
         return props;
     }
 
