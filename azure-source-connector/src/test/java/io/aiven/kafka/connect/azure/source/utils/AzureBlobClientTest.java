@@ -83,7 +83,7 @@ class AzureBlobClientTest {
         when(flux.toStream()).thenReturn(createListOfBlobs(100));
         when(containerClient.listBlobs(any())).thenReturn(flux);
 
-        final Stream<BlobItem> stream = client.getAzureBlobStream();
+        final Stream<BlobItem> stream = client.getAzureBlobStream(null);
         assertThat(stream).isNotNull();
         assertThat(stream.collect(Collectors.toList())).hasSize(100);
     }
@@ -92,7 +92,7 @@ class AzureBlobClientTest {
     void testListAllBlobsReturnsNullWhenNoEntriesAvailable() {
         client = new AzureBlobClient(config);
         when(containerClient.listBlobs(any())).thenReturn(new PagedFlux<>(Mono::empty, continuationToken -> null));
-        final Stream<BlobItem> stream = client.getAzureBlobStream();
+        final Stream<BlobItem> stream = client.getAzureBlobStream(null);
         assertThat(stream).isNotNull();
         assertThat(stream).isNullOrEmpty();
     }

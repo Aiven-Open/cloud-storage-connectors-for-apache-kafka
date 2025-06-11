@@ -60,14 +60,18 @@ import org.junit.jupiter.params.provider.EnumSource;
  * @param <K>
  *            the native key type.
  */
-public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, I extends AbstractSourceRecordIterator<?, K, O, ?>>
+public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>, I extends AbstractSourceRecordIterator<K, N, O, T>>
         extends
-            AbstractSourceIntegrationBase<K, O, I> {
+            AbstractSourceIntegrationBase<K, N, O, T> {
 
     /**
      * Static value to flag that the task is not set.
      */
     private static final int TASK_NOT_SET = -1;
+
+    protected AbstractSourceIteratorIntegrationTest() {
+        super();
+    }
 
     @Override
     protected Duration getOffsetFlushInterval() {
@@ -200,7 +204,7 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
 
         final HashSet<K> seenKeys = new HashSet<>();
         while (sourceRecordIterator.hasNext()) {
-            final AbstractSourceRecord<?, K, O, ?> sourceRecord = sourceRecordIterator.next();
+            final AbstractSourceRecord<K, ?, O, ?> sourceRecord = sourceRecordIterator.next();
             final K key = sourceRecord.getNativeKey();
             assertThat(expectedKeys).contains(key);
             seenKeys.add(key);
@@ -245,7 +249,7 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
         final HashSet<K> seenKeys = new HashSet<>();
         final Map<K, List<Long>> seenRecords = new HashMap<>();
         while (sourceRecordIterator.hasNext()) {
-            final AbstractSourceRecord<?, K, O, ?> sourceRecord = sourceRecordIterator.next();
+            final AbstractSourceRecord<K, ?, O, ?> sourceRecord = sourceRecordIterator.next();
             final K key = sourceRecord.getNativeKey();
             seenRecords.compute(key, (k, v) -> {
                 final List<Long> lst = v == null ? new ArrayList<>() : v; // NOPMD new object inside loop
@@ -294,7 +298,7 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
         final I sourceRecordIterator = getSourceRecordIterator(configData, createOffsetManager(),
                 TransformerFactory.getTransformer(InputFormat.BYTES));
         assertThat(sourceRecordIterator).hasNext();
-        AbstractSourceRecord<?, K, O, ?> sourceRecord = sourceRecordIterator.next();
+        AbstractSourceRecord<K, ?, O, ?> sourceRecord = sourceRecordIterator.next();
         actualKeys.add(sourceRecord.getNativeKey());
         assertThat(sourceRecordIterator).hasNext();
         sourceRecord = sourceRecordIterator.next();

@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class AzureBlobSourceRecordIterator
         extends
-            AbstractSourceRecordIterator<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
+            AbstractSourceRecordIterator<String, BlobItem, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
 
     /** The azure blob client that provides the blobItems */
     private final AzureBlobClient azureBlobClient;
@@ -56,11 +56,7 @@ public final class AzureBlobSourceRecordIterator
 
     @Override
     protected Stream<BlobItem> getNativeItemStream(final String offset) {
-        Stream<BlobItem> result = azureBlobClient.getAzureBlobStream();
-        if (offset != null) {
-            result = result.filter(blobItem -> blobItem.getName().compareTo(offset) > 0);
-        }
-        return result;
+        return azureBlobClient.getAzureBlobStream(offset);
     }
 
     @Override

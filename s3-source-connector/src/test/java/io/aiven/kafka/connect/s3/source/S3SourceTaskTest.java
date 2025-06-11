@@ -50,6 +50,7 @@ import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;
 
+import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,9 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 @Testcontainers
 final class S3SourceTaskTest {
 
-    /** The default timeout when polling for records */
+    /**
+     * The default timeout when polling for records
+     */
     private static final Duration TIMEOUT = Duration.ofSeconds(2);
     /**
      * The default polling interval.
@@ -160,7 +163,7 @@ final class S3SourceTaskTest {
                 .name(name);
         CommonConfigFragment.setter(props).taskId(0);
         SourceConfigFragment.setter(props).targetTopic(getTopic()).maxPollRecords(50);
-        FileNameFragment.setter(props).template(".*");
+        FileNameFragment.setter(props).template("any-old-file");
         return props;
     }
 
@@ -235,12 +238,92 @@ final class S3SourceTaskTest {
         return lst;
     }
 
+    @Test
+    void testPollWithSlowProducer() {
+        final List<S3SourceRecord> lst = createS3SourceRecords(3);
+
+        // an iterator that returns records in 6 second intervals.
+        final Iterator<S3SourceRecord> sourceRecordIterator = new Iterator<>() {
+            final Iterator<S3SourceRecord> inner = lst.iterator();
+
+            @Override
+            public boolean hasNext() {
+                return inner.hasNext();
+            }
+
+            @Override
+            public S3SourceRecord next() {
+                try {
+                    Thread.sleep(Duration.ofSeconds(6).toMillis());
+                } catch (InterruptedException e) {
+                    // do nothing.
+                }
+                return inner.next();
+            }
+        };
+
+        final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
+        s3SourceTask.initialize(createSourceTaskContext());
+        s3SourceTask.start(createDefaultConfig());
+        final int[] counter = { 0 };
+        await().atMost(Duration.ofSeconds(20)).pollInterval(Duration.ofSeconds(1)).until(() -> {
+            final List<SourceRecord> results = s3SourceTask.poll();
+            if (results != null) {
+                counter[0] += results.size();
+            }
+            return counter[0] == 3;
+        });
+        assertThat(counter[0]).isEqualTo(3);
+    }
+
+    @Test
+    void testPollsWithExcessRecords() {
+        // test that multiple polls to get all records succeeds.
+        final Map<String, String> properties = createDefaultConfig();
+        SourceConfigFragment.setter(properties).maxPollRecords(2);
+
+        final List<S3SourceRecord> lst = createS3SourceRecords(3);
+
+        final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
+        final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
+        s3SourceTask.initialize(createSourceTaskContext());
+        s3SourceTask.start(properties);
+        final int[] counter = { 0, 0 };
+        await().atMost(Duration.ofSeconds(5)).pollInterval(Duration.ofSeconds(1)).until(() -> {
+            final List<SourceRecord> results = s3SourceTask.poll();
+            if (results != null) {
+                counter[0] += results.size();
+                counter[1]++;
+            }
+            return counter[0] == 3;
+        });
+        assertThat(counter[1]).isEqualTo(2);
+    }
+
+    @Test
+    void testPollWhenConnectorStopped() {
+        final List<S3SourceRecord> lst = createS3SourceRecords(3);
+        final Iterator<S3SourceRecord> sourceRecordIterator = lst.iterator();
+        final S3SourceTask s3SourceTask = new TestingS3SourceTask(sourceRecordIterator);
+
+        s3SourceTask.initialize(createSourceTaskContext());
+        s3SourceTask.start(createDefaultConfig());
+        s3SourceTask.stop();
+        final StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+        final List<SourceRecord> results = s3SourceTask.poll();
+        stopWatch.stop();
+        assertThat(results).isNull();
+        assertThat(stopWatch.getTime()).isLessThan(TIMING_DELTA);
+    }
+
     private static class TestingS3SourceTask extends S3SourceTask { // NOPMD not a test class
 
         private final Iterator<S3SourceRecord> sourceRecordIterator;
 
         TestingS3SourceTask(final Iterator<S3SourceRecord> realIterator) {
-            super(realIterator);
+            super();
+            super.s3SourceRecordIterator = realIterator;
             this.sourceRecordIterator = realIterator;
         }
 

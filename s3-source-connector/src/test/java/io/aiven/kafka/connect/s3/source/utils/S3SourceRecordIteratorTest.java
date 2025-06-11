@@ -43,7 +43,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 @SuppressWarnings("PMD.TestClassWithoutTestCases")
 final class S3SourceRecordIteratorTest
         extends
-            AbstractSourceRecordIteratorTest<S3Object, String, S3OffsetManagerEntry, S3SourceRecord> {
+            AbstractSourceRecordIteratorTest<String, S3Object, S3OffsetManagerEntry, S3SourceRecord> {
 
     /** The client that we build the iterator from */
     private S3Client s3Client;
@@ -55,7 +55,7 @@ final class S3SourceRecordIteratorTest
     }
 
     @Override
-    protected AbstractSourceRecordIterator<S3Object, String, S3OffsetManagerEntry, S3SourceRecord> createSourceRecordIterator(
+    protected AbstractSourceRecordIterator<String, S3Object, S3OffsetManagerEntry, S3SourceRecord> createSourceRecordIterator(
             final SourceCommonConfig mockConfig, final OffsetManager<S3OffsetManagerEntry> offsetManager,
             final Transformer mockTransformer) {
         // create an instance of our concrete iterator.
@@ -73,7 +73,7 @@ final class S3SourceRecordIteratorTest
     protected SourceCommonConfig createMockedConfig() {
         // create a mocked config with the values required by the S3CSourceConfig
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
-        when(s3SourceConfig.getS3FetchBufferSize()).thenReturn(1);
+        when(s3SourceConfig.getRingBufferSize()).thenReturn(1);
         when(s3SourceConfig.getAwsS3BucketName()).thenReturn("testBucket");
         when(s3SourceConfig.getFetchPageSize()).thenReturn(10);
         return s3SourceConfig;

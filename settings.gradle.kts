@@ -29,9 +29,9 @@ val stax2ApiVersion by extra("4.2.2")
 val testcontainersVersion by extra("1.20.6")
 val zstdVersion by extra("1.5.6-3")
 val wireMockVersion by extra("2.35.0")
+val azureVersion by extra("12.30.0")
 val velocityCoreVersion by extra("2.4.1")
 val velocityToolsVersion by extra("3.1")
-val azureVersion by extra("12.29.0")
 
 dependencyResolutionManagement {
   versionCatalogs {

@@ -123,7 +123,7 @@ public class BucketAccessor {
     /**
      * Implementation of NativeInfo for the S3 access.
      */
-    public static final class S3NativeInfo implements NativeInfo<S3Object, String> {
+    public static final class S3NativeInfo implements NativeInfo<String, S3Object> {
         /** The S3 native object */
         private final S3Object s3Object;
 

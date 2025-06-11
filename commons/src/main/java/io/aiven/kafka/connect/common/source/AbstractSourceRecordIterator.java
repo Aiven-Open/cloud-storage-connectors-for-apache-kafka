@@ -72,7 +72,7 @@ import org.slf4j.Logger;
  *            number as well as the Kafka Connector defined keyValue and dataValue objects.</li>
  *            </ul>
  */
-public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>>
+public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>>
         implements
             Iterator<T> {
     /** The OffsetManager that we are using */
@@ -95,8 +95,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      * by the inner record.
      */
     private Iterator<T> outer;
-    /** The topic(s) which have been configured with the 'topics' configuration */
-    private final Optional<String> targetTopics;
+
     /** FileMatcher to match the name of the native item and extract the Context from it. */
     private final FileMatching fileMatching;
     /** The predicate which will determine if an native item should be assigned to this task for processing */
@@ -134,10 +133,9 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
         this.sourceConfig = sourceConfig;
         this.offsetManager = offsetManager;
         this.transformer = transformer;
-        this.targetTopics = Optional.ofNullable(sourceConfig.getTargetTopic());
         this.taskId = sourceConfig.getTaskId() % maxTasks;
         this.taskAssignment = new TaskAssignment(distributionType.getDistributionStrategy(maxTasks));
-        this.fileMatching = new FileMatching(new FilePatternUtils(sourceConfig.getSourcename()));
+        this.fileMatching = new FileMatching(new FilePatternUtils(sourceConfig.getSourceName()));
         this.inner = Collections.emptyIterator();
         this.outer = Collections.emptyIterator();
         this.ringBuffer = new RingBuffer<>(sourceConfig.getRingBufferSize());
@@ -275,7 +273,7 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
      * @param <T>
      *            The source record for the client type.
      */
-    static class Mapper<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>>
+    static class Mapper<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>>
             implements
                 Function<SchemaAndValue, T> {
         /**
@@ -367,19 +365,20 @@ public abstract class AbstractSourceRecordIterator<N, K extends Comparable<K>, O
         }
 
         /**
-         * Sets the target topic in the context if it has been set from configuration.
+         * Sets the target topic in the context.
          *
          * @param context
          *            the context to set the topic in if found.
          */
         private void overrideContextTopic(final Context<K> context) {
-            if (targetTopics.isPresent()) {
+            final String targetTopic = sourceConfig.getTargetTopic();
+            if (targetTopic != null) {
                 if (context.getTopic().isPresent()) {
                     getLogger().debug(
                             "Overriding topic '{}' extracted from native item name with topic '{}' from configuration 'topics'. ",
-                            context.getTopic().get(), targetTopics.get());
+                            context.getTopic().get(), targetTopic);
                 }
-                context.setTopic(targetTopics.get());
+                context.setTopic(targetTopic);
             }
         }
     }

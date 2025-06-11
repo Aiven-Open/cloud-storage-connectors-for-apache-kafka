@@ -18,7 +18,7 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins {
   id("aiven-apache-kafka-connectors-all.java-conventions")
-  id("com.bmuschko.docker-remote-api") version "9.4.0"
+  /*id("com.bmuschko.docker-remote-api") version "9.4.0"*/
   id("aiven-apache-kafka-connectors-all.docs")
 }
 
@@ -64,9 +64,8 @@ dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
   compileOnly(project(":site"))
-
-  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
-  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
+  compileOnly(apache.velocity.engine.core)
+  compileOnly(apache.velocity.tools)
 
   implementation(apache.commons.collection4)
   implementation(project(":commons"))
@@ -198,6 +197,7 @@ dependencies {
   }
 
   integrationTestImplementation(apache.kafka.connect.runtime)
+  integrationTestImplementation(apache.kafka.clients)
   integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation(testFixtures(project(":s3-source-connector")))
 
@@ -220,6 +220,7 @@ dependencies {
   testFixturesImplementation(compressionlibs.zstd.jni)
   testFixturesImplementation(tools.spotbugs.annotations)
   testFixturesImplementation(apache.kafka.connect.api)
+  testFixturesImplementation(apache.commons.io)
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {
@@ -279,7 +280,7 @@ publishing {
         licenses {
           license {
             name = "Apache 2.0"
-            url = "http://www.apache.org/licenses/LICENSE-2.0"
+            url = "https://www.apache.org/licenses/LICENSE-2.0"
             distribution = "repo"
           }
         }

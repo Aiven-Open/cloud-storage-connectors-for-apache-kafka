@@ -92,7 +92,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         final Map<String, Schema> gcsOutputAvroSchemas = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final byte[] blobBytes = testBucketAccessor.readBytes(blobName, compression);
+            final byte[] blobBytes = testBucketAccessor.readBytes(blobName, CompressionType.forName(compression));
             try (SeekableInput sin = new SeekableByteArrayInput(blobBytes)) { // NOPMD AvoidInstantiatingObjectsInLoops
                 final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>(); // NOPMD
                                                                                                   // AvoidInstantiatingObjectsInLoops
@@ -157,7 +157,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
             final List<String> items = Collections
-                    .unmodifiableList(testBucketAccessor.readLines(blobName, compression));
+                    .unmodifiableList(testBucketAccessor.readLines(blobName, CompressionType.forName(compression)));
             blobContents.put(blobName, items);
         }
 

@@ -160,7 +160,7 @@ public abstract class AbstractSourceTask extends SourceTask {
                 } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
                     logger.error("{} failed -- EXITING", this, e);
                 }
-
+                logger.info("{} finished", this.toString());
             }
         }, this.getClass().getName() + " polling thread");
     }

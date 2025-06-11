@@ -99,7 +99,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
             blobContents.put(blobName,
-                    testBucketAccessor.readAndDecodeLines(blobName, compression, 0, 1)
+                    testBucketAccessor.readAndDecodeLines(blobName, CompressionType.forName(compression), 0, 1)
                             .stream()
                             .map(fields -> String.join(",", fields))
                             .collect(Collectors.toList()));
@@ -154,7 +154,8 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         }
 
         for (final String blobName : expectedBlobs) {
-            final List<String> blobContent = testBucketAccessor.readAndDecodeLines(blobName, compression, 0, 1)
+            final List<String> blobContent = testBucketAccessor
+                    .readAndDecodeLines(blobName, CompressionType.forName(compression), 0, 1)
                     .stream()
                     .map(fields -> String.join(",", fields))
                     .collect(Collectors.toList());
@@ -213,8 +214,8 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         }
 
         for (final Map.Entry<String, String> blobAndContentEntry : expectedBlobsAndContent.entrySet()) {
-            assertThat(testBucketAccessor.readLines(blobAndContentEntry.getKey(), compression).get(0))
-                    .isEqualTo(blobAndContentEntry.getValue());
+            assertThat(testBucketAccessor.readLines(blobAndContentEntry.getKey(), CompressionType.forName(compression))
+                    .get(0)).isEqualTo(blobAndContentEntry.getValue());
         }
 
     }
@@ -280,7 +281,8 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         }
 
         for (final String blobName : expectedBlobs) {
-            final String blobContent = testBucketAccessor.readAndDecodeLines(blobName, compression, 0, 1)
+            final String blobContent = testBucketAccessor
+                    .readAndDecodeLines(blobName, CompressionType.forName(compression), 0, 1)
                     .stream()
                     .map(fields -> String.join(",", fields))
                     .collect(Collectors.joining());
@@ -342,7 +344,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
             final List<String> items = Collections
-                    .unmodifiableList(testBucketAccessor.readLines(blobName, compression));
+                    .unmodifiableList(testBucketAccessor.readLines(blobName, CompressionType.forName(compression)));
             blobContents.put(blobName, items);
         }
 
@@ -407,7 +409,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
 
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final List<String> items = testBucketAccessor.readLines(blobName, compression);
+            final List<String> items = testBucketAccessor.readLines(blobName, CompressionType.forName(compression));
             assertThat(items).hasSize(numEpochs + 2);
             blobContents.put(blobName, Collections.unmodifiableList(items));
         }

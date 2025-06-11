@@ -53,7 +53,7 @@ class TaskAssignmentTest {
         when(mockConfig.getMaxTasks()).thenReturn(maxTasks);
         when(mockConfig.getTargetTopic()).thenReturn("topic");
         when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
-        when(mockConfig.getSourcename()).thenReturn("{{topic}}-{{partition}}-{{start_offset}}");
+        when(mockConfig.getSourceName()).thenReturn("{{topic}}-{{partition}}-{{start_offset}}");
         return mockConfig;
     }
 

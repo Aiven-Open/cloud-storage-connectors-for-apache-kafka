@@ -40,7 +40,7 @@ import org.slf4j.Logger;
  * @param <T>
  *            the implementation class for AbstractSourceRecord.
  */
-public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>> {
+public abstract class AbstractSourceRecord<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>> {
     /** The logger from the implementation class */
     private final Logger logger;
     /** the key for the source record */
@@ -52,7 +52,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
     /** The context associated with this record */
     private Context<K> context;
     /** The native info for this record. */
-    private final NativeInfo<N, K> nativeInfo;
+    private final NativeInfo<K, N> nativeInfo;
 
     /**
      * Construct a source record from a native item.
@@ -62,7 +62,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
      * @param nativeInfo
      *            the native information for the native that his record represents.
      */
-    public AbstractSourceRecord(final Logger logger, final NativeInfo<N, K> nativeInfo) {
+    public AbstractSourceRecord(final Logger logger, final NativeInfo<K, N> nativeInfo) {
         this.logger = logger;
         this.nativeInfo = nativeInfo;
     }
@@ -73,7 +73,7 @@ public abstract class AbstractSourceRecord<N, K extends Comparable<K>, O extends
      * @param sourceRecord
      *            the source record to copy.
      */
-    protected AbstractSourceRecord(final AbstractSourceRecord<N, K, O, T> sourceRecord) {
+    protected AbstractSourceRecord(final AbstractSourceRecord<K, N, O, T> sourceRecord) {
         this(sourceRecord.logger, sourceRecord.nativeInfo);
         this.offsetManagerEntry = sourceRecord.offsetManagerEntry
                 .fromProperties(sourceRecord.getOffsetManagerEntry().getProperties());

@@ -40,7 +40,7 @@ import com.azure.storage.blob.models.BlobItemProperties;
 @SuppressWarnings("PMD.TestClassWithoutTestCases")
 final public class AzureBlobSourceRecordIteratorTest
         extends
-            AbstractSourceRecordIteratorTest<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
+            AbstractSourceRecordIteratorTest<String, BlobItem, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
 
     private AzureBlobClient azureBlobClient;
 
@@ -50,7 +50,7 @@ final public class AzureBlobSourceRecordIteratorTest
     }
 
     @Override
-    protected AbstractSourceRecordIterator<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> createSourceRecordIterator(
+    protected AbstractSourceRecordIterator<String, BlobItem, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> createSourceRecordIterator(
             final SourceCommonConfig mockConfig, final OffsetManager<AzureBlobOffsetManagerEntry> offsetManager,
             final Transformer transformer) {
         return new AzureBlobSourceRecordIterator((AzureBlobSourceConfig) mockConfig, offsetManager, transformer,
@@ -105,7 +105,7 @@ final public class AzureBlobSourceRecordIteratorTest
             }
 
             azureBlobClient = mock(AzureBlobClient.class);
-            when(azureBlobClient.getAzureBlobStream()).thenAnswer(env -> dequeueData());
+            when(azureBlobClient.getAzureBlobStream(null)).thenAnswer(env -> dequeueData());
             when(azureBlobClient.getBlob(anyString())).thenAnswer(env -> getStream(env.getArgument(0)));
         }
     }

@@ -44,17 +44,13 @@ public class AzureBlobSourceTask extends AbstractSourceTask {
     /** The configuration for this run */
     private AzureBlobSourceConfig azureBlobSourceConfig; // NOPMD only called once, when used in the future this can be
     // removed
+    private Iterator<AzureBlobSourceRecord> azureBlobSourceRecordIterator;
 
     /**
-     * Iterator to read. protected for testing.
-     */
-    protected Iterator<AzureBlobSourceRecord> azureBlobSourceRecordIterator;
-
-    /**
-     * Constructor to set the Logger used.
+     * Constructor to set the Logger used. This constructor is required by Connect.
      *
      */
-    protected AzureBlobSourceTask() {
+    public AzureBlobSourceTask() {
         super(LOGGER);
     }
 

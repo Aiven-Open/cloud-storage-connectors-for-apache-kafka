@@ -446,8 +446,7 @@ public final class S3ConfigFragment extends ConfigFragment {
         public void ensureValid(final String name, final Object value) {
             if (Objects.nonNull(value)) {
                 final String valueStr = (String) value;
-                final com.amazonaws.regions.Region region = RegionUtils.getRegion(valueStr);
-                if (!RegionUtils.getRegions().contains(region)) {
+                if (!RegionUtils.getRegions().contains(RegionUtils.getRegion(valueStr))) {
                     throw new ConfigException(name, valueStr, toString());
                 }
             }

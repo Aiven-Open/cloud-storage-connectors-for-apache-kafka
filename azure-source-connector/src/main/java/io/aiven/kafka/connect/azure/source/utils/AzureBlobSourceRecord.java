@@ -25,11 +25,11 @@ import org.slf4j.LoggerFactory;
 
 public class AzureBlobSourceRecord
         extends
-            AbstractSourceRecord<BlobItem, String, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
+            AbstractSourceRecord<String, BlobItem, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobSourceRecord.class);
 
     public AzureBlobSourceRecord(final BlobItem blobItem) {
-        super(LOGGER, new NativeInfo<BlobItem, String>() {
+        super(LOGGER, new NativeInfo<String, BlobItem>() {
 
             @Override
             public BlobItem getNativeItem() {

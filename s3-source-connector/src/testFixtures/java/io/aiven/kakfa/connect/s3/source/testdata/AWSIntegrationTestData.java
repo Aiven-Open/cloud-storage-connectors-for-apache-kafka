@@ -23,7 +23,7 @@ import java.util.Map;
 import org.apache.kafka.connect.connector.Connector;
 
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.integration.source.AbstractSourceIntegrationBase.WriteResult;
+import io.aiven.kafka.connect.common.integration.source.SourceStorage;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.S3SourceConnector;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
@@ -142,10 +142,15 @@ public final class AWSIntegrationTestData {
      *            the bytes to write.
      * @return A WriteResult.
      */
-    public WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
-        final PutObjectRequest request = PutObjectRequest.builder().bucket(BUCKET_NAME).key(nativeKey).build();
+    public SourceStorage.WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes,
+            final BucketAccessor bucketAccessor) {
+        final PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(bucketAccessor.getBucketName())
+                .key(nativeKey)
+                .build();
         s3Client.putObject(request, RequestBody.fromBytes(testDataBytes));
-        return new WriteResult<>(new S3OffsetManagerEntry(BUCKET_NAME, nativeKey).getManagerKey(), nativeKey);
+        return new SourceStorage.WriteResult<>(
+                new S3OffsetManagerEntry(bucketAccessor.getBucketName(), nativeKey).getManagerKey(), nativeKey);
     }
 
     /**
@@ -163,7 +168,8 @@ public final class AWSIntegrationTestData {
      * @param localPrefix
      *            the local prefix if any.
      * @param bucketName
-     *            the bucket name for the connector to read from.
+     *            the name of the bucket to write to.
+     *
      * @return the data map of the configuration options for to talk to the container.
      */
     public Map<String, String> createConnectorConfig(final String localPrefix, final String bucketName) {
@@ -181,5 +187,4 @@ public final class AWSIntegrationTestData {
         }
         return data;
     }
-
 }

@@ -58,6 +58,12 @@ under the License.
                     <item name="Introduction" href="azure-sink-connector/index.html"/>
                     <item name="Javadoc" href="azure-sink-connector/javadoc/index.html"/>
                 </item>
+                <item name="Source">
+                    <item name="Introduction" href="azure-source-connector/index.html"/>
+                    <item name="Configuration" href="azure-source-connector/AzureBlobSourceConfig.html"/>
+                    <item name="Javadoc" href="azure-source-connector/javadoc/index.html"/>
+                </item>
+
             </item>
 
             <item name="GCS - Google Cloud Storage">
@@ -85,6 +91,12 @@ under the License.
                 </item>
             </item>
         </menu>
+
+        <menu name="Design Notes">
+            <item name="Site Documentation" href="design/site.html" />
+            <item name="Source Processing" href="design/source.html"/>
+        </menu>
+
     </body>
     <skin>
         <groupId>org.apache.maven.skins</groupId>

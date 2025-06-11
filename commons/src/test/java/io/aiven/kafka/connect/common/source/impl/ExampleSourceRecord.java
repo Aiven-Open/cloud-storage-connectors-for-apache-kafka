@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  */
 final public class ExampleSourceRecord
         extends
-            AbstractSourceRecord<ExampleNativeObject, String, ExampleOffsetManagerEntry, ExampleSourceRecord> {
+            AbstractSourceRecord<String, ExampleNativeObject, ExampleOffsetManagerEntry, ExampleSourceRecord> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ExampleSourceRecord.class);
 
     /**
@@ -37,7 +37,7 @@ final public class ExampleSourceRecord
      *            The native object
      */
     public ExampleSourceRecord(final ExampleNativeObject nativeObject) {
-        super(LOGGER, new NativeInfo<ExampleNativeObject, String>() {
+        super(LOGGER, new NativeInfo<String, ExampleNativeObject>() {
             @Override
             public ExampleNativeObject getNativeItem() {
                 return nativeObject;

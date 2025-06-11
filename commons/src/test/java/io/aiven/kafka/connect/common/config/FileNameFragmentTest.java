@@ -39,7 +39,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class FileNameFragmentTest {// NOPMD
+class FileNameFragmentTest {
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("configDefSource")
@@ -219,7 +219,6 @@ public class FileNameFragmentTest {// NOPMD
 
         props.put(FileNameFragment.FILE_MAX_RECORDS, "-1");
         assertThatThrownBy(() -> new AbstractConfig(configDef, props)).isInstanceOf(ConfigException.class);
-
     }
 
     @Test

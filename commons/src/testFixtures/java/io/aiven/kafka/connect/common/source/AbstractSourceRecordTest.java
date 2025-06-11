@@ -44,7 +44,7 @@ import org.junit.jupiter.api.Test;
  * @param <T>
  *            The concrete implementation of the {@link AbstractSourceRecord} .
  */
-public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<N, K, O, T>> {
+public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>> {
 
     public static final String TEST_OBJECT_KEY_TXT = "test-object-key.txt";
     private static final String TEST_TOPIC = "test-topic";
@@ -78,6 +78,9 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
      */
     abstract protected T createSourceRecord();
 
+    /**
+     * Tests that the source record is propery constructed.
+     */
     @Test
     void testCreateSourceRecord() {
         final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
@@ -100,6 +103,10 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         assertThat(result.kafkaPartition()).isEqualTo(2);
     }
 
+    /**
+     * Tests that an exception in the OffsetManager when errors tolerance is NONE results in an exception and that error
+     * tolerance ALL results in a null result.
+     */
     @Test
     void testCreateSourceRecordWithDataError() {
         final Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
@@ -119,6 +126,9 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         assertThat(result).isNull();
     }
 
+    /**
+     * Tests isolation between original context and context internal to source record.
+     */
     @Test
     void testModifyingInitialContextDoesNotAlterTheSourceRecordsContext() {
         final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
@@ -153,6 +163,9 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
 
     }
 
+    /**
+     * Tests isolation between OffsetManagerEntry and Source Record.
+     */
     @Test
     void testModifyingInitialOffsetManagerEntryDoesNotAlterTheSourceRecordsOffsetManagerEntry() {
         O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
@@ -177,6 +190,9 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         assertThat(sourceRecord.getRecordCount()).isEqualTo(currentRecordCount);
     }
 
+    /**
+     * Tests that the duplicate method works as expected.
+     */
     @Test
     void testDuplicateMethod() {
         final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
@@ -211,6 +227,9 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         assertThat(duplicate.getNativeKey()).isSameAs(sourceRecord.getNativeKey());
     }
 
+    /**
+     * Test that offset manager entry responds correctly to incrementing record count and generation from properties.
+     */
     @Test
     void offsetManagerEntryTest() {
         final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);

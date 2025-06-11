@@ -36,7 +36,7 @@ import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.integration.KafkaManager;
-import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
+import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
@@ -48,15 +48,17 @@ import org.junit.jupiter.api.Test;
  * Test to verify OffsetManager and OffsetManagerKey implementations work as expected
  *
  * @param <K>
- *            the native Key type.
+ *            the native key type.
+ * @param <N>
+ *            the native object type
  * @param <O>
- *            The OffsetManagerEntry type.
- * @param <I>
- *            The SourecRecord iteratior type.
+ *            The {@link OffsetManager.OffsetManagerEntry} implementation.
+ * @param <T>
+ *            The implementation of the {@link AbstractSourceRecord}
  */
-public abstract class AbstractOffsetManagerIntegrationTest<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, I extends AbstractSourceRecordIterator<?, K, O, ?>>
+public abstract class AbstractOffsetManagerIntegrationTest<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>>
         extends
-            AbstractSourceIntegrationBase<K, O, I> {
+            AbstractSourceIntegrationBase<K, N, O, T> {
 
     /**
      * Static to indicate that the TASK is not set.

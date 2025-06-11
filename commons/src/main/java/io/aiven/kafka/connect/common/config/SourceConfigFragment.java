@@ -39,6 +39,7 @@ public final class SourceConfigFragment extends ConfigFragment {
     public static final String TARGET_TOPIC = "topic";
     private static final String ERRORS_TOLERANCE = "errors.tolerance";
     private static final String DISTRIBUTION_TYPE = "distribution.type";
+
     /* public so that deprecated users can reference it */
     public static final String RING_BUFFER_SIZE = "ring.buffer.size";
 

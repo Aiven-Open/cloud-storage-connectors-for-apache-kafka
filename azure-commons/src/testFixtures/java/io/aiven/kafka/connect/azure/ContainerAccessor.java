@@ -103,7 +103,7 @@ public final class ContainerAccessor {
     /**
      * Implementation of NativeInfo for the azure blob access.
      */
-    public final static class AzureNativeInfo implements NativeInfo<BlobItem, String>, Comparable<AzureNativeInfo> {
+    public final static class AzureNativeInfo implements NativeInfo<String, BlobItem>, Comparable<AzureNativeInfo> {
         private final BlobItem blobItem;
 
         AzureNativeInfo(final BlobItem blobItem) {

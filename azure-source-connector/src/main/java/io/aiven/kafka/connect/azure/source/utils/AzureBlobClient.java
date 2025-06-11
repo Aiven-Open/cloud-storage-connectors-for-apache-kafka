@@ -56,13 +56,17 @@ public class AzureBlobClient {
     /**
      * returns a stream of BlobItems listing each object in lexical order. It handles paging of data within the client.
      *
+     * @param offset
+     *            the offset to start the list from. May be {@code null} to start at beginning of list.
      * @return A Stream of BlobItems in the container.
      *
      */
-    public Stream<BlobItem> getAzureBlobStream() {
+    public Stream<BlobItem> getAzureBlobStream(final String offset) {
         final ListBlobsOptions options = new ListBlobsOptions().setPrefix(config.getAzurePrefix())
                 .setMaxResultsPerPage(config.getAzureFetchPageSize());
-        return containerAsyncClient.listBlobs(options).toStream().filter(filterPredicate);
+        return offset == null
+                ? containerAsyncClient.listBlobs(options).toStream().filter(filterPredicate)
+                : containerAsyncClient.listBlobs(options, offset).toStream().filter(filterPredicate);
     }
 
     /**

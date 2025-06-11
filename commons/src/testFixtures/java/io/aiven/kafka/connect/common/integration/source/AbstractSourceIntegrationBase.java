@@ -42,7 +42,7 @@ import org.apache.kafka.connect.json.JsonDeserializer;
 
 import io.aiven.kafka.connect.common.integration.ConsumerPropertiesBuilder;
 import io.aiven.kafka.connect.common.integration.KafkaManager;
-import io.aiven.kafka.connect.common.source.AbstractSourceRecordIterator;
+import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.storage.NativeInfo;
@@ -66,12 +66,14 @@ import org.slf4j.Logger;
  *
  * @param <K>
  *            the native key type.
+ * @param <N>
+ *            the native object type
  * @param <O>
  *            The {@link OffsetManager.OffsetManagerEntry} implementation.
- * @param <I>
- *            The implementation of the {@link AbstractSourceRecordIterator}
+ * @param <T>
+ *            The implementation of the {@link AbstractSourceRecord}
  */
-public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O extends OffsetManager.OffsetManagerEntry<O>, I extends AbstractSourceRecordIterator<?, K, O, ?>> {
+public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>> {
 
     /**
      * The Test info provided before each test. Tests may access this info wihout capturing it themselves.
@@ -84,6 +86,16 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
     /** The thread local instance of the connector name */
     private static final ThreadLocal<String> CONNECTOR_NAME_THREAD_LOCAL = new ThreadLocal<>() {
     };
+
+    protected AbstractSourceIntegrationBase() {
+    }
+
+    /**
+     * Create the SourceStorage. Should create the source storage once and then return it.
+     *
+     * @return the current SourceStorage object.
+     */
+    abstract protected SourceStorage<K, N, O> getSourceStorage();
 
     /**
      * Gets logger for the test class
@@ -103,7 +115,9 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
      *            the partition for the key.
      * @return the native Key.
      */
-    abstract protected K createKey(String prefix, String topic, int partition);
+    final protected K createKey(final String prefix, final String topic, final int partition) {
+        return getSourceStorage().createKey(prefix, topic, partition);
+    }
 
     /**
      * Write file to natvie storage with the specified key and data.
@@ -113,14 +127,18 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
      * @param testDataBytes
      *            the data.
      */
-    abstract protected WriteResult<K> writeWithKey(K nativeKey, byte[] testDataBytes);
+    final protected SourceStorage.WriteResult<K> writeWithKey(final K nativeKey, final byte[] testDataBytes) {
+        return getSourceStorage().writeWithKey(nativeKey, testDataBytes);
+    }
 
     /**
      * Retrieves a list of {@link NativeInfo} implementations, one for each item in native storage.
      *
      * @return the list of {@link NativeInfo} implementations, one for each item in native storage.
      */
-    abstract protected List<? extends NativeInfo<?, K>> getNativeStorage();
+    final protected List<? extends NativeInfo<K, N>> getNativeStorage() {
+        return getSourceStorage().getNativeStorage();
+    }
 
     /**
      * The Connector class under test.
@@ -128,7 +146,9 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
      * @return the connector class under test.
      */
 
-    protected abstract Class<? extends Connector> getConnectorClass();
+    final protected Class<? extends Connector> getConnectorClass() {
+        return getSourceStorage().getConnectorClass();
+    }
 
     /**
      * Gets the name of the current connector.
@@ -151,7 +171,9 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
      *
      * @return the configuration data for the Connector class under test.
      */
-    protected abstract Map<String, String> createConnectorConfig(String localPrefix);
+    final protected Map<String, String> createConnectorConfig(final String localPrefix) {
+        return getSourceStorage().createConnectorConfig(localPrefix);
+    }
 
     /**
      * Gets the default offset flush interval.
@@ -208,8 +230,7 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
      * @throws InterruptedException
      *             on interrupted thread.
      */
-    final protected KafkaManager setupKafka(final boolean forceRestart)
-            throws IOException, ExecutionException, InterruptedException {
+    final protected KafkaManager setupKafka(final boolean forceRestart) throws IOException {
         KafkaManager kafkaManager = KAFKA_MANAGER_THREAD_LOCAL.get();
         if (kafkaManager != null && forceRestart) {
             tearDownKafka();
@@ -280,7 +301,9 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
      *
      * @return A BiFunction that crates an OffsetManagerEntry.
      */
-    abstract protected BiFunction<Map<String, Object>, Map<String, Object>, O> offsetManagerEntryFactory();
+    final protected BiFunction<Map<String, Object>, Map<String, Object>, O> offsetManagerEntryFactory() {
+        return getSourceStorage().offsetManagerEntryFactory();
+    }
 
     /**
      * Creates a MessageConsumer for this test environment.
@@ -312,7 +335,8 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
      *            the partition id fo the file.
      * @return the WriteResult for the operation.
      */
-    protected final WriteResult<K> write(final String topic, final byte[] testDataBytes, final int partition) {
+    protected final SourceStorage.WriteResult<K> write(final String topic, final byte[] testDataBytes,
+            final int partition) {
         return write(topic, testDataBytes, partition, null);
     }
 
@@ -329,8 +353,8 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
      *            the prefix for the key.
      * @return the WriteResult for the result.
      */
-    protected final WriteResult<K> write(final String topic, final byte[] testDataBytes, final int partition,
-            final String prefix) {
+    protected final SourceStorage.WriteResult<K> write(final String topic, final byte[] testDataBytes,
+            final int partition, final String prefix) {
         final K objectKey = createKey(prefix, topic, partition);
         return writeWithKey(objectKey, testDataBytes);
     }
@@ -348,7 +372,9 @@ public abstract class AbstractSourceIntegrationBase<K extends Comparable<K>, O e
      * Handles reading messages from the local kafka.
      */
     public class MessageConsumer {
-        /** constructor */
+        /**
+         * constructor. use {@link AbstractSourceIntegrationBase#messageConsumer()}
+         */
         private MessageConsumer() {
             // use AbstractSourceIntegrationBase.messageConsumer();
         }

@@ -16,14 +16,13 @@
 
 package io.aiven.kafka.connect.s3.source.config;
 
-import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 
 import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
@@ -35,19 +34,15 @@ final class S3SourceConfigTest {
     void correctFullConfig() {
         final var props = new HashMap<String, String>();
 
-        // aws props
-        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "AWS_ACCESS_KEY_ID");
-        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY");
-        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG, "AWS_S3_ENDPOINT");
-        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
-
-        // record, topic specific props
-        props.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
-        props.put(TARGET_TOPIC, "testtopic");
-        props.put(SCHEMA_REGISTRY_URL, "localhost:8081");
-        FileNameFragment.setter(props).template(".*");
+        S3ConfigFragment.setter(props)
+                .accessKeyId("AWS_ACCESS_KEY_ID")
+                .accessKeySecret("AWS_SECRET_ACCESS_KEY")
+                .bucketName("the-bucket")
+                .endpoint("AWS_S3_ENDPOINT")
+                .region(Region.US_EAST_1);
+        TransformerFragment.setter(props).inputFormat(InputFormat.AVRO).schemaRegistry("localhost:8081");
+        SourceConfigFragment.setter(props).targetTopic("testtopic");
+        FileNameFragment.setter(props).template("any-old-file");
 
         final var conf = new S3SourceConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
