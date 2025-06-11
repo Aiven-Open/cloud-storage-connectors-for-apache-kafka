@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.common.config;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -141,9 +140,10 @@ public final class FileNameFragment extends ConfigFragment {
                         + "There is also `key` only variable {{key}} for grouping by keys",
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_PATH_PREFIX_TEMPLATE_CONFIG);
 
-        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, new FileCompressionTypeValidator(),
-                ConfigDef.Importance.MEDIUM, "The compression type used for files.", GROUP_FILE, fileGroupCounter++,
-                ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
+        configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
+                defaultCompressionType == null ? CompressionType.NONE : defaultCompressionType.name(),
+                new FileCompressionTypeValidator(), ConfigDef.Importance.MEDIUM, "The compression type used for files.",
+                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(CompressionType.names()));
 
         configDef.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, ConfigDef.Range.between(0, Integer.MAX_VALUE),

@@ -90,8 +90,8 @@ class FileNameFragmentTest {
         args.add(Arguments.of(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, false,
                 ConfigDef.Importance.MEDIUM, false));
 
-        args.add(Arguments.of(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
-                ConfigDef.Importance.MEDIUM, true));
+        args.add(Arguments.of(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
+                CompressionType.NONE.toString(), true, ConfigDef.Importance.MEDIUM, true));
 
         args.add(Arguments.of(FileNameFragment.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true,
                 ConfigDef.Importance.MEDIUM, false));
@@ -139,13 +139,13 @@ class FileNameFragmentTest {
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.CSV.name,
-                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + ".avro" + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.AVRO.name,
-                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         return args.stream();

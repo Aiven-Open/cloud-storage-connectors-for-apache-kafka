@@ -474,7 +474,7 @@ final class S3SinkConfigTest {
 
         props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
         if (!Objects.isNull(compression)) {
-            props.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compression);
+            FileNameFragment.setter(props).fileCompression(CompressionType.forName(compression));
         }
 
         config = new S3SinkConfig(props);
@@ -661,10 +661,12 @@ final class S3SinkConfigTest {
     @ParameterizedTest
     @ValueSource(strings = { "{{key}}", "{{topic}}/{{partition}}/{{key}}" })
     void notSupportedFileMaxRecords(final String fileNameTemplate) {
-        final Map<String, String> properties = Map.of(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, fileNameTemplate,
-                S3SinkConfig.FILE_MAX_RECORDS, "2", S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key",
-                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        final Map<String, String> properties = new HashMap<>();
+        FileNameFragment.setter(properties).template(fileNameTemplate);
+        properties.put(S3SinkConfig.FILE_MAX_RECORDS, "2");
+        properties.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id");
+        properties.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key");
+        properties.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
         assertThatThrownBy(() -> new S3SinkConfig(properties)).isInstanceOf(ConfigException.class)
                 .hasMessage(String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
                         fileNameTemplate));

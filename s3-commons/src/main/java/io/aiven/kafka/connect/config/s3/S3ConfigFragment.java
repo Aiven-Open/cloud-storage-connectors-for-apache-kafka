@@ -643,12 +643,12 @@ public final class S3ConfigFragment extends ConfigFragment {
      */
     public static Map<String, String> handleDeprecatedOptions(final Map<String, String> properties) {
         // we need to have the old OUTPUT_COMPRESSION take priority over the new FILE_COMPRESSION_TYPE_CONFIG
-        final String newValue = properties.get(FILE_COMPRESSION_TYPE_CONFIG);
+        final String newValue = properties.get(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG);
         final String oldValue = properties.get(OUTPUT_COMPRESSION);
         if (oldValue != null) {
-            logDeprecated(LOGGER, OUTPUT_COMPRESSION, FILE_COMPRESSION_TYPE_CONFIG);
+            logDeprecated(LOGGER, OUTPUT_COMPRESSION, FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG);
             if (newValue == null) {
-                properties.put(FILE_COMPRESSION_TYPE_CONFIG, oldValue);
+                properties.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, oldValue);
             }
         }
         return properties;

@@ -35,7 +35,6 @@ import io.aiven.kafka.connect.common.source.task.DistributionType;
 import io.aiven.kafka.connect.common.storage.NativeInfo;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import jakarta.validation.constraints.NotNull;
 import org.apache.commons.io.function.IOSupplier;
 import org.slf4j.Logger;
 

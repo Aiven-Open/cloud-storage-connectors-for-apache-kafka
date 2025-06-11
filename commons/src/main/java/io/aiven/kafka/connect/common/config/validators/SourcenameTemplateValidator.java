@@ -27,6 +27,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -53,7 +56,6 @@ public final class SourcenameTemplateValidator implements ConfigDef.Validator {
         SUPPORTED_VARIABLE_PARAMETERS.put(TOPIC.name, TOPIC.parameterDescriptor);
     }
 
-    private final String configName;
     private final DistributionType distributionType;
 
     public SourcenameTemplateValidator(final DistributionType distributionType) {
@@ -66,11 +68,7 @@ public final class SourcenameTemplateValidator implements ConfigDef.Validator {
         if (StringUtils.isBlank(valueStr)) {
             throw new ConfigException(name, "must not be empty or not set");
         }
-
-        assert value instanceof String;
-
         // See https://cloud.google.com/storage/docs/naming
-        final String valueStr = (String) value;
         if (valueStr.startsWith(".well-known/acme-challenge")) {
             throw new ConfigException(name, value, "cannot start with '.well-known/acme-challenge'");
         }
@@ -121,6 +119,5 @@ public final class SourcenameTemplateValidator implements ConfigDef.Validator {
                     String.format("Partition distribution type requires %s %s in the file.name.template", parameterText,
                             formatVariables(missingVariables)));
         }
-
     }
 }

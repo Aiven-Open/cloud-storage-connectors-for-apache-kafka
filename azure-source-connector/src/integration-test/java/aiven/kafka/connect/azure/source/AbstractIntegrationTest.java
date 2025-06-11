@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -197,7 +196,7 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
             throws ExecutionException, InterruptedException {
         testBlobAccessor.clear(azurePrefix);
 
-        kafkaManager.createTopics(Arrays.asList(testTopic0, testTopic1));
+        kafkaManager.createTopics(testTopic0, testTopic1);
 
         final Map<String, Object> producerProps = new HashMap<>(testSpecificProducerProperties);
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
