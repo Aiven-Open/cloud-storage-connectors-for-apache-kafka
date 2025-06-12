@@ -62,7 +62,7 @@ public abstract class AzureStorage implements StorageBase<String, BlobItem> {
      * @return a newly constructed Azurite container.
      */
     public static AzuriteContainer createContainer() {
-        return new AzuriteContainer("mcr.microsoft.com/azure-storage/azurite:3.33.0");
+        return new AzuriteContainer("mcr.microsoft.com/azure-storage/azurite:latest");
     }
 
     /**

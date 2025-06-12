@@ -145,6 +145,7 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         producer.close();
         testBlobAccessor.clear(azurePrefix);
         CONNECTOR_NAMES.forEach(kafkaManager::deleteConnector);
+        CONNECTOR_NAMES.clear();
     }
 
     protected static boolean useFakeAzure() {
