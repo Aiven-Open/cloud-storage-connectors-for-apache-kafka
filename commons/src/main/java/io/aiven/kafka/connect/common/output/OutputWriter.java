@@ -109,10 +109,7 @@ public abstract class OutputWriter implements AutoCloseable {
         protected boolean envelopeEnabled = true;
 
         public Builder withCompressionType(final CompressionType compressionType) {
-            if (Objects.isNull(compressionType)) {
-                this.compressionType = CompressionType.NONE;
-            }
-            this.compressionType = compressionType;
+            this.compressionType = compressionType == null ? CompressionType.NONE : compressionType;
             return this;
         }
 
