@@ -16,12 +16,14 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecordIteratorTest;
@@ -52,7 +54,7 @@ public class ExampleSourceRecordIteratorTest
     @Override
     protected ExampleSourceRecordIterator createSourceRecordIterator(final SourceCommonConfig mockConfig,
             final OffsetManager<ExampleOffsetManagerEntry> offsetManager, final Transformer transformer) {
-        return new ExampleSourceRecordIterator(mockConfig, offsetManager, transformer, 4096, nativeClient);
+        return new ExampleSourceRecordIterator(mockConfig, offsetManager, transformer, nativeClient);
     }
 
     @Override
@@ -65,8 +67,8 @@ public class ExampleSourceRecordIteratorTest
         return mock(SourceCommonConfig.class);
     }
 
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
-    public class Mutator extends ClientMutator<ExampleNativeObject, String, Mutator> {
+    @SuppressFBWarnings({ "EI_EXPOSE_REP", "EI_EXPOSE_REP2" })
+    public final class Mutator extends ClientMutator<ExampleNativeObject, String, Mutator> {
 
         @Override
         protected ExampleNativeObject createObject(final String key, final ByteBuffer data) {
@@ -78,18 +80,21 @@ public class ExampleSourceRecordIteratorTest
          *
          * @return A list of NativeObjects from a single block.
          */
-        private List<ExampleNativeObject> dequeueData() {
+        private List<ExampleNativeObject> dequeueData(final String offset) {
             // Dequeue a block. Sets the objects.
             dequeueBlock();
-            return objects;
+            final boolean matches = offset == null;
+            return objects.stream()
+                    .filter(o -> matches || o.getKey().compareTo(offset) >= 0)
+                    .collect(Collectors.toList());
         }
 
         @Override
         public void build() {
             nativeClient = mock(ExampleNativeClient.class);
 
-            // when a listObjectV2 is requests deququ the answer from the blocks.
-            when(nativeClient.listObjects()).thenAnswer(env -> dequeueData());
+            // when an object is requested retrieve the answer from the blocks.
+            when(nativeClient.listObjects(any())).thenAnswer(env -> dequeueData(env.getArgument(0)));
             // when an objectRequest is sent retrieve the response data.
             when(nativeClient.getObjectAsBytes(anyString())).thenAnswer(env -> getData(env.getArgument(0)));
         }

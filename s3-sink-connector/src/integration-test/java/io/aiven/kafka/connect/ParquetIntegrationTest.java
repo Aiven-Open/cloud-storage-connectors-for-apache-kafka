@@ -18,7 +18,6 @@ package io.aiven.kafka.connect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -32,7 +31,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -41,103 +39,38 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
-import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
 
-import com.amazonaws.services.s3.AmazonS3;
 import org.apache.avro.generic.GenericRecord;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-final class ParquetIntegrationTest implements IntegrationBase {
+final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
 
-    private static final String S3_ACCESS_KEY_ID = "test-key-id0";
-
-    private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
-
-    private static final String TEST_BUCKET_NAME = "test-bucket0";
-
-    private static final String CONNECTOR_NAME = "aiven-s3-sink-connector";
-
-    private static final int OFFSET_FLUSH_INTERVAL_MS = 5000;
-
-    private static String s3Endpoint;
-    private static BucketAccessor testBucketAccessor;
-    private static File pluginDir;
     @TempDir
     Path tmpDir;
 
-    @Container
-    public static final LocalStackContainer LOCALSTACK = IntegrationBase.createS3Container();
-    @Container
-    private static final KafkaContainer KAFKA = IntegrationBase.createKafkaContainer();
-
-    private AdminClient adminClient;
-    private KafkaProducer<byte[], byte[]> producer;
-    private ConnectRunner connectRunner;
-
-    @BeforeAll
-    static void setUpAll() throws IOException, InterruptedException {
-        final AmazonS3 s3Client = IntegrationBase.createS3Client(LOCALSTACK);
-        s3Endpoint = LOCALSTACK.getEndpoint().toString();
-        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
-
-        pluginDir = IntegrationBase.getPluginDir();
-        IntegrationBase.extractConnectorPlugin(pluginDir);
-
-        IntegrationBase.waitForRunningContainer(KAFKA);
-    }
-
-    @BeforeEach
-    void setUp(final TestInfo testInfo) throws ExecutionException, InterruptedException {
-        testBucketAccessor.createBucket();
-
-        adminClient = newAdminClient(KAFKA);
-        producer = newProducer();
-
-        final var topicName = IntegrationBase.topicName(testInfo);
-        IntegrationBase.createTopics(adminClient, List.of(topicName));
-
-        connectRunner = newConnectRunner(KAFKA, pluginDir, OFFSET_FLUSH_INTERVAL_MS);
-        connectRunner.start();
-    }
-
-    @AfterEach
-    void tearDown() {
-        testBucketAccessor.removeBucket();
-        connectRunner.stop();
-        adminClient.close();
-        producer.close();
-
-        connectRunner.awaitStop();
-    }
-
-    private KafkaProducer<byte[], byte[]> newProducer() {
+    @Override
+    protected KafkaProducer<byte[], byte[]> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
         return new KafkaProducer<>(producerProps, new ByteArraySerializer(), new ByteArraySerializer());
     }
 
     @Test
     void allOutputFields(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = topicName(testInfo);
         final var compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", "key,value,offset,timestamp,headers");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectRunner.createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         int cnt = 0;
@@ -191,14 +124,14 @@ final class ParquetIntegrationTest implements IntegrationBase {
     @Test
     void allOutputFieldsJsonValueAsString(final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = topicName(testInfo);
         final var compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", "key,value,offset,timestamp,headers");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectRunner.createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         int cnt = 0;
@@ -253,7 +186,7 @@ final class ParquetIntegrationTest implements IntegrationBase {
     @CsvSource({ "true, {\"value\": {\"name\": \"%s\"}} ", "false, {\"name\": \"%s\"}" })
     void jsonValue(final String envelopeEnabled, final String expectedOutput, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = topicName(testInfo);
         final var compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", "value");
@@ -261,7 +194,7 @@ final class ParquetIntegrationTest implements IntegrationBase {
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
-        connectRunner.createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
         final var jsonMessagePattern = "{\"schema\": %s, \"payload\": %s}";
@@ -313,14 +246,14 @@ final class ParquetIntegrationTest implements IntegrationBase {
 
     @Test
     void schemaChanged(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = topicName(testInfo);
         final var compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
-        connectRunner.createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
         final var jsonMessageNewSchema = "{\"type\":\"struct\",\"fields\":"

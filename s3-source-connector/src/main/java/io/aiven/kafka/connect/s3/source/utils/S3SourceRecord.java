@@ -16,8 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +27,7 @@ public class S3SourceRecord extends AbstractSourceRecord<String, S3Object, S3Off
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceRecord.class);
 
     public S3SourceRecord(final S3Object s3Object) {
-        super(LOGGER, new NativeInfo<String, S3Object>() {
+        super(LOGGER, new NativeInfo<>() {
             @Override
             public S3Object getNativeItem() {
                 return s3Object;
@@ -45,8 +45,8 @@ public class S3SourceRecord extends AbstractSourceRecord<String, S3Object, S3Off
         });
     }
 
-    private S3SourceRecord(final S3SourceRecord azureBlobSourceRecord) {
-        super(azureBlobSourceRecord);
+    private S3SourceRecord(final S3SourceRecord s3SourceRecord) {
+        super(s3SourceRecord);
     }
 
     @Override

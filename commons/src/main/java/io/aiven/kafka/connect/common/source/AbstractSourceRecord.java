@@ -21,9 +21,9 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 
-import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.task.Context;
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 
 import org.slf4j.Logger;
 
@@ -31,11 +31,12 @@ import org.slf4j.Logger;
  * An abstract source record as retrieved from the storage layer.
  *
  * @param <N>
- *            the native object type.
+ *            the native object type. This is the class that represents a file or stream in the underlying data store.
  * @param <K>
- *            the key type for the native object.
+ *            the key type for the native object. This is the class that uniquely identifies a native object.
  * @param <O>
- *            the OffsetManagerEntry for the iterator.
+ *            the OffsetManagerEntry for the iterator. The implementation of OffsetManagerEntry for the underlying
+ *            storage.
  * @param <T>
  *            the implementation class for AbstractSourceRecord.
  */

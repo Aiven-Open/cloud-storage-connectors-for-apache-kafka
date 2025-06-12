@@ -20,8 +20,11 @@ import static java.util.stream.Collectors.toList;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -29,9 +32,16 @@ import java.util.function.Function;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Manages the offsets returned from the Kafka SourceTaskContext.
+ *
+ * @param <E>
+ *            the implementation class for the {@link OffsetManager.OffsetManagerEntry}.
+ */
 public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> {
     /** The logger to write to */
     private static final Logger LOGGER = LoggerFactory.getLogger(OffsetManager.class);
@@ -111,7 +121,6 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
                 .forEach(entry -> matchingOffsets.put(entry.getKey(), entry.getValue()));
         // offsets is multithreaded batching in matchingOffsets is faster
         offsets.putAll(matchingOffsets);
-
     }
 
     /**
@@ -127,19 +136,8 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
     }
 
     /**
-     * Removes the specified entry from the in memory table. Does not impact the records stored in the
-     * {@link SourceTaskContext}.
-     *
-     * @param sourceRecord
-     *            the SourceRecord that contains the key to be removed.
-     */
-    public void removeEntry(final SourceRecord sourceRecord) {
-        LOGGER.debug("Removing: {}", sourceRecord.sourcePartition());
-        offsets.remove(sourceRecord.sourcePartition());
-    }
-
-    /**
-     * The definition of an entry in the OffsetManager.
+     * The definition of an entry in the OffsetManager. Source implementations should define an entry to meet their
+     * needs.
      */
     public interface OffsetManagerEntry<T extends OffsetManagerEntry<T>> extends Comparable<T> {
 
@@ -253,23 +251,77 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
     }
 
     /**
-     * The OffsetManager Key. Must override hashCode() and equals().
+     * The OffsetManager Key.
      */
-    @FunctionalInterface
-    public interface OffsetManagerKey {
+    public static final class OffsetManagerKey {
         /**
-         * Gets the partition map used by Kafka to identify this Offset entry.
-         * <p>
-         * Kafka stores all numbers as longs and so all keys based off integers should be created as longs in the
-         * manager key.
-         * </p>
-         * <p>
-         * This method should make a copy of the internal data and return that to prevent any accidental updates to the
-         * internal data.
-         * </p>
-         *
-         * @return The partition map used by Kafka to identify this Offset entry.
+         * The map of key data items.
          */
-        Map<String, Object> getPartitionMap();
+        private final SortedMap<String, Object> data;
+        /**
+         * the hash code value for this key.
+         */
+        private final int hashCodeValue;
+
+        /**
+         * Constructor.
+         *
+         * @param data
+         *            the map of data items. A defensive copy of the map is created so that subsequent changes to the
+         *            parameter are NOT reflected in the key.
+         */
+        public OffsetManagerKey(final Map<String, Object> data) {
+            this.data = new TreeMap<>(data);
+            final HashCodeBuilder builder = new HashCodeBuilder();
+            for (final Object value : this.data.values()) {
+                builder.append(value);
+            }
+            hashCodeValue = builder.toHashCode();
+        }
+
+        /**
+         * Return the map as the partition map for a {@link SourceRecord}.
+         *
+         * @return the data map.
+         */
+        public Map<String, Object> getPartitionMap() {
+            return new TreeMap<>(data);
+        }
+
+        @Override
+        public String toString() {
+            return data.toString();
+        }
+
+        @Override
+        public int hashCode() {
+            return hashCodeValue;
+        }
+
+        @Override
+        public boolean equals(final Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (other instanceof OffsetManager.OffsetManagerKey) {
+                final Map<String, Object> lhs = data;
+                final Map<String, Object> rhs = ((OffsetManager.OffsetManagerKey) other).data;
+                if (lhs.size() != rhs.size()) {
+                    return false;
+                }
+                final Iterator<Map.Entry<String, Object>> lhsIterator = lhs.entrySet().iterator();
+                final Iterator<Map.Entry<String, Object>> rhsIterator = rhs.entrySet().iterator();
+                while (lhsIterator.hasNext() && rhsIterator.hasNext()) {
+                    final Map.Entry<String, Object> lhsEntry = lhsIterator.next();
+                    final Map.Entry<String, Object> rhsEntry = rhsIterator.next();
+                    if (!(lhsEntry.getKey().equals(rhsEntry.getKey())
+                            && lhsEntry.getValue().equals(rhsEntry.getValue()))) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
     }
 }

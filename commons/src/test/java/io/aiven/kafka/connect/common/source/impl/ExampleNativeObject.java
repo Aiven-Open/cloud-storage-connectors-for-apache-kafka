@@ -23,6 +23,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 /**
  * A "native" object for testing.
  */
+@SuppressFBWarnings({ "EI_EXPOSE_REP2", "EI_EXPOSE_REP" })
 public class ExampleNativeObject {
     // instance vars are package private.
     final String key;
@@ -36,9 +37,16 @@ public class ExampleNativeObject {
      * @param data
      *            the data for this object.
      */
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
     public ExampleNativeObject(final String key, final ByteBuffer data) {
         this.key = key;
         this.data = data;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public ByteBuffer getData() {
+        return data;
     }
 }

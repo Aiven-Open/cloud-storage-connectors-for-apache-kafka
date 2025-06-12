@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.config;
 
-import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYyyyUppercase;
-
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
@@ -31,7 +29,6 @@ import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
-import org.apache.commons.lang3.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -39,11 +36,10 @@ import software.amazon.awssdk.regions.Region;
 final public class S3SourceConfig extends SourceCommonConfig {
 
     private final S3ConfigFragment s3ConfigFragment;
-
     private final AwsCredentialProviderFactory awsCredentialsProviderFactory;
 
     public S3SourceConfig(final Map<String, String> properties) {
-        super(configDef(), handleDeprecatedYyyyUppercase(properties));
+        super(new S3SourceConfigDef(), S3ConfigFragment.handleDeprecations(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
         awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
@@ -105,7 +101,7 @@ final public class S3SourceConfig extends SourceCommonConfig {
     }
 
     public String getAwsS3Prefix() {
-        return StringUtils.defaultIfBlank(s3ConfigFragment.getAwsS3Prefix(), null);
+        return s3ConfigFragment.getAwsS3Prefix();
     }
 
     public int getAwsS3PartSize() {
@@ -124,10 +120,6 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
     }
 
-    public int getS3FetchBufferSize() {
-        return s3ConfigFragment.getS3FetchBufferSize();
-    }
-
     public int getFetchPageSize() {
         return s3ConfigFragment.getFetchPageSize();
     }
@@ -135,5 +127,4 @@ final public class S3SourceConfig extends SourceCommonConfig {
     public AwsCredentialsProvider getAwsV2Provider() {
         return awsCredentialsProviderFactory.getAwsV2Provider(s3ConfigFragment);
     }
-
 }
