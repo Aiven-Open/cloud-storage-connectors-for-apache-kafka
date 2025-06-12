@@ -27,7 +27,6 @@ import io.aiven.kafka.connect.azure.source.AzureBlobSourceConnector;
 import io.aiven.kafka.connect.azure.source.utils.AzureBlobOffsetManagerEntry;
 import io.aiven.kafka.connect.common.integration.source.SourceStorage;
 
-import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.models.BlobItem;
 import org.testcontainers.azure.AzuriteContainer;
 
@@ -40,14 +39,13 @@ public class AzureSourceStorage extends AzureStorage
      * @param container
      *            the container to Azure read/write to.
      */
-    public AzureSourceStorage(AzuriteContainer container) {
+    public AzureSourceStorage(final AzuriteContainer container) {
         super(container);
     }
 
     @Override
-    public WriteResult<String> writeWithKey(String nativeKey, byte[] testDataBytes) {
-        BlobClient blobClient = containerAccessor.getBlobClient(nativeKey);
-        blobClient.upload(new ByteArrayInputStream(testDataBytes));
+    public WriteResult<String> writeWithKey(final String nativeKey, final byte[] testDataBytes) {
+        containerAccessor.getBlobClient(nativeKey).upload(new ByteArrayInputStream(testDataBytes));
         return new WriteResult<>(AzureBlobOffsetManagerEntry.asKey(containerAccessor.getContainerName(), nativeKey),
                 nativeKey);
     }
