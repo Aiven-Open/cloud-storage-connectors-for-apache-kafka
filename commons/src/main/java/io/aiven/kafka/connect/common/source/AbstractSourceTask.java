@@ -138,7 +138,7 @@ public abstract class AbstractSourceTask extends SourceTask {
                 } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
                     logger.error("{} failed -- EXITING", this.toString(), e);
                 }
-
+                logger.info("{} finished", this.toString());
             }
         }, this.getClass().getName() + " polling thread");
     }
@@ -254,7 +254,7 @@ public abstract class AbstractSourceTask extends SourceTask {
     /**
      * Calculates elapsed time and flags when expired.
      */
-    protected static class Timer extends StopWatch {
+    public static class Timer extends StopWatch {
         /**
          * The length of time that the timer should run.
          */
@@ -271,7 +271,7 @@ public abstract class AbstractSourceTask extends SourceTask {
          * @param duration
          *            the length of time the timer should run.
          */
-        Timer(final Duration duration) {
+        public Timer(final Duration duration) {
             super();
             this.duration = duration.toMillis();
         }

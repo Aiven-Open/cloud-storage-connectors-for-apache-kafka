@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
 import static io.aiven.kafka.connect.common.config.CommonConfig.TASK_ID;
-import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
@@ -49,6 +48,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
@@ -144,7 +144,7 @@ class AwsIntegrationTest implements IntegrationBase {
         final Map<String, String> configData = getConfig(topic, maxTasks);
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
-        configData.put(FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
+        FileNameFragment.setter(configData).template("{{topic}}-{{partition}}-{{start_offset}}");
         configData.put(TASK_ID, String.valueOf(taskId));
         configData.put(MAX_TASKS, String.valueOf(maxTasks));
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
@@ -199,7 +199,7 @@ class AwsIntegrationTest implements IntegrationBase {
         configData.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
         configData.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        configData.put(FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
+        FileNameFragment.setter(configData).template("{{topic}}-{{partition}}-{{start_offset}}");
         configData.put(TASK_ID, String.valueOf(taskId));
         configData.put(MAX_TASKS, String.valueOf(maxTasks));
 
@@ -279,7 +279,7 @@ class AwsIntegrationTest implements IntegrationBase {
         configData.put(TASK_ID, "0");
 
         configData.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
-        configData.put(FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}");
+        FileNameFragment.setter(configData).template("{{topic}}-{{partition}}");
 
         final String testData1 = "Hello, Kafka Connect S3 Source! object 1";
         final String testData2 = "Hello, Kafka Connect S3 Source! object 2";

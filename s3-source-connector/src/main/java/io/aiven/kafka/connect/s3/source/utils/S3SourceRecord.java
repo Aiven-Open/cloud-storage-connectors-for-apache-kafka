@@ -27,7 +27,7 @@ public class S3SourceRecord extends AbstractSourceRecord<String, S3Object, S3Off
     private static final Logger LOGGER = LoggerFactory.getLogger(S3SourceRecord.class);
 
     public S3SourceRecord(final S3Object s3Object) {
-        super(LOGGER, new NativeInfo<String, S3Object>() {
+        super(LOGGER, new NativeInfo<>() {
             @Override
             public S3Object getNativeItem() {
                 return s3Object;

@@ -60,7 +60,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
      *            the key value as a string.
      * @return the native key equivalent of the {@code key} parameter.
      */
-    abstract protected K createKFrom(final String key);
+    abstract protected K createKFrom(String key);
 
     /**
      * Create an offset manager entry from the string key value,
@@ -69,7 +69,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
      *            the key value as a string.
      * @return an OffsetManager entry.
      */
-    abstract protected O createOffsetManagerEntry(final String key);
+    abstract protected O createOffsetManagerEntry(String key);
 
     /**
      * Creates the source record under test.
@@ -78,6 +78,9 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
      */
     abstract protected T createSourceRecord();
 
+    /**
+     * Tests that the source record is propery constructed.
+     */
     @Test
     void testCreateSourceRecord() {
         final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
@@ -100,6 +103,10 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         assertThat(result.kafkaPartition()).isEqualTo(2);
     }
 
+    /**
+     * Tests that an exception in the OffsetManager when errors tolerance is NONE results in an exception and that error
+     * tolerance ALL results in a null result.
+     */
     @Test
     void testCreateSourceRecordWithDataError() {
         final Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
@@ -119,6 +126,9 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         assertThat(result).isNull();
     }
 
+    /**
+     * Tests isolation between original context and context internal to source record.
+     */
     @Test
     void testModifyingInitialContextDoesNotAlterTheSourceRecordsContext() {
         final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
@@ -153,10 +163,13 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
 
     }
 
+    /**
+     * Tests isolation between OffsetManagerEntry and Source Record.
+     */
     @Test
     void testModifyingInitialOffsetManagerEntryDoesNotAlterTheSourceRecordsOffsetManagerEntry() {
         O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
-        Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
+        final Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
         context.setPartition(3);
         context.setTopic(TEST_TOPIC);
 
@@ -177,11 +190,14 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         assertThat(sourceRecord.getRecordCount()).isEqualTo(currentRecordCount);
     }
 
+    /**
+     * Tests that the duplicate method works as expected.
+     */
     @Test
     void testDuplicateMethod() {
-        O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
+        final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
         offsetManagerEntry.incrementRecordCount();
-        Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
+        final Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
         context.setPartition(3);
         context.setTopic(TEST_TOPIC);
 
@@ -211,17 +227,20 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         assertThat(duplicate.getNativeKey()).isSameAs(sourceRecord.getNativeKey());
     }
 
+    /**
+     * Test that offset manager entry responds correctly to incrementing record count and generation from properties.
+     */
     @Test
     void offsetManagerEntryTest() {
-        O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
+        final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
         assertThat(offsetManagerEntry.getRecordCount()).isEqualTo(0);
-        OffsetManager.OffsetManagerKey key = offsetManagerEntry.getManagerKey();
+        final OffsetManager.OffsetManagerKey key = offsetManagerEntry.getManagerKey();
 
         offsetManagerEntry.incrementRecordCount();
         assertThat(offsetManagerEntry.getRecordCount()).isEqualTo(1);
         assertThat(offsetManagerEntry.getManagerKey().getPartitionMap()).isEqualTo(key.getPartitionMap());
 
-        O offsetManagerEntry2 = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
+        final O offsetManagerEntry2 = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
         assertThat(offsetManagerEntry2.getRecordCount()).isEqualTo(1);
         assertThat(offsetManagerEntry2.getManagerKey().getPartitionMap()).isEqualTo(key.getPartitionMap());
 

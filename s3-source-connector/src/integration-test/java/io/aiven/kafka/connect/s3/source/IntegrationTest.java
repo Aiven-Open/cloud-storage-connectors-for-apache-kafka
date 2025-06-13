@@ -17,11 +17,9 @@
 package io.aiven.kafka.connect.s3.source;
 
 import static io.aiven.kafka.connect.common.config.CommonConfig.MAX_TASKS;
-import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_NAME_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG;
 import static io.aiven.kafka.connect.common.config.SourceConfigFragment.TARGET_TOPIC;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.INPUT_FORMAT_KEY;
-import static io.aiven.kafka.connect.common.config.TransformerFragment.SCHEMA_REGISTRY_URL;
 import static io.aiven.kafka.connect.common.config.TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG;
 import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
@@ -63,6 +61,7 @@ import org.apache.kafka.connect.runtime.WorkerSourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetBackingStore;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.ParquetTestingFixture;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
@@ -234,7 +233,7 @@ final class IntegrationTest implements IntegrationBase {
                 null, "-");
 
         if (StringUtils.isNotBlank(overrideFileNameTemplate)) {
-            connectorConfig.put(FILE_NAME_TEMPLATE_CONFIG, overrideFileNameTemplate);
+            FileNameFragment.setter(connectorConfig).template(overrideFileNameTemplate);
         }
 
         connectorConfig.put(INPUT_FORMAT_KEY, InputFormat.BYTES.getValue());
@@ -377,10 +376,12 @@ final class IntegrationTest implements IntegrationBase {
         final Map<String, String> connectorConfig = getConfig(CONNECTOR_NAME, topic, 4, distributionType, addPrefix,
                 s3Prefix, prefixPattern, "-");
 
-        connectorConfig.put(INPUT_FORMAT_KEY, inputFormat.getValue());
-        connectorConfig.put(SCHEMA_REGISTRY_URL, schemaRegistry.getSchemaRegistryUrl());
+        TransformerFragment.setter(connectorConfig)
+                .inputFormat(inputFormat)
+                .schemaRegistry(schemaRegistry.getSchemaRegistryUrl())
+                .valueConverterSchemaRegistry(schemaRegistry.getSchemaRegistryUrl());
+
         connectorConfig.put(VALUE_CONVERTER_KEY, "io.confluent.connect.avro.AvroConverter");
-        TransformerFragment.setter(connectorConfig).valueConverterSchemaRegistry(schemaRegistry.getSchemaRegistryUrl());
         connectorConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
         return connectorConfig;
@@ -433,8 +434,8 @@ final class IntegrationTest implements IntegrationBase {
         config.put(VALUE_CONVERTER_KEY, "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put(MAX_TASKS, String.valueOf(maxTasks));
         SourceConfigFragment.setter(config).distributionType(taskDistributionConfig);
-        config.put(FILE_NAME_TEMPLATE_CONFIG,
-                "{{topic}}" + fileNameSeparator + "{{partition}}" + fileNameSeparator + "{{start_offset}}");
+        FileNameFragment.setter(config)
+                .template("{{topic}}" + fileNameSeparator + "{{partition}}" + fileNameSeparator + "{{start_offset}}");
         if (addPrefix) {
             config.put(FILE_PATH_PREFIX_TEMPLATE_CONFIG, prefixPattern);
         }
