@@ -21,17 +21,17 @@ import java.util.List;
 
 import org.apache.kafka.connect.connector.Connector;
 
-import io.aiven.kafka.connect.common.NativeInfo;
+import io.aiven.kafka.connect.common.storage.NativeInfo;
 
 import org.apache.commons.io.function.IOSupplier;
 
 /**
  * The base class for Sink and Source storage.
  *
- * @param <N>
- *            the native storage object type
  * @param <K>
  *            the native storage key type.
+ * @param <N>
+ *            the native storage object type
  */
 public interface StorageBase<K extends Comparable<K>, N> {
     /**
@@ -55,7 +55,7 @@ public interface StorageBase<K extends Comparable<K>, N> {
      *
      * @return the list of {@link NativeInfo} implementations, one for each item in native storage.
      */
-    List<? extends NativeInfo<N, K>> getNativeStorage();
+    List<? extends NativeInfo<K, N>> getNativeStorage();
 
     /**
      * Gets an IOSupplier for an InputStream for the specified nativeKey.

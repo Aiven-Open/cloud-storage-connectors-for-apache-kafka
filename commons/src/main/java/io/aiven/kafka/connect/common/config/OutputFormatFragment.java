@@ -53,14 +53,8 @@ public final class OutputFormatFragment extends ConfigFragment {
     public static ConfigDef update(final ConfigDef configDef, final OutputFieldType defaultFieldType) {
         int formatGroupCounter = 0;
 
-        final String supportedFormatTypes = FormatType.names()
-                .stream()
-                .map(f -> "'" + f + "'")
-                .collect(Collectors.joining(", "));
-
         configDef.define(FORMAT_OUTPUT_TYPE_CONFIG, ConfigDef.Type.STRING, FormatType.CSV.name,
-                new OutputTypeValidator(), ConfigDef.Importance.MEDIUM,
-                "The format type of output content" + "The supported values are: " + supportedFormatTypes + ".",
+                new OutputTypeValidator(), ConfigDef.Importance.MEDIUM, "The format type of output content.",
                 GROUP_FORMAT, 0, ConfigDef.Width.NONE, FORMAT_OUTPUT_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(FormatType.names()));
 

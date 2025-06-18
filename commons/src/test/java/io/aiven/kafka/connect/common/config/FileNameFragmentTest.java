@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Modifier;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +39,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class FileNameFragmentTest {// NOPMD
+class FileNameFragmentTest {
 
     @ParameterizedTest(name = "{index} {0}")
     @MethodSource("configDefSource")
@@ -89,8 +90,8 @@ public class FileNameFragmentTest {// NOPMD
         args.add(Arguments.of(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, false,
                 ConfigDef.Importance.MEDIUM, false));
 
-        args.add(Arguments.of(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, null, true,
-                ConfigDef.Importance.MEDIUM, true));
+        args.add(Arguments.of(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
+                CompressionType.NONE.toString(), true, ConfigDef.Importance.MEDIUM, true));
 
         args.add(Arguments.of(FileNameFragment.FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, true,
                 ConfigDef.Importance.MEDIUM, false));
@@ -218,5 +219,95 @@ public class FileNameFragmentTest {// NOPMD
 
         props.put(FileNameFragment.FILE_MAX_RECORDS, "-1");
         assertThatThrownBy(() -> new AbstractConfig(configDef, props)).isInstanceOf(ConfigException.class);
+    }
+
+    @Test
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    void compressionTypeTest() {
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+        for (final CompressionType compressionType : CompressionType.values()) {
+            setter.fileCompression(compressionType);
+            final FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+            assertThat(underTest.getCompressionType()).isEqualTo(compressionType);
+        }
+    }
+
+    @Test
+    void maxRecordsTest() {
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+        setter.maxRecordsPerFile(0);
+        FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getMaxRecordsPerFile()).isEqualTo(0);
+        setter.maxRecordsPerFile(50);
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getMaxRecordsPerFile()).isEqualTo(50);
+        setter.maxRecordsPerFile(Integer.MAX_VALUE);
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getMaxRecordsPerFile()).isEqualTo(Integer.MAX_VALUE);
+    }
+
+    @Test
+    void timezoneTest() {
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+        setter.timestampTimeZone(ZoneOffset.UTC);
+        FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimezone()).isEqualTo(ZoneOffset.UTC);
+        setter.timestampTimeZone(ZoneId.of("GMT"));
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimezone()).isEqualTo(ZoneId.of("GMT"));
+        setter.timestampTimeZone(ZoneId.of("CET"));
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimezone()).isEqualTo(ZoneId.of("CET"));
+    }
+
+    @Test
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    void timestampTest() {
+        FileNameFragment underTest;
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+        for (final TimestampSource.Type timestampType : TimestampSource.Type.values()) {
+            setter.timestampSource(timestampType);
+            underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+            assertThat(underTest.getFilenameTimestampSource().type()).isEqualTo(timestampType);
+        }
+
+        TimestampSource source = TimestampSource.of(TimestampSource.Type.WALLCLOCK);
+        setter.timestampSource(source);
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimestampSource().type()).isEqualTo(TimestampSource.Type.WALLCLOCK);
+
+        source = TimestampSource.of(TimestampSource.Type.EVENT);
+        setter.timestampSource(source);
+        underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+        assertThat(underTest.getFilenameTimestampSource().type()).isEqualTo(TimestampSource.Type.EVENT);
+    }
+
+    @Test
+    void filenameTest() {
+
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+
+        setter.template("{{key}}-aFileName.txt");
+        final FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+
+        assertThat(underTest.getFilename()).isEqualTo("{{key}}-aFileName.txt");
+        assertThat(underTest.getFilenameTemplate().toString()).isEqualTo("{{key}}-aFileName.txt");
+
+    }
+
+    @Test
+    void filenamePrefixTest() {
+        final ConfigDef configDef = FileNameFragment.update(new ConfigDef());
+        final FileNameFragment.Setter setter = FileNameFragment.setter(new HashMap<>());
+
+        setter.prefixTemplate("{{key}}-SomePrefix");
+        final FileNameFragment underTest = new FileNameFragment(new AbstractConfig(configDef, setter.data()));
+
+        assertThat(underTest.getPrefixTemplate()).isEqualTo("{{key}}-SomePrefix");
     }
 }

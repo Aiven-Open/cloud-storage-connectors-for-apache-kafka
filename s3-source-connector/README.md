@@ -375,6 +375,10 @@ consumer.ssl.key.password=\<your password\>
 
 This project depends on [Common Module for Apache Kafka Connect](../commons/README.md).
 
+### Unit tests
+
+The `S3SourceTaskTest` will not execute on non-Linux systems because it depends upon using a container that does not run on Mac or Windows.
+
 ### Integration testing
 
 Integration tests are implemented using JUnit, Gradle and Docker.

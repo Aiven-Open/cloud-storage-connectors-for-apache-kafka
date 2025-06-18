@@ -150,7 +150,6 @@ public final class SourceConfigFragment extends ConfigFragment {
                     .map(ErrorsTolerance::toString)
                     .collect(Collectors.joining(", "));
         }
-
     }
 
     /**
