@@ -59,7 +59,7 @@ dependencies {
   compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
   compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
-  implementation("commons-io:commons-io:2.18.0")
+  implementation("commons-io:commons-io:2.19.0")
   implementation("org.apache.commons:commons-lang3:3.17.0")
   implementation(project(":commons"))
   implementation(apache.commons.collection4)
