@@ -138,6 +138,7 @@ dependencies {
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testinglibs.awaitility)
+  integrationTestImplementation("org.testcontainers:kafka:1.21.3")
 
   integrationTestImplementation(apache.kafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath

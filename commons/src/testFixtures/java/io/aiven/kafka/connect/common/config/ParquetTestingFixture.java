@@ -51,21 +51,6 @@ public final class ParquetTestingFixture {
             .field("email", STRING_SCHEMA)
             .build();
 
-    /**
-     * Gets the schema used for the test cases.
-     *
-     * @return The schema used for the test cases.
-     * @deprecated use {@link #PARQUET_SCHEMA}
-     */
-    @Deprecated
-    public static Schema testSchema() {
-        return SchemaBuilder.struct()
-                .field("name", STRING_SCHEMA)
-                .field("age", INT32_SCHEMA)
-                .field("email", STRING_SCHEMA)
-                .build();
-    }
-
     private ParquetTestingFixture() {
         // do int instantiate
     }

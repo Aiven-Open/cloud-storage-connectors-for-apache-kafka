@@ -25,7 +25,6 @@ dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
   compileOnly(apache.kafka.connect.json)
-  // https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api
   implementation("jakarta.validation:jakarta.validation-api:3.1.1")
   implementation(tools.spotbugs.annotations)
 
@@ -88,10 +87,11 @@ dependencies {
   testFixturesImplementation(apache.kafka.connect.api)
   testFixturesImplementation("javax.validation:validation-api:2.0.1.Final")
   testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaTestingVersion}:test")
-  testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaTestingVersion}")
+  testFixturesImplementation(testinglibs.kafka.connect.runtime)
   testFixturesImplementation("org.apache.kafka:kafka-clients:${kafkaTestingVersion}:test")
+  testFixturesImplementation(testinglibs.kafka.clients)
   testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaTestingVersion}:test")
-  testFixturesImplementation("org.apache.kafka:kafka_2.13:${kafkaTestingVersion}")
+  testFixturesImplementation(testinglibs.kafka.scala)
   testFixturesImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
@@ -110,13 +110,10 @@ dependencies {
   testFixturesImplementation(apache.commons.lang3)
   testFixturesImplementation(apache.commons.io)
   testFixturesImplementation(apache.avro)
+  testFixturesImplementation(testinglibs.kafka.connect.api)
   testFixturesImplementation(testcontainers.junit.jupiter)
   testFixturesImplementation(testcontainers.kafka) // this is not Kafka version
   testFixturesImplementation(testcontainers.localstack)
-  //  // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
-  //  testFixturesImplementation(confluent.kafka.connect.avro.converter) {
-  //    exclude(group = "org.apache.kafka", module = "kafka-clients")
-  //  }
   testFixturesImplementation(apache.parquet.avro) {
     exclude(group = "org.xerial.snappy", module = "snappy-java")
     exclude(group = "org.slf4j", module = "slf4j-api")

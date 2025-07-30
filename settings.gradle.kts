@@ -107,6 +107,11 @@ dependencyResolutionManagement {
       library("junit-jupiter-params", "org.junit.jupiter:junit-jupiter-params:$junitVersion")
       library("jqwik", "net.jqwik:jqwik:$jqwikVersion")
       library("jqwik-engine", "net.jqwik:jqwik-engine:$jqwikVersion")
+      library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaVersion")
+      library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:${kafkaVersion}")
+      library("kafka-clients", "org.apache.kafka:kafka-clients:${kafkaVersion}")
+      library("kafka-scala", "org.apache.kafka:kafka_2.13:${kafkaVersion}")
+
       library("mockito-core", "org.mockito:mockito-core:$mockitoVersion")
       library("mockito-junit-jupiter", "org.mockito:mockito-junit-jupiter:$mockitoVersion")
       library("wiremock", "com.github.tomakehurst:wiremock-jre8:$wireMockVersion")
