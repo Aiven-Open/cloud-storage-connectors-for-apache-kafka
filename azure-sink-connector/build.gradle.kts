@@ -70,7 +70,7 @@ idea {
 }
 
 dependencies {
-  compileOnly(apache.kafka.connect.api)
+  compileOnly(oldKafka.connect.api)
 
   implementation(project(":commons"))
 
@@ -88,9 +88,9 @@ dependencies {
   // is provided by "jqwik", but need this in testImplementation scope
   testImplementation(testinglibs.jqwik.engine)
 
-  testImplementation(apache.kafka.connect.api)
-  testImplementation(apache.kafka.connect.runtime)
-  testImplementation(apache.kafka.connect.json)
+  testImplementation(oldKafka.connect.api)
+  testImplementation(oldKafka.connect.runtime)
+  testImplementation(oldKafka.connect.json)
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
@@ -133,14 +133,15 @@ dependencies {
   }
 
   testRuntimeOnly(logginglibs.slf4j.log4j12)
-
+  integrationTestImplementation(oldKafka.connect.api)
+  integrationTestImplementation(oldKafka.connect.runtime)
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testinglibs.awaitility)
   integrationTestImplementation("org.testcontainers:kafka:1.21.3")
 
-  integrationTestImplementation(apache.kafka.connect.transforms)
+  integrationTestImplementation(oldKafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")

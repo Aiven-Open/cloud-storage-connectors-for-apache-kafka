@@ -91,13 +91,11 @@ dependencies {
 
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
-  testImplementation(apache.kafka.connect.json)
 
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
 
-  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
-
+  testImplementation("io.findify:s3mock_2.13:$s3mockVersion")
   testImplementation(testinglibs.mockito.core)
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
@@ -105,6 +103,8 @@ dependencies {
 
   testRuntimeOnly(logginglibs.logback.classic)
 
+  integrationTestImplementation(oldKafka.connect.api)
+  integrationTestImplementation(oldKafka.connect.runtime)
   integrationTestImplementation(testinglibs.localstack)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version

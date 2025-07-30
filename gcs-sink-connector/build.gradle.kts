@@ -76,8 +76,8 @@ idea {
 }
 
 dependencies {
-  compileOnly(apache.kafka.connect.api)
-  compileOnly(apache.kafka.connect.runtime)
+  compileOnly(oldKafka.connect.api)
+  compileOnly(oldKafka.connect.runtime)
 
   implementation(project(":commons"))
   implementation("com.google.cloud:google-cloud-storage:2.52.3")
@@ -92,9 +92,9 @@ dependencies {
   // is provided by "jqwik", but need this in testImplementation scope
   testImplementation(testinglibs.jqwik.engine)
 
-  testImplementation(apache.kafka.connect.api)
-  testImplementation(apache.kafka.connect.runtime)
-  testImplementation(apache.kafka.connect.json)
+  testImplementation(oldKafka.connect.api)
+  testImplementation(oldKafka.connect.runtime)
+  testImplementation(oldKafka.connect.json)
   testImplementation("com.google.cloud:google-cloud-nio:0.127.36")
 
   testImplementation(compressionlibs.snappy)

@@ -124,7 +124,8 @@ dependencies {
   }
 
   testRuntimeOnly(logginglibs.slf4j.log4j12)
-
+  integrationTestImplementation(oldKafka.connect.api)
+  integrationTestImplementation(oldKafka.connect.runtime)
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version

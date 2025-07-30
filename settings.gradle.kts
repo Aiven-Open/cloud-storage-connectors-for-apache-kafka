@@ -35,6 +35,15 @@ val velocityToolsVersion by extra("3.1")
 
 dependencyResolutionManagement {
   versionCatalogs {
+    create("oldKafka") {
+      library("connect-api", "org.apache.kafka:connect-api:$kafkaAPIVersion")
+      library("connect-json", "org.apache.kafka:connect-json:$kafkaAPIVersion")
+      library("connect-runtime", "org.apache.kafka:connect-runtime:$kafkaAPIVersion")
+      library("connect-transforms", "org.apache.kafka:connect-transforms:$kafkaAPIVersion")
+      library("clients", "org.apache.kafka:kafka-clients:${kafkaAPIVersion}")
+      library("scala", "org.apache.kafka:kafka_2.13:${kafkaAPIVersion}")
+    }
+
     create("apache") {
       library("avro", "org.apache.avro:avro:$avroVersion")
       library("commons-text", "org.apache.commons:commons-text:$commonsTextVersion")
@@ -43,11 +52,12 @@ dependencyResolutionManagement {
           "org.apache.commons:commons-collections4:$commonsCollections4Version")
       library("commons-io", "commons-io:commons-io:$commonsIOVersion")
       library("commons-lang3", "org.apache.commons:commons-lang3:$commonsLang3Version")
-      library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaAPIVersion")
+      library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaVersion")
       library("kafka-connect-json", "org.apache.kafka:connect-json:$kafkaVersion")
       library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:$kafkaVersion")
       library("kafka-connect-transforms", "org.apache.kafka:connect-transforms:$kafkaVersion")
-      library("kafka-clients", "org.apache.kafka:kafka-clients:${kafkaVersion}")
+      library("kafka-clients", "org.apache.kafka:kafka-clients:${kafkaAPIVersion}")
+      library("kafka-scala", "org.apache.kafka:kafka_2.13:${kafkaVersion}")
       library("hadoop-common", "org.apache.hadoop:hadoop-common:$hadoopVersion")
       library(
           "hadoop-mapreduce-client-core",
@@ -108,7 +118,7 @@ dependencyResolutionManagement {
       library("jqwik", "net.jqwik:jqwik:$jqwikVersion")
       library("jqwik-engine", "net.jqwik:jqwik-engine:$jqwikVersion")
       library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaVersion")
-      library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:${kafkaVersion}")
+      library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:${kafkaAPIVersion}")
       library("kafka-clients", "org.apache.kafka:kafka-clients:${kafkaVersion}")
       library("kafka-scala", "org.apache.kafka:kafka_2.13:${kafkaVersion}")
 
