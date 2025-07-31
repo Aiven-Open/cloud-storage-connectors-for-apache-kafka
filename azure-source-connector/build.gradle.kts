@@ -67,7 +67,6 @@ dependencies {
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
-  implementation(apache.commons.collection4)
 
   testImplementation(testFixtures(project(":commons")))
   testImplementation(testinglibs.junit.jupiter)
@@ -124,8 +123,8 @@ dependencies {
   }
 
   testRuntimeOnly(logginglibs.slf4j.log4j12)
-  integrationTestImplementation(oldKafka.connect.api)
-  integrationTestImplementation(oldKafka.connect.runtime)
+  integrationTestImplementation(apache.kafka.connect.api)
+  integrationTestImplementation(apache.kafka.connect.runtime)
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version

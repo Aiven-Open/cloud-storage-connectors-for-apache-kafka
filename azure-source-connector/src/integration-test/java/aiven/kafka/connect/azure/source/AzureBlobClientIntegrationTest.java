@@ -63,7 +63,7 @@ final class AzureBlobClientIntegrationTest extends AbstractIntegrationTest<byte[
         when(mockServiceAsyncClient.getBlobContainerAsyncClient(anyString())).thenReturn(getAsyncContainerClient());
         when(config.getAzureContainerName()).thenReturn("test-1");
         final AzureBlobClient client = new AzureBlobClient(config);
-        // Test the pagintation is automatically executed.
+        // Test the pagination is automatically executed.
         when(config.getAzureFetchPageSize()).thenReturn(10);
         when(config.getAzurePrefix()).thenReturn(azurePrefix);
 
