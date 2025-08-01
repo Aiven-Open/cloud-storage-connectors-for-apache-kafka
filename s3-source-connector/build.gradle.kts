@@ -96,7 +96,7 @@ dependencies {
   testImplementation(testinglibs.assertj.core)
 
   testImplementation(testinglibs.mockito.core)
-  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
+  testImplementation("io.findify:s3mock_2.13:$s3mockVersion")
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testImplementation(testinglibs.mockito.junit.jupiter)

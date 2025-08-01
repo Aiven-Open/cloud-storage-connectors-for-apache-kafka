@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.kafka.common.record.TimestampType;
-import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 
@@ -38,7 +37,9 @@ import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
 /**
  * A testing feature to generate Parquet data.
  */
-public class ParquetTestDataFixture {
+final public class ParquetTestDataFixture {
+    private ParquetTestDataFixture() {
+    }
     /**
      * Generate the specified number of parquet records in a byte array.
      *
@@ -53,16 +54,17 @@ public class ParquetTestDataFixture {
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public static byte[] generateMockParquetData(final String name, final int numOfRecords) throws IOException {
-        Schema schema = ParquetTestingFixture.testSchema();
 
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
-            allParquetRecords.add(new Struct(schema).put("name", name + i).put("age", 30).put("email", name + "@test"));
+            allParquetRecords.add(new Struct(ParquetTestingFixture.PARQUET_SCHEMA).put("name", name + i)
+                    .put("age", 30)
+                    .put("email", name + "@test"));
         }
 
         // Create a Parquet writer
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try (var parquetWriter = new ParquetOutputWriter(
                 List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
                 Collections.emptyMap(), false)) {
@@ -70,8 +72,8 @@ public class ParquetTestDataFixture {
             final var sinkRecords = new ArrayList<SinkRecord>();
             for (final var r : allParquetRecords) {
                 final var sinkRecord = new SinkRecord( // NOPMD AvoidInstantiatingObjectsInLoops
-                        "some-topic", 1, STRING_SCHEMA, "some-key-" + counter, schema, r, 100L, 1000L + counter,
-                        TimestampType.CREATE_TIME, null);
+                        "some-topic", 1, STRING_SCHEMA, "some-key-" + counter, ParquetTestingFixture.PARQUET_SCHEMA, r,
+                        100L, 1000L + counter, TimestampType.CREATE_TIME, null);
                 sinkRecords.add(sinkRecord);
                 counter++;
             }
