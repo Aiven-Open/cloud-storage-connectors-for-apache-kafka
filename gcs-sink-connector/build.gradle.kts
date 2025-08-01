@@ -139,12 +139,14 @@ dependencies {
 
   testRuntimeOnly(logginglibs.slf4j.log4j12)
 
+  integrationTestImplementation(oldKafka.connect.api)
+  integrationTestImplementation(oldKafka.connect.runtime)
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testinglibs.awaitility)
 
-  integrationTestImplementation(apache.kafka.connect.transforms)
+  integrationTestImplementation(oldKafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
