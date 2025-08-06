@@ -26,19 +26,18 @@ import org.apache.kafka.common.Configurable;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.tools.AwsCredentialBaseConfig;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
-import com.amazonaws.regions.Regions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
 
 /**
- * Tests the Credential provider factory generation of V1 credentials
+ * Tests the Credential provider factory generation of V2 credentials
  */
-final class AwsCredentialProviderFactoryTest {
+final class AwsCredentialV2ProviderFactoryTest {
     private AwsCredentialProviderFactory factory;
     private Map<String, String> props;
 
@@ -56,13 +55,13 @@ final class AwsCredentialProviderFactoryTest {
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
         props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
         props.put(S3ConfigFragment.AWS_STS_CONFIG_ENDPOINT, "https://sts.us-east-1.amazonaws.com");
 
         final var config = new AwsCredentialBaseConfig(props);
 
-        final var credentialProvider = factory.getProvider(new S3ConfigFragment(config));
-        assertThat(credentialProvider).isInstanceOf(STSAssumeRoleSessionCredentialsProvider.class);
+        final var credentialProvider = factory.getAwsV2Provider(new S3ConfigFragment(config));
+        assertThat(credentialProvider).isInstanceOf(StsAssumeRoleCredentialsProvider.class);
     }
 
     @Test
@@ -72,16 +71,16 @@ final class AwsCredentialProviderFactoryTest {
 
         final var config = new AwsCredentialBaseConfig(props);
 
-        final var credentialProvider = factory.getProvider(new S3ConfigFragment(config));
-        assertThat(credentialProvider).isInstanceOf(AWSStaticCredentialsProvider.class);
+        final var credentialProvider = factory.getAwsV2Provider(new S3ConfigFragment(config));
+        assertThat(credentialProvider).isInstanceOf(StaticCredentialsProvider.class);
     }
 
     @Test
     void createDefaultCredentialsWhenNoCredentialsSpecified() {
         final var config = new AwsCredentialBaseConfig(props);
 
-        final var credentialProvider = factory.getProvider(new S3ConfigFragment(config));
-        assertThat(credentialProvider).isInstanceOf(DefaultAWSCredentialsProviderChain.class);
+        final var credentialProvider = factory.getAwsV2Provider(new S3ConfigFragment(config));
+        assertThat(credentialProvider).isInstanceOf(AwsCredentialsProvider.class);
     }
 
     @Test
@@ -89,30 +88,25 @@ final class AwsCredentialProviderFactoryTest {
         props.put(S3ConfigFragment.AWS_CREDENTIALS_PROVIDER_CONFIG, DummyCredentialsProvider.class.getName());
         final var config = new AwsCredentialBaseConfig(props);
 
-        final var credentialProvider = factory.getProvider(new S3ConfigFragment(config));
+        final var credentialProvider = factory.getAwsV2Provider(new S3ConfigFragment(config));
         assertThat(credentialProvider).isInstanceOf(DummyCredentialsProvider.class);
         assertThat(((DummyCredentialsProvider) credentialProvider).configured).isTrue();
     }
 
     /**
-     * A custom V1 credential provider for testing.
+     * A custom V2 credential provider for testing.
      */
-    public static class DummyCredentialsProvider implements AWSCredentialsProvider, Configurable {
+    public static class DummyCredentialsProvider implements AwsCredentialsProvider, Configurable {
         boolean configured;
-
-        @Override
-        public AWSCredentials getCredentials() {
-            return null;
-        }
-
-        @Override
-        public void refresh() {
-
-        }
 
         @Override
         public void configure(final Map<String, ?> map) {
             configured = true;
+        }
+
+        @Override
+        public AwsCredentials resolveCredentials() {
+            return null;
         }
     }
 
