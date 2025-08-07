@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.connect.common.config.ConfigFragment;
 import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValidator;
@@ -43,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 
 /**
  * The configuration fragment that defines the S3 specific characteristics.
@@ -94,6 +96,12 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     public static final String AWS_CREDENTIALS_PROVIDER_CONFIG = "aws.credentials.provider";
+    /**
+     * not used in codebase
+     *
+     * @deprecated to be removed
+     */
+    @Deprecated
     public static final String AWS_CREDENTIAL_PROVIDER_DEFAULT = "com.amazonaws.auth.DefaultAWSCredentialsProviderChain";
     public static final String AWS_S3_BUCKET_NAME_CONFIG = "aws.s3.bucket.name";
     public static final String AWS_S3_SSE_ALGORITHM_CONFIG = "aws.s3.sse.algorithm";
@@ -189,13 +197,10 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM, "AWS Secret Access Key", GROUP_AWS, awsGroupCounter++,
                 ConfigDef.Width.NONE, AWS_SECRET_ACCESS_KEY_CONFIG);
 
-        configDef.define(AWS_CREDENTIALS_PROVIDER_CONFIG, ConfigDef.Type.CLASS, AWS_CREDENTIAL_PROVIDER_DEFAULT,
-                ConfigDef.Importance.MEDIUM,
-                "When you initialize a new " + "service client without supplying any arguments, "
-                        + "the AWS SDK for Java attempts to find temporary "
-                        + "credentials by using the default credential " + "provider chain implemented by the "
-                        + "DefaultAWSCredentialsProviderChain class.",
-
+        configDef.define(AWS_CREDENTIALS_PROVIDER_CONFIG, ConfigDef.Type.CLASS, null, ConfigDef.Importance.MEDIUM,
+                "When you initialize a new service client without supplying any arguments "
+                        + "the AWS SDK for Java attempts to find temporary credentials by using the default credential "
+                        + "provider chain.",
                 GROUP_AWS, awsGroupCounter++, ConfigDef.Width.NONE, AWS_CREDENTIALS_PROVIDER_CONFIG);
 
         configDef.define(AWS_S3_BUCKET_NAME_CONFIG, ConfigDef.Type.STRING, null, new BucketNameValidator(),
@@ -355,7 +360,7 @@ public final class S3ConfigFragment extends ConfigFragment {
             final AwsBasicCredentials awsCredentialsV2 = getAwsCredentialsV2();
             if (awsCredentials == null && awsCredentialsV2 == null) {
                 LOGGER.info(
-                        "Connector use {} as credential Provider, "
+                        "Connector uses {} as credential Provider, "
                                 + "when configuration for {{}, {}} OR {{}, {}} are absent",
                         AWS_CREDENTIALS_PROVIDER_CONFIG, AWS_ACCESS_KEY_ID_CONFIG, AWS_SECRET_ACCESS_KEY_CONFIG,
                         AWS_STS_ROLE_ARN, AWS_STS_ROLE_SESSION_NAME);
@@ -541,12 +546,26 @@ public final class S3ConfigFragment extends ConfigFragment {
         return cfg.getInt(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
     }
 
+    /**
+     * @return a V1 credentials provider
+     * @deprecated use {@link #getAwsCredentialsV2()}
+     */
+    @Deprecated
     public AWSCredentialsProvider getCustomCredentialsProvider() {
-        return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AWSCredentialsProvider.class);
+        final AWSCredentialsProvider result = cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG,
+                AWSCredentialsProvider.class);
+        return result != null ? result : Utils.newInstance(com.amazonaws.auth.DefaultAWSCredentialsProviderChain.class);
     }
 
+    /**
+     * Gets the Aws Credentials provider.
+     *
+     * @return the Aws Credentials provider.
+     */
     public AwsCredentialsProvider getCustomCredentialsProviderV2() {
-        return cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG, AwsCredentialsProvider.class);
+        final AwsCredentialsProvider result = cfg.getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG,
+                AwsCredentialsProvider.class);
+        return result != null ? result : DefaultCredentialsProvider.builder().build();
     }
 
     public int getFetchPageSize() {
