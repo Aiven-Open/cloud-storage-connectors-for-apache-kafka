@@ -81,6 +81,7 @@ under the License.
 
                 <item name="Sink">
                     <item name="Introduction" href="s3-sink-connector/index.html"/>
+                    <item name="Configuration" href="s3-sink-connector/S3SinkConfig.html"/>
                     <item name="Javadoc" href="s3-sink-connector/javadoc/index.html"/>
                 </item>
 
