@@ -79,7 +79,6 @@ dependencies {
   compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
   compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
-
   implementation(project(":commons"))
   testImplementation(testFixtures(project(":commons")))
   implementation(project(":s3-commons"))
