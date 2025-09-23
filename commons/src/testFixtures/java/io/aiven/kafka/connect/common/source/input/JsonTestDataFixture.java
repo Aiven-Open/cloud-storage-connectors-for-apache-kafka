@@ -21,6 +21,8 @@ package io.aiven.kafka.connect.common.source.input;
  */
 final public class JsonTestDataFixture {
 
+    private JsonTestDataFixture() {
+    }
     /**
      * Creates the specified number of JSON records encoded into a string.
      *
