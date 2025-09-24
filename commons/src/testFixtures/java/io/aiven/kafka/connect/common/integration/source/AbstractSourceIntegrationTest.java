@@ -47,7 +47,7 @@ import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
 import io.aiven.kafka.connect.common.format.JsonTestDataFixture;
 import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
-import io.aiven.kafka.connect.common.integration.KafkaManager;
+import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
