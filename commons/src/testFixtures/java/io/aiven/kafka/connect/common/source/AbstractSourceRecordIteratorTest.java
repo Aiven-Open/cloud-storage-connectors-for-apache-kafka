@@ -75,7 +75,7 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
     /** The file name for testing */
     private final static String FILE_NAME = "topic-00001-1741965423180.txt";
     /** The file pattern for the file name */
-    private final static String FILE_PATTERN = "{{topic}}-{{partition}}-{{start_offset}}";
+    public final static String FILE_PATTERN = "{{topic}}-{{partition}}-{{start_offset}}";
 
     // The abstract methods that must be implemented
 
