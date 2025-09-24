@@ -46,7 +46,7 @@ import io.aiven.kafka.connect.common.integration.KafkaManager;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
-import io.aiven.kafka.connect.common.utils.CasedString;
+import io.aiven.commons.strings.CasedString;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
