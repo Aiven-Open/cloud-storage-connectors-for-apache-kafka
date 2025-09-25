@@ -42,7 +42,7 @@ import org.apache.kafka.connect.json.JsonDeserializer;
 
 import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.integration.ConsumerPropertiesBuilder;
-import io.aiven.kafka.connect.common.integration.KafkaManager;
+import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
