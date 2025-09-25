@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.common.source;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.aiven.commons.collections.RingBuffer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -32,12 +33,12 @@ class RingBufferTest {
 
         final RingBuffer<String> buffer = new RingBuffer<>(size);
         for (int i = 0; i < size; i++) {
-            buffer.enqueue(OBJECT_KEY + i);
+            buffer.add(OBJECT_KEY + i);
         }
-        assertThat(buffer.getOldest()).isEqualTo("S3ObjectKey" + 0);
+        assertThat(buffer.getNextEjected()).isEqualTo("S3ObjectKey" + 0);
         // Add one more unique ObjectKey
-        buffer.enqueue(OBJECT_KEY);
-        assertThat(buffer.getOldest()).isEqualTo("S3ObjectKey" + 1);
+        buffer.add(OBJECT_KEY);
+        assertThat(buffer.getNextEjected()).isEqualTo("S3ObjectKey" + 1);
     }
 
     @ParameterizedTest
@@ -47,11 +48,11 @@ class RingBufferTest {
         final RingBuffer<String> buffer = new RingBuffer<>(size);
         for (int i = 0; i < size; i++) {
             // add the same objectKey every time, it should onl have one entry.
-            buffer.enqueue(OBJECT_KEY);
+            buffer.add(OBJECT_KEY);
         }
         // Buffer not filled so should return null
-        assertThat(buffer.getOldest()).isEqualTo(null);
-        assertThat(buffer.peek()).isEqualTo(OBJECT_KEY);
+        assertThat(buffer.getNextEjected()).isEqualTo(null);
+        assertThat(buffer.head()).isEqualTo(OBJECT_KEY);
         assertThat(buffer.contains(OBJECT_KEY)).isTrue();
     }
 
@@ -59,9 +60,9 @@ class RingBufferTest {
     void testRingBufferOfSizeOneOnlyRetainsOneEntry() {
 
         final RingBuffer<String> buffer = new RingBuffer<>(1);
-        buffer.enqueue(OBJECT_KEY + 0);
-        assertThat(buffer.getOldest()).isEqualTo(OBJECT_KEY + 0);
-        buffer.enqueue(OBJECT_KEY + 1);
-        assertThat(buffer.getOldest()).isEqualTo(OBJECT_KEY + 1);
+        buffer.add(OBJECT_KEY + 0);
+        assertThat(buffer.getNextEjected()).isEqualTo(OBJECT_KEY + 0);
+        buffer.add(OBJECT_KEY + 1);
+        assertThat(buffer.getNextEjected()).isEqualTo(OBJECT_KEY + 1);
     }
 }
