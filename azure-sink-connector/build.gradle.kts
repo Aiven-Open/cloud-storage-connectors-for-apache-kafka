@@ -74,7 +74,7 @@ dependencies {
 
   implementation(project(":commons"))
 
-  implementation("com.azure:azure-storage-blob:12.30.0")
+  implementation(azure.storage.blob)
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -134,9 +134,11 @@ dependencies {
 
   testRuntimeOnly(logginglibs.slf4j.log4j12)
 
+  integrationTestImplementation(tools.spotbugs.annotations)
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
+  integrationTestImplementation(testcontainers.azure)
   integrationTestImplementation(testinglibs.awaitility)
 
   integrationTestImplementation(apache.kafka.connect.transforms)
@@ -147,6 +149,8 @@ dependencies {
 
   // Make test utils from "test" available in "integration-test"
   integrationTestImplementation(sourceSets["test"].output)
+  // integrationTestImplementation(testFixtures(project(":azure-commons")))
+  integrationTestImplementation(testFixtures(project(":commons")))
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {
