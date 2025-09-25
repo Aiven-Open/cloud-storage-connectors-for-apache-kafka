@@ -33,31 +33,6 @@ final class S3SourceConfigTest {
     @Test
     void correctFullConfig() {
         final var props = new HashMap<String, String>();
-        /*
-        -        // aws props
--        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "AWS_ACCESS_KEY_ID");
--        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY");
--        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
--        props.put(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG, "AWS_S3_ENDPOINT");
--        props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
--        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
--        FileNameFragment.setter(props).template(".*");
--
--        // record, topic specific props
--        props.put(INPUT_FORMAT_KEY, InputFormat.AVRO.getValue());
--        props.put(TARGET_TOPIC, "testtopic");
--        props.put(SCHEMA_REGISTRY_URL, "localhost:8081");
-+        S3ConfigFragment.setter(props)
-+                .accessKeyId("AWS_ACCESS_KEY_ID")
-+                .accessKeySecret("AWS_SECRET_ACCESS_KEY")
-+                .bucketName("the-bucket")
-+                .endpoint("AWS_S3_ENDPOINT")
-+                .region(Region.US_EAST_1);
-+        TransformerFragment.setter(props).inputFormat(InputFormat.AVRO).schemaRegistry("localhost:8081");
-+        SourceConfigFragment.setter(props).targetTopic("testtopic");
-+        FileNameFragment.setter(props).template("any-old-file");
-
-         */
 
         S3ConfigFragment.setter(props)
                 .accessKeyId("AWS_ACCESS_KEY_ID")
