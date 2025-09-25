@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.common.utils;
+package io.aiven.commons.strings;
 
 import java.util.ArrayList;
 import java.util.Arrays;
