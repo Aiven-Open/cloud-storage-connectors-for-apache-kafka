@@ -36,7 +36,7 @@ public final class RingBuffer<K> {
         REJECT,
         /** Move the duplicate entry to the tail of the buffer. */
         DELETE
-    };
+    }
 
     /** The wrapped queue. */
     private final SynchronizedQueue<K> queue;
@@ -99,7 +99,7 @@ public final class RingBuffer<K> {
     public K add(final K item) {
         Objects.requireNonNull(item, "item");
         if (!alwaysEmpty && checkDuplicates(item)) {
-            K result = isFull() ? queue.poll() : null;
+            final K result = isFull() ? queue.poll() : null;
             queue.add(item);
             return result;
         }
@@ -142,7 +142,7 @@ public final class RingBuffer<K> {
      * @return the item at the tail of the buffer. May be {@code null}.
      */
     public K tail() {
-        int size = wrappedQueue.size();
+        final int size = wrappedQueue.size();
         return size == 0 ? null : wrappedQueue.get(size - 1);
     }
 
