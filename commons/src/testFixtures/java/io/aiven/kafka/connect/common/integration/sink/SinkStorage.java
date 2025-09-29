@@ -16,7 +16,10 @@
 
 package io.aiven.kafka.connect.common.integration.sink;
 
+import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.integration.StorageBase;
@@ -160,5 +163,12 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
      * @return the compression the backend uses when no other compression is specified.
      */
     CompressionType getDefaultCompression();
+
+    /**
+     * Construct a BucketAccessor for the named bucket on this storage.
+     * @param bucketName the name of the bucket.
+     * @return a BucketAccessor.
+     */
+    BucketAccessor<K> getBucketAccessor(String bucketName);
 
 }

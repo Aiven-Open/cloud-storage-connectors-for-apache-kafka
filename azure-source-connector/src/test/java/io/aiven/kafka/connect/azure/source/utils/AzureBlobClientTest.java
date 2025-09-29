@@ -57,6 +57,7 @@ class AzureBlobClientTest {
 
     private BlobContainerAsyncClient containerClient;
     private BlobAsyncClient blobClient;
+
     @BeforeEach
     public void setup() {
         this.config = mock(AzureBlobSourceConfig.class);
