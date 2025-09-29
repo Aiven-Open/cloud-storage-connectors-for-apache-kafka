@@ -17,12 +17,13 @@
 package io.aiven.commons.collections;
 
 import java.util.Objects;
+
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.apache.commons.collections4.queue.SynchronizedQueue;
 
 /**
- * Implements a ring buffer of items. Items are inserted until maximum size is
- * reached and then the earliest items are removed when newer items are added.
+ * Implements a ring buffer of items. Items are inserted until maximum size is reached and then the earliest items are
+ * removed when newer items are added.
  *
  * @param <K>
  *            the type of item in the queue. Must support equality check.
@@ -50,8 +51,8 @@ public final class RingBuffer<K> {
     private final DuplicateHandling duplicateHandling;
 
     /**
-     * Create a Ring Buffer of a maximum size that rejects duplicates. If the size
-     * is less than or equal to 0 then the buffer is always empty.
+     * Create a Ring Buffer of a maximum size that rejects duplicates. If the size is less than or equal to 0 then the
+     * buffer is always empty.
      *
      * @param size
      *            The maximum size of the ring buffer
@@ -62,9 +63,8 @@ public final class RingBuffer<K> {
     }
 
     /**
-     * Create a Ring Buffer of specified maximum size and potentially allowing
-     * duplicates. If the size is less than or equal to 0 then the buffer is always
-     * empty.
+     * Create a Ring Buffer of specified maximum size and potentially allowing duplicates. If the size is less than or
+     * equal to 0 then the buffer is always empty.
      *
      * @param size
      *            The maximum size of the ring buffer
@@ -170,12 +170,10 @@ public final class RingBuffer<K> {
     }
 
     /**
-     * Gets the next item to be ejected. If the buffer is full this will return the
-     * oldest value in the buffer. If the buffer is not full this method will return
-     * {@code null}.
+     * Gets the next item to be ejected. If the buffer is full this will return the oldest value in the buffer. If the
+     * buffer is not full this method will return {@code null}.
      *
-     * @return A value T from the last place in the buffer, returns null if buffer
-     *         is not full.
+     * @return A value T from the last place in the buffer, returns null if buffer is not full.
      */
     public K getNextEjected() {
         return isFull() ? queue.peek() : null;

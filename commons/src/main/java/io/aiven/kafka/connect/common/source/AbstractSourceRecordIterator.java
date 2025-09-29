@@ -24,9 +24,9 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import io.aiven.commons.collections.RingBuffer;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.aiven.commons.collections.RingBuffer;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
