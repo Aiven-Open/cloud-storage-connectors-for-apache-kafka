@@ -18,12 +18,9 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins {
   id("aiven-apache-kafka-connectors-all.java-conventions")
-  id("java-test-fixtures")
   id("aiven-apache-kafka-connectors-all.docs")
 }
 
-val amazonS3Version by extra("1.12.777")
-val amazonSTSVersion by extra("1.12.777")
 val s3mockVersion by extra("0.2.6")
 
 val integrationTest: SourceSet =
@@ -75,37 +72,31 @@ idea {
 dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
-  compileOnly(project(":site"))
-  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
-  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
   implementation(project(":commons"))
-  testImplementation(testFixtures(project(":commons")))
   implementation(project(":s3-commons"))
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
-  implementation("com.amazonaws:aws-java-sdk-s3:$amazonS3Version")
-  implementation("com.amazonaws:aws-java-sdk-sts:$amazonSTSVersion")
+  implementation(amazonoldawssdk.s3)
+  implementation(amazonoldawssdk.sts)
 
+  testImplementation(apache.commons.io)
+  testImplementation(testFixtures(project(":commons")))
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(project(":s3-commons"))
-
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
-
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
-
-  testImplementation("io.findify:s3mock_2.11:$s3mockVersion")
+  testImplementation("io.findify:s3mock_2.13:$s3mockVersion")
 
   testImplementation(testinglibs.mockito.core)
-
-  testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testImplementation(testinglibs.mockito.junit.jupiter)
 
+  testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
 
   integrationTestImplementation(testinglibs.localstack)
@@ -113,6 +104,9 @@ dependencies {
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testcontainers.localstack)
   integrationTestImplementation(testinglibs.wiremock)
+  integrationTestImplementation(testFixtures(project(":s3-commons")))
+  integrationTestImplementation(testFixtures(project(":commons")))
+  integrationTestImplementation(apache.kafka.connect.runtime)
 
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {
@@ -120,6 +114,9 @@ dependencies {
   }
 
   integrationTestImplementation(apache.avro)
+  // Make test utils from 'test' available in 'integration-test'
+  integrationTestImplementation(sourceSets["test"].output)
+  integrationTestImplementation(testinglibs.awaitility)
 
   testImplementation(apache.hadoop.mapreduce.client.core) {
     exclude(group = "org.apache.hadoop", module = "hadoop-yarn-client")
@@ -158,10 +155,6 @@ dependencies {
     exclude(group = "com.google.inject.extensions", module = "guice-servlet")
     exclude(group = "io.netty", module = "netty")
   }
-
-  // Make test utils from 'test' available in 'integration-test'
-  integrationTestImplementation(sourceSets["test"].output)
-  integrationTestImplementation(testinglibs.awaitility)
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {
@@ -260,47 +253,3 @@ signing {
   }
   signatureTypes = ASCSignatureProvider()
 }
-
-/** ******************************* */
-/* Documentation building section */
-/** ******************************* */
-tasks.register("buildDocs") {
-  dependsOn("buildConfigMd")
-  dependsOn("buildConfigYml")
-}
-
-tasks.register<JavaExec>("buildConfigMd") {
-  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
-  classpath =
-      sourceSets.main
-          .get()
-          .compileClasspath
-          .plus(files(tasks.jar))
-          .plus(sourceSets.main.get().runtimeClasspath)
-  args =
-      listOf(
-          "io.aiven.kafka.connect.s3.config.S3SinkConfig",
-          "configDef",
-          "src/templates/configData.md.vm",
-          "build/site/markdown/s3-sink-connector/S3SinkConfig.md")
-}
-
-tasks.register<JavaExec>("buildConfigYml") {
-  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
-  classpath =
-      sourceSets.main
-          .get()
-          .compileClasspath
-          .plus(files(tasks.jar))
-          .plus(sourceSets.main.get().runtimeClasspath)
-  args =
-      listOf(
-          "io.aiven.kafka.connect.s3.config.S3SinkConfig",
-          "configDef",
-          "src/templates/configData.yml.vm",
-          "build/site/s3-sink-connector/S3SinkConfig.yml")
-}
-
-/** ****************************** */
-/*  End of documentation section */
-/** ****************************** */

@@ -40,10 +40,10 @@ import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.source.input.AvroTestDataFixture;
+import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
-import io.aiven.kafka.connect.common.source.input.JsonTestDataFixture;
-import io.aiven.kafka.connect.common.source.input.ParquetTestDataFixture;
+import io.aiven.kafka.connect.common.format.JsonTestDataFixture;
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
@@ -220,13 +220,13 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
                     bytes = "Hello World".getBytes(StandardCharsets.UTF_8);
                     break;
                 case AVRO :
-                    bytes = AvroTestDataFixture.generateMockAvroData(1);
+                    bytes = AvroTestDataFixture.generateAvroData(1);
                     break;
                 case JSONL :
-                    bytes = JsonTestDataFixture.getJsonRecs(1).getBytes(StandardCharsets.UTF_8);
+                    bytes = JsonTestDataFixture.generateJsonRecs(1).getBytes(StandardCharsets.UTF_8);
                     break;
                 case PARQUET :
-                    bytes = ParquetTestDataFixture.generateMockParquetData("name", 1);
+                    bytes = ParquetTestDataFixture.generateParquetData("name", 1);
                     break;
                 default :
                     throw new IllegalArgumentException("Unsupported format: " + format);
@@ -280,13 +280,13 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
                     Arrays.fill(bytes, (byte) 5);
                     break;
                 case AVRO :
-                    bytes = AvroTestDataFixture.generateMockAvroData(2);
+                    bytes = AvroTestDataFixture.generateAvroData(2);
                     break;
                 case JSONL :
-                    bytes = JsonTestDataFixture.getJsonRecs(2).getBytes(StandardCharsets.UTF_8);
+                    bytes = JsonTestDataFixture.generateJsonRecs(2).getBytes(StandardCharsets.UTF_8);
                     break;
                 case PARQUET :
-                    bytes = ParquetTestDataFixture.generateMockParquetData("name", 2);
+                    bytes = ParquetTestDataFixture.generateParquetData("name", 2);
                     break;
                 default :
                     throw new IllegalArgumentException("Unsupported format: " + format);
