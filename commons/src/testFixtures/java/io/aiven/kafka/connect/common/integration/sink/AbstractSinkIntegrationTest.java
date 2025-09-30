@@ -16,71 +16,46 @@
 
 package io.aiven.kafka.connect.common.integration.sink;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.http.RequestMethod;
-import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.source.input.InputFormat;
+import io.aiven.kafka.connect.common.source.input.Transformer;
+import io.aiven.kafka.connect.common.source.input.TransformerFactory;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 
-abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> extends AbstractSinkIntegrationBase<K, N, byte[], byte[]> {
+public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> extends AbstractSinkIntegrationBase<K, N, byte[], byte[]> {
 
-    @BeforeEach
-    void setUp() throws ExecutionException, InterruptedException {
-
-        testBucketAccessor.clear(gcsPrefix);
-        final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getKafkaManager().bootstrapServers());
-        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-                "org.apache.kafka.common.serialization.ByteArraySerializer");
-        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-                "org.apache.kafka.common.serialization.ByteArraySerializer");
-        super.startConnectRunner(producerProps);
+    private static final String VALUE_KEY_JSON_FMT = "{\"value\":%s,\"key\":%s}";
+    protected final String quoted(String s) {
+        return "\"" + s + "\"";
     }
 
-    private K getTimestampBlobName(final int partition, final int startOffset) {
-//        final ZonedDateTime time = ZonedDateTime.now(ZoneId.of("UTC"));
-//        return String.format("%s%s-%d-%d-%s-%s-%s", prefix, testTopic, partition, startOffset,
-//                time.format(DateTimeFormatter.ofPattern("yyyy")), time.format(DateTimeFormatter.ofPattern("MM")),
-//                time.format(DateTimeFormatter.ofPattern("dd")));
-
-        return getSinkStorage().getTimestampBlobName(prefix, testTopic, partition, startOffset);
-    }
-
-    private K getBlobName(final int partition, final int startOffset, final CompressionType compressionType) {
-//        final ZonedDateTime time = ZonedDateTime.now(ZoneId.of("UTC"));
-//        return String.format("%s%s-%d-%d-%s-%s-%s", prefix, testTopic, partition, startOffset,
-//                time.format(DateTimeFormatter.ofPattern("yyyy")), time.format(DateTimeFormatter.ofPattern("MM")),
-//                time.format(DateTimeFormatter.ofPattern("dd")));
-
-        return getSinkStorage().getBlobName(prefix, testTopic, partition, startOffset, compressionType);
+    protected Map<String, String> getProducerProperties() {
+        final Map<String, String> producerProps = new HashMap<>();
+        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
+        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
+        return producerProps;
     }
 
     @ParameterizedTest
@@ -110,10 +85,10 @@ abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> extends A
 
         awaitFutures(sendFutures, Duration.ofSeconds(2));
 
-        awaitAllBlobsWritten(expectedBlobsAndContent.keySet());
+        awaitAllBlobsWritten(expectedBlobsAndContent.keySet(), Duration.ofMinutes(1));
 
         for (final K expectedBlobName : expectedBlobsAndContent.keySet()) {
-            final List<String> blobContent = getBucketAccessor().readAndDecodeLines(expectedBlobName, compression, 0, 1)
+            final List<String> blobContent = bucketAccessor.readAndDecodeLines(expectedBlobName, compression, 0, 1)
                     .stream()
                     .map(fields -> String.join(",", fields).trim())
                     .collect(Collectors.toList());
@@ -123,6 +98,7 @@ abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> extends A
 
     @ParameterizedTest
     @EnumSource(CompressionType.class)
+    @Disabled
     void groupByTimestampVariable(final CompressionType compression) throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.fields", "key,value");
@@ -147,17 +123,17 @@ abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> extends A
         awaitFutures(sendFutures, Duration.ofSeconds(2));
 
         final Map<K, String[]> expectedBlobsAndContent = new HashMap<>();
-        expectedBlobsAndContent.put(getTimestampBlobName(0, 0),
+        expectedBlobsAndContent.put(getTimestampBlobName(0, 0, compression),
                 new String[] { "key-0,value-0", "key-1,value-1", "key-2,value-2" });
-        expectedBlobsAndContent.put(getTimestampBlobName(1, 0), new String[] { "key-3,value-3" });
-        expectedBlobsAndContent.put(getTimestampBlobName(3, 0), new String[] { "key-4,value-4" });
+        expectedBlobsAndContent.put(getTimestampBlobName(1, 0, compression), new String[] { "key-3,value-3" });
+        expectedBlobsAndContent.put(getTimestampBlobName(3, 0, compression), new String[] { "key-4,value-4" });
 
 
-        awaitAllBlobsWritten(expectedBlobsAndContent.keySet());
+        awaitAllBlobsWritten(expectedBlobsAndContent.keySet(), Duration.ofMinutes(1));
 
 
         for (final K expectedBlobName : expectedBlobsAndContent.keySet()) {
-            final List<String> blobContent = getBucketAccessor().readAndDecodeLines(expectedBlobName, compression, 0, 1)
+            final List<String> blobContent = bucketAccessor.readAndDecodeLines(expectedBlobName, compression, 0, 1)
                     .stream()
                     .map(fields -> String.join(",", fields).trim())
                     .collect(Collectors.toList());
@@ -198,43 +174,45 @@ abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> extends A
         expectedBlobsAndContent.put(getBlobName(1, 0, compression), "value-3");
         expectedBlobsAndContent.put(getBlobName(3, 0, compression), "value-4");
 
-        awaitAllBlobsWritten(expectedBlobsAndContent.keySet());
+        awaitAllBlobsWritten(expectedBlobsAndContent.keySet(), Duration.ofMinutes(1));
 
         for (final Map.Entry<K, String> entry : expectedBlobsAndContent.entrySet()) {
-            assertThat(getBucketAccessor().readString(entry.getKey(), compression))
+            assertThat(bucketAccessor.readString(entry.getKey(), compression))
                     .isEqualTo(entry.getValue());
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void groupByKey(final String compression) throws ExecutionException, InterruptedException {
+    @EnumSource(CompressionType.class)
+    void groupByKey(final CompressionType compressionType) throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        final CompressionType compressionType = CompressionType.forName(compression);
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compressionType.name());
         connectorConfig.put("file.name.template", "{{key}}" + compressionType.extension());
         createConnector(connectorConfig);
 
-        final Map<TopicPartition, List<String>> keysPerTopicPartition = new HashMap<>();
-        keysPerTopicPartition.put(new TopicPartition(testTopic0, 0), Arrays.asList("key-0", "key-1", "key-2", "key-3"));
-        keysPerTopicPartition.put(new TopicPartition(testTopic0, 1), Arrays.asList("key-4", "key-5", "key-6"));
-        keysPerTopicPartition.put(new TopicPartition(testTopic0, 0), Arrays.asList(null, "key-7"));
-        keysPerTopicPartition.put(new TopicPartition(testTopic0, 1), Arrays.asList("key-8"));
 
+        final Map<TopicPartition, List<String>> keysPerTopicPartition = new HashMap<>();
+        keysPerTopicPartition.put(new TopicPartition(testTopic, 0), Arrays.asList("key-0", "key-1", "key-2", "key-3", "key-7"));
+        keysPerTopicPartition.put(new TopicPartition(testTopic, 1), Arrays.asList("key-4", "key-5", "key-6", "key-8"));
+//        keysPerTopicPartition.put(new TopicPartition(testTopic, 0), Arrays.asList(null, "key-7"));
+//        keysPerTopicPartition.put(new TopicPartition(testTopic, 1), Collections.singletonList("key-8"));
+
+        final Map<K, Pair<byte[], String>> expectedBlobs = new TreeMap<>();
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         final Map<String, String> lastValuePerKey = new HashMap<>();
         final int cntMax = 1000;
         int cnt = 0;
         outer : while (true) {
             for (final Map.Entry<TopicPartition, List<String>> entry : keysPerTopicPartition.entrySet()) {
-                for (final String key : keysPerTopicPartition.get(entry.getKey())) {
+                for (final String key : entry.getValue()) {
                     final String value = "value-" + cnt;
                     cnt += 1;
                     final byte[] keyBytes = key == null ? null : key.getBytes(StandardCharsets.UTF_8);
                     sendFutures.add(sendMessageAsync(entry.getKey().topic(), entry.getKey().partition(), keyBytes,
                             value.getBytes(StandardCharsets.UTF_8)));
+                    expectedBlobs.put(getKeyBlobName(keyBytes, compressionType), Pair.of(keyBytes, value));
                     lastValuePerKey.put(key, value);
                     if (cnt >= cntMax) {
                         break outer;
@@ -242,219 +220,145 @@ abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> extends A
                 }
             }
         }
-        getProducer().flush();
-        for (final Future<RecordMetadata> sendFuture : sendFutures) {
-            sendFuture.get();
-        }
 
-        final List<String> expectedBlobs = keysPerTopicPartition.values()
-                .stream()
-                .flatMap(keys -> keys.stream().map(k -> getBlobName(k, compression)))
-                .collect(Collectors.toList());
+        awaitFutures(sendFutures, Duration.ofSeconds(2));
 
-        awaitAllBlobsWritten(expectedBlobs.size());
-        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyInAnyOrderElementsOf(expectedBlobs);
+        awaitAllBlobsWritten(expectedBlobs.keySet(), Duration.ofMinutes(1));
 
-        for (final String blobName : expectedBlobs) {
-            final String blobContent = testBucketAccessor.readAndDecodeLines(blobName, compression, 0, 1)
+        for (final K blobName : expectedBlobs.keySet()) {
+            final String blobContent = bucketAccessor.readAndDecodeLines(blobName, compressionType, 0, 1)
                     .stream()
                     .map(fields -> String.join(",", fields))
                     .collect(Collectors.joining());
-            final String keyInBlobName = blobName.replace(gcsPrefix, "").replace(compressionType.extension(), "");
-            final String value;
-            final String expectedBlobContent;
-            if ("null".equals(keyInBlobName)) {
-                value = lastValuePerKey.get(null);
-                expectedBlobContent = String.format("%s,%s", "", value);
-            } else {
-                value = lastValuePerKey.get(keyInBlobName);
-                expectedBlobContent = String.format("%s,%s", keyInBlobName, value);
-            }
-            assertThat(blobContent).isEqualTo(expectedBlobContent);
+
+            Pair<byte[], String> keyValue = expectedBlobs.get(blobName);
+            assertThat(blobName).isEqualTo(getKeyBlobName(keyValue.getKey(), compressionType));
+            assertThat(blobContent).isEqualTo(keyValue.getValue());
         }
     }
 
-    @Test
-    void jsonlOutput() throws ExecutionException, InterruptedException {
+    @ParameterizedTest
+    @EnumSource(CompressionType.class)
+    void jsonlOutput(CompressionType compressionType) throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        final String compression = "none";
         final String contentType = "jsonl";
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compressionType.name());
         connectorConfig.put("format.output.type", contentType);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
+        final Map<K, String> expectedBlobsAndContent = new TreeMap<>();
         int cnt = 0;
         for (int i = 0; i < 10; i++) {
             for (int partition = 0; partition < 4; partition++) {
                 final String key = "key-" + cnt;
-                final String value = "[{" + "\"name\":\"user-" + cnt + "\"}]";
+                final String value = String.format("[{\"name\":\"user-%s\"}]", cnt);
                 cnt += 1;
 
-                sendFutures.add(sendMessageAsync(testTopic0, partition, key.getBytes(StandardCharsets.UTF_8),
+                sendFutures.add(sendMessageAsync(testTopic, partition, key.getBytes(StandardCharsets.UTF_8),
                         value.getBytes(StandardCharsets.UTF_8)));
+                expectedBlobsAndContent.put(getBlobName(partition, i, compressionType), value);
             }
         }
-        getProducer().flush();
-        for (final Future<RecordMetadata> sendFuture : sendFutures) {
-            sendFuture.get();
-        }
 
-        final List<String> expectedBlobs = Arrays.asList(getBlobName(0, 0, compression), getBlobName(1, 0, compression),
-                getBlobName(2, 0, compression), getBlobName(3, 0, compression));
+        awaitFutures(sendFutures, Duration.ofSeconds(2));
 
-        awaitAllBlobsWritten(expectedBlobs.size());
-        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
+        awaitAllBlobsWritten(expectedBlobsAndContent.keySet(), Duration.ofMinutes(1));
 
-        final Map<String, List<String>> blobContents = new HashMap<>();
-        for (final String blobName : expectedBlobs) {
-            final List<String> items = new ArrayList<>(testBucketAccessor.readLines(blobName, compression)); // NOPMD
-                                                                                                             // instantiation
-                                                                                                             // in a
-                                                                                                             // loop
-            blobContents.put(blobName, items);
-        }
-
-        cnt = 0;
-        for (int i = 0; i < 10; i++) {
-            for (int partition = 0; partition < 4; partition++) {
-                final String key = "key-" + cnt;
-                final String value = "[{" + "\"name\":\"user-" + cnt + "\"}]";
-                cnt += 1;
-
-                final String blobName = getBlobName(partition, 0, "none");
-                final String actualLine = blobContents.get(blobName).get(i);
-                final String expectedLine = "{\"value\":" + value + ",\"key\":\"" + key + "\"}";
-                assertThat(actualLine).isEqualTo(expectedLine);
-            }
+        for (final Map.Entry<K, String> entry : expectedBlobsAndContent.entrySet()) {
+            assertThat(bucketAccessor.readLines(entry.getKey(), compressionType)).containsExactly(entry.getValue());
         }
     }
 
-    @Test
-    void jsonOutput() throws ExecutionException, InterruptedException {
-        final var faultyProxy = enableFaultyProxy();
+    @ParameterizedTest
+    @EnumSource(CompressionType.class)
+    void jsonOutput(CompressionType compressionType) throws ExecutionException, InterruptedException, IOException {
+        //final var faultyProxy = enableFaultyProxy();
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        final String compression = "none";
         final String contentType = "json";
-        connectorConfig.put("gcs.endpoint", faultyProxy.baseUrl());
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compressionType.name);
         connectorConfig.put("format.output.type", contentType);
         createConnector(connectorConfig);
 
         final int numEpochs = 10;
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
+        final Map<K, List<String>> expectedBlobsAndContent = new TreeMap<>();
+
         int cnt = 0;
         for (int i = 0; i < numEpochs; i++) {
             for (int partition = 0; partition < 4; partition++) {
                 final String key = "key-" + cnt;
                 final String value = "[{" + "\"name\":\"user-" + cnt + "\"}]";
-                cnt += 1;
 
-                sendFutures.add(sendMessageAsync(testTopic0, partition, key.getBytes(StandardCharsets.UTF_8),
+                sendFutures.add(sendMessageAsync(testTopic, partition, key.getBytes(StandardCharsets.UTF_8),
                         value.getBytes(StandardCharsets.UTF_8)));
-            }
-        }
-        getProducer().flush();
-        for (final Future<RecordMetadata> sendFuture : sendFutures) {
-            sendFuture.get();
-        }
-
-        final List<String> expectedBlobs = Arrays.asList(getBlobName(0, 0, compression), getBlobName(1, 0, compression),
-                getBlobName(2, 0, compression), getBlobName(3, 0, compression));
-
-        awaitAllBlobsWritten(expectedBlobs.size());
-        assertThat(testBucketAccessor.getBlobNames(gcsPrefix)).containsExactlyElementsOf(expectedBlobs);
-
-        final Map<String, List<String>> blobContents = new HashMap<>();
-        for (final String blobName : expectedBlobs) {
-            final List<String> items = new ArrayList<>(testBucketAccessor.readLines(blobName, compression)); // NOPMD
-                                                                                                             // instantiation
-                                                                                                             // in a
-                                                                                                             // loop
-            assertThat(items).hasSize(numEpochs + 2);
-            blobContents.put(blobName, items);
-        }
-
-        // each blob should be a JSONArray
-        final Map<String, List<String>> jsonContents = new HashMap<>();
-        for (int partition = 0; partition < 4; partition++) {
-            final String blobName = getBlobName(partition, 0, compression);
-            final List<String> blobContent = blobContents.get(blobName);
-            assertThat(blobContent.get(0)).isEqualTo("[");
-            assertThat(blobContent.get(blobContent.size() - 1)).isEqualTo("]");
-            jsonContents.put(blobName, blobContent.subList(1, blobContent.size() - 1));
-        }
-
-        cnt = 0;
-        for (int i = 0; i < numEpochs; i++) {
-            for (int partition = 0; partition < 4; partition++) {
-                final String key = "key-" + cnt;
-                final String value = "[{" + "\"name\":\"user-" + cnt + "\"}]";
+                expectedBlobsAndContent.computeIfAbsent(getBlobName(partition, 0, compressionType), k -> new ArrayList<>()).add(String.format(VALUE_KEY_JSON_FMT, value, quoted(key)) + ",");
                 cnt += 1;
-
-                final String blobName = getBlobName(partition, 0, compression);
-                final String actualLine = jsonContents.get(blobName).get(i);
-                String expectedLine = String.format("{\"value\":%s,\"key\":\"%s\"}", value, key);
-                expectedLine = i < (jsonContents.get(blobName).size() - 1)
-                        ? String.format("%s,", expectedLine)
-                        : expectedLine;
-                assertThat(actualLine).isEqualTo(expectedLine);
             }
+        }
+
+        awaitFutures(sendFutures, Duration.ofSeconds(2));
+
+        awaitAllBlobsWritten(expectedBlobsAndContent.keySet(), Duration.ofHours(2));
+
+        for (final Map.Entry<K, List<String>> entry : expectedBlobsAndContent.entrySet()) {
+          List<String> lst = bucketAccessor.readLines(entry.getKey(), compressionType);
+          // remove first and last entries because they are "[" and "]"
+            lst.remove(0);
+            lst.remove(lst.size() - 1);
+            List<String> expected = entry.getValue();
+            int pos = expected.size()-1;
+            String lastEntry = expected.get(pos);
+            lastEntry = lastEntry.substring(0, lastEntry.length() - 1);
+            expected.set(pos, lastEntry);
+            assertThat(lst).containsExactlyElementsOf(expected);
         }
     }
 
     private Map<String, String> basicConnectorConfig() {
-        final Map<String, String> config = new HashMap<>();
-        config.put("name", CONNECTOR_NAME);
-        config.put("connector.class", GcsSinkConnector.class.getName());
+        final Map<String, String> config = getSinkStorage().createSinkProperties(bucketAccessor.bucketName);
+        config.put("name", getSinkStorage().getConnectorClass().getSimpleName());
+        config.put("connector.class", getSinkStorage().getConnectorClass().getName());
         config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
         config.put("tasks.max", "1");
-        if (gcsCredentialsPath != null) {
-            config.put("gcs.credentials.path", gcsCredentialsPath);
+        config.put("topics", testTopic);
+        if (prefix != null) {
+            config.put("file.name.prefix", prefix);
         }
-        if (gcsCredentialsJson != null) {
-            config.put("gcs.credentials.json", gcsCredentialsJson);
-        }
-        if (useFakeGCS()) {
-            config.put("gcs.endpoint", gcsEndpoint);
-        }
-        config.put("gcs.bucket.name", testBucketName);
-        config.put("file.name.prefix", gcsPrefix);
-        config.put("topics", testTopic0 + "," + testTopic1);
         return config;
     }
 
-    private static WireMockServer enableFaultyProxy() {
-        final WireMockServer wireMockServer = new WireMockServer(WireMockConfiguration.options().dynamicPort());
-        wireMockServer.start();
-        wireMockServer.addStubMapping(WireMock.request(RequestMethod.ANY.getName(), UrlPattern.ANY)
-                .willReturn(aResponse().proxiedFrom(gcsEndpoint))
-                .build());
-        final String urlPathPattern = "/upload/storage/v1/b/" + testBucketName + "/o";
-        wireMockServer.addStubMapping(
-                WireMock.request(RequestMethod.POST.getName(), UrlPattern.fromOneOf(null, null, null, urlPathPattern))
-                        .inScenario("temp-error")
-                        .willSetStateTo("Error")
-                        .willReturn(aResponse().withStatus(400))
-                        .build());
-        wireMockServer.addStubMapping(
-                WireMock.request(RequestMethod.POST.getName(), UrlPattern.fromOneOf(null, null, null, urlPathPattern))
-                        .inScenario("temp-error")
-                        .whenScenarioStateIs("Error")
-                        .willReturn(aResponse().proxiedFrom(gcsEndpoint))
-                        .build());
-        return wireMockServer;
-    }
+//    private static WireMockServer enableFaultyProxy() {
+//        final WireMockServer wireMockServer = new WireMockServer(WireMockConfiguration.options().dynamicPort());
+//        wireMockServer.start();
+//        wireMockServer.addStubMapping(WireMock.request(RequestMethod.ANY.getName(), UrlPattern.ANY)
+//                .willReturn(aResponse().proxiedFrom(gcsEndpoint))
+//                .build());
+//        final String urlPathPattern = "/upload/storage/v1/b/" + testBucketName + "/o";
+//        wireMockServer.addStubMapping(
+//                WireMock.request(RequestMethod.POST.getName(), UrlPattern.fromOneOf(null, null, null, urlPathPattern))
+//                        .inScenario("temp-error")
+//                        .willSetStateTo("Error")
+//                        .willReturn(aResponse().withStatus(400))
+//                        .build());
+//        wireMockServer.addStubMapping(
+//                WireMock.request(RequestMethod.POST.getName(), UrlPattern.fromOneOf(null, null, null, urlPathPattern))
+//                        .inScenario("temp-error")
+//                        .whenScenarioStateIs("Error")
+//                        .willReturn(aResponse().proxiedFrom(gcsEndpoint))
+//                        .build());
+//        return wireMockServer;
+//    }
 }

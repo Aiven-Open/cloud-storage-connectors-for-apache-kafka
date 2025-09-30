@@ -65,10 +65,10 @@ import static org.awaitility.Awaitility.await;
  *            the native key type.
  * @param <N>
  *            the native object type
- * @param <O>
- *            The {@link OffsetManager.OffsetManagerEntry} implementation.
- * @param <T>
- *            The implementation of the {@link AbstractSourceRecord}
+ * @param <I>
+ *            The type for the kafka connect key type
+ * @param <V>
+ *            The type for the kafka connect value type.
  */
 @SuppressWarnings({ "deprecation", "PMD.TestClassWithoutTestCases" })
 @Testcontainers
@@ -82,39 +82,45 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N, I,
 
     private static final Set<String> CONNECTOR_NAMES = new HashSet<>();
 
-    protected abstract KafkaProducer<I, V> createProducer();
-
-    protected abstract BucketAccessor<K> getBucketAccessor();
-
     protected abstract SinkStorage<K, N> getSinkStorage();
 
     protected String testTopic;
 
     protected String prefix;
 
+    protected BucketAccessor<K> bucketAccessor;
+
     protected SinkStorage<K, N> sinkStorage;
 
+    /**
+     * Retreives the topic name from the test info. This ensures that each test has its own topic.
+     * @param testInfo the test info to create the topic name from.
+     * @return the topic name.
+     */
     static String topicName(final TestInfo testInfo) {
         return testInfo.getTestMethod().get().getName() + "-" + testInfo.getDisplayName().hashCode();
     }
 
+    /**
+     * Sends a message in an async manner.
+     * @param topicName the topic to send the message on.
+     * @param partition the partition for the message.
+     * @param key the key for the message.
+     * @param value the value for the message.
+     * @return A future that will return the {@link RecordMetadata} for the message.
+     */
     protected Future<RecordMetadata> sendMessageAsync(final String topicName, final int partition, final I key, final V value) {
         final ProducerRecord<I, V> msg = new ProducerRecord<>(topicName, partition, key, value);
         return producer.send(msg);
     }
 
+    /**
+     * Sets the prefix used for files in testing.
+     * @param prefix the testing prefix.  May be {@code null}.
+     */
     protected final void setPrefix(String prefix) {
         this.prefix = prefix;
     }
-
-//    @BeforeAll
-//    static void setUpAll() {
-//        s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
-//
-//        final AmazonS3 s3Client = createS3Client(LOCALSTACK);
-//        s3Endpoint = LOCALSTACK.getEndpoint().toString();
-//        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
-//    }
 
     @BeforeEach
     void setUp() throws ExecutionException, InterruptedException, IOException {
@@ -123,42 +129,45 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N, I,
         producer = createProducer();
         testTopic = topicName(testInfo);
         kafkaManager.createTopic(testTopic);
+        bucketAccessor = sinkStorage.getBucketAccessor("testBucket");
+        bucketAccessor.createBucket();
     }
 
     @AfterEach
     void tearDown() {
         producer.close();
-        getBucketAccessor().removeBucket();
         CONNECTOR_NAMES.forEach(kafkaManager::deleteConnector);
         CONNECTOR_NAMES.clear();
+        bucketAccessor.removeBucket();
     }
 
     protected void createConnector(final Map<String, String> connectorConfig) {
         CONNECTOR_NAMES.add(connectorConfig.get("name"));
-        kafkaManager.configureConnector(connectorConfig.get("name"), connectorConfig);
+        String result = kafkaManager.configureConnector(connectorConfig.get("name"), connectorConfig);
+        System.out.println(result);
     }
 
-//    protected String getBaseBlobName(final int partition, final int startOffset) {
-//        return String.format("%s%s-%d-%d", gcsPrefix, testTopic0, partition, startOffset);
-//    }
-//
-//    protected String getBlobName(final int partition, final int startOffset, final String compression) {
-//        final String result = getBaseBlobName(partition, startOffset);
-//        return result + CompressionType.forName(compression).extension();
-//    }
-//
-//    protected String getBlobName(final K key, final String compression) {
-//        final String result = String.format("%s%s", gcsPrefix, key);
-//        return result + CompressionType.forName(compression).extension();
-//    }
-//
-//    protected void awaitAllBlobsWritten(final int expectedBlobCount) {
-//        await("All expected files stored on GCS").atMost(Duration.ofMillis(OFFSET_FLUSH_INTERVAL_MS * 30))
-//                .pollInterval(Duration.ofMillis(300))
-//                .until(() -> testBucketAccessor.getBlobNames(gcsPrefix).size() >= expectedBlobCount);
-//
-//    }
-//
+    abstract Map<String, String> getProducerProperties();
+
+
+    private KafkaProducer<I, V> createProducer() {
+        final Map<String, Object> producerProps = new HashMap<>(getProducerProperties());
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
+        return new KafkaProducer<>(producerProps);
+    }
+
+
+    protected final K getTimestampBlobName(final int partition, final int startOffset, CompressionType compression) {
+        return getSinkStorage().getTimestampBlobName(prefix, testTopic, partition, startOffset, compression);
+    }
+
+    protected final K getBlobName(final int partition, final int startOffset, final CompressionType compressionType) {
+        return getSinkStorage().getBlobName(prefix, testTopic, partition, startOffset, compressionType);
+    }
+
+    protected final K getKeyBlobName(final byte[] key, final CompressionType compressionType) {
+        return getSinkStorage().getKeyBlobName(prefix, new String(key), compressionType);
+    }
 
     protected void awaitFutures(List<? extends Future<?>> futures, Duration timeout) {
         producer.flush();
@@ -170,22 +179,9 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N, I,
         });
     }
 
-
-//    protected void startConnectRunner(final Map<String, Object> testSpecificProducerProperties)
-//            throws ExecutionException, InterruptedException {
-//        testBucketAccessor.clear(gcsPrefix);
-//
-//        kafkaManager.createTopics(Arrays.asList(testTopic0, testTopic1));
-//
-//        final Map<String, Object> producerProps = new HashMap<>(testSpecificProducerProperties);
-//        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
-//        producer = new KafkaProducer<>(producerProps);
-//
-//    }
-
-    protected void awaitAllBlobsWritten(final Collection<K> expectedKeys) {
-        await("All expected files on storage").atMost(Duration.ofMillis(OFFSET_FLUSH_INTERVAL_MS * 30))
-                .pollInterval(Duration.ofMillis(300))
-                .untilAsserted(() -> assertThat(getBucketAccessor().listKeys(prefix)).containsExactlyElementsOf(expectedKeys));
+    protected void awaitAllBlobsWritten(final Collection<K> expectedKeys, Duration timeout) {
+        await("All expected files on storage").atMost(timeout)
+                .pollInterval(Duration.ofMillis(OFFSET_FLUSH_INTERVAL_MS))
+                .untilAsserted(() -> assertThat(bucketAccessor.listKeys(prefix)).containsExactlyElementsOf(expectedKeys));
     }
 }

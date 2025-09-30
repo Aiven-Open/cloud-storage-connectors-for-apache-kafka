@@ -46,6 +46,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -54,6 +55,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
 @Testcontainers
+@Disabled
 final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-avro";
 

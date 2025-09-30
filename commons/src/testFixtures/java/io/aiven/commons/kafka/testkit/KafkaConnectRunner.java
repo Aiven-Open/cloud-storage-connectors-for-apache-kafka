@@ -233,7 +233,7 @@ public final class KafkaConnectRunner {
      * @param connectorName
      *            The name for the connector.
      * @param connectorConfig
-     *            the map of data items for the configuraiton of the connector.
+     *            the map of data items for the configuration of the connector.
      * @return the result of the cluster configuration call.
      */
     public String configureConnector(final String connectorName, final Map<String, String> connectorConfig) {
@@ -291,7 +291,7 @@ public final class KafkaConnectRunner {
      */
     public Map<String, String> getWorkerProperties(final Class<? extends Connector> connectorClass) {
         final Map<String, String> workerProperties = new HashMap<>();
-        workerProperties.put(ConnectorConfig.KEY_CONVERTER_CLASS_CONFIG, ByteArrayConverter.class.getName());
+        workerProperties.put(ConnectorConfig.KEY_CONVERTER_CLASS_CONFIG, ByteArrayConverter.class.getCanonicalName());
         workerProperties.put(ConnectorConfig.VALUE_CONVERTER_CLASS_CONFIG, ByteArrayConverter.class.getCanonicalName());
         workerProperties.put(WorkerConfig.OFFSET_COMMIT_INTERVAL_MS_CONFIG,
                 Long.toString(offsetFlushInterval.toMillis()));

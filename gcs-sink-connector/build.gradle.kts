@@ -65,7 +65,7 @@ tasks.register<Test>("integrationTest") {
   val distTarTask = tasks["distTar"] as Tar
   val distributionFilePath = distTarTask.archiveFile.get().asFile.path
   systemProperty("integration-test.distribution.file.path", distributionFilePath)
-  systemProperty("fake-gcs-server-version", "1.45.2")
+  systemProperty("fake-gcs-server-version", "1.47.4")
 }
 
 idea {
@@ -144,6 +144,7 @@ dependencies {
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testinglibs.awaitility)
+  integrationTestImplementation("io.aiven:testcontainers-fake-gcs-server:0.2.0")
 
   integrationTestImplementation(apache.kafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath

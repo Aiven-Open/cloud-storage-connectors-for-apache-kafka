@@ -117,7 +117,7 @@ public enum CompressionType {
     }
 
     /**
-     * Gets the file name extension associated with the compression.
+     * Gets the file name extension associated with the compression.  Includes the '.' separator.
      *
      * @return the file name extension.
      */

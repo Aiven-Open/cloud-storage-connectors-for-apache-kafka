@@ -211,14 +211,16 @@ public final class GcsSinkConfig extends AivenCommonConfig {
         configDef.define(FILE_NAME_PREFIX_CONFIG, ConfigDef.Type.STRING, "", new ConfigDef.Validator() {
             @Override
             public void ensureValid(final String name, final Object value) {
-                // See https://cloud.google.com/storage/docs/naming
-                assert value instanceof String;
+                if (value == null) {
+                    throw new ConfigException(name, value,
+                            "Should not be null");
+                }
                 final String valueStr = (String) value;
                 if (valueStr.length() > 1024) { // NOPMD avoid literal
-                    throw new ConfigException(GCS_BUCKET_NAME_CONFIG, value, "cannot be longer than 1024 characters");
+                    throw new ConfigException(name, value, "cannot be longer than 1024 characters");
                 }
                 if (valueStr.startsWith(".well-known/acme-challenge")) {
-                    throw new ConfigException(GCS_BUCKET_NAME_CONFIG, value,
+                    throw new ConfigException(name, value,
                             "cannot start with '.well-known/acme-challenge'");
                 }
             }

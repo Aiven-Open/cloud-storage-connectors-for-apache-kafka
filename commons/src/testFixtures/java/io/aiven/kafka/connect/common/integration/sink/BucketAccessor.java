@@ -37,7 +37,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public abstract class BucketAccessor<K extends Comparable<K>> {
-    private final String bucketName;
+    protected final String bucketName;
 
     /**
      * Creates an accessor.
@@ -63,10 +63,13 @@ public abstract class BucketAccessor<K extends Comparable<K>> {
      * @return the list of keys for objects in this bucket.
      * @throws IOException if there is an error.
      */
-    protected abstract List<K> listKeys() throws IOException;
+    final protected List<K> listKeys() throws IOException {
+        return listKeys(null);
+    }
 
     /**
      * Gets the list of keys for objects in this bucket.
+     * @param prefix May  be {@code null}.
      * @return the list of keys for objects in this bucket.
      * @throws IOException if there is an error.
      */
