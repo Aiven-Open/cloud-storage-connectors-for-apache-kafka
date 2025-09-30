@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.aiven.commons.collections.RingBuffer;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
@@ -186,12 +187,12 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
     final public boolean hasNext() {
         if (!outer.hasNext() && lastSeenNativeKey != null) {
             // update the buffer to contain this new objectKey
-            ringBuffer.enqueue(lastSeenNativeKey);
+            ringBuffer.add(lastSeenNativeKey);
             // Remove the last seen from the offsetmanager as the file has been completely processed.
             offsetManager.removeEntry(getOffsetManagerKey(lastSeenNativeKey));
         }
         if (!inner.hasNext() && !outer.hasNext()) {
-            inner = getNativeItemStream(ringBuffer.getOldest()).map(fileMatching)
+            inner = getNativeItemStream(ringBuffer.getNextEjected()).map(fileMatching)
                     .filter(taskAssignment)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
