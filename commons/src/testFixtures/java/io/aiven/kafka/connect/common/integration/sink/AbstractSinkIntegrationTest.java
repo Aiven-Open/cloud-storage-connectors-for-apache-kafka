@@ -63,7 +63,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
     void standardGrouping(final CompressionType compression) throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("file.compression.type", compression.name());
+        connectorConfig.put("file.compression.type", compression.name);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -146,7 +146,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
     void oneFilePerRecordWithPlainValues(final CompressionType compression) throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.fields", "value");
-        connectorConfig.put("file.compression.type", compression.name());
+        connectorConfig.put("file.compression.type", compression.name);
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("file.max.records", "1");
         createConnector(connectorConfig);
@@ -188,7 +188,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("file.compression.type", compressionType.name());
+        connectorConfig.put("file.compression.type", compressionType.name);
         connectorConfig.put("file.name.template", "{{key}}" + compressionType.extension());
         createConnector(connectorConfig);
 
@@ -247,7 +247,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compressionType.name());
+        connectorConfig.put("file.compression.type", compressionType.name);
         connectorConfig.put("format.output.type", contentType);
         createConnector(connectorConfig);
 
