@@ -16,41 +16,28 @@
 
 package io.aiven.kafka.connect.common.integration.sink;
 
-//import com.google.cloud.NoCredentials;
-//import com.google.cloud.storage.BucketInfo;
-//import com.google.cloud.storage.Storage;
-//import com.google.cloud.storage.StorageOptions;
 import io.aiven.commons.kafka.testkit.KafkaIntegrationTestBase;
 import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
-import io.aiven.kafka.connect.common.source.OffsetManager;
-//import io.aiven.kafka.connect.gcs.testutils.BucketAccessor;
-import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.io.File;
+
 import java.io.IOException;
 import java.time.Duration;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -65,18 +52,14 @@ import static org.awaitility.Awaitility.await;
  *            the native key type.
  * @param <N>
  *            the native object type
- * @param <I>
- *            The type for the kafka connect key type
- * @param <V>
- *            The type for the kafka connect value type.
  */
-@SuppressWarnings({ "deprecation", "PMD.TestClassWithoutTestCases" })
+@SuppressWarnings({ "PMD.TestClassWithoutTestCases" })
 @Testcontainers
-public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N, I, V> extends KafkaIntegrationTestBase {
+public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N> extends KafkaIntegrationTestBase {
 
     private KafkaManager kafkaManager;
 
-    private KafkaProducer<I, V> producer;
+    private KafkaProducer<byte[], byte[]> producer;
 
     protected static final int OFFSET_FLUSH_INTERVAL_MS = 5000;
 
@@ -102,15 +85,15 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N, I,
     }
 
     /**
-     * Sends a message in an async manner.
+     * Sends a message in an async manner.  All messages are sent with a byte[] key and value type.
      * @param topicName the topic to send the message on.
      * @param partition the partition for the message.
      * @param key the key for the message.
      * @param value the value for the message.
      * @return A future that will return the {@link RecordMetadata} for the message.
      */
-    protected Future<RecordMetadata> sendMessageAsync(final String topicName, final int partition, final I key, final V value) {
-        final ProducerRecord<I, V> msg = new ProducerRecord<>(topicName, partition, key, value);
+    protected Future<RecordMetadata> sendMessageAsync(final String topicName, final int partition, final byte[] key, final byte[] value) {
+        final ProducerRecord<byte[], byte[]> msg = new ProducerRecord<>(topicName, partition, key, value);
         return producer.send(msg);
     }
 
@@ -143,32 +126,34 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N, I,
 
     protected void createConnector(final Map<String, String> connectorConfig) {
         CONNECTOR_NAMES.add(connectorConfig.get("name"));
-        String result = kafkaManager.configureConnector(connectorConfig.get("name"), connectorConfig);
-        System.out.println(result);
+        kafkaManager.configureConnector(connectorConfig.get("name"), connectorConfig);
     }
 
-    abstract Map<String, String> getProducerProperties();
-
-
-    private KafkaProducer<I, V> createProducer() {
-        final Map<String, Object> producerProps = new HashMap<>(getProducerProperties());
+    private KafkaProducer<byte[], byte[]> createProducer() {
+        final Map<String, Object> producerProps = new HashMap<>();
+        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
+        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
         return new KafkaProducer<>(producerProps);
     }
 
-
-    protected final K getTimestampBlobName(final int partition, final int startOffset, CompressionType compression) {
+    protected final K getNativeKeyForTimestamp(final int partition, final int startOffset, CompressionType compression) {
         return getSinkStorage().getTimestampBlobName(prefix, testTopic, partition, startOffset, compression);
     }
 
-    protected final K getBlobName(final int partition, final int startOffset, final CompressionType compressionType) {
+    protected final K getNativeKey(final int partition, final int startOffset, final CompressionType compressionType) {
         return getSinkStorage().getBlobName(prefix, testTopic, partition, startOffset, compressionType);
     }
 
-    protected final K getKeyBlobName(final byte[] key, final CompressionType compressionType) {
+    protected final K getNativeKeyForKey(final byte[] key, final CompressionType compressionType) {
         return getSinkStorage().getKeyBlobName(prefix, new String(key), compressionType);
     }
 
+    /**
+     * Wait until all the specified futures have completed.
+     * @param futures the futures to wait for.
+     * @param timeout the maximum time to wait for the futures to complete.
+     */
     protected void awaitFutures(List<? extends Future<?>> futures, Duration timeout) {
         producer.flush();
         await("All futures written").atMost(timeout).until(() -> {
@@ -179,9 +164,15 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N, I,
         });
     }
 
+    /**
+     * Wait until the keys specified in the expectedKeys, and only those keys, are found in the storage.
+     * System will check every {@link #OFFSET_FLUSH_INTERVAL_MS} for updates.
+     * @param expectedKeys the expected keys
+     * @param timeout the maximum time to wait.
+     */
     protected void awaitAllBlobsWritten(final Collection<K> expectedKeys, Duration timeout) {
         await("All expected files on storage").atMost(timeout)
                 .pollInterval(Duration.ofMillis(OFFSET_FLUSH_INTERVAL_MS))
-                .untilAsserted(() -> assertThat(bucketAccessor.listKeys(prefix)).containsExactlyElementsOf(expectedKeys));
+                .untilAsserted(() -> assertThat(bucketAccessor.listKeys(prefix)).containsExactlyInAnyOrderElementsOf(expectedKeys));
     }
 }

@@ -7,14 +7,13 @@ import io.aiven.kafka.connect.common.integration.sink.SinkStorage;
 
 import io.aiven.testcontainers.fakegcsserver.FakeGcsServerContainer;
 
-import org.testcontainers.containers.FixedHostPortGenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 
 
 @Testcontainers
-public class NewGCSTest extends AbstractSinkIntegrationTest<String, Blob> {
+public class GCSIntegrationTest extends AbstractSinkIntegrationTest<String, Blob> {
 
     @Container
     FakeGcsServerContainer gcsServerContainer = new FakeGcsServerContainer(FakeGcsServerContainer.DEFAULT_IMAGE_NAME);
