@@ -16,27 +16,11 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import static org.apache.kafka.connect.data.Schema.INT32_SCHEMA;
-import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
-
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
-import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.sink.SinkRecord;
-
-import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
-
-import org.testcontainers.shaded.org.apache.commons.io.function.IOSupplier;
 
 /**
  * Test fixture to generate standard parquet file.
@@ -49,7 +33,7 @@ public final class ParquetTestingFixture {
     public final static Schema PARQUET_SCHEMA = ParquetTestDataFixture.PARQUET_SCHEMA;
 
     private ParquetTestingFixture() {
-        // do int instantiate
+        // do not instantiate
     }
 
     /**
