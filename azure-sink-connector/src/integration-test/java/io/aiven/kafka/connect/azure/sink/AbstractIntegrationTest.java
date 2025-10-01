@@ -33,13 +33,13 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import io.aiven.commons.kafka.testkit.KafkaIntegrationTestBase;
-import io.aiven.commons.kafka.testkit.KafkaManager;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
+import io.aiven.commons.kafka.testkit.KafkaIntegrationTestBase;
+import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.azure.sink.testutils.AzureBlobAccessor;
 import io.aiven.kafka.connect.common.config.CompressionType;
 
