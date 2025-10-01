@@ -77,7 +77,7 @@ public class FileNameFragmentTest {// NOPMD
         names.remove(FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
         // TODO remove this when we understand what it is for.
         names.remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
-        configDefSource().map(a -> (String) (a.get()[0])).forEach(names::remove);
+        configDefSource().map(a -> (String) a.get()[0]).forEach(names::remove);
         assertThat(names.isEmpty())
                 .as(() -> "Tests do not process the following arguments: " + String.join(", ", names))
                 .isTrue();

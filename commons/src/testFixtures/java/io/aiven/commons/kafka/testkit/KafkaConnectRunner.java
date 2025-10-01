@@ -286,7 +286,7 @@ public final class KafkaConnectRunner {
 	 * @return the default set of worker properties.
 	 */
 	public Map<String, String> getWorkerProperties(final Class<? extends Connector> connectorClass) {
-		Map<String, String> workerProperties = new HashMap<>();
+		final Map<String, String> workerProperties = new HashMap<>();
 		workerProperties.put(ConnectorConfig.KEY_CONVERTER_CLASS_CONFIG, ByteArrayConverter.class.getName());
 		workerProperties.put(ConnectorConfig.VALUE_CONVERTER_CLASS_CONFIG, ByteArrayConverter.class.getCanonicalName());
 		workerProperties.put(WorkerConfig.OFFSET_COMMIT_INTERVAL_MS_CONFIG,
