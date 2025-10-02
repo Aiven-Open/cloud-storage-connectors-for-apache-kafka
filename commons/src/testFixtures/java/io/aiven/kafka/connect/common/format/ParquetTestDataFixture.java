@@ -56,12 +56,12 @@ public final class ParquetTestDataFixture {
     /**
      * The schema for the test cases
      */
-    public final static org.apache.kafka.connect.data.Schema PARQUET_SCHEMA = org.apache.kafka.connect.data.SchemaBuilder.struct()
+    public final static org.apache.kafka.connect.data.Schema PARQUET_SCHEMA = org.apache.kafka.connect.data.SchemaBuilder
+            .struct()
             .field("name", STRING_SCHEMA)
             .field("age", INT32_SCHEMA)
             .field("email", STRING_SCHEMA)
             .build();
-
 
     public static final Schema NAME_VALUE_SCHEMA = SchemaBuilder.record("value")
             .fields()
@@ -112,9 +112,8 @@ public final class ParquetTestDataFixture {
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
-            allParquetRecords.add(new Struct(PARQUET_SCHEMA).put("name", name + i)
-                    .put("age", 30)
-                    .put("email", name + "@test"));
+            allParquetRecords
+                    .add(new Struct(PARQUET_SCHEMA).put("name", name + i).put("age", 30).put("email", name + "@test"));
         }
 
         // Create a Parquet writer
@@ -126,8 +125,7 @@ public final class ParquetTestDataFixture {
             final var sinkRecords = new ArrayList<SinkRecord>();
             for (final var r : allParquetRecords) {
                 final var sinkRecord = new SinkRecord("some-topic", 1, STRING_SCHEMA, "some-key-" + counter,
-                        PARQUET_SCHEMA, r, 100L, 1000L + counter, TimestampType.CREATE_TIME,
-                        null);
+                        PARQUET_SCHEMA, r, 100L, 1000L + counter, TimestampType.CREATE_TIME, null);
                 sinkRecords.add(sinkRecord);
                 counter++;
             }
@@ -223,9 +221,9 @@ public final class ParquetTestDataFixture {
 
         // Create a Parquet writer
         try (OutputStream outputStream = Files.newOutputStream(outputFilePath.toAbsolutePath());
-             ParquetOutputWriter parquetWriter = new ParquetOutputWriter(
-                     List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
-                     Collections.emptyMap(), false)) {
+                ParquetOutputWriter parquetWriter = new ParquetOutputWriter(
+                        List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
+                        Collections.emptyMap(), false)) {
             int counter = 0;
             final var sinkRecords = new ArrayList<SinkRecord>();
             for (final var r : allParquetRecords) {

@@ -37,15 +37,14 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.commons.strings.CasedString;
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.KafkaFragment;
-import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.task.Context;
-import io.aiven.commons.strings.CasedString;
 import io.aiven.kafka.connect.s3.source.utils.S3OffsetManagerEntry;
 import io.aiven.kafka.connect.s3.source.utils.S3SourceRecord;
 import io.aiven.kakfa.connect.s3.source.testdata.AWSIntegrationTestData;

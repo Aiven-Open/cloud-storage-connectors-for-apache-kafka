@@ -30,13 +30,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
 
 import org.apache.avro.Schema;

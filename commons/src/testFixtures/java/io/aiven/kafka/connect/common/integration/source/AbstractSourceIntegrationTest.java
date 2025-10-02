@@ -39,6 +39,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.json.JsonConverter;
 
+import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.KafkaFragment;
@@ -47,7 +48,6 @@ import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
 import io.aiven.kafka.connect.common.format.JsonTestDataFixture;
 import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
-import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.InputFormat;

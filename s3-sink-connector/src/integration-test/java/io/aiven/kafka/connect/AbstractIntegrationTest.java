@@ -24,10 +24,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import io.aiven.commons.kafka.testkit.KafkaIntegrationTestBase;
-import io.aiven.commons.kafka.testkit.KafkaManager;
 import org.apache.kafka.clients.producer.KafkaProducer;
 
+import io.aiven.commons.kafka.testkit.KafkaIntegrationTestBase;
+import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
 

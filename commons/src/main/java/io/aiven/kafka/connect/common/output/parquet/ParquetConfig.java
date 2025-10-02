@@ -18,11 +18,11 @@ package io.aiven.kafka.connect.common.output.parquet;
 
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;

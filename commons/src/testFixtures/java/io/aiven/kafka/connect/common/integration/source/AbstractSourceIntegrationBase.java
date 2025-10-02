@@ -40,13 +40,13 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.json.JsonDeserializer;
 
+import io.aiven.commons.kafka.testkit.KafkaManager;
+import io.aiven.commons.strings.CasedString;
 import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.integration.ConsumerPropertiesBuilder;
-import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.AbstractSourceTask;
 import io.aiven.kafka.connect.common.source.OffsetManager;
-import io.aiven.commons.strings.CasedString;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;

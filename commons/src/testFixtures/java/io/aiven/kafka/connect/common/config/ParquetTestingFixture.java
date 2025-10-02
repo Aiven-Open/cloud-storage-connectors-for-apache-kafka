@@ -19,8 +19,9 @@ package io.aiven.kafka.connect.common.config;
 import java.io.IOException;
 import java.nio.file.Path;
 
-import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import org.apache.kafka.connect.data.Schema;
+
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 
 /**
  * Test fixture to generate standard parquet file.
