@@ -129,6 +129,7 @@ public final class AvroTestDataFixture {
      *
      * @param numRecs
      *            the numer of records to generate
+     * @param recordCreator A function to convert the record number into a generic record.
      * @return A byte array containing the specified number of records.
      */
     public static List<GenericRecord> generateAvroRecords(final int numRecs,

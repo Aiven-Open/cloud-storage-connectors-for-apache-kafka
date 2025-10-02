@@ -24,6 +24,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -39,17 +40,17 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> extends AbstractSinkIntegrationBase<K, N> {
+public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>> extends AbstractSinkIntegrationBase<K> {
 
     private static final String VALUE_KEY_JSON_FMT = "{\"value\":%s,\"key\":%s}";
     protected final String quoted(String s) {
         return "\"" + s + "\"";
     }
 
-
     @ParameterizedTest
     @EnumSource(CompressionType.class)
     void standardGrouping(final CompressionType compression) throws IOException {
+        final FormatType formatType = FormatType.CSV;
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("file.compression.type", compression.name);
@@ -67,7 +68,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
 
                 sendFutures.add(sendMessageAsync(testTopic, partition, key.getBytes(StandardCharsets.UTF_8),
                         value.getBytes(StandardCharsets.UTF_8)));
-                K objectKey = getNativeKey(partition, 0, compression);
+                K objectKey = getNativeKey(partition, 0, compression, formatType);
                 expectedBlobsAndContent.compute(objectKey, (k, v) -> v == null ? new ArrayList<>() : v).add(String.format("%s,%s", key, value));
             }
         }
@@ -89,6 +90,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
     @EnumSource(CompressionType.class)
     @Disabled
     void groupByTimestampVariable(final CompressionType compression) throws IOException {
+        final FormatType formatType = FormatType.CSV;
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("file.compression.type", compression.name());
@@ -112,10 +114,10 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
         awaitFutures(sendFutures, Duration.ofSeconds(2));
 
         final Map<K, String[]> expectedBlobsAndContent = new HashMap<>();
-        expectedBlobsAndContent.put(getNativeKeyForTimestamp(0, 0, compression),
+        expectedBlobsAndContent.put(getNativeKeyForTimestamp(0, 0, compression, formatType),
                 new String[] { "key-0,value-0", "key-1,value-1", "key-2,value-2" });
-        expectedBlobsAndContent.put(getNativeKeyForTimestamp(1, 0, compression), new String[] { "key-3,value-3" });
-        expectedBlobsAndContent.put(getNativeKeyForTimestamp(3, 0, compression), new String[] { "key-4,value-4" });
+        expectedBlobsAndContent.put(getNativeKeyForTimestamp(1, 0, compression, formatType), new String[] { "key-3,value-3" });
+        expectedBlobsAndContent.put(getNativeKeyForTimestamp(3, 0, compression, formatType), new String[] { "key-4,value-4" });
 
 
         awaitAllBlobsWritten(expectedBlobsAndContent.keySet(), Duration.ofSeconds(10));
@@ -133,6 +135,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
     @ParameterizedTest
     @EnumSource(CompressionType.class)
     void oneRecordPerFileWithPlainValues(final CompressionType compression) throws IOException {
+        final FormatType formatType = FormatType.CSV;
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("file.compression.type", compression.name);
@@ -156,11 +159,11 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
         awaitFutures(sendFutures, Duration.ofSeconds(2));
 
         final Map<K, String> expectedBlobsAndContent = new HashMap<>();
-        expectedBlobsAndContent.put(getNativeKey(0, 0, compression), "value-0");
-        expectedBlobsAndContent.put(getNativeKey(0, 1, compression), "value-1");
-        expectedBlobsAndContent.put(getNativeKey(0, 2, compression), "value-2");
-        expectedBlobsAndContent.put(getNativeKey(1, 0, compression), "value-3");
-        expectedBlobsAndContent.put(getNativeKey(3, 0, compression), "value-4");
+        expectedBlobsAndContent.put(getNativeKey(0, 0, compression, formatType), "value-0");
+        expectedBlobsAndContent.put(getNativeKey(0, 1, compression, formatType), "value-1");
+        expectedBlobsAndContent.put(getNativeKey(0, 2, compression, formatType), "value-2");
+        expectedBlobsAndContent.put(getNativeKey(1, 0, compression, formatType), "value-3");
+        expectedBlobsAndContent.put(getNativeKey(3, 0, compression, formatType), "value-4");
 
         awaitAllBlobsWritten(expectedBlobsAndContent.keySet(), Duration.ofSeconds(45));
 
@@ -173,6 +176,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
     @ParameterizedTest
     @EnumSource(CompressionType.class)
     void groupByKey(final CompressionType compressionType) throws IOException {
+        final FormatType formatType = FormatType.CSV;
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("format.output.fields", "key,value");
@@ -198,7 +202,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
                     final byte[] keyBytes = key == null ? null : key.getBytes(StandardCharsets.UTF_8);
                     sendFutures.add(sendMessageAsync(entry.getKey().topic(), entry.getKey().partition(), keyBytes,
                             value.getBytes(StandardCharsets.UTF_8)));
-                    expectedBlobs.put(getNativeKeyForKey(keyBytes, compressionType), Pair.of(keyBytes, String.format("%s,%s",key, value)));
+                    expectedBlobs.put(getNativeKeyForKey(keyBytes, compressionType, formatType), Pair.of(keyBytes, String.format("%s,%s",key, value)));
                     lastValuePerKey.put(key, value);
                     if (cnt >= cntMax) {
                         break outer;
@@ -218,7 +222,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
                     .collect(Collectors.joining());
 
             Pair<byte[], String> keyValue = expectedBlobs.get(blobName);
-            assertThat(blobName).isEqualTo(getNativeKeyForKey(keyValue.getKey(), compressionType));
+            assertThat(blobName).isEqualTo(getNativeKeyForKey(keyValue.getKey(), compressionType, formatType));
             assertThat(blobContent).isEqualTo(keyValue.getValue());
         }
     }
@@ -248,7 +252,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
 
                 sendFutures.add(sendMessageAsync(testTopic, partition, key.getBytes(StandardCharsets.UTF_8),
                         value.getBytes(StandardCharsets.UTF_8)));
-                expectedBlobsAndContent.computeIfAbsent(getNativeKey(partition, 0, compressionType), k -> new ArrayList<>())
+                expectedBlobsAndContent.computeIfAbsent(getNativeKey(partition, 0, compressionType, contentType), k -> new ArrayList<>())
                         .add(String.format(VALUE_KEY_JSON_FMT, value, quoted(key)));
             }
         }
@@ -297,7 +301,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
 
                 sendFutures.add(sendMessageAsync(testTopic, partition, key.getBytes(StandardCharsets.UTF_8),
                         value.getBytes(StandardCharsets.UTF_8)));
-                expectedBlobsAndContent.computeIfAbsent(getNativeKey(partition, 0, compressionType), k -> new ArrayList<>())
+                expectedBlobsAndContent.computeIfAbsent(getNativeKey(partition, 0, compressionType, contentType), k -> new ArrayList<>())
                         .add(String.format(VALUE_KEY_JSON_FMT, value, quoted(key)) + ",");
                 cnt += 1;
             }
@@ -314,18 +318,6 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>, N> ex
             lst.remove(lst.size() - 1);
             assertThat(lst).containsExactlyElementsOf(removeCommaFromLastEntry(entry.getValue()));
         }
-    }
-
-    private Map<String, String> basicConnectorConfig() {
-        final Map<String, String> config = getSinkStorage().createSinkProperties(bucketAccessor.bucketName);
-        config.put("name", getSinkStorage().getConnectorClass().getSimpleName());
-        config.put("connector.class", getSinkStorage().getConnectorClass().getName());
-        config.put("tasks.max", "1");
-        config.put("topics", testTopic);
-        if (prefix != null) {
-            config.put("file.name.prefix", prefix);
-        }
-        return config;
     }
 
 //    private static WireMockServer enableFaultyProxy() {

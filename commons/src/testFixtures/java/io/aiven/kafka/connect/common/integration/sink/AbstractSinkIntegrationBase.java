@@ -19,11 +19,16 @@ package io.aiven.kafka.connect.common.integration.sink;
 import io.aiven.commons.kafka.testkit.KafkaIntegrationTestBase;
 import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.apache.kafka.common.serialization.Serializer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
@@ -55,17 +60,13 @@ import static org.awaitility.Awaitility.await;
  */
 @SuppressWarnings({ "PMD.TestClassWithoutTestCases" })
 @Testcontainers
-public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N> extends KafkaIntegrationTestBase {
+public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>> extends KafkaIntegrationTestBase {
 
     private KafkaManager kafkaManager;
-
-    private KafkaProducer<byte[], byte[]> producer;
 
     protected static final int OFFSET_FLUSH_INTERVAL_MS = 5000;
 
     private static final Set<String> CONNECTOR_NAMES = new HashSet<>();
-
-    protected abstract SinkStorage<K, N> getSinkStorage();
 
     protected String testTopic;
 
@@ -73,15 +74,50 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N> ex
 
     protected BucketAccessor<K> bucketAccessor;
 
-    protected SinkStorage<K, N> sinkStorage;
+    protected SinkStorage<K, ?> sinkStorage;
+
+    protected KafkaProducer<byte[], byte[]> producer;
 
     /**
-     * Retreives the topic name from the test info. This ensures that each test has its own topic.
+     * Gets the SinkStorage implementation for these tests.
+     * Sink storage encapsulates the functionality needed to verify items writen to storage.
+     *
+     * @return the SinkStorage implementation for these tests.
+     */
+    protected abstract SinkStorage<K, ?> getSinkStorage();
+
+    /**
+     * Retrieves the topic name from the test info. This ensures that each test has its own topic.
+     *
      * @param testInfo the test info to create the topic name from.
      * @return the topic name.
      */
     static String topicName(final TestInfo testInfo) {
         return testInfo.getTestMethod().get().getName() + "-" + testInfo.getDisplayName().hashCode();
+    }
+
+    /**
+     * The connector configuration for the specified sink.
+     * <ul>
+     *     <li>connector specific settings from sink storage</li>
+     *     <li>name - connector class simple name</li>
+     *     <li>class - sink storage provided class</li>
+     *     <li>tasks.max - 1</li>
+     *     <li>topics - testTopic</li>
+     *     <li>file.name.prefix - specified prefix</li>
+     * </ul>
+     * @return a Map of configuration properties to string representations.
+     */
+    protected Map<String, String> basicConnectorConfig() {
+        final Map<String, String> config = getSinkStorage().createSinkProperties(bucketAccessor.bucketName);
+        config.put("name", getSinkStorage().getConnectorClass().getSimpleName());
+        config.put("connector.class", getSinkStorage().getConnectorClass().getName());
+        config.put("tasks.max", "1");
+        config.put("topics", testTopic);
+        if (prefix != null) {
+            config.put("file.name.prefix", prefix);
+        }
+        return config;
     }
 
     /**
@@ -99,6 +135,7 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N> ex
 
     /**
      * Sets the prefix used for files in testing.
+     *
      * @param prefix the testing prefix.  May be {@code null}.
      */
     protected final void setPrefix(String prefix) {
@@ -109,11 +146,11 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N> ex
     void setUp() throws ExecutionException, InterruptedException, IOException {
         sinkStorage = getSinkStorage();
         kafkaManager = setupKafka(sinkStorage.getConnectorClass());
-        producer = createProducer();
         testTopic = topicName(testInfo);
         kafkaManager.createTopic(testTopic);
         bucketAccessor = sinkStorage.getBucketAccessor("testBucket");
         bucketAccessor.createBucket();
+        producer = createProducer();
     }
 
     @AfterEach
@@ -137,20 +174,22 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N> ex
         return new KafkaProducer<>(producerProps);
     }
 
-    protected final K getNativeKeyForTimestamp(final int partition, final int startOffset, CompressionType compression) {
-        return getSinkStorage().getTimestampBlobName(prefix, testTopic, partition, startOffset, compression);
+    protected final K getNativeKeyForTimestamp(final int partition, final int startOffset, CompressionType compressionType, FormatType formatType) {
+        return getSinkStorage().getTimestampNativeKey(prefix, testTopic, partition, startOffset, compressionType, formatType);
     }
 
-    protected final K getNativeKey(final int partition, final int startOffset, final CompressionType compressionType) {
-        return getSinkStorage().getBlobName(prefix, testTopic, partition, startOffset, compressionType);
+    protected final K getNativeKey(final int partition, final int startOffset, final CompressionType compressionType, FormatType formatType) {
+        return getSinkStorage().getNativeKey(prefix, testTopic, partition, startOffset, compressionType, formatType);
     }
 
-    protected final K getNativeKeyForKey(final byte[] key, final CompressionType compressionType) {
-        return getSinkStorage().getKeyBlobName(prefix, new String(key), compressionType);
+    protected final K getNativeKeyForKey(final byte[] key, final CompressionType compressionType, final FormatType formatType) {
+        return getSinkStorage().getKeyNativeKey(prefix, new String(key), compressionType, formatType);
     }
+
 
     /**
      * Wait until all the specified futures have completed.
+     *
      * @param futures the futures to wait for.
      * @param timeout the maximum time to wait for the futures to complete.
      */
@@ -167,8 +206,9 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, N> ex
     /**
      * Wait until the keys specified in the expectedKeys, and only those keys, are found in the storage.
      * System will check every {@link #OFFSET_FLUSH_INTERVAL_MS} for updates.
+     *
      * @param expectedKeys the expected keys
-     * @param timeout the maximum time to wait.
+     * @param timeout      the maximum time to wait.
      */
     protected void awaitAllBlobsWritten(final Collection<K> expectedKeys, Duration timeout) {
         await("All expected files on storage").atMost(timeout)

@@ -16,12 +16,10 @@
 
 package io.aiven.kafka.connect.common.integration.sink;
 
-import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.integration.StorageBase;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -39,22 +37,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
  *            the native storage object type
  */
 public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, N> {
-    /**
-     * Get the native key for an avro based blob.
-     *
-     * @param prefix
-     *            the prefix for the storage location.
-     * @param topicName
-     *            the topic name for the storage location.
-     * @param partition
-     *            the partition for the storage location.
-     * @param startOffset
-     *            the start offset for the storage location.
-     * @param compression
-     *            the compression type for the data at the storage location.
-     * @return a native key for the specified avro file.
-     */
-    K getAvroBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression);
+
 
     /**
      * Get the native key for a standard blob.
@@ -71,7 +54,7 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
      *            the compression type for the data at the storage location.
      * @return a native key for the specified avro file.
      */
-    K getBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression);
+    K getNativeKey(String prefix, String topicName, int partition, int startOffset, CompressionType compression, FormatType formatType);
 
     /**
      * Get the native key for a standard blob.
@@ -82,9 +65,11 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
      *            the key for the storage location.
      * @param compression
      *            the compression type for the data at the storage location.
+     * @param formatType
+     *            the format type for the output file.
      * @return a native key for the specified data.
      */
-    K getKeyBlobName(String prefix, String key, CompressionType compression);
+    K getKeyNativeKey(String prefix, String key, CompressionType compression, FormatType formatType);
 
     /**
      * Get the native key for a blob with the new name format.
@@ -116,9 +101,11 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
      *            the start offset for the storage location.
      * @param compression
      *            the compression type for the data at the storage location.
+     * @param formatType
+     *            the format type for the output file.
      * @return a native key for the specified data.
      */
-    K getTimestampBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression);
+    K getTimestampNativeKey(String prefix, String topicName, int partition, int startOffset, CompressionType compression, FormatType formatType);
 
     /**
      * Creates a map of the sink properties for the specific storage layer.

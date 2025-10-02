@@ -34,15 +34,15 @@ import io.aiven.kafka.connect.common.output.plainwriter.PlainOutputWriter;
 
 public enum FormatType {
     /** Handles in Avro format */
-    AVRO("avro", (stream, fields, config, envelope) -> new AvroOutputWriter(fields, stream, config, envelope)),
+    AVRO("avro", "avro", (stream, fields, config, envelope) -> new AvroOutputWriter(fields, stream, config, envelope)),
     /** Handles in CSV format */
-    CSV("csv", (stream, fields, config, envelope) -> new PlainOutputWriter(fields, stream)),
+    CSV("csv", "", (stream, fields, config, envelope) -> new PlainOutputWriter(fields, stream)),
     /** Handles in JSON format */
-    JSON("json", (stream, fields, config, envelope) -> new JsonOutputWriter(fields, stream, envelope)),
+    JSON("json", "", (stream, fields, config, envelope) -> new JsonOutputWriter(fields, stream, envelope)),
     /** Handles in JSONL format */
-    JSONL("jsonl", (stream, fields, config, envelope) -> new JsonLinesOutputWriter(fields, stream, envelope)),
+    JSONL("jsonl", "", (stream, fields, config, envelope) -> new JsonLinesOutputWriter(fields, stream, envelope)),
     /** Handles Parquet format */
-    PARQUET("parquet", (stream, fields, config, envelope) -> new ParquetOutputWriter(fields, stream, config, envelope));
+    PARQUET("parquet", "", (stream, fields, config, envelope) -> new ParquetOutputWriter(fields, stream, config, envelope));
 
     /**
      * A list of supported format types for display.
@@ -57,6 +57,11 @@ public enum FormatType {
      */
     public final String name;
 
+    /**
+     * File name segment to be added into file names, may be an empty string.  Does not include separator.
+     */
+    final String fileNameSegment;
+
     /** The writer constructor for this type */
     private final WriterConstructor writerConstructor;
 
@@ -68,9 +73,14 @@ public enum FormatType {
      * @param writerConstructor
      *            the writer constructor for this type.
      */
-    FormatType(final String name, final WriterConstructor writerConstructor) {
+    FormatType(final String name, final String fileNameSegment, final WriterConstructor writerConstructor) {
         this.name = name;
+        this.fileNameSegment = fileNameSegment;
         this.writerConstructor = writerConstructor;
+    }
+
+    public String getFileNameSegment() {
+        return fileNameSegment;
     }
 
     /**

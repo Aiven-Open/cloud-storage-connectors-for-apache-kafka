@@ -13,6 +13,7 @@ import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.StorageRetryStrategy;
 import io.aiven.kafka.connect.common.NativeInfo;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.integration.sink.BucketAccessor;
 import io.aiven.kafka.connect.common.integration.sink.SinkStorage;
 import io.aiven.testcontainers.fakegcsserver.FakeGcsServerContainer;
@@ -47,26 +48,25 @@ public class GCSSinkStorage implements SinkStorage<String, Blob> {
                 .build().getService();
     }
 
-    @Override
-    public String getAvroBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression) {
-        throw new NotImplementedException();
+    String formatSegment(FormatType formatType) {
+        return StringUtils.isEmpty(formatType.getFileNameSegment()) ? "" : "."+formatType.getFileNameSegment();
     }
 
     @Override
-    public String getBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression) {
-        return String.format("%s%s-%d-%d%s", Objects.toString(prefix, ""), topicName, partition, startOffset, compression.extension());
+    public String getNativeKey(String prefix, String topicName, int partition, int startOffset, CompressionType compression, FormatType formatType) {
+        return String.format("%s%s-%d-%d%s%s", Objects.toString(prefix, ""), topicName, partition, startOffset, formatSegment(formatType), compression.extension());
     }
 
     @Override
-    public String getKeyBlobName(String prefix, String key, CompressionType compression) {
-        return String.format("%s%s%s", Objects.toString(prefix, ""), key, compression.extension());
+    public String getKeyNativeKey(String prefix, String key, CompressionType compression, FormatType formatType) {
+        return String.format("%s%s%s%s", Objects.toString(prefix, ""), key, formatSegment(formatType), compression.extension());
     }
 
     @Override
-    public String getTimestampBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression) {
+    public String getTimestampNativeKey(String prefix, String topicName, int partition, int startOffset, CompressionType compression, FormatType formatType) {
         final ZonedDateTime time = ZonedDateTime.now(ZoneId.of("UTC"));
-        return String.format("%s%s-%d-%d-%s%s", Objects.toString(prefix, ""), topicName, partition, startOffset,
-                time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), compression.extension());
+        return String.format("%s%s-%d-%d-%s%s%s", Objects.toString(prefix, ""), topicName, partition, startOffset,
+                time.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")), formatSegment(formatType), compression.extension());
     }
 
     @Override
