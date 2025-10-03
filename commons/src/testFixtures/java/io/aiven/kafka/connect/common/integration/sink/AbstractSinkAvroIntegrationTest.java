@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.function.Function;
@@ -57,6 +58,7 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
          * @param partition the partition
          */
         public Record(byte[] key, byte[] value, int partition) {
+            Objects.requireNonNull(value, "value must not be null");
             this.key = key;
             this.value = value;
             this.partition = partition;
@@ -88,8 +90,8 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
 
         @Override
         public int compareTo(Record o) {
-            int result = Arrays.compare(key, o.key);
-            return result == 0 ? Arrays.compare(value, o.value) : result;
+            int result = Arrays.compare(value, o.value);
+            return result == 0 ? Arrays.compare(key, o.key) : result;
         }
 
         @Override
@@ -104,7 +106,12 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
         }
         @Override
         public int hashCode() {
-            return key.hashCode();
+            return value.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Record(key=%s, value=%s, partition=%d)", key == null ? key : new Utf8(key), new Utf8(value), partition);
         }
     }
 
@@ -219,11 +226,12 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
         final AvroSerDe serializer = new AvroSerDe();
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.envelope", "false");
-        connectorConfig.put("format.output.fields", "key,value");
+        connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("format.output.type", FormatType.AVRO.name);
         createConnector(connectorConfig);
 
+        // write one record with old schema, one with new, and one with old again.  All written into partition 0
         List<Record> avroRecords = serializer.sendRecords(3, 1, Duration.ofSeconds(3), (i) -> {
                     // new schema every 3 records
                     boolean newSchema = (i % 2) == 1;
@@ -237,15 +245,15 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
                 }
         );
 
-
+        // since each record changes the schema each record should be in its own partition.
         final Map<K, Record> expectedBlobs = new HashMap<>();
         for (int i = 0; i < 3; i++)
         {
             Record record = avroRecords.get(i);
-            expectedBlobs.put(getNativeKey(record.getPartition(), 0, CompressionType.NONE, FormatType.AVRO), record);
+            expectedBlobs.put(getNativeKey(0, i, CompressionType.NONE, FormatType.AVRO), record);
         }
 
-        awaitAllBlobsWritten(expectedBlobs.keySet(), Duration.ofSeconds(45));
+        awaitAllBlobsWritten(Collections.singletonList(expectedBlobs.keySet().iterator().next()), Duration.ofSeconds(45));
 
         for (final K nativeKey : expectedBlobs.keySet()) {
             final List<Record> items = serializer.extractRecords(bucketAccessor.readBytes(nativeKey));
@@ -372,7 +380,13 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
     /// /        return super.getBaseBlobName(partition, startOffset) + ".avro";
     /// /    }
 
+    /**
+     * Methods to serialize and deserialze records from the sink storage.
+     */
     public final class AvroSerDe {
+        /**
+         * An Avro serializer instance to work with.
+         */
         private final KafkaAvroSerializer serializer;
 
         AvroSerDe() {
@@ -382,32 +396,55 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
             serializer.configure(serializerConfig, false);
         }
 
+        /**
+         * Creates and sends records with the default testing schema.
+         * Will wait for the records to be sent before returning.
+         * @param recordCount the number of records to send.
+         * @param timeLimit the time limit to wait for the records to be sent.
+         * @return a list of {@link Record} representing each record sent.
+         */
         private List<Record> sendRecords(final int recordCount, Duration timeLimit) {
             return sendRecords(recordCount, 4, timeLimit, AvroTestDataFixture::generateAvroRecord);
         }
 
+        /**
+         * Creates and sends records generated with the specified generator.
+         * Will wait for the records to be sent before returning.
+         * @param recordCount the number of records to send.
+         * @param partitionCount the number of partitions to split the records across.
+         * @param timeLimit the time limit to wait for the records to be sent.
+         * @param generator The function to convert the current record number to a GenericRecord to send.
+         * @return a list of {@link Record} representing each record sent.
+         */
         private List<Record> sendRecords(final int recordCount, final int partitionCount, Duration timeLimit, final Function<Integer, GenericRecord> generator) {
             final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
             final List<Record> result = new ArrayList<>();
             for (int cnt = 0; cnt < recordCount; cnt++) {
                 int partition = cnt % partitionCount;
                     final String key = "key-" + cnt;
-                    byte[] serializedValue = serializer.serialize(testTopic, generator.apply(cnt));
+                    GenericRecord value = generator.apply(cnt);
+                    byte[] serializedValue = serializer.serialize(testTopic, value);
                     byte[] serializedKey = key.getBytes(StandardCharsets.UTF_8);
                     sendFutures.add(sendMessageAsync(testTopic, partition, serializedKey, serializedValue));
-                    result.add(new Record(serializedKey, serializedValue, partition));
+                    result.add(new Record(value.hasField("key") ? serializedKey : null, serializedValue, partition));
             }
             awaitFutures(sendFutures, timeLimit);
             return result;
         }
 
+        /**
+         * Extract {@link Record} values from a blob of data read from the storage.
+         * @param blobBytes the bytes for the blob of data.
+         * @return a list of {@link Record} representing each record read from the blob.
+         * @throws IOException on error reading blob.
+         */
         private List<Record> extractRecords(byte[] blobBytes) throws IOException {
             List<Record> items = new ArrayList<>();
             try (SeekableInput sin = new SeekableByteArrayInput(blobBytes)) {
                 final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
                 try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
                     reader.forEach( genericRecord -> {
-                        byte[] key = ((ByteBuffer)genericRecord.get("key")).array();
+                        byte[] key = genericRecord.hasField("key") ? ((ByteBuffer)genericRecord.get("key")).array() : null;
                         byte[] value = ((ByteBuffer)genericRecord.get("value")).array();
                         items.add(new Record(key, value, -1));
                     });

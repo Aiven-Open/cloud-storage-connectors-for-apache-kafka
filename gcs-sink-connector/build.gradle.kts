@@ -145,7 +145,7 @@ dependencies {
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testinglibs.awaitility)
   integrationTestImplementation("io.aiven:testcontainers-fake-gcs-server:0.2.0")
-
+  integrationTestImplementation(logginglibs.slf4j.simple)
   integrationTestImplementation(apache.kafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
   integrationTestImplementation(confluent.kafka.connect.avro.converter) {

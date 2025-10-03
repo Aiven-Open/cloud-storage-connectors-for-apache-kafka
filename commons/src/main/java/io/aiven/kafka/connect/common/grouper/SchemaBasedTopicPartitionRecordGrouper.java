@@ -27,10 +27,13 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordGrouper {
 
     private final SchemaBasedRotator schemaBasedRotator = new SchemaBasedRotator();
+    private final static Logger LOG = LoggerFactory.getLogger(SchemaBasedTopicPartitionRecordGrouper.class);
 
     SchemaBasedTopicPartitionRecordGrouper(final Template filenameTemplate, final Integer maxRecordsPerFile,
             final TimestampSource tsSource) {
@@ -67,6 +70,7 @@ final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordG
             final var schemaChanged = !keyValueVersion.keySchema.equals(record.keySchema())
                     || !keyValueVersion.valueSchema.equals(record.valueSchema());
             if (schemaChanged) {
+                LOG.debug("Schema change detected for topic partition {}", topicPartition);
                 keyValueSchemas.put(topicPartition, new KeyValueSchema(record.keySchema(), record.valueSchema()));
             }
             return schemaChanged;
