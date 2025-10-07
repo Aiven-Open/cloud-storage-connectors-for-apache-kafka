@@ -27,8 +27,11 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class SchemaBasedTopicPartitionKeyRecordGrouper extends TopicPartitionKeyRecordGrouper {
+    private static final Logger LOG = LoggerFactory.getLogger(SchemaBasedTopicPartitionKeyRecordGrouper.class);
 
     private final SchemaBasedRotator schemaBasedRotator = new SchemaBasedRotator();
 
@@ -39,6 +42,7 @@ final class SchemaBasedTopicPartitionKeyRecordGrouper extends TopicPartitionKeyR
 
     @Override
     protected String resolveRecordKeyFor(final SinkRecord record) {
+        LOG.debug("resolveRecordKeyFor()");
         if (schemaBasedRotator.rotate(record)) {
             return generateNewRecordKey(record);
         } else {
@@ -53,7 +57,7 @@ final class SchemaBasedTopicPartitionKeyRecordGrouper extends TopicPartitionKeyR
     }
 
     private static final class SchemaBasedRotator implements Rotator<SinkRecord> {
-
+        private static final Logger LOG = LoggerFactory.getLogger(SchemaBasedRotator.class);
         private final Map<TopicPartitionKey, KeyValueSchema> keyValueSchemas = new HashMap<>();
 
         @Override
@@ -64,7 +68,8 @@ final class SchemaBasedTopicPartitionKeyRecordGrouper extends TopicPartitionKeyR
             final var key = recordKey(record);
             final var tpk = new TopicPartitionKey(new TopicPartition(record.topic(), record.kafkaPartition()), key);
             final var keyValueVersion = keyValueSchemas.computeIfAbsent(tpk,
-                    ignored -> new KeyValueSchema(record.keySchema(), record.valueSchema()));
+                    ignored -> {LOG.debug("Creating new KeyValueSchema"); return new KeyValueSchema(record.keySchema(), record.valueSchema());});
+
             final var schemaChanged = !keyValueVersion.keySchema.equals(record.keySchema())
                     || !keyValueVersion.valueSchema.equals(record.valueSchema());
             if (schemaChanged) {

@@ -33,8 +33,12 @@ import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TopicPartitionKeyRecordGrouper.class);
 
     private final Template filenameTemplate;
 
@@ -68,12 +72,13 @@ public class TopicPartitionKeyRecordGrouper implements RecordGrouper {
     public void put(final SinkRecord record) {
         Objects.requireNonNull(record, "record cannot be null");
         final String recordKey = resolveRecordKeyFor(record);
+        LOG.debug("put({}}", recordKey);
         fileBuffers.computeIfAbsent(recordKey, ignored -> new ArrayList<>()).add(record);
     }
 
     protected String resolveRecordKeyFor(final SinkRecord record) {
         final var key = recordKey(record);
-
+        LOG.debug("resolveRecordKeyFor(): {}", key);
         final TopicPartitionKey tpk = new TopicPartitionKey(new TopicPartition(record.topic(), record.kafkaPartition()),
                 key);
         final SinkRecord currentHeadRecord = currentHeadRecords.computeIfAbsent(tpk, ignored -> record);

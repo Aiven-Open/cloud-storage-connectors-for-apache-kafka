@@ -106,11 +106,13 @@ public final class GcsSinkTask extends SinkTask {
         for (final SinkRecord record : records) {
             recordGrouper.put(record);
         }
+        LOG.debug("Processed {} records into {} files", records.size(), recordGrouper.records().size());
     }
 
     @Override
     public void flush(final Map<TopicPartition, OffsetAndMetadata> currentOffsets) {
         try {
+            LOG.debug("Flushing {} files", recordGrouper.records().size());
             recordGrouper.records().forEach(this::flushFile);
         } finally {
             recordGrouper.clear();

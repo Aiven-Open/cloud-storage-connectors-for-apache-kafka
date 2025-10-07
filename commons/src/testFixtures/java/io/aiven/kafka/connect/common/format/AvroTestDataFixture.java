@@ -197,6 +197,9 @@ public final class AvroTestDataFixture {
         final GenericRecord avroRecord = new GenericData.Record(schema);
         avroRecord.put("message", "Hello, from Avro Test Data Fixture! object " + messageId);
         avroRecord.put("id", messageId);
+        if (schema.getField("age") != null) {
+            avroRecord.put("age", messageId);
+        }
         return avroRecord;
     }
 

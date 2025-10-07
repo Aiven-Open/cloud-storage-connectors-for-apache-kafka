@@ -13,9 +13,11 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.apache.kafka.common.serialization.StringSerializer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +39,7 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N> extends AbstractSinkIntegrationBase<K> {
+public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N> extends AbstractSinkIntegrationBase<K, String, GenericRecord> {
 
     public enum AvroCodec { NULL, DEFLATE, BZIP2, SNAPPY, XZ, ZSTANDARD};
 
@@ -115,6 +117,24 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
         }
     }
 
+    @Override
+    protected Map<String, String> basicConnectorConfig() {
+        final Map<String, String> config = super.basicConnectorConfig();
+        config.put("format.output.type", FormatType.AVRO.name);
+        return config;
+    }
+
+    @Override
+    protected final Map<String, Object> getProducerConfig() {
+        Map<String, Object> props = new HashMap<>();
+        props.put("schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class.getName());
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                KafkaAvroSerializer.class.getName());
+        return props;
+    }
+
     @Test
     void avroOutput() throws IOException {
         final AvroSerDe serializer = new AvroSerDe();
@@ -122,7 +142,6 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("file.compression.type", compressionType.name);
-        connectorConfig.put("format.output.type", FormatType.AVRO.name);
         createConnector(connectorConfig);
 
         List<Record> avroRecords = serializer.sendRecords(40, Duration.ofSeconds(45));
@@ -228,7 +247,6 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
         connectorConfig.put("format.output.envelope", "false");
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("format.output.type", FormatType.AVRO.name);
         createConnector(connectorConfig);
 
         // write one record with old schema, one with new, and one with old again.  All written into partition 0
@@ -246,18 +264,21 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
         );
 
         // since each record changes the schema each record should be in its own partition.
-        final Map<K, Record> expectedBlobs = new HashMap<>();
+        final Map<K, List<Record>> expectedBlobs = new HashMap<>();
         for (int i = 0; i < 3; i++)
         {
             Record record = avroRecords.get(i);
-            expectedBlobs.put(getNativeKey(0, i, CompressionType.NONE, FormatType.AVRO), record);
+            record = new Record(null, record.value, record.partition);
+            int startOffset = i > 0 ? 1 : 0;
+            expectedBlobs.compute(getNativeKey(record.getPartition(), startOffset, CompressionType.NONE, FormatType.AVRO), (k, v) -> v == null ? new ArrayList<>() : v)
+                    .add(record);
         }
 
-        awaitAllBlobsWritten(Collections.singletonList(expectedBlobs.keySet().iterator().next()), Duration.ofSeconds(45));
+        awaitAllBlobsWritten(expectedBlobs.keySet(), Duration.ofSeconds(45));
 
         for (final K nativeKey : expectedBlobs.keySet()) {
             final List<Record> items = serializer.extractRecords(bucketAccessor.readBytes(nativeKey));
-            assertThat(items).containsExactlyInAnyOrderElementsOf(Collections.singletonList(expectedBlobs.get(nativeKey)));
+            assertThat(items).containsExactlyInAnyOrderElementsOf(expectedBlobs.get(nativeKey));
         }
     }
 
@@ -384,10 +405,8 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
      * Methods to serialize and deserialze records from the sink storage.
      */
     public final class AvroSerDe {
-        /**
-         * An Avro serializer instance to work with.
-         */
-        private final KafkaAvroSerializer serializer;
+
+        KafkaAvroSerializer serializer;
 
         AvroSerDe() {
             Map<String, String> serializerConfig = new HashMap<>();
@@ -425,8 +444,8 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
                     GenericRecord value = generator.apply(cnt);
                     byte[] serializedValue = serializer.serialize(testTopic, value);
                     byte[] serializedKey = key.getBytes(StandardCharsets.UTF_8);
-                    sendFutures.add(sendMessageAsync(testTopic, partition, serializedKey, serializedValue));
-                    result.add(new Record(value.hasField("key") ? serializedKey : null, serializedValue, partition));
+                    sendFutures.add(sendMessageAsync(testTopic, partition, key, value));
+                    result.add(new Record(serializedKey, serializedValue, partition));
             }
             awaitFutures(sendFutures, timeLimit);
             return result;

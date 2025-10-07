@@ -32,6 +32,8 @@ import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link RecordGrouper} that groups records by topic and partition.
@@ -44,6 +46,7 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
  * The class supports limited and unlimited number of records in files.
  */
 class TopicPartitionRecordGrouper implements RecordGrouper {
+    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     private final Template filenameTemplate;
 
@@ -87,6 +90,7 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
     public void put(final SinkRecord record) {
         Objects.requireNonNull(record, "record cannot be null");
         final String recordKey = resolveRecordKeyFor(record);
+        LOG.debug("{} key is {}", record.kafkaOffset(), recordKey);
         fileBuffers.computeIfAbsent(recordKey, ignored -> new ArrayList<>()).add(record);
     }
 

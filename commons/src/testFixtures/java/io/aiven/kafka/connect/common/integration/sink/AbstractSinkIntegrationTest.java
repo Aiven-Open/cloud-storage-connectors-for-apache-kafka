@@ -18,7 +18,10 @@ package io.aiven.kafka.connect.common.integration.sink;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FormatType;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.Disabled;
@@ -40,11 +43,21 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>> extends AbstractSinkIntegrationBase<K> {
+public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>> extends AbstractSinkIntegrationBase<K, String, byte[]> {
 
     private static final String VALUE_KEY_JSON_FMT = "{\"value\":%s,\"key\":%s}";
     protected final String quoted(String s) {
         return "\"" + s + "\"";
+    }
+
+    @Override
+    protected final Map<String, Object> getProducerConfig() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class.getName());
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                ByteArraySerializer.class.getName());
+        return props;
     }
 
     @ParameterizedTest
@@ -66,7 +79,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>> exten
                 final String value = "value-" + cnt;
                 cnt += 1;
 
-                sendFutures.add(sendMessageAsync(testTopic, partition, key.getBytes(StandardCharsets.UTF_8),
+                sendFutures.add(sendMessageAsync(testTopic, partition, key,
                         value.getBytes(StandardCharsets.UTF_8)));
                 K objectKey = getNativeKey(partition, 0, compression, formatType);
                 expectedBlobsAndContent.compute(objectKey, (k, v) -> v == null ? new ArrayList<>() : v).add(String.format("%s,%s", key, value));
@@ -100,15 +113,15 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>> exten
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
 
-        sendFutures.add(sendMessageAsync(testTopic, 0, "key-0".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 0, "key-0",
                 "value-0".getBytes(StandardCharsets.UTF_8)));
-        sendFutures.add(sendMessageAsync(testTopic, 0, "key-1".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 0, "key-1",
                 "value-1".getBytes(StandardCharsets.UTF_8)));
-        sendFutures.add(sendMessageAsync(testTopic, 0, "key-2".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 0, "key-2",
                 "value-2".getBytes(StandardCharsets.UTF_8)));
-        sendFutures.add(sendMessageAsync(testTopic, 1, "key-3".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 1, "key-3",
                 "value-3".getBytes(StandardCharsets.UTF_8)));
-        sendFutures.add(sendMessageAsync(testTopic, 3, "key-4".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 3, "key-4",
                 "value-4".getBytes(StandardCharsets.UTF_8)));
 
         awaitFutures(sendFutures, Duration.ofSeconds(2));
@@ -145,15 +158,15 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>> exten
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
 
-        sendFutures.add(sendMessageAsync(testTopic, 0, "key-0".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 0, "key-0",
                 "value-0".getBytes(StandardCharsets.UTF_8)));
-        sendFutures.add(sendMessageAsync(testTopic, 0, "key-1".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 0, "key-1",
                 "value-1".getBytes(StandardCharsets.UTF_8)));
-        sendFutures.add(sendMessageAsync(testTopic, 0, "key-2".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 0, "key-2",
                 "value-2".getBytes(StandardCharsets.UTF_8)));
-        sendFutures.add(sendMessageAsync(testTopic, 1, "key-3".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 1, "key-3",
                 "value-3".getBytes(StandardCharsets.UTF_8)));
-        sendFutures.add(sendMessageAsync(testTopic, 3, "key-4".getBytes(StandardCharsets.UTF_8),
+        sendFutures.add(sendMessageAsync(testTopic, 3, "key-4",
                 "value-4".getBytes(StandardCharsets.UTF_8)));
 
         awaitFutures(sendFutures, Duration.ofSeconds(2));
@@ -200,7 +213,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>> exten
                     final String value = "value-" + cnt;
                     cnt += 1;
                     final byte[] keyBytes = key == null ? null : key.getBytes(StandardCharsets.UTF_8);
-                    sendFutures.add(sendMessageAsync(entry.getKey().topic(), entry.getKey().partition(), keyBytes,
+                    sendFutures.add(sendMessageAsync(entry.getKey().topic(), entry.getKey().partition(), key,
                             value.getBytes(StandardCharsets.UTF_8)));
                     expectedBlobs.put(getNativeKeyForKey(keyBytes, compressionType, formatType), Pair.of(keyBytes, String.format("%s,%s",key, value)));
                     lastValuePerKey.put(key, value);
@@ -250,7 +263,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>> exten
                 final String value = String.format("[{\"name\":\"user-%s\"}]", cnt);
                 cnt += 1;
 
-                sendFutures.add(sendMessageAsync(testTopic, partition, key.getBytes(StandardCharsets.UTF_8),
+                sendFutures.add(sendMessageAsync(testTopic, partition, key,
                         value.getBytes(StandardCharsets.UTF_8)));
                 expectedBlobsAndContent.computeIfAbsent(getNativeKey(partition, 0, compressionType, contentType), k -> new ArrayList<>())
                         .add(String.format(VALUE_KEY_JSON_FMT, value, quoted(key)));
@@ -299,7 +312,7 @@ public abstract class AbstractSinkIntegrationTest<K extends Comparable<K>> exten
                 final String key = "key-" + cnt;
                 final String value = "[{" + "\"name\":\"user-" + cnt + "\"}]";
 
-                sendFutures.add(sendMessageAsync(testTopic, partition, key.getBytes(StandardCharsets.UTF_8),
+                sendFutures.add(sendMessageAsync(testTopic, partition, key,
                         value.getBytes(StandardCharsets.UTF_8)));
                 expectedBlobsAndContent.computeIfAbsent(getNativeKey(partition, 0, compressionType, contentType), k -> new ArrayList<>())
                         .add(String.format(VALUE_KEY_JSON_FMT, value, quoted(key)) + ",");

@@ -29,6 +29,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.connect.runtime.WorkerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
@@ -55,12 +56,13 @@ import static org.awaitility.Awaitility.await;
  *
  * @param <K>
  *            the native key type.
- * @param <N>
- *            the native object type
+ * @param <I>
+ *            the kafka producer index type
+ * @param <V> the kafka producer value type.
  */
 @SuppressWarnings({ "PMD.TestClassWithoutTestCases" })
 @Testcontainers
-public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>> extends KafkaIntegrationTestBase {
+public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>, I, V> extends KafkaIntegrationTestBase {
 
     private KafkaManager kafkaManager;
 
@@ -76,7 +78,7 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>> exten
 
     protected SinkStorage<K, ?> sinkStorage;
 
-    protected KafkaProducer<byte[], byte[]> producer;
+    protected KafkaProducer<I, V> producer;
 
     /**
      * Gets the SinkStorage implementation for these tests.
@@ -114,6 +116,7 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>> exten
         config.put("connector.class", getSinkStorage().getConnectorClass().getName());
         config.put("tasks.max", "1");
         config.put("topics", testTopic);
+        config.put(WorkerConfig.OFFSET_COMMIT_INTERVAL_MS_CONFIG, Long.toString(OFFSET_FLUSH_INTERVAL_MS));
         if (prefix != null) {
             config.put("file.name.prefix", prefix);
         }
@@ -128,8 +131,8 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>> exten
      * @param value the value for the message.
      * @return A future that will return the {@link RecordMetadata} for the message.
      */
-    protected Future<RecordMetadata> sendMessageAsync(final String topicName, final int partition, final byte[] key, final byte[] value) {
-        final ProducerRecord<byte[], byte[]> msg = new ProducerRecord<>(topicName, partition, key, value);
+    protected Future<RecordMetadata> sendMessageAsync(final String topicName, final int partition, final I key, final V value) {
+        final ProducerRecord<I, V> msg = new ProducerRecord<>(topicName, partition, key, value);
         return producer.send(msg);
     }
 
@@ -166,10 +169,10 @@ public abstract class AbstractSinkIntegrationBase<K extends Comparable<K>> exten
         kafkaManager.configureConnector(connectorConfig.get("name"), connectorConfig);
     }
 
-    private KafkaProducer<byte[], byte[]> createProducer() {
-        final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
-        producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
+    protected abstract Map<String, Object> getProducerConfig();
+
+    private KafkaProducer<I, V> createProducer() {
+        final Map<String, Object> producerProps = getProducerConfig();
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
         return new KafkaProducer<>(producerProps);
     }
