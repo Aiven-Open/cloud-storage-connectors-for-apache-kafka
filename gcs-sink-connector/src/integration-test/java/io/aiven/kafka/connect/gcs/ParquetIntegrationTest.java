@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
@@ -54,7 +55,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
     void setUp() throws ExecutionException, InterruptedException {
         testBucketAccessor.clear(gcsPrefix);
         final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getKafkaManager().bootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "org.apache.kafka.common.serialization.ByteArraySerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
@@ -70,7 +71,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         int cnt = 0;
@@ -96,7 +97,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.put(blobName, records);
         }
@@ -125,7 +126,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         int cnt = 0;
@@ -151,7 +152,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.put(blobName, records);
         }
@@ -183,7 +184,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
         final var jsonMessagePattern = "{\"schema\": %s, \"payload\": %s}";
@@ -214,7 +215,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.put(blobName, records);
         }
@@ -239,7 +240,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
         final var jsonMessageNewSchema = "{\"type\":\"struct\",\"fields\":"
@@ -282,7 +283,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
         final var blobContents = new ArrayList<String>();
         for (final String blobName : expectedBlobs) {
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.addAll(records.stream().map(GenericRecord::toString).collect(Collectors.toList()));
         }
