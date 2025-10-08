@@ -55,7 +55,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
 @Testcontainers
-@Disabled
 final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-avro";
 

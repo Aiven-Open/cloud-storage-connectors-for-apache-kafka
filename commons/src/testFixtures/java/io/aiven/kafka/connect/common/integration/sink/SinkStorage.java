@@ -38,7 +38,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
  */
 public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, N> {
 
-
     /**
      * Get the native key for a standard blob.
      *
