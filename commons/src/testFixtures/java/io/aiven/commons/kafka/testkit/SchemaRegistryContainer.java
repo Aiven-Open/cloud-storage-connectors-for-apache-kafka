@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.s3.source;
+package io.aiven.commons.kafka.testkit;
 
 import java.time.Duration;
 
@@ -22,13 +22,31 @@ import com.github.dockerjava.api.model.Ulimit;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
+/**
+ * A container for the schema registry.
+ */
 public final class SchemaRegistryContainer extends GenericContainer<SchemaRegistryContainer> {
+    /** The schema registry local port */
     public static final int SCHEMA_REGISTRY_PORT = 8081;
 
+    /**
+     * Constructs the container with the default version of 4.1.0
+     *
+     * @param bootstrapServer
+     *            the url of the kafka bootstrap server.
+     */
     public SchemaRegistryContainer(final String bootstrapServer) {
         this("4.1.0", bootstrapServer);
     }
 
+    /**
+     * Constructs the container.
+     *
+     * @param karapaceVersion
+     *            the version of karapace to run.
+     * @param bootstrapServer
+     *            the url of the kafka bootstrap server.
+     */
     public SchemaRegistryContainer(final String karapaceVersion, final String bootstrapServer) {
         super("ghcr.io/aiven-open/karapace:" + karapaceVersion);
         withAccessToHost(true);
@@ -47,7 +65,8 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
         withExposedPorts(SCHEMA_REGISTRY_PORT);
         withCommand("/bin/bash", "/opt/karapace/start.sh", "registry");
 
-        // When started, check any API to see if the service is ready, which also indicates that it is connected to the
+        // When started, check any API to see if the service is ready, which also
+        // indicates that it is connected to the
         // Kafka bootstrap server.
         waitingFor(Wait.forHttp("/_health")
                 .forPort(8081)
@@ -58,6 +77,11 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
                 cmd -> cmd.getHostConfig().withUlimits(new Ulimit[] { new Ulimit("nofile", 30_000L, 30_000L) }));
     }
 
+    /**
+     * Get the schema registry URL for this container.
+     *
+     * @return the schema registry URL as a string.
+     */
     public String getSchemaRegistryUrl() {
         return String.format("http://%s:%s", getHost(), getMappedPort(SCHEMA_REGISTRY_PORT));
 

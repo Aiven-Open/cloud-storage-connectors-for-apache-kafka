@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
+
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
@@ -40,7 +42,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
@@ -48,19 +49,16 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-parquet";
 
-    @Container
-    private final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(KAFKA);
-
     @BeforeEach
     void setUp() throws ExecutionException, InterruptedException {
         testBucketAccessor.clear(gcsPrefix);
         final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getKafkaManager().bootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        producerProps.put("schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
+        producerProps.put("schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
         startConnectRunner(producerProps);
     }
 
@@ -70,7 +68,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         connectorConfig.put("format.output.fields", "key,value,offset,timestamp,headers");
         connectorConfig.put("format.output.fields.value.encoding", "none");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -109,7 +107,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.put(blobName, records);
         }
@@ -138,7 +136,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -177,7 +175,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.put(blobName, records);
         }
@@ -202,7 +200,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -268,7 +266,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
         final var blobContents = new ArrayList<String>();
         for (final String blobName : expectedBlobs) {
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.addAll(records.stream().map(r -> r.get("value").toString()).collect(Collectors.toList()));
         }
@@ -280,9 +278,9 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         config.put("name", CONNECTOR_NAME);
         config.put("connector.class", GcsSinkConnector.class.getName());
         config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("key.converter.schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
+        config.put("key.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
         config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("value.converter.schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
+        config.put("value.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
         config.put("tasks.max", "1");
         if (gcsCredentialsPath != null) {
             config.put("gcs.credentials.path", gcsCredentialsPath);
