@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
@@ -133,7 +134,7 @@ public final class AvroTestDataFixture {
      * @return A byte array containing the specified number of records.
      */
     public static List<GenericRecord> generateAvroRecords(final int numRecs,
-            final Function<Integer, GenericRecord> recordCreator) {
+            final IntFunction<GenericRecord> recordCreator) {
         return generateAvroRecords(0, numRecs, recordCreator);
     }
 
@@ -159,11 +160,12 @@ public final class AvroTestDataFixture {
      *            the messageId to start with.
      * @param numOfRecs
      *            the number of records to write.
+     * @param recordCreator The creator of the generic records
      * @return A byte array containing the specified number of records.
      */
     @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
     public static List<GenericRecord> generateAvroRecords(final int messageId, final int numOfRecs,
-            final Function<Integer, GenericRecord> recordCreator) {
+            final IntFunction<GenericRecord> recordCreator) {
         // Create Avro records
         final List<GenericRecord> avroRecords = new ArrayList<>();
         final int limit = messageId + numOfRecs;

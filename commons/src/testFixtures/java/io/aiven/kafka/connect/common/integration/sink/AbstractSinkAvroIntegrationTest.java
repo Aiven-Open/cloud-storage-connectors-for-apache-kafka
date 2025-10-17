@@ -35,8 +35,11 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N> extends AbstractSinkIntegrationBase<K, String, GenericRecord> {
+public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N> extends AbstractSinkGenericRecordIntegrationTest<K, N> {
 
+    protected AbstractSinkAvroIntegrationTest() {
+        super(FormatType.AVRO);
+    }
 //    public enum AvroCodec { NULL, DEFLATE, BZIP2, SNAPPY, XZ, ZSTANDARD};
 
     /**
@@ -112,27 +115,27 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
         }
     }
 
-    @Override
-    protected Map<String, String> basicConnectorConfig() {
-        final Map<String, String> config = super.basicConnectorConfig();
-        config.put("format.output.type", FormatType.AVRO.name);
-        config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("key.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("value.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        return config;
-    }
+//    @Override
+//    protected Map<String, String> basicConnectorConfig() {
+//        final Map<String, String> config = super.basicConnectorConfig();
+//        config.put("format.output.type", FormatType.AVRO.name);
+//        config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
+//        config.put("key.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
+//        config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+//        config.put("value.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
+//        return config;
+//    }
 
-    @Override
-    protected final Map<String, Object> getProducerConfig() {
-        Map<String, Object> props = new HashMap<>();
-        props.put("schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-                KafkaAvroSerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-                KafkaAvroSerializer.class.getName());
-        return props;
-    }
+//    @Override
+//    protected final Map<String, Object> getProducerConfig() {
+//        Map<String, Object> props = new HashMap<>();
+//        props.put("schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
+//        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+//                KafkaAvroSerializer.class.getName());
+//        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+//                KafkaAvroSerializer.class.getName());
+//        return props;
+//    }
 
     @Test
     void avroOutput() throws IOException {

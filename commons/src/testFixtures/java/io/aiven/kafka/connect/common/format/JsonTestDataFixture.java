@@ -39,17 +39,30 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
  */
 final public class JsonTestDataFixture {
 
+
     private final static String MSG_FORMAT = "{\"id\" : %s, \"message\" : \"%s\", \"value\" : \"value%s\"}%n";
 
+    /**
+     * A schema with fields {@code id} of type {@code int32} and {@code message} of type {@code string}.
+     */
     public static final String SCHEMA_JSON = "{\n  \"type\": \"struct\", \"name\": \"TestRecord\",\n "
             + "  \"fields\": [\n {\"field\": \"message\", \"type\": \"string\"},\n"
             + "    {\"field\": \"id\", \"type\": \"int32\"}\n  ]\n}";
+
 
     public static final String CONNECT_EXTRA_SCHEMA_JSON = "{\n  \"type\": \"struct\",\n  \"name\": \"TestRecord\",\n"
             + "  \"fields\": [\n    {\"name\": \"message\", \"type\": \"string\"},\n"
             + "    {\"name\": \"id\", \"type\": \"int32\"}\n  ],\n"
             + "    \"connect.version\":1, \"connect.name\": \"TestRecord\"}\n";
 
+    /**
+     * message format for the {@link #EVOLVED_SCHEMA_JSON} with an added "value" field.
+     */
+    private final static String EVOLVED_MSG_FORMAT = "{\"id\" : %s, \"message\" : \"%s\", \"value\" : \"value%s\", \"age\" : %s}%n";
+
+    /**
+     * A schema with fields from {@link #SCHEMA_JSON} and added field of {@code age} of type {@code int32} and default of {@code 0}.
+     */
     public static final String EVOLVED_SCHEMA_JSON = "{\n  \"type\": \"struct\",\n  \"name\": \"TestRecord\",\n"
             + "  \"fields\": [\n    {\"field\": \"message\", \"type\": \"string\"},\n"
             + "    {\"field\": \"id\", \"type\": \"int32\"},\n"
@@ -83,7 +96,9 @@ final public class JsonTestDataFixture {
     }
 
     /**
-     * Generates a single JSON record
+     * Generates a single JSON record with the structure
+     * {@code {"id":[messageId], "message":"[msg]", "value":"value[messagId]"}\n}.
+     * The produced record has the "value" field that is not included in the schema.
      *
      * @param messageId
      *            the id for the record
@@ -93,6 +108,21 @@ final public class JsonTestDataFixture {
      */
     public static String generateJsonRec(final int messageId, final String msg) {
         return String.format(MSG_FORMAT, messageId, msg, messageId);
+    }
+
+    /**
+     * Generates a single evolved JSON record with the structure
+     * {@code {"id":[messageId], "message":"[msg]", "value":"value[messageId]", "age":[messageId]*10}\n}.
+     * The produced record has the "value" field that is not included in the schema.
+     *
+     * @param messageId
+     *            the id for the record
+     * @param msg
+     *            the message for the record
+     * @return a standard JSON test record.
+     */
+    public static String generateEvolvedJsonRec(final int messageId, final String msg) {
+        return String.format(EVOLVED_MSG_FORMAT, messageId, msg, messageId, messageId * 10);
     }
 
     /**

@@ -19,9 +19,11 @@ package io.aiven.kafka.connect.common.format;
 import static org.apache.kafka.connect.data.Schema.INT32_SCHEMA;
 import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
@@ -30,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.avro.generic.GenericData;
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -94,6 +97,33 @@ public final class ParquetTestDataFixture {
     private ParquetTestDataFixture() {
         // do not instantiate
     }
+
+    /**
+     * Generate an avro record with the specified message id using the specified schema
+     *
+     * @param messageId
+     *            the message id.
+     * @param schema
+     *            the schaema to use.
+     * @return a GenericRecord with the specified data and schema.
+     */
+    public static Struct generateParquetRecord(final int messageId) {
+        return generateParquetRecord(messageId, "name-", messageId);
+    }
+
+    /**
+     * Generate an avro record with the specified message id using the specified schema
+     *
+     * @param messageId
+     *            the message id.
+     * @param name the name prefix.  Final value will be {@code }name+messageId}.
+     * @param age the age value
+     * @return a GenericRecord with the specified data and schema.
+     */
+    public static Struct generateParquetRecord(final int messageId, final String name, final int age) {
+        return new Struct(PARQUET_SCHEMA).put("name", name + messageId).put("age", age).put("email", name + "@test");
+    }
+
     /**
      * Generate the specified number of parquet records in a byte array.
      *
@@ -112,8 +142,7 @@ public final class ParquetTestDataFixture {
         final List<Struct> allParquetRecords = new ArrayList<>();
         // Write records to the Parquet file
         for (int i = 0; i < numOfRecords; i++) {
-            allParquetRecords
-                    .add(new Struct(PARQUET_SCHEMA).put("name", name + i).put("age", 30).put("email", name + "@test"));
+            allParquetRecords.add(generateParquetRecord(i, name, 30));
         }
 
         // Create a Parquet writer
