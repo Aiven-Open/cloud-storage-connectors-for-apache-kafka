@@ -89,7 +89,9 @@ public abstract class AbstractSourceTask extends SourceTask {
     /**
      * The Backoff implementation that executes the delay in the poll loop.
      */
-    private final Backoff backoff;
+    private final Backoff iteratorBackoff;
+
+    private final Backoff pollBackoff;
 
     private final BackoffConfig backoffConfig;
 
@@ -122,15 +124,16 @@ public abstract class AbstractSourceTask extends SourceTask {
                 return false;
             }
         };
-        backoff = new Backoff(backoffConfig);
+        iteratorBackoff = new Backoff(backoffConfig);
+        pollBackoff = new Backoff(backoffConfig);
         implemtationPollingThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
                     while (stillPolling()) {
                         if (!tryAdd()) {
-                            logger.debug("Attempting {}", backoff);
-                            backoff.cleanDelay();
+                            logger.debug("Attempting {}", iteratorBackoff);
+                            iteratorBackoff.cleanDelay();
                         }
                     }
                 } catch (InterruptedException e) {
@@ -139,6 +142,7 @@ public abstract class AbstractSourceTask extends SourceTask {
                     logger.error("{} failed -- EXITING", this.toString(), e);
                 }
                 logger.info("{} finished", this.toString());
+
             }
         }, this.getClass().getName() + " polling thread");
     }
@@ -185,7 +189,7 @@ public abstract class AbstractSourceTask extends SourceTask {
     private boolean tryAdd() throws InterruptedException {
         if (queue.remainingCapacity() > 0) {
             if (sourceRecordIterator.hasNext()) {
-                backoff.reset();
+                iteratorBackoff.reset();
                 final SourceRecord sourceRecord = sourceRecordIterator.next();
                 if (logger.isDebugEnabled()) {
                     logger.debug("tryAdd() : read record {}", sourceRecord.sourceOffset());
@@ -217,17 +221,29 @@ public abstract class AbstractSourceTask extends SourceTask {
         if (stillPolling()) {
             List<SourceRecord> results = new ArrayList<>(maxPollRecords);
             results = 0 == queue.drainTo(results, maxPollRecords) ? NULL_RESULT : results;
-            if (logger.isDebugEnabled()) {
-                logger.debug("Poll() returning {} SourceRecords.", results == null ? null : results.size());
-            }
+            updatePollBackOff(results);
+
             if (results == null && !implemtationPollingThread.isAlive()) {
                 throw new ConnectException(implemtationPollingThread.getName() + " has died");
             }
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("Poll() returning {} SourceRecords.", results == null ? null : results.size());
+            }
+
             return results;
         } else {
             logger.info("Stopping");
             closeResources();
             return NULL_RESULT;
+        }
+    }
+
+    private void updatePollBackOff(final List<SourceRecord> results) {
+        if (results == NULL_RESULT) {
+            pollBackoff.cleanDelay();
+        } else {
+            pollBackoff.reset();
         }
     }
 

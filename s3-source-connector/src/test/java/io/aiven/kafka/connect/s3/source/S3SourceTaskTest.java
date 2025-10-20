@@ -67,7 +67,7 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 final class S3SourceTaskTest {
 
     /** The default timeout when polling for records */
-    private static final Duration TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration TIMEOUT = Duration.ofSeconds(5);
     /**
      * The default polling interval.
      */
