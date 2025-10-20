@@ -2,7 +2,7 @@
 
 This is a source Apache Kafka Connect connector that takes stored AWS S3 bucket objects and places them onto an Apache Kafka topic.
 
-The connector class name is: `io.aiven.kafka.connect.s3.S3SourceConnector`.
+The connector class name is: `io.aiven.kafka.connect.s3.source.S3SourceConnector`.
 
 
 **Table of Contents**
