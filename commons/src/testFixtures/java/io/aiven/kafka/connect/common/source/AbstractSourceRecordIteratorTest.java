@@ -21,6 +21,8 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -333,6 +335,37 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
 
         // check complete
         assertThat(iterator).isExhausted();
+    }
+
+    /**
+     * Check to make sure that the native start key is used in the setup of the AbstractSourceRecordIterator if set
+     *
+     * @param key
+     *            The key to start iterating from
+     * @param numberOfInvocations
+     *            The number of invocations for the piece of config
+     */
+    @ParameterizedTest
+    @MethodSource("parameterizedNativeStartKey")
+    void testNativeStartKeyConfiguration(final String key, final int numberOfInvocations) {
+
+        createClientMutator().build();
+        final Transformer transformer = TransformerFactory.getTransformer(InputFormat.BYTES);
+        final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
+        when(config.getTransformerMaxBufferSize()).thenReturn(4096);
+        when(config.getInputFormat()).thenReturn(InputFormat.BYTES);
+        when(config.getNativeStartKey()).thenReturn(key);
+
+        final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
+                transformer);
+
+        iterator.hasNext();
+        verify(config, times(numberOfInvocations)).getNativeStartKey();
+
+    }
+
+    static List<Arguments> parameterizedNativeStartKey() {
+        return List.of(Arguments.of("startKeyOne", 2), Arguments.of("startKeyOne", 2), Arguments.of(null, 1));
     }
 
     /**
