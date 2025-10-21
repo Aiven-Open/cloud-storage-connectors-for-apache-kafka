@@ -132,7 +132,7 @@ public abstract class AbstractSourceTask extends SourceTask {
                 try {
                     while (stillPolling()) {
                         if (!tryAdd()) {
-                            logger.debug("Attempting {}", iteratorBackoff);
+                            logger.debug("Iterator attempting {}", iteratorBackoff);
                             iteratorBackoff.cleanDelay();
                         }
                     }

@@ -21,10 +21,30 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.source.SourceRecord;
+
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.config.TransformerFragment;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.apache.commons.lang3.time.StopWatch;
+import org.assertj.core.api.Assertions;
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.slf4j.LoggerFactory;
 
 class AbstractSourceTaskTest {
 
@@ -155,5 +175,88 @@ class AbstractSourceTaskTest {
             expected *= 2;
         }
         assertThat(backoff.estimatedDelay()).isEqualTo(maxDelay);
+    }
+
+    @Test
+    public void checkBackOffIsTriggeredInTask() {
+        final Logger taskLogger = (Logger) LoggerFactory.getLogger(AbstractSourceTask.class);
+        ListAppender<ILoggingEvent> loggerAppender = new ListAppender<>();
+        loggerAppender.start();
+        taskLogger.addAppender(loggerAppender);
+        try {
+            AbstractSourceTask task = new TestSourceTask(taskLogger);
+            Map<String, String> props = new HashMap<>();
+
+            CommonConfigFragment.setter(props).taskId(0);
+            SourceConfigFragment.setter(props).targetTopic("targetTopic").maxPollRecords(50);
+            FileNameFragment.setter(props).template("any-old-file");
+
+            task.start(props);
+
+            wait(12);
+
+            task.stop();
+        } catch (Exception ex) {
+            taskLogger.error("Interrupted exception: ", ex);
+        }
+
+        Assertions.assertThat(loggerAppender.list)
+                .extracting(ILoggingEvent::getFormattedMessage, ILoggingEvent::getLevel)
+                .contains(Tuple.tuple("Iterator attempting Backoff 0/12, 5000 milliseconds remaining.", Level.DEBUG),
+                        Tuple.tuple("No records found in tryAdd call", Level.INFO));
+
+    }
+
+    static class TestSourceTask extends AbstractSourceTask {
+
+        protected TestSourceTask(org.slf4j.Logger logger) {
+            super(logger);
+        }
+
+        @Override
+        public String version() {
+            // Not required for current level of testing
+            throw new UnsupportedOperationException("Unimplemented method 'version'");
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        protected Iterator<SourceRecord> getIterator(BackoffConfig config) {
+            Iterator<SourceRecord> iterator = Mockito.mock(Iterator.class);
+            return iterator;
+        }
+
+        @Override
+        protected SourceCommonConfig configure(Map<String, String> props) {
+
+            return new SourceCommonConfigTest(props);
+        }
+
+        @Override
+        protected void closeResources() {
+            // Not required for current level of testing
+            throw new UnsupportedOperationException("Unimplemented method 'closeResources'");
+        }
+
+    }
+
+    private static class SourceCommonConfigTest extends SourceCommonConfig {
+
+        public SourceCommonConfigTest(Map<?, ?> originals) {
+            super(configDef(), originals);
+        }
+
+        public SourceCommonConfigTest(ConfigDef definition, Map<?, ?> originals) {
+            super(definition, originals);
+        }
+
+        public static ConfigDef configDef() {
+            final var configDef = new ConfigDef();
+            SourceConfigFragment.update(configDef);
+            TransformerFragment.update(configDef);
+            FileNameFragment.update(configDef);
+            return configDef;
+        }
+
     }
 }

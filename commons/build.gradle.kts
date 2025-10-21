@@ -175,7 +175,7 @@ dependencies {
   testImplementation(confluent.kafka.connect.avro.converter)
 
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
-  testRuntimeOnly(logginglibs.logback.classic)
+  testImplementation(logginglibs.logback.classic)
 }
 
 tasks.withType<Jar> { archiveBaseName.set(project.name + "-for-apache-kafka-connect") }
