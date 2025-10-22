@@ -7,6 +7,7 @@ import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
 
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 
+import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableByteArrayInput;
 import org.apache.avro.file.SeekableInput;
@@ -47,8 +48,8 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
      * Equality is only checked against key and value.
      */
     public static class Record implements Comparable<Record> {
-        private final byte[] key;
-        private final byte[] value;
+        private final String key;
+        private final GenericRecord value;
         private final int partition;
 
         /**
@@ -57,7 +58,7 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
          * @param value the value
          * @param partition the partition
          */
-        public Record(byte[] key, byte[] value, int partition) {
+        public Record(String key, GenericRecord value, int partition) {
             Objects.requireNonNull(value, "value must not be null");
             this.key = key;
             this.value = value;
@@ -68,7 +69,7 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
          * Gest the key value
          * @return the key value.
          */
-        public byte[] getKey() {
+        public String getKey() {
             return key;
         }
 
@@ -76,7 +77,7 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
          * Gets the value.
          * @return the value.
          */
-        public byte[] getValue() {
+        public GenericRecord getValue() {
             return value;
         }
 
@@ -90,8 +91,18 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
 
         @Override
         public int compareTo(Record o) {
-            int result = Arrays.compare(value, o.value);
-            return result == 0 ? Arrays.compare(key, o.key) : result;
+            int result = value.toString().compareTo(o.value.toString());
+//            String[] schema = value.getSchema().getFields().stream().map(Schema.Field::name).toArray(String[]::new);
+//            String[] schema2 = o.value.getSchema().getFields().stream().map(Schema.Field::name).toArray(String[]::new);
+//            int result = Arrays.compare(schema, schema2);
+//            if (result == 0) {
+//                Arrays.stream(schema).map(s -> value.hasField(s) ? value.get(s).toString() : null).
+//
+//            }
+//            Comparator.(value.getSchema().getFields(), o.value.getSchema().getFields());
+//            Map.value.getSchema().getObjectProps()
+//            int result = value.String.compare(value, o.value);
+            return result == 0 ? key.compareTo(o.key) : result;
         }
 
         @Override
@@ -111,7 +122,7 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
 
         @Override
         public String toString() {
-            return String.format("Record(key=%s, value=%s, partition=%d)", key == null ? key : new Utf8(key), new Utf8(value), partition);
+            return String.format("Record(key=%s, value=%s, partition=%d)", key, value, partition);
         }
     }
 
@@ -253,10 +264,8 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
                 int partition = cnt % partitionCount;
                     final String key = "key-" + cnt;
                     GenericRecord value = generator.apply(cnt);
-                    byte[] serializedValue = serializer.serialize(testTopic, value);
-                    byte[] serializedKey = key.getBytes(StandardCharsets.UTF_8);
                     sendFutures.add(sendMessageAsync(testTopic, partition, key, value));
-                    result.add(new Record(serializedKey, serializedValue, partition));
+                    result.add(new Record(key, value, partition));
             }
             awaitFutures(sendFutures, timeLimit);
             return result;
@@ -274,8 +283,8 @@ public abstract class AbstractSinkAvroIntegrationTest<K extends Comparable<K>, N
                 final GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
                 try (DataFileReader<GenericRecord> reader = new DataFileReader<>(sin, datumReader)) {
                     reader.forEach( genericRecord -> {
-                        byte[] key = genericRecord.hasField("key") ? ((ByteBuffer)genericRecord.get("key")).array() : null;
-                        byte[] value = ((ByteBuffer)genericRecord.get("value")).array();
+                        String key = genericRecord.hasField("key") ? genericRecord.get("key").toString() : null;
+                        GenericRecord value = (GenericRecord) genericRecord.get("value");
                         items.add(new Record(key, value, -1));
                     });
                 }
