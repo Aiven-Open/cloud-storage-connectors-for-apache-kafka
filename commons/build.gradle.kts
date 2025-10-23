@@ -25,6 +25,7 @@ dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
   compileOnly(apache.kafka.connect.json)
+  compileOnly(apache.kafka.streams)
   // https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api
   implementation("jakarta.validation:jakarta.validation-api:3.1.1")
   implementation(tools.spotbugs.annotations)
@@ -162,6 +163,7 @@ dependencies {
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
+  testImplementation(apache.kafka.streams)
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.mockito.junit.jupiter)
 

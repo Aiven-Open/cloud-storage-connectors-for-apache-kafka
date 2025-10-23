@@ -47,7 +47,8 @@ dependencyResolutionManagement {
       library("kafka-connect-json", "org.apache.kafka:connect-json:$kafkaVersion")
       library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:$kafkaVersion")
       library("kafka-connect-transforms", "org.apache.kafka:connect-transforms:$kafkaVersion")
-      library("kafka-clients", "org.apache.kafka:kafka-clients:${kafkaVersion}")
+      library("kafka-clients", "org.apache.kafka:kafka-clients:$kafkaVersion")
+      library("kafka-streams", "org.apache.kafka:kafka-streams:$kafkaVersion")
       library("hadoop-common", "org.apache.hadoop:hadoop-common:$hadoopVersion")
       library(
           "hadoop-mapreduce-client-core",
