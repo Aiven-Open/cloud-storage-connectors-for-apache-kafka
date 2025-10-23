@@ -16,22 +16,33 @@
 
 package io.aiven.kafka.connect.common.config.validators;
 
-import java.util.Objects;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.FormatType;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class OutputTypeValidator implements ConfigDef.Validator {
 
     @Override
     public void ensureValid(final String name, final Object value) {
-        if (Objects.nonNull(value)) {
-            final String valueStr = (String) value;
-            if (!FormatType.names().contains(valueStr)) {
-                throw new ConfigException(name, valueStr, "supported values are: " + FormatType.SUPPORTED_FORMAT_TYPES);
-            }
+        final String valueStr = value == null ? null : value.toString();
+        if (StringUtils.isBlank(valueStr)) {
+            throw new ConfigException(name, "must not be empty or not set");
         }
+        try {
+            FormatType.valueOf(valueStr.toUpperCase(Locale.ROOT));
+        } catch (final IllegalArgumentException e) {
+            throw new ConfigException(name, valueStr, "Supported values are: " + this);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return FormatType.names().stream().map(s -> "'" + s + "'").collect(Collectors.joining(", "));
     }
 }

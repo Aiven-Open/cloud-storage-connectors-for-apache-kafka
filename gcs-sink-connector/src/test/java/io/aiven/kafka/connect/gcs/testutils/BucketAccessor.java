@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -43,12 +42,10 @@ import org.apache.kafka.connect.header.Header;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 
-import com.github.luben.zstd.ZstdInputStream;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
-import org.xerial.snappy.SnappyInputStream;
 
 public final class BucketAccessor {
     private final Storage storage;
@@ -221,16 +218,7 @@ public final class BucketAccessor {
         Objects.requireNonNull(compression, "compression cannot be null");
 
         final CompressionType compressionType = CompressionType.forName(compression);
-        switch (compressionType) {
-            case ZSTD :
-                return new ZstdInputStream(inputStream);
-            case GZIP :
-                return new GZIPInputStream(inputStream);
-            case SNAPPY :
-                return new SnappyInputStream(inputStream);
-            default :
-                return inputStream;
-        }
+        return compressionType.decompress(inputStream);
     }
 
     public List<List<String>> readAndDecodeLines(final String blobName, final String compression,

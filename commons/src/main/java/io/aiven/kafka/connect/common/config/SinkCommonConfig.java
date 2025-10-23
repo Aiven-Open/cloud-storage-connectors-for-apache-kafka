@@ -28,9 +28,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class SinkCommonConfig extends CommonConfig {
 
-    public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
-    public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     /**
      * FileNameFragment to handle FileName based configuration queries.
      */
@@ -52,7 +50,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     private void validate() {
         outputFormatFragment.validate();
-        fileNameFragment.validate();
+        fileNameFragment.validateRecordGrouper();
     }
 
     protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,

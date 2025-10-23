@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
@@ -60,7 +61,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
-        props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.GZIP.name);
+        FileNameFragment.setter(props).fileCompression(CompressionType.GZIP);
         props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(),
                 Arrays.stream(OutputFieldType.values())
                         .map(OutputFieldType::name)
@@ -142,7 +143,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
 
-        props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.GZIP.name);
+        FileNameFragment.setter(props).fileCompression(CompressionType.GZIP);
         props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(),
                 Arrays.stream(OutputFieldType.values())
                         .map(OutputFieldType::name)
@@ -240,7 +241,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value  for configuration aws_s3_region: " + "supported values are: "
+                .hasMessage("Invalid value  for configuration aws_s3_region: " + "Supported values are: "
                         + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
@@ -248,7 +249,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value  for configuration aws.s3.region: " + "supported values are: "
+                .hasMessage("Invalid value  for configuration aws.s3.region: " + "Supported values are: "
                         + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
     }
 
@@ -260,7 +261,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION, "unknown");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value unknown for configuration aws_s3_region: " + "supported values are: "
+                .hasMessage("Invalid value unknown for configuration aws_s3_region: " + "Supported values are: "
                         + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
@@ -268,7 +269,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value  for configuration aws.s3.region: " + "supported values are: "
+                .hasMessage("Invalid value  for configuration aws.s3.region: " + "Supported values are: "
                         + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
     }
 
@@ -473,7 +474,7 @@ final class S3SinkConfigTest {
 
         props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
         if (!Objects.isNull(compression)) {
-            props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+            props.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compression);
         }
 
         config = new S3SinkConfig(props);
@@ -489,7 +490,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.OUTPUT_COMPRESSION, CompressionType.GZIP.name);
-        props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name);
+        FileNameFragment.setter(props).fileCompression(CompressionType.NONE);
 
         final var config = new S3SinkConfig(props);
 
@@ -521,15 +522,15 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.OUTPUT_COMPRESSION, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value unsupported for configuration output_compression: "
-                        + "supported values are: 'none', 'gzip', 'snappy', 'zstd'");
+                .hasMessage(
+                        "Invalid value unsupported for configuration output_compression: 'none', 'gzip', 'snappy', 'zstd'");
 
         props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
-        props.put(S3SinkConfig.FILE_COMPRESSION_TYPE_CONFIG, "unsupported");
+        props.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value unsupported for configuration file.compression.type: "
-                        + "supported values are: 'none', 'gzip', 'snappy', 'zstd'");
+                .hasMessage(
+                        "Invalid value unsupported for configuration file.compression.type: 'none', 'gzip', 'snappy', 'zstd'");
     }
 
     @ParameterizedTest
@@ -593,23 +594,8 @@ final class S3SinkConfigTest {
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value unknown for configuration format.output.type: "
-                        + "supported values are: 'avro', 'csv', 'json', 'jsonl', 'parquet'");
+                        + "Supported values are: 'avro', 'csv', 'json', 'jsonl', 'parquet'");
 
-    }
-
-    @Test
-    void notSupportYyyyUppercaseInFilenameTemplate() {
-        final Map<String, String> properties = Map.of(S3SinkConfig.FILE_NAME_TEMPLATE_CONFIG,
-                "{{topic}}-" + "{{timestamp:unit=YYYY}}" + "-{{partition}}-{{start_offset:padding=true}}.gz",
-                S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key",
-                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
-        assertThatThrownBy(() -> new S3SinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(
-                        "Invalid value {{topic}}-{{timestamp:unit=YYYY}}-{{partition}}-{{start_offset:padding=true}}.gz "
-                                + "for configuration file.name.template: unsupported set of template variables parameters, "
-                                + "supported sets are: "
-                                + "partition:padding=true|false,start_offset:padding=true|false,timestamp:unit=yyyy|MM|dd|HH");
     }
 
     @Test
@@ -685,7 +671,7 @@ final class S3SinkConfigTest {
     @ParameterizedTest
     @ValueSource(strings = { "{{key}}", "{{topic}}/{{partition}}/{{key}}" })
     void notSupportedFileMaxRecords(final String fileNameTemplate) {
-        final Map<String, String> properties = Map.of(S3SinkConfig.FILE_NAME_TEMPLATE_CONFIG, fileNameTemplate,
+        final Map<String, String> properties = Map.of(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, fileNameTemplate,
                 S3SinkConfig.FILE_MAX_RECORDS, "2", S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id",
                 S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key",
                 S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");

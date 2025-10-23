@@ -23,30 +23,30 @@ import java.util.Map;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.OutputFieldType;
-import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 
 final public class S3SourceConfig extends SourceCommonConfig {
 
-    public static final Logger LOGGER = LoggerFactory.getLogger(S3SourceConfig.class);
-
     private final S3ConfigFragment s3ConfigFragment;
-    private final FileNameFragment s3FileNameFragment;
+    private final SourceConfigFragment sourceConfigFragment;
+    private final AwsCredentialProviderFactory awsCredentialsProviderFactory;
+
     public S3SourceConfig(final Map<String, String> properties) {
         super(configDef(), handleDeprecatedYyyyUppercase(properties));
         s3ConfigFragment = new S3ConfigFragment(this);
-        s3FileNameFragment = new FileNameFragment(this);
+        sourceConfigFragment = new SourceConfigFragment(this);
+        awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
         validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
     }
 
@@ -55,10 +55,8 @@ final public class S3SourceConfig extends SourceCommonConfig {
         final var configDef = new S3SourceConfigDef();
         S3ConfigFragment.update(configDef);
         SourceConfigFragment.update(configDef);
-        FileNameFragment.update(configDef);
         TransformerFragment.update(configDef);
-        OutputFormatFragment.update(configDef, OutputFieldType.VALUE);
-
+        FileNameFragment.update(configDef);
         return configDef;
     }
 
@@ -108,7 +106,7 @@ final public class S3SourceConfig extends SourceCommonConfig {
     }
 
     public String getAwsS3Prefix() {
-        return s3ConfigFragment.getAwsS3Prefix();
+        return StringUtils.defaultIfBlank(s3ConfigFragment.getAwsS3Prefix(), null);
     }
 
     public int getAwsS3PartSize() {
@@ -127,16 +125,16 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
     }
 
-    public int getS3FetchBufferSize() {
-        return s3ConfigFragment.getS3FetchBufferSize();
+    public int getRingBufferSize() {
+        return sourceConfigFragment.getRingBufferSize();
     }
 
-    public S3ConfigFragment getS3ConfigFragment() {
-        return s3ConfigFragment;
+    public int getFetchPageSize() {
+        return s3ConfigFragment.getFetchPageSize();
     }
 
-    public FileNameFragment getS3FileNameFragment() {
-        return s3FileNameFragment;
+    public AwsCredentialsProvider getAwsV2Provider() {
+        return awsCredentialsProviderFactory.getAwsV2Provider(s3ConfigFragment);
     }
 
 }

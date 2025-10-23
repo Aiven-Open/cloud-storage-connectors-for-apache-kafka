@@ -39,6 +39,10 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+/**
+ * @deprecated switch to {@link SourcenameTemplateValidator} and specific sink/source validation.
+ */
+@Deprecated
 public final class FilenameTemplateValidator implements ConfigDef.Validator {
 
     static final Map<String, ParameterDescriptor> SUPPORTED_VARIABLE_PARAMETERS = new LinkedHashMap<>();

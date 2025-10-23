@@ -16,7 +16,10 @@ import com.github.spotbugs.snom.SpotBugsTask
  * limitations under the License.
  */
 
-plugins { id("aiven-apache-kafka-connectors-all.java-conventions") }
+plugins {
+  id("aiven-apache-kafka-connectors-all.java-conventions")
+  id("aiven-apache-kafka-connectors-all.docs")
+}
 
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
@@ -77,13 +80,7 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
-
-  implementation("com.google.cloud:google-cloud-storage:2.49.0") {
-    exclude(group = "com.google.guava", module = "guava")
-  }
-  // TODO: document why specific version of guava is required
-  implementation("com.google.guava:guava:33.4.0-jre")
-
+  implementation("com.google.cloud:google-cloud-storage:2.52.3")
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
 
@@ -98,7 +95,7 @@ dependencies {
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
-  testImplementation("com.google.cloud:google-cloud-nio:0.127.32")
+  testImplementation("com.google.cloud:google-cloud-nio:0.127.36")
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
@@ -142,6 +139,7 @@ dependencies {
 
   testRuntimeOnly(logginglibs.slf4j.log4j12)
 
+  integrationTestImplementation(testFixtures(project(":commons")))
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version

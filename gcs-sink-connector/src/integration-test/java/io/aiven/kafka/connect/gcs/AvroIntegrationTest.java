@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,7 +30,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -50,16 +50,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
 @Testcontainers
 final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-avro";
-
-    @Container
-    private final SchemaRegistryContainer schemaRegistry = new SchemaRegistryContainer(KAFKA);
 
     private final Schema avroInputDataSchema = new Schema.Parser().parse(
             "{\"type\":\"record\",\"name\":\"input_data\"," + "\"fields\":[{\"name\":\"name\",\"type\":\"string\"}]}");
@@ -68,12 +64,12 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     void setUp() throws ExecutionException, InterruptedException {
         testBucketAccessor.clear(gcsPrefix);
         final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getKafkaManager().bootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        producerProps.put("schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
+        producerProps.put("schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
         startConnectRunner(producerProps);
     }
 
@@ -101,7 +97,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.fields", "key,value");
         connectorConfig.put("format.output.type", "avro");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final int recordCountPerPartition = 10;
         produceRecords(recordCountPerPartition);
@@ -146,35 +142,35 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     }
 
     private static Stream<Arguments> compressionAndCodecTestParameters() {
-        return Stream.of(Arguments.of("bzip2", "none"), Arguments.of("deflate", "none"), Arguments.of("null", "none"),
-                Arguments.of("snappy", "gzip"), // single test for codec and compression when both set.
-                Arguments.of("zstandard", "none"));
+        return Stream.of(Arguments.of("bzip2", CompressionType.NONE), Arguments.of("deflate", CompressionType.NONE),
+                Arguments.of("null", CompressionType.NONE), Arguments.of("snappy", CompressionType.GZIP), // single test
+                                                                                                          // for codec
+                                                                                                          // and
+                                                                                                          // compression
+                                                                                                          // when both
+                                                                                                          // set.
+                Arguments.of("zstandard", CompressionType.NONE));
     }
 
-    private byte[] getBlobBytes(final byte[] blobBytes, final String compression) throws IOException {
-        switch (CompressionType.forName(compression)) {
-            case GZIP :
-                final ByteArrayOutputStream out = new ByteArrayOutputStream();
-                IOUtils.copy(new GZIPInputStream(new ByteArrayInputStream(blobBytes)), out);
-                return out.toByteArray();
-            case NONE :
-                return blobBytes;
-            default :
-                throw new IllegalArgumentException("Unsupported compression in test: " + compression);
+    private byte[] getBlobBytes(final byte[] blobBytes, final CompressionType compression) throws IOException {
+        try (InputStream decompressedStream = compression.decompress(new ByteArrayInputStream(blobBytes));
+                ByteArrayOutputStream decompressedBytes = new ByteArrayOutputStream()) {
+            IOUtils.copy(decompressedStream, decompressedBytes);
+            return decompressedBytes.toByteArray();
         }
     }
 
     @ParameterizedTest
     @MethodSource("compressionAndCodecTestParameters")
-    void avroOutputPlainValueWithoutEnvelope(final String avroCodec, final String compression)
+    void avroOutputPlainValueWithoutEnvelope(final String avroCodec, final CompressionType compression)
             throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put("format.output.envelope", "false");
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.type", "avro");
-        connectorConfig.put("file.compression.type", compression);
+        connectorConfig.put("file.compression.type", compression.name);
         connectorConfig.put("avro.codec", avroCodec);
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final int recordCountPerPartition = 10;
         produceRecords(recordCountPerPartition);
@@ -231,7 +227,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("format.output.type", "avro");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema evolvedAvroInputDataSchema = new Schema.Parser()
                 .parse("{\"type\":\"record\",\"name\":\"input_data\","
@@ -286,7 +282,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         connectorConfig.put("format.output.fields.value.encoding", "none");
         connectorConfig.put("file.compression.type", compression);
         connectorConfig.put("format.output.type", "jsonl");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final int recordCountPerPartition = 10;
         produceRecords(recordCountPerPartition);
@@ -323,9 +319,9 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         config.put("name", CONNECTOR_NAME);
         config.put("connector.class", GcsSinkConnector.class.getName());
         config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("key.converter.schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
+        config.put("key.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
         config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("value.converter.schema.registry.url", schemaRegistry.getSchemaRegistryUrl());
+        config.put("value.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
         config.put("tasks.max", "1");
         if (gcsCredentialsPath != null) {
             config.put("gcs.credentials.path", gcsCredentialsPath);
@@ -342,9 +338,8 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         return config;
     }
 
-    protected String getAvroBlobName(final int partition, final int startOffset, final String compression) {
-        return super.getBaseBlobName(partition, startOffset) + ".avro"
-                + CompressionType.forName(compression).extension();
+    protected String getAvroBlobName(final int partition, final int startOffset, final CompressionType compression) {
+        return super.getBaseBlobName(partition, startOffset) + ".avro" + compression.extension();
     }
 
     protected String getAvroBlobName(final int partition, final int startOffset) {

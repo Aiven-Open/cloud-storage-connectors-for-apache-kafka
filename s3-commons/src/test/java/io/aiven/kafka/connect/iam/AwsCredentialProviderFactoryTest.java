@@ -21,9 +21,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.common.Configurable;
+
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.tools.AwsCredentialBaseConfig;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
@@ -31,6 +35,9 @@ import com.amazonaws.regions.Regions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests the Credential provider factory generation of V1 credentials
+ */
 final class AwsCredentialProviderFactoryTest {
     private AwsCredentialProviderFactory factory;
     private Map<String, String> props;
@@ -75,6 +82,38 @@ final class AwsCredentialProviderFactoryTest {
 
         final var credentialProvider = factory.getProvider(new S3ConfigFragment(config));
         assertThat(credentialProvider).isInstanceOf(DefaultAWSCredentialsProviderChain.class);
+    }
+
+    @Test
+    void customCredentialProviderTest() {
+        props.put(S3ConfigFragment.AWS_CREDENTIALS_PROVIDER_CONFIG, DummyCredentialsProvider.class.getName());
+        final var config = new AwsCredentialBaseConfig(props);
+
+        final var credentialProvider = factory.getProvider(new S3ConfigFragment(config));
+        assertThat(credentialProvider).isInstanceOf(DummyCredentialsProvider.class);
+        assertThat(((DummyCredentialsProvider) credentialProvider).configured).isTrue();
+    }
+
+    /**
+     * A custom V1 credential provider for testing.
+     */
+    public static class DummyCredentialsProvider implements AWSCredentialsProvider, Configurable {
+        boolean configured;
+
+        @Override
+        public AWSCredentials getCredentials() {
+            return null;
+        }
+
+        @Override
+        public void refresh() {
+
+        }
+
+        @Override
+        public void configure(final Map<String, ?> map) {
+            configured = true;
+        }
     }
 
 }

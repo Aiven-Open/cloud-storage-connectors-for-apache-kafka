@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import com.diffplug.spotless.LineEnding
 import java.net.URI
 
 group = "io.aiven"
@@ -45,6 +44,8 @@ plugins {
     id("pmd")
 
     id("com.github.spotbugs")
+
+    id("java-test-fixtures")
 }
 
 java {
@@ -76,7 +77,7 @@ tasks.withType<Jar> {
 }
 
 jacoco {
-    toolVersion = "0.8.7"
+    toolVersion = "0.8.13"
 }
 
 repositories {
@@ -109,6 +110,10 @@ pmd {
         ruleSets = ArrayList() // Clear the default rulesets
     }
     tasks.pmdTest {
+        ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
+        ruleSets = ArrayList() // Clear the default rulesets
+    }
+    tasks.pmdTestFixtures {
         ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
         ruleSets = ArrayList() // Clear the default rulesets
     }
@@ -152,7 +157,7 @@ spotless {
 
     java {
         // LocalInputFile.java has a different license file and needs to be ignored until it is removed in a future release
-        targetExclude("**/LocalInputFile.java")
+        targetExclude("**/LocalInputFile.java", "**/VersionInfo.java")
         licenseHeaderFile(file("${project.rootDir}/gradle-config/java.header"))
         importOrder("javax", "java", "org.apache.kafka", "io.aiven", "")
         removeUnusedImports()

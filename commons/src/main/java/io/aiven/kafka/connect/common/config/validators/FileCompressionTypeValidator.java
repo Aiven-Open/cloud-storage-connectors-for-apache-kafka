@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.config.validators;
 
+import java.util.Locale;
 import java.util.Objects;
 
 import org.apache.kafka.common.config.ConfigDef;
@@ -30,11 +31,15 @@ public class FileCompressionTypeValidator implements ConfigDef.Validator {
         // is it up to the connector decide how to support default values for compression.
         // The reason is that for different connectors there is the different compression type
         if (Objects.nonNull(value)) {
-            final String valueStr = (String) value;
+            final String valueStr = value.toString().toLowerCase(Locale.ROOT);
             if (!CompressionType.names().contains(valueStr)) {
-                throw new ConfigException(name, valueStr,
-                        "supported values are: " + CompressionType.SUPPORTED_COMPRESSION_TYPES);
+                throw new ConfigException(name, valueStr, toString());
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        return CompressionType.SUPPORTED_COMPRESSION_TYPES;
     }
 }

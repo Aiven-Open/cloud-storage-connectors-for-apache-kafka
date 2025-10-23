@@ -21,8 +21,6 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.Random;
 
-import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
-
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryMode;
 import software.amazon.awssdk.retries.api.internal.backoff.ExponentialDelayWithJitter;
@@ -30,8 +28,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
 public class S3ClientFactory {
-
-    private final AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
 
     public S3Client createAmazonS3Client(final S3SourceConfig config) {
 
@@ -48,14 +44,14 @@ public class S3ClientFactory {
                     .overrideConfiguration(o -> o.retryStrategy(
                             r -> r.backoffStrategy(backoffStrategy).maxAttempts(config.getS3RetryBackoffMaxRetries())))
                     .region(config.getAwsS3Region())
-                    .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                    .credentialsProvider(config.getAwsV2Provider())
                     .build();
         } else {
-            // TODO This is definitely used for testing but not sure if customers use it.
+            // TODO This is definitely used for testing but not sure if customers use it. customers use it!
             return S3Client.builder()
                     .overrideConfiguration(clientOverrideConfiguration)
                     .region(config.getAwsS3Region())
-                    .credentialsProvider(credentialFactory.getAwsV2Provider(config.getS3ConfigFragment()))
+                    .credentialsProvider(config.getAwsV2Provider())
                     .endpointOverride(URI.create(config.getAwsS3EndPoint()))
                     .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
                     .build();
