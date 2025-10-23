@@ -71,6 +71,8 @@ template for file names.
 
 The configuration property `file.name.template` is **mandatory**. If not set **no objects will be processed**.
 
+From version 3.4.0 when using "object_hash" distribution type it is possible to set this to ".*" to match all object keys or use a regex to match specific object keys. When using partition distribution type you must use the placeholders described below.
+
 The file name format supports placeholders with variable names of the form: `{{variable_name}}`.  The currently, supported variables are:
 
   | name | matches | notes |
