@@ -204,6 +204,8 @@ the final `Avro` schema for `Parquet` is:
 ```
 **Note:** The connector works just fine with and without a schema registry.
 
+### Compression type
+`file.compression.type` - Compression type for input files. Supported algorithms are `gzip`, `snappy`, `zstd` and `none`. Defaults to `none`. If used in conjunction with the S3-sink connector ensure both have the same compression set as the sink connector defaults to `gzip`.
 
 ### Acked Records
 

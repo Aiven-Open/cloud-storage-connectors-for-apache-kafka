@@ -506,6 +506,8 @@ List of new configuration parameters:
 - `timestamp.timezone` - The time zone in which timestamps are represented. Accepts short and long standard names like: `UTC`, `PST`, `ECT`, `Europe/Berlin`, `Europe/Helsinki`, or `America/New_York`. For more information please refer to https://docs.oracle.com/javase/tutorial/datetime/iso/timezones.html. The default is `UTC`.
 - `timestamp.source` -  The source of timestamps. Supports only `wallclock` which is the default value.
 
+The `file.compression.type` defaults to `gzip`, when being used in conjunction with the s3-source connector, ensure that the source connector is set to the same compression type as by default the source connector defaults to `none`.
+
 ## Configuration
 
 [Here](https://kafka.apache.org/documentation/#connect_running) you can
