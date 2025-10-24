@@ -69,7 +69,12 @@ subdirectories in the bucket.
 `<filename>` is the file name. The connector has the configurable
 template for file names.
 
+Set the property `native.start.key` with an object key to begin processing objects from **AFTER** that key.
+In the event of a restart the connector will restart from this object key.
+
 The configuration property `file.name.template` is **mandatory**. If not set **no objects will be processed**.
+
+From version 3.4.0, when using the `object_hash` distribution type, you can set this to `.*` to match all object keys or use a regular expression to match specific object keys. When using the partition distribution type, you must use the placeholders described below.
 
 The file name format supports placeholders with variable names of the form: `{{variable_name}}`.  The currently, supported variables are:
 
@@ -202,6 +207,8 @@ the final `Avro` schema for `Parquet` is:
 ```
 **Note:** The connector works just fine with and without a schema registry.
 
+### Compression type
+`file.compression.type`: Compression type for input files. Supported algorithms: `gzip`, `snappy`, `zstd`, and `none`. Defaults to `none`. If used with the S3 sink connector, ensure both connectors use the same compression type. The sink connector defaults to `gzip`.
 
 ### Acked Records
 
