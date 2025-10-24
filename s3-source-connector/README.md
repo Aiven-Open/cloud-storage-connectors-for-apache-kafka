@@ -69,6 +69,9 @@ subdirectories in the bucket.
 `<filename>` is the file name. The connector has the configurable
 template for file names.
 
+Set the property `native.start.key` with an object key to begin processing objects from **AFTER** that key.
+In the event of a restart the connector will restart from this object key.
+
 The configuration property `file.name.template` is **mandatory**. If not set **no objects will be processed**.
 
 The file name format supports placeholders with variable names of the form: `{{variable_name}}`.  The currently, supported variables are:

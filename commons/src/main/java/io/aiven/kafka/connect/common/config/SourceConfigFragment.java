@@ -43,6 +43,8 @@ public final class SourceConfigFragment extends ConfigFragment {
     /* public so that deprecated users can reference it */
     public static final String RING_BUFFER_SIZE = "ring.buffer.size";
 
+    public static final String NATIVE_START_KEY = "native.start.key";
+
     /**
      * Gets a setter for this fragment.
      *
@@ -82,6 +84,10 @@ public final class SourceConfigFragment extends ConfigFragment {
                 new ObjectDistributionStrategyValidator(), ConfigDef.Importance.MEDIUM,
                 "Based on tasks.max config and the type of strategy selected, objects are processed in distributed"
                         + " way by Kafka connect workers.");
+
+        // TODO FIX ME this should be updated to add 'since version 3.4.2' when ExtendedConfigKey is used.
+        configDef.define(NATIVE_START_KEY, ConfigDef.Type.STRING, null, null, ConfigDef.Importance.MEDIUM,
+                "An identifier for the source connector to know which key to start processing from, on a restart it will also begin reading messages from this point as well. Available since 3.4.2");
 
         return configDef;
     }
@@ -129,6 +135,15 @@ public final class SourceConfigFragment extends ConfigFragment {
      */
     public int getRingBufferSize() {
         return cfg.getInt(RING_BUFFER_SIZE);
+    }
+
+    /**
+     * Gets the nativeStartKey.
+     *
+     * @return the key to start consuming records from.
+     */
+    public String getNativeStartKey() {
+        return cfg.getString(NATIVE_START_KEY);
     }
 
     /**
@@ -241,6 +256,17 @@ public final class SourceConfigFragment extends ConfigFragment {
          */
         public Setter ringBufferSize(final int ringBufferSize) {
             return setValue(RING_BUFFER_SIZE, ringBufferSize);
+        }
+
+        /**
+         * Sets the initial native key to start from.
+         *
+         * @param nativeStartKey
+         *            the key to start reading new messages from.
+         * @return this.
+         */
+        public Setter nativeStartKey(final String nativeStartKey) {
+            return setValue(NATIVE_START_KEY, nativeStartKey);
         }
     }
 }

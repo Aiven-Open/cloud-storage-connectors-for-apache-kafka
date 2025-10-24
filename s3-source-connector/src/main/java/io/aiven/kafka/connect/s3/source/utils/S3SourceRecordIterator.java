@@ -82,6 +82,11 @@ public final class S3SourceRecordIterator
     }
 
     @Override
+    protected String parseNativeKey(final String nativeKeyText) {
+        return nativeKeyText;
+    }
+
+    @Override
     protected S3SourceRecord createSourceRecord(final S3Object nativeObject) {
         return new S3SourceRecord(nativeObject);
     }
