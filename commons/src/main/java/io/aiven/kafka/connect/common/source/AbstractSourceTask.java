@@ -570,7 +570,7 @@ public abstract class AbstractSourceTask extends SourceTask {
         /**
          * Gets the abort timer rule flag. If there is no timer that may expire and shorten the time for the delay then
          * this value should be {@code false} otherwise if the delay time will exceed the maximum time remaining no
-         * delay is executed. By default, the false is {@code true}.
+         * delay is executed. By default, the flag is {@code true}.
          *
          * @return The abort time rule flag.
          */

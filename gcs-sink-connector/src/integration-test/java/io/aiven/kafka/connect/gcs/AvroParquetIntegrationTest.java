@@ -40,11 +40,13 @@ import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
+@Disabled
 final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
 
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-parquet";

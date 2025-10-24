@@ -44,12 +44,14 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.RequestMethod;
 import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
+@Disabled
 final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector";
 

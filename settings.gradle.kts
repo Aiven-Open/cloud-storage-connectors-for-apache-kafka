@@ -90,6 +90,7 @@ dependencyResolutionManagement {
       library("logback-classic", "ch.qos.logback:logback-classic:$logbackVersion")
       library("slf4j", "org.slf4j:slf4j-api:$slf4jVersion")
       library("slf4j-log4j12", "org.slf4j:slf4j-log4j12:$slf4jVersion")
+      library("slf4j-simple", "org.slf4j:slf4j-simple:2.0.17")
     }
     create("tools") {
       library(

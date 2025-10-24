@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.common.integration.sink;
 import java.util.Map;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.integration.StorageBase;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -36,22 +37,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
  *            the native storage object type
  */
 public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, N> {
-    /**
-     * Get the native key for an avro based blob.
-     *
-     * @param prefix
-     *            the prefix for the storage location.
-     * @param topicName
-     *            the topic name for the storage location.
-     * @param partition
-     *            the partition for the storage location.
-     * @param startOffset
-     *            the start offset for the storage location.
-     * @param compression
-     *            the compression type for the data at the storage location.
-     * @return a native key for the specified avro file.
-     */
-    K getAvroBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression);
 
     /**
      * Get the native key for a standard blob.
@@ -68,7 +53,7 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
      *            the compression type for the data at the storage location.
      * @return a native key for the specified avro file.
      */
-    K getBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression);
+    K getNativeKey(String prefix, String topicName, int partition, int startOffset, CompressionType compression, FormatType formatType);
 
     /**
      * Get the native key for a standard blob.
@@ -79,9 +64,11 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
      *            the key for the storage location.
      * @param compression
      *            the compression type for the data at the storage location.
+     * @param formatType
+     *            the format type for the output file.
      * @return a native key for the specified data.
      */
-    K getKeyBlobName(String prefix, String key, CompressionType compression);
+    K getKeyNativeKey(String prefix, String key, CompressionType compression, FormatType formatType);
 
     /**
      * Get the native key for a blob with the new name format.
@@ -98,7 +85,7 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
      *            the compression type for the data at the storage location.
      * @return a native key for the specified data.
      */
-    K getNewBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression);
+    //K getNewBlobName(String prefix, String topicName, int partition, int startOffset, CompressionType compression);
 
     /**
      * Return a native key with the format {@code prefixtopicName-partition-offset-yyyy-MM-dd}
@@ -111,20 +98,21 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
      *            the partition for the storage location.
      * @param startOffset
      *            the start offset for the storage location.
+     * @param compression
+     *            the compression type for the data at the storage location.
+     * @param formatType
+     *            the format type for the output file.
      * @return a native key for the specified data.
      */
-    K getTimestampBlobName(String prefix, String topicName, int partition, int startOffset);
+    K getTimestampNativeKey(String prefix, String topicName, int partition, int startOffset, CompressionType compression, FormatType formatType);
 
     /**
      * Creates a map of the sink properties for the specific storage layer.
      *
-     * @param prefix
-     *            the prefix for the files in the storage.
-     * @param connectorName
-     *            the name of the connector.
+     * @param bucketName the name of the bucket.
      * @return the map of configuration options specific to the storage layer.
      */
-    Map<String, String> createSinkProperties(String prefix, String connectorName);
+    Map<String, String> createSinkProperties(String bucketName);
 
     /**
      * Get the URL of the sink storage endpoint. This is used in testing to create a proxy that will return a HTTP 500
@@ -137,11 +125,11 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
     /**
      * Gets the path to append to the result of {@link #getEndpointURL()} to create a request for the specific topic.
      *
-     * @param topicName
-     *            the topic that is being written to.
+     * @param bucketName
+     *            the bucket that is being written to.
      * @return the URL pattern to write to the specific topic.
      */
-    String getURLPathPattern(String topicName);
+    String getURLPathPattern(String bucketName);
 
     /**
      * Enables a proxy in front of the storage layer to test that the connector handles backend network errors.
@@ -161,4 +149,16 @@ public interface SinkStorage<K extends Comparable<K>, N> extends StorageBase<K, 
      */
     CompressionType getDefaultCompression();
 
+    /**
+     * Construct a BucketAccessor for the named bucket on this storage.
+     * @param bucketName the name of the bucket.
+     * @return a BucketAccessor.
+     */
+    BucketAccessor<K> getBucketAccessor(String bucketName);
+
+    /**
+     * Configures a WireMockServer that will throw an error
+     * @return
+     */
+    WireMockServer enableFaultyProxy();
 }

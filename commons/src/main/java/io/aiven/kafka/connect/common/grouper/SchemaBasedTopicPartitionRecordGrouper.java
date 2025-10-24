@@ -27,10 +27,13 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordGrouper {
 
     private final SchemaBasedRotator schemaBasedRotator = new SchemaBasedRotator();
+    private final static Logger LOG = LoggerFactory.getLogger(SchemaBasedTopicPartitionRecordGrouper.class);
 
     SchemaBasedTopicPartitionRecordGrouper(final Template filenameTemplate, final Integer maxRecordsPerFile,
             final TimestampSource tsSource) {
@@ -39,6 +42,7 @@ final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordG
 
     @Override
     protected String resolveRecordKeyFor(final SinkRecord record) {
+        LOG.debug("Checking schema based rotator");
         if (schemaBasedRotator.rotate(record)) {
             return generateNewRecordKey(record);
         } else {
@@ -61,12 +65,15 @@ final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordG
             if (Objects.isNull(record.valueSchema()) || Objects.isNull(record.keySchema())) {
                 throw new SchemaProjectorException("Record must have schemas for key and value");
             }
+            final KeyValueSchema recordSchemas = new KeyValueSchema(record.keySchema(), record.valueSchema());
             final var topicPartition = new TopicPartition(record.topic(), record.kafkaPartition());
-            final var keyValueVersion = keyValueSchemas.computeIfAbsent(topicPartition,
-                    ignored -> new KeyValueSchema(record.keySchema(), record.valueSchema()));
-            final var schemaChanged = !keyValueVersion.keySchema.equals(record.keySchema())
-                    || !keyValueVersion.valueSchema.equals(record.valueSchema());
+            final KeyValueSchema topicPartitionSchemas = keyValueSchemas.computeIfAbsent(topicPartition,
+                    ignored -> recordSchemas);
+            LOG.debug("comparing keys {} to {}", topicPartitionSchemas, recordSchemas);
+
+            final var schemaChanged = ! topicPartitionSchemas.equals(recordSchemas);
             if (schemaChanged) {
+                LOG.debug("Schema change detected for topic partition {}", topicPartition);
                 keyValueSchemas.put(topicPartition, new KeyValueSchema(record.keySchema(), record.valueSchema()));
             }
             return schemaChanged;
@@ -98,6 +105,11 @@ final class SchemaBasedTopicPartitionRecordGrouper extends TopicPartitionRecordG
             @Override
             public int hashCode() {
                 return Objects.hash(keySchema, valueSchema);
+            }
+
+            @Override
+            public String toString() {
+                return String.format("KeyValueSchema{keySchema=%s, valueSchema=%s}", keySchema, valueSchema);
             }
         }
 

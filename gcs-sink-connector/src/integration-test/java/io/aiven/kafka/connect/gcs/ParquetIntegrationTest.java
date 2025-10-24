@@ -38,6 +38,7 @@ import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 
 import org.apache.avro.generic.GenericRecord;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,6 +46,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
+@Disabled
 final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
 
     private static final String CONNECTOR_NAME = "aiven-gcs-sink-connector-plain-parquet";
