@@ -25,6 +25,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -38,13 +39,24 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
+import org.apache.kafka.connect.data.Field;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
 
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputField;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
 import io.aiven.kafka.connect.common.format.JsonTestDataFixture;
 import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
+import io.aiven.kafka.connect.common.output.OutputWriter;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
@@ -100,7 +112,7 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
      * @param offsetManager
      *            A mock offset manager.
      * @param transformer
-     *            The trnasformer to use for the test.
+     *            The transformer to use for the test.
      * @return A configured AbstractSourceRecordIterator.
      */
     abstract protected AbstractSourceRecordIterator<K, N, O, T> createSourceRecordIterator(
@@ -135,7 +147,7 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
     }
 
     /**
-     * Create a mock SourceCOnfig with our necessary items added.
+     * Create a mock SourceConfig with our necessary items added.
      *
      * @param filePattern
      *            The file pattern to match.
@@ -180,6 +192,7 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
         final Transformer transformer = TransformerFactory.getTransformer(format);
         final SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(mockConfig.getInputFormat()).thenReturn(format);
+        when(mockConfig.getCompressionType()).thenReturn(CompressionType.NONE);
 
         // verify one data has one data
         createClientMutator().reset().addObject(key, ByteBuffer.wrap(data)).endOfBlock().build();
@@ -245,6 +258,10 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
         final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(config.getTransformerMaxBufferSize()).thenReturn(4096);
         when(config.getInputFormat()).thenReturn(format);
+        when(config.getCompressionType()).thenReturn(CompressionType.NONE);
+        // when(config.getList<>OutputFields()).genReturn(Collections.singletonList(new
+        // OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)));
+
         final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
                 transformer);
 
@@ -315,6 +332,8 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
         final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(config.getTransformerMaxBufferSize()).thenReturn(4096);
         when(config.getInputFormat()).thenReturn(InputFormat.BYTES);
+        when(config.getCompressionType()).thenReturn(CompressionType.NONE);
+
         final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
                 transformer);
 
@@ -366,6 +385,137 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
 
     static List<Arguments> parameterizedNativeStartKey() {
         return List.of(Arguments.of("startKeyOne", 2), Arguments.of("startKeyOne", 2), Arguments.of(null, 1));
+    }
+
+    /**
+     * Gets a configured Transformer.
+     *
+     * @param formatType
+     *            The input format for the transformer.
+     * @return the Transformer for the specified input format.
+     */
+    private static InputFormat formatTypeConversion(final FormatType formatType) {
+        switch (formatType) {
+            case AVRO :
+                return InputFormat.AVRO;
+            case PARQUET :
+                return InputFormat.PARQUET;
+            case JSONL :
+                return InputFormat.JSONL;
+            case CSV :
+            case JSON :
+                return InputFormat.BYTES;
+            default :
+                throw new IllegalArgumentException("Unknown format type in configuration: " + formatType);
+        }
+    }
+    @ParameterizedTest
+    @MethodSource("testDecompressionData")
+    void testDecompression(FormatType formatType, CompressionType compressionType) throws IOException {
+        // setup the data
+        OffsetManager.OffsetManagerEntry<?> offsetManagerEntry = mock(OffsetManager.OffsetManagerEntry.class);
+
+        final Transformer transformer = TransformerFactory.getTransformer(formatTypeConversion(formatType));
+        final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
+        when(config.getTransformerMaxBufferSize()).thenReturn(4096);
+        when(config.getCompressionType()).thenReturn(compressionType);
+        when(config.getInputFormat()).thenReturn(formatTypeConversion(formatType));
+
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        OutputWriter outputWriter = OutputWriter.builder()
+                .withCompressionType(compressionType)
+                .withOutputFields(
+                        Collections.singletonList(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)))
+                .build(byteArrayOutputStream, formatType);
+        Object value = null;
+        Schema valueSchema = null;
+        switch (formatType) {
+            case AVRO :
+                valueSchema = SchemaBuilder.struct()
+                        .field("message", SchemaBuilder.STRING_SCHEMA)
+                        .field("id", SchemaBuilder.INT32_SCHEMA);
+                value = new Struct(valueSchema).put("message", "Hello").put("id", 1);
+                break;
+            case PARQUET :
+                valueSchema = ParquetTestDataFixture.PARQUET_SCHEMA;
+                value = new Struct(valueSchema).put("name", "TheDude")
+                        .put("age", 32)
+                        .put("email", "thedude@example.com");
+                break;
+            case JSONL :
+                valueSchema = SchemaBuilder.struct()
+                        .field("message", SchemaBuilder.STRING_SCHEMA)
+                        .field("id", SchemaBuilder.INT32_SCHEMA);
+                value = new Struct(valueSchema).put("message", "Hello").put("id", 2);
+                break;
+            case CSV :
+                valueSchema = SchemaBuilder.BYTES_SCHEMA;
+                value = "'test','one'".getBytes(StandardCharsets.UTF_8);
+                break;
+            case JSON :
+                valueSchema = SchemaBuilder.STRING_SCHEMA;
+                value = "json is here";
+                break;
+            default :
+                throw new IllegalArgumentException("Unknown format type: " + formatType);
+        }
+
+        SinkRecord sinkRecord = new SinkRecord("testTopic", 0, Schema.STRING_SCHEMA, "testRecord", valueSchema, value,
+                0);
+        outputWriter.writeRecord(sinkRecord);
+        outputWriter.close();
+        createClientMutator().addObject(key, ByteBuffer.wrap(byteArrayOutputStream.toByteArray())).endOfBlock().build();
+
+        // Start the test
+        final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
+                transformer);
+        assertThat(iterator).hasNext();
+        T sourceRecord = iterator.next();
+        assertThat(sourceRecord).isNotNull();
+        switch (formatType) {
+            case AVRO :
+            case PARQUET :
+                Struct struct = (Struct) sourceRecord.getValue().value();
+                struct = (Struct) struct.get("value");
+                assertEquivalent(valueSchema, struct.schema());
+                for (Field field : valueSchema.fields()) {
+                    assertThat(struct.get(field)).isEqualTo(((Struct) value).get(field));
+                }
+                break;
+            case CSV :
+                assertThat(sourceRecord.getValue().schema()).isNull();
+                assertThat(sourceRecord.getValue().value()).isEqualTo(value);
+                break;
+            case JSON :
+                assertThat(sourceRecord.getValue().schema()).isNull();
+                assertThat(sourceRecord.getValue().value())
+                        .isEqualTo(String.format("[%n{\"value\":\"%s\"}%n]", value).getBytes(StandardCharsets.UTF_8));
+                break;
+            case JSONL :
+                assertThat(sourceRecord.getValue().schema()).isNull();
+                Map<String, Object> values = (Map<String, Object>) sourceRecord.getValue().value();
+                values = (Map<String, Object>) values.get("value");
+                assertThat(values.get("id")).isEqualTo(2L);
+                assertThat(values.get("message")).isEqualTo("Hello");
+                break;
+            default :
+                throw new IllegalArgumentException("Unknown format type: " + formatType);
+        }
+    }
+
+    private void assertEquivalent(Schema expected, Schema actual) {
+        assertThat(actual.type()).isEqualTo(expected.type());
+        assertThat(actual.fields()).containsExactlyElementsOf(expected.fields());
+    }
+
+    static List<Arguments> testDecompressionData() {
+        List<Arguments> result = new ArrayList<>();
+        for (FormatType formatType : FormatType.values()) {
+            for (CompressionType compressionType : CompressionType.values()) {
+                result.add(Arguments.of(formatType, compressionType));
+            }
+        }
+        return result;
     }
 
     /**

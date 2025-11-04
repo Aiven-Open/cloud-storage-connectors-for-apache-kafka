@@ -62,13 +62,8 @@ public class SinkCommonConfig extends CommonConfig {
         return outputFormatFragment.getFormatType();
     }
 
-    protected static void addCompressionTypeConfig(final ConfigDef configDef,
-            final CompressionType defaultCompressionType) {
-        CompressionFragment.update(configDef, defaultCompressionType);
-    }
-
     public CompressionType getCompressionType() {
-        return new CompressionFragment(this).getCompressionType();
+        return fileNameFragment.getCompressionType();
     }
 
     public Boolean envelopeEnabled() {

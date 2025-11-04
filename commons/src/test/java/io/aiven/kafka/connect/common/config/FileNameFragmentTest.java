@@ -138,13 +138,13 @@ public class FileNameFragmentTest {// NOPMD
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.CSV.name,
-                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         for (final CompressionType compressionType : CompressionType.values()) {
             args.add(Arguments.of(FileNameFragment.DEFAULT_FILENAME_TEMPLATE + ".avro" + compressionType.extension(),
                     Map.of(OutputFormatFragment.FORMAT_OUTPUT_TYPE_CONFIG, FormatType.AVRO.name,
-                            CompressionFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
+                            FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compressionType.name)));
         }
 
         return args.stream();
