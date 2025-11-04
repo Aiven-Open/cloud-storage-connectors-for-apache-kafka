@@ -259,8 +259,6 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
         when(config.getTransformerMaxBufferSize()).thenReturn(4096);
         when(config.getInputFormat()).thenReturn(format);
         when(config.getCompressionType()).thenReturn(CompressionType.NONE);
-        // when(config.getList<>OutputFields()).genReturn(Collections.singletonList(new
-        // OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)));
 
         final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
                 transformer);
