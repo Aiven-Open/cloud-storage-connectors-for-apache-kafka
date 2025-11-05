@@ -463,7 +463,7 @@ public final class S3ConfigFragment extends ConfigFragment {
 
         @Override
         public String toString() {
-            return "Supported values are: " + SUPPORTED_AWS_REGIONS;
+            return SUPPORTED_AWS_REGIONS;
         }
 
     }

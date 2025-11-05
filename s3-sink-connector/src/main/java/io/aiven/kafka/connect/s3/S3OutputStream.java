@@ -33,6 +33,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.aiven.commons.collections.Scale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,7 @@ public class S3OutputStream extends OutputStream {
 
     private final Logger logger = LoggerFactory.getLogger(S3OutputStream.class);
 
-    public static final int DEFAULT_PART_SIZE = 5 * 1024 * 1024;
+    public static final int DEFAULT_PART_SIZE = (int) Scale.MiB.asBytes(5);
 
     private final AmazonS3 client;
 
