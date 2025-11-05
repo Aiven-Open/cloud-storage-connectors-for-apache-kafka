@@ -409,66 +409,66 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
     }
     @ParameterizedTest
     @MethodSource("testDecompressionData")
-    void testDecompression(FormatType formatType, CompressionType compressionType) throws IOException {
+    @SuppressWarnings("PMD.NcssCount")
+    void testDecompression(final FormatType formatType, final CompressionType compressionType) throws IOException {
         // setup the data
-        OffsetManager.OffsetManagerEntry<?> offsetManagerEntry = mock(OffsetManager.OffsetManagerEntry.class);
-
-        final Transformer transformer = TransformerFactory.getTransformer(formatTypeConversion(formatType));
         final SourceCommonConfig config = mockSourceConfig(FILE_PATTERN, 0, 1, null);
         when(config.getTransformerMaxBufferSize()).thenReturn(4096);
         when(config.getCompressionType()).thenReturn(compressionType);
         when(config.getInputFormat()).thenReturn(formatTypeConversion(formatType));
 
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        OutputWriter outputWriter = OutputWriter.builder()
+        final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        Object value = null;
+        Schema valueSchema = null;
+        try (OutputWriter outputWriter = OutputWriter.builder()
                 .withCompressionType(compressionType)
                 .withOutputFields(
                         Collections.singletonList(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)))
-                .build(byteArrayOutputStream, formatType);
-        Object value = null;
-        Schema valueSchema = null;
-        switch (formatType) {
-            case AVRO :
-                valueSchema = SchemaBuilder.struct()
-                        .field("message", SchemaBuilder.STRING_SCHEMA)
-                        .field("id", SchemaBuilder.INT32_SCHEMA);
-                value = new Struct(valueSchema).put("message", "Hello").put("id", 1);
-                break;
-            case PARQUET :
-                valueSchema = ParquetTestDataFixture.PARQUET_SCHEMA;
-                value = new Struct(valueSchema).put("name", "TheDude")
-                        .put("age", 32)
-                        .put("email", "thedude@example.com");
-                break;
-            case JSONL :
-                valueSchema = SchemaBuilder.struct()
-                        .field("message", SchemaBuilder.STRING_SCHEMA)
-                        .field("id", SchemaBuilder.INT32_SCHEMA);
-                value = new Struct(valueSchema).put("message", "Hello").put("id", 2);
-                break;
-            case CSV :
-                valueSchema = SchemaBuilder.BYTES_SCHEMA;
-                value = "'test','one'".getBytes(StandardCharsets.UTF_8);
-                break;
-            case JSON :
-                valueSchema = SchemaBuilder.STRING_SCHEMA;
-                value = "json is here";
-                break;
-            default :
-                throw new IllegalArgumentException("Unknown format type: " + formatType);
-        }
+                .build(byteArrayOutputStream, formatType)) {
 
-        SinkRecord sinkRecord = new SinkRecord("testTopic", 0, Schema.STRING_SCHEMA, "testRecord", valueSchema, value,
-                0);
-        outputWriter.writeRecord(sinkRecord);
-        outputWriter.close();
+            switch (formatType) {
+                case AVRO :
+                    valueSchema = SchemaBuilder.struct()
+                            .field("message", SchemaBuilder.STRING_SCHEMA)
+                            .field("id", SchemaBuilder.INT32_SCHEMA);
+                    value = new Struct(valueSchema).put("message", "Hello").put("id", 1);
+                    break;
+                case PARQUET :
+                    valueSchema = ParquetTestDataFixture.PARQUET_SCHEMA;
+                    value = new Struct(valueSchema).put("name", "TheDude")
+                            .put("age", 32)
+                            .put("email", "thedude@example.com");
+                    break;
+                case JSONL :
+                    valueSchema = SchemaBuilder.struct()
+                            .field("message", SchemaBuilder.STRING_SCHEMA)
+                            .field("id", SchemaBuilder.INT32_SCHEMA);
+                    value = new Struct(valueSchema).put("message", "Hello").put("id", 2);
+                    break;
+                case CSV :
+                    valueSchema = SchemaBuilder.BYTES_SCHEMA;
+                    value = "'test','one'".getBytes(StandardCharsets.UTF_8);
+                    break;
+                case JSON :
+                    valueSchema = SchemaBuilder.STRING_SCHEMA;
+                    value = "json is here";
+                    break;
+                default :
+                    throw new IllegalArgumentException("Unknown format type: " + formatType);
+            }
+
+            final SinkRecord sinkRecord = new SinkRecord("testTopic", 0, Schema.STRING_SCHEMA, "testRecord",
+                    valueSchema, value, 0);
+            outputWriter.writeRecord(sinkRecord);
+        }
         createClientMutator().addObject(key, ByteBuffer.wrap(byteArrayOutputStream.toByteArray())).endOfBlock().build();
+        final Transformer transformer = TransformerFactory.getTransformer(formatTypeConversion(formatType));
 
         // Start the test
         final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(config, offsetManager,
                 transformer);
         assertThat(iterator).hasNext();
-        T sourceRecord = iterator.next();
+        final T sourceRecord = iterator.next();
         assertThat(sourceRecord).isNotNull();
         switch (formatType) {
             case AVRO :
@@ -476,7 +476,7 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
                 Struct struct = (Struct) sourceRecord.getValue().value();
                 struct = (Struct) struct.get("value");
                 assertEquivalent(valueSchema, struct.schema());
-                for (Field field : valueSchema.fields()) {
+                for (final Field field : valueSchema.fields()) {
                     assertThat(struct.get(field)).isEqualTo(((Struct) value).get(field));
                 }
                 break;
@@ -501,15 +501,15 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
         }
     }
 
-    private void assertEquivalent(Schema expected, Schema actual) {
+    private void assertEquivalent(final Schema expected, final Schema actual) {
         assertThat(actual.type()).isEqualTo(expected.type());
         assertThat(actual.fields()).containsExactlyElementsOf(expected.fields());
     }
 
     static List<Arguments> testDecompressionData() {
-        List<Arguments> result = new ArrayList<>();
-        for (FormatType formatType : FormatType.values()) {
-            for (CompressionType compressionType : CompressionType.values()) {
+        final List<Arguments> result = new ArrayList<>();
+        for (final FormatType formatType : FormatType.values()) {
+            for (final CompressionType compressionType : CompressionType.values()) {
                 result.add(Arguments.of(formatType, compressionType));
             }
         }

@@ -176,7 +176,7 @@ publishing {
         licenses {
           license {
             name = "Apache 2.0"
-            url = "http://www.apache.org/licenses/LICENSE-2.0"
+            url = "https://www.apache.org/licenses/LICENSE-2.0"
             distribution = "repo"
           }
         }

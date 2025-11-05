@@ -89,6 +89,7 @@ dependencies {
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
+  testImplementation(apache.commons.io)
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
   testImplementation("io.findify:s3mock_2.13:$s3mockVersion")
@@ -193,7 +194,7 @@ publishing {
         licenses {
           license {
             name = "Apache 2.0"
-            url = "http://www.apache.org/licenses/LICENSE-2.0"
+            url = "https://www.apache.org/licenses/LICENSE-2.0"
             distribution = "repo"
           }
         }

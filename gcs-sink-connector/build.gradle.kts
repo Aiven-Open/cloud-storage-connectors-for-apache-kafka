@@ -95,6 +95,7 @@ dependencies {
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
+  testImplementation(apache.commons.io)
   testImplementation("com.google.cloud:google-cloud-nio:0.127.36")
 
   testImplementation(compressionlibs.snappy)
@@ -191,7 +192,7 @@ publishing {
         licenses {
           license {
             name = "Apache 2.0"
-            url = "http://www.apache.org/licenses/LICENSE-2.0"
+            url = "https://www.apache.org/licenses/LICENSE-2.0"
             distribution = "repo"
           }
         }
