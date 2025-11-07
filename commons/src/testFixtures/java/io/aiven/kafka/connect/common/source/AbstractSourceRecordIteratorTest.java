@@ -486,7 +486,7 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
                 break;
             case JSON :
                 assertThat(sourceRecord.getValue().schema()).isNull();
-                assertThat(sourceRecord.getValue().value())
+                assertThat(sourceRecord.getValue().value()).describedAs(new String((byte[])sourceRecord.getValue().value()) + " == " + String.format("[%n{\"value\":\"%s\"}%n]", value))
                         .isEqualTo(String.format("[%n{\"value\":\"%s\"}%n]", value).getBytes(StandardCharsets.UTF_8));
                 break;
             case JSONL :
