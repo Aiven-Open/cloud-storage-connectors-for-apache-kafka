@@ -43,6 +43,7 @@ import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.source.SourceTaskContext;
 import org.apache.kafka.connect.storage.OffsetStorageReader;
@@ -62,6 +63,7 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -486,10 +488,15 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
                 break;
             case JSON :
                 assertThat(sourceRecord.getValue().schema()).isNull();
-                assertThat(sourceRecord.getValue().value())
-                        .describedAs(new String((byte[]) sourceRecord.getValue().value(), StandardCharsets.UTF_8)
-                                + " == " + String.format("[%n{\"value\":\"%s\"}%n]", value))
-                        .isEqualTo(String.format("[%n{\"value\":\"%s\"}%n]", value).getBytes(StandardCharsets.UTF_8));
+                try (JsonDeserializer jsonDeserializer = new JsonDeserializer()) {
+                    ArrayNode arrayNode = (ArrayNode) jsonDeserializer.deserialize("topic",
+                            (byte[]) sourceRecord.getValue().value());
+                    assertThat(arrayNode.size()).isEqualTo(1);
+                    assertThat(arrayNode.get(0).get("value").asText())
+                            .describedAs(new String((byte[]) sourceRecord.getValue().value(), StandardCharsets.UTF_8)
+                                    + " == " + String.format("[%n{\"value\":\"%s\"}%n]", value))
+                            .isEqualTo(value);
+                }
                 break;
             case JSONL :
                 assertThat(sourceRecord.getValue().schema()).isNull();
