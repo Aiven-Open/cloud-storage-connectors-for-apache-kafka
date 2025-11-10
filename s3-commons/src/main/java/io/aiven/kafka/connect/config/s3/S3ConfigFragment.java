@@ -456,7 +456,7 @@ public final class S3ConfigFragment extends ConfigFragment {
             if (Objects.nonNull(value)) {
                 final String valueStr = (String) value;
                 if (Region.regions().stream().noneMatch(r -> r.id().equals(valueStr))) {
-                    throw new ConfigException(name, valueStr, toString());
+                    throw new ConfigException(name, valueStr, "See documentation for list of valid regions.");
                 }
             }
         }
@@ -600,7 +600,7 @@ public final class S3ConfigFragment extends ConfigFragment {
     }
 
     public int getAwsS3PartSize() {
-        return getInt(AWS_S3_PART_SIZE);
+        return getLong(AWS_S3_PART_SIZE).intValue();
     }
 
     public long getS3RetryBackoffDelayMs() {
@@ -702,7 +702,7 @@ public final class S3ConfigFragment extends ConfigFragment {
             return setValue(FETCH_PAGE_SIZE, fetchPageSize);
         }
 
-        public Setter partSize(final int partSize) {
+        public Setter partSize(final long partSize) {
             return setValue(AWS_S3_PART_SIZE, partSize);
         }
 
