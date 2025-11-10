@@ -48,7 +48,6 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SinkConfig.class);
 
-
     // Default values from AWS SDK, since they are hidden
     public static final int AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT = 100;
     public static final int AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 20_000;

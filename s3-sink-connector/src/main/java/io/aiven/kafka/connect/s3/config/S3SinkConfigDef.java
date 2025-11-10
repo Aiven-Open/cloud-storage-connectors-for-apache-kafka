@@ -22,6 +22,9 @@ import java.util.Map;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 
+import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigValue;
+
 import io.aiven.commons.collections.Scale;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
@@ -31,10 +34,6 @@ import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.S3OutputStream;
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
-
-import static io.aiven.commons.collections.Scale.GiB;
 
 public class S3SinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef {
 
@@ -72,12 +71,12 @@ public class S3SinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef {
 
         // add awsS3SinkCounter if more S3 Sink Specific config is added
         // This is used to set orderInGroup
-        configDef.define(S3ConfigFragment.AWS_S3_PART_SIZE, Type.INT, S3OutputStream.DEFAULT_PART_SIZE,
-                ScaleValidator.between(0, GiB.asBytes(2), Scale.IEC)
-                , Importance.MEDIUM,
-                "The Part Size in S3 Multi-part Uploads in bytes. Maximum is " + GiB.units(2) + " and default is " + Scale.size(S3OutputStream.DEFAULT_PART_SIZE, Scale.IEC),
+        configDef.define(S3ConfigFragment.AWS_S3_PART_SIZE, Type.LONG, S3OutputStream.DEFAULT_PART_SIZE,
+                ScaleValidator.between(Scale.MiB.asBytes(1), Integer.MAX_VALUE, Scale.IEC), Importance.MEDIUM,
+                "The Part Size in S3 Multi-part Uploads in bytes. Maximum is "
+                        + Scale.scaleOf(Integer.MAX_VALUE, Scale.IEC) + " and default is "
+                        + Scale.size(S3OutputStream.DEFAULT_PART_SIZE, Scale.IEC),
                 GROUP_AWS, 0, ConfigDef.Width.NONE, S3ConfigFragment.AWS_S3_PART_SIZE);
     }
-
 
 }

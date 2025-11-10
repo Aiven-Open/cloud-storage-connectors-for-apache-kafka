@@ -182,19 +182,25 @@ final class S3SinkConfigTest {
 
     @Test
     void wrongPartSize() {
-        final var wrongMaxPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
-                Long.toString(2_000_000_001L));
-        assertThatThrownBy(() -> new S3SinkConfig(wrongMaxPartSizeProps)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value 2000000001 for configuration aws.s3.part.size.bytes: "
-                        + "Part size must be no more: 2000000000 bytes (2GB)");
+        final Map<String, String> wrongPartSizeProps = new HashMap<>();
+        // Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
+        // S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
+        // Long.toString(2_000_000_001L),
+        // S3ConfigFragment.setter());
+        S3ConfigFragment.setter(wrongPartSizeProps)
+                .accessKeyId("blah-blah-key-id")
+                .accessKeySecret("bla-bla-access-key")
+                .bucketName("bla-bucket-name")
+                .partSize((long) Integer.MAX_VALUE + 1);
 
-        final var wrongMinPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
-                "0");
-        assertThatThrownBy(() -> new S3SinkConfig(wrongMinPartSizeProps)).isInstanceOf(ConfigException.class)
+        assertThatThrownBy(() -> new S3SinkConfig(wrongPartSizeProps)).isInstanceOf(ConfigException.class)
                 .hasMessage(
-                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Part size must be greater than 0");
+                        "Invalid value 2147483648 for configuration aws.s3.part.size.bytes: Value must be no more than 2.0 GiB (2147483647 B)");
+
+        S3ConfigFragment.setter(wrongPartSizeProps).partSize(0);
+        assertThatThrownBy(() -> new S3SinkConfig(wrongPartSizeProps)).isInstanceOf(ConfigException.class)
+                .hasMessage(
+                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Value must be at least 1.0 MiB (1048576 B)");
     }
 
     @Test
@@ -241,16 +247,16 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value  for configuration aws_s3_region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                .hasMessage(
+                        "Invalid value  for configuration aws_s3_region: See documentation for list of valid regions.");
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value  for configuration aws.s3.region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                .hasMessage(
+                        "Invalid value  for configuration aws.s3.region: See documentation for list of valid regions.");
     }
 
     @Test
@@ -261,16 +267,16 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION, "unknown");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value unknown for configuration aws_s3_region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                .hasMessage(
+                        "Invalid value unknown for configuration aws_s3_region: See documentation for list of valid regions.");
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value  for configuration aws.s3.region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                .hasMessage(
+                        "Invalid value  for configuration aws.s3.region: See documentation for list of valid regions.");
     }
 
     @Test
