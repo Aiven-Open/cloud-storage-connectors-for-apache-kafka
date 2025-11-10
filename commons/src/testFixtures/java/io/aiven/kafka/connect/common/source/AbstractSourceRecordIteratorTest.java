@@ -83,6 +83,7 @@ import org.junit.jupiter.params.provider.MethodSource;
  * @param <T>
  *            The concrete implementation of the {@link AbstractSourceRecord} .
  */
+@SuppressWarnings("PMD.ExcessiveImports")
 public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends AbstractSourceRecord<K, N, O, T>> {
     /** The offset manager */
     private OffsetManager<O> offsetManager;
@@ -489,7 +490,7 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
             case JSON :
                 assertThat(sourceRecord.getValue().schema()).isNull();
                 try (JsonDeserializer jsonDeserializer = new JsonDeserializer()) {
-                    ArrayNode arrayNode = (ArrayNode) jsonDeserializer.deserialize("topic",
+                    final ArrayNode arrayNode = (ArrayNode) jsonDeserializer.deserialize("topic",
                             (byte[]) sourceRecord.getValue().value());
                     assertThat(arrayNode.size()).isEqualTo(1);
                     assertThat(arrayNode.get(0).get("value").asText())
