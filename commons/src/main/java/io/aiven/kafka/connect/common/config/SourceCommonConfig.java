@@ -18,7 +18,7 @@ package io.aiven.kafka.connect.common.config;
 
 import java.util.Map;
 
-import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigValue;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
@@ -32,19 +32,12 @@ public class SourceCommonConfig extends CommonConfig {
     private final SourceConfigFragment sourceConfigFragment;
     private final FileNameFragment fileNameFragment;
 
-    public SourceCommonConfig(ConfigDef definition, Map<?, ?> originals) {// NOPMD
+    public SourceCommonConfig(final SourceCommonConfigDef definition, final Map<?, ?> originals) {
         super(definition, originals);
-        // Construct Fragments
-        transformerFragment = new TransformerFragment(this);
-        sourceConfigFragment = new SourceConfigFragment(this);
-        fileNameFragment = new FileNameFragment(this);
-        validate(); // NOPMD ConstructorCallsOverridableMethod
-    }
-
-    private void validate() {
-        transformerFragment.validate();
-        sourceConfigFragment.validate();
-        fileNameFragment.validateDistributionType(getDistributionType());
+        final FragmentDataAccess dataAccess = FragmentDataAccess.from(this);
+        transformerFragment = new TransformerFragment(dataAccess);
+        sourceConfigFragment = new SourceConfigFragment(dataAccess);
+        fileNameFragment = new FileNameFragment(dataAccess, false);
     }
 
     public InputFormat getInputFormat() {
@@ -87,7 +80,27 @@ public class SourceCommonConfig extends CommonConfig {
         return sourceConfigFragment.getNativeStartKey();
     }
 
-    public CompressionType getCompressionType() {
-        return fileNameFragment.getCompressionType();
+    public int getRingBufferSize() {
+        return sourceConfigFragment.getRingBufferSize();
+    }
+
+    public static class SourceCommonConfigDef extends CommonConfigDef {
+
+        public SourceCommonConfigDef() {
+            super();
+            TransformerFragment.update(this);
+            SourceConfigFragment.update(this);
+            FileNameFragment.update(this);
+        }
+
+        @Override
+        public Map<String, ConfigValue> multiValidate(final Map<String, ConfigValue> valueMap) {
+            final Map<String, ConfigValue> values = super.multiValidate(valueMap);
+            final FragmentDataAccess fragmentDataAccess = FragmentDataAccess.from(valueMap);
+            new TransformerFragment(fragmentDataAccess).validate(values);
+            new SourceConfigFragment(fragmentDataAccess).validate(values);
+            new FileNameFragment(fragmentDataAccess, false).validate(values);
+            return values;
+        }
     }
 }

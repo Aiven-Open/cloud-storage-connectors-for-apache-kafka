@@ -16,14 +16,9 @@
 
 package io.aiven.kafka.connect.common.config.validators;
 
-import static io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator.SUPPORTED_VARIABLE_PARAMETERS;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.stream.Collectors;
-
 import org.apache.kafka.common.config.ConfigException;
-
-import io.aiven.kafka.connect.common.config.FilenameTemplateVariable;
 
 import org.junit.jupiter.api.Test;
 
@@ -34,12 +29,9 @@ class FilenameTemplateValidatorTest {
     @Test
     void validateVariableWithInvalidParameterName() {
         final String value = "{{topic}}-{{partition:qwe=true}}-{{start_offset}}";
-        final String supportedParametersSet = SUPPORTED_VARIABLE_PARAMETERS.keySet()
-                .stream()
-                .map(v -> FilenameTemplateVariable.of(v).description())
-                .collect(Collectors.joining(","));
-        final String message = "Invalid value %s for configuration %s: unsupported set of template variables parameters, supported sets are: %s";
-        assertThatThrownBy(() -> validator.ensureValid(null, value)).isInstanceOf(ConfigException.class)
-                .hasMessage(message, value, TEST_CONFIG_NAME, supportedParametersSet);
+        final String message = "Invalid value {{topic}}-{{partition:qwe=true}}-{{start_offset}} for configuration TEST_CONFIG: unsupported set of template variables parameters, supported sets are: partition:padding=true|false,start_offset:padding=true|false,timestamp:unit=yyyy|MM|dd|HH";
+
+        assertThatThrownBy(() -> validator.ensureValid(TEST_CONFIG_NAME, value)).isInstanceOf(ConfigException.class)
+                .hasMessage(message);
     }
 }

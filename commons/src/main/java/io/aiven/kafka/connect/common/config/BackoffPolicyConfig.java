@@ -19,20 +19,19 @@ package io.aiven.kafka.connect.common.config;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 /**
  * Defines the backoff policy for connectors.
  */
-public class BackoffPolicyConfig extends ConfigFragment {
+public final class BackoffPolicyConfig extends ConfigFragment {
 
     static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
     static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
 
-    protected BackoffPolicyConfig(final AbstractConfig cfg) {
-        super(cfg);
+    public BackoffPolicyConfig(final FragmentDataAccess dataAccess) {
+        super(dataAccess);
     }
 
     /**
@@ -40,9 +39,9 @@ public class BackoffPolicyConfig extends ConfigFragment {
      *
      * @param configDef
      *            the configuration definition ot update.
-     * @return the configuraiton definition with additional options.
+     * @return the number of items in the backoff policy group.
      */
-    public static ConfigDef update(final ConfigDef configDef) {
+    public static int update(final ConfigDef configDef) {
         configDef.define(KAFKA_RETRY_BACKOFF_MS_CONFIG, ConfigDef.Type.LONG, null, new ConfigDef.Validator() {
 
             final long maximumBackoffPolicy = TimeUnit.HOURS.toMillis(24);
@@ -68,7 +67,7 @@ public class BackoffPolicyConfig extends ConfigFragment {
                         + TimeUnit.HOURS.toMillis(24) + " (24 hours).",
                 GROUP_RETRY_BACKOFF_POLICY, 1, ConfigDef.Width.NONE, KAFKA_RETRY_BACKOFF_MS_CONFIG);
 
-        return configDef;
+        return 1;
     }
 
     /**
@@ -77,6 +76,6 @@ public class BackoffPolicyConfig extends ConfigFragment {
      * @return the Kafka retry backoff time in MS.
      */
     public Long getKafkaRetryBackoffMs() {
-        return cfg.getLong(KAFKA_RETRY_BACKOFF_MS_CONFIG);
+        return getLong(KAFKA_RETRY_BACKOFF_MS_CONFIG);
     }
 }

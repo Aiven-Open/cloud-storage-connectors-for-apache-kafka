@@ -39,7 +39,8 @@ class TransformerFragmentTest {
         final Map<String, Object> props = new HashMap<>();
         props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, bufferSize);
 
-        final TransformerFragment schemaReg = new TransformerFragment(new AbstractConfig(configDef, props));
+        final TransformerFragment schemaReg = new TransformerFragment(
+                FragmentDataAccess.from(new AbstractConfig(configDef, props)));
         assertThat(schemaReg.getTransformerMaxBufferSize()).isEqualTo(bufferSize);
     }
 
@@ -56,7 +57,7 @@ class TransformerFragmentTest {
         final Map<String, Object> props = new HashMap<>();
 
         props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, value);
-        assertThatThrownBy(() -> new TransformerFragment(new AbstractConfig(configDef, props)))
+        assertThatThrownBy(() -> new TransformerFragment(FragmentDataAccess.from(new AbstractConfig(configDef, props))))
                 .isInstanceOf(ConfigException.class)
                 .hasMessage(expectedMessage);
     }

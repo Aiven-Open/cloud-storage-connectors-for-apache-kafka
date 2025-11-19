@@ -16,15 +16,13 @@
 
 package io.aiven.kafka.connect.gcs;
 
-import java.util.List;
-import java.util.Map;
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
+public class GcsSinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef {
 
-public class GcsSinkConfigDef extends ConfigDef {
-    @Override
-    public List<ConfigValue> validate(final Map<String, String> props) {
-        return super.validate(GcsSinkConfig.handleDeprecatedYyyyUppercase(props));
+    public GcsSinkConfigDef() {
+        super(OutputFieldType.VALUE, CompressionType.NONE);
     }
 }

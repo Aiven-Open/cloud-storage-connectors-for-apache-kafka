@@ -71,7 +71,7 @@ final class AzureSinkConfigTest {
         assertThat(configValue.errorMessages()).isNotEmpty();
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessageStartingWith("Invalid value ");
+                .hasMessageStartingWith("There are errors in the configuration:\n" + "Invalid value ");
     }
 
     @Test
@@ -226,14 +226,14 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.compression.type", "unsupported");
 
         final var expectedErrorMessage = "Invalid value unsupported for configuration file.compression.type: "
-                + "supported values are: 'none', 'gzip', 'snappy', 'zstd'";
+                + "String must be one of (case insensitive): ZSTD, GZIP, NONE, SNAPPY";
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "file.compression.type", expectedErrorMessage);
         assertThat(configValue.recommendedValues()).containsExactly("none", "gzip", "snappy", "zstd");
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -259,14 +259,14 @@ final class AzureSinkConfigTest {
 
         final var expectedErrorMessage = "Invalid value [key, value, offset, timestamp, headers, unsupported] "
                 + "for configuration format.output.fields: "
-                + "supported values are: 'key', 'value', 'offset', 'timestamp', 'headers'";
+                + "supported values are (case insensitive): key, value, offset, timestamp, headers";
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "format.output.fields", expectedErrorMessage);
         assertThat(configValue.recommendedValues()).containsExactly("key", "value", "offset", "timestamp", "headers");
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -324,12 +324,12 @@ final class AzureSinkConfigTest {
                 "file.max.records", "-42");
 
         final var expectedErrorMessage = "Invalid value -42 for configuration file.max.records: "
-                + "must be a non-negative integer number";
+                + "Value must be at least 0";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.max.records", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @ParameterizedTest
@@ -435,12 +435,12 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.name.template", "");
 
         final var expectedErrorMessage = "Invalid value  for configuration file.name.template: RecordGrouper requires that the template [] has variables defined. Supported variables are: "
-                + TEMPLATE_VARIABLES;
+                + TEMPLATE_VARIABLES + ".";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -449,14 +449,18 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.name.template",
                 "{{ aaa }}{{ topic }}{{ partition }}{{ start_offset }}");
 
-        final var expectedErrorMessage = "Invalid value {{ aaa }}{{ topic }}{{ partition }}{{ start_offset }} "
-                + "for configuration file.name.template: unsupported set of template variables, "
-                + "supported sets are: " + TEMPLATE_VARIABLES;
+        final String errMsg1 = "Invalid value {{ aaa }}{{ topic }}{{ partition }}{{ start_offset }} for configuration "
+                + "file.name.template: unsupported template variable used ({{aaa}}), supported values are: {{key}}, {{partition}}, "
+                + "{{start_offset}}, {{timestamp}}, {{topic}}.";
 
-        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
+        final String errMsg2 = "Invalid value {{ aaa }}{{ topic }}{{ partition }}{{ start_offset }} for configuration "
+                + "file.name.template: unsupported set of template variables, supported sets are: topic,partition,start_offset,timestamp; "
+                + "topic,partition,key,start_offset,timestamp; key; key,topic,partition.";
+
+        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", errMsg1, errMsg2);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(errMsg1, errMsg2);
     }
 
     @Test
@@ -465,12 +469,12 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.name.template", "{{ partition }}{{ start_offset }}");
 
         final var expectedErrorMessage = "Invalid value {{ partition }}{{ start_offset }} for configuration file.name.template: "
-                + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES;
+                + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES + ".";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -479,15 +483,14 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.name.template",
                 "{{start_offset:padding=FALSE}}-{{partition}}-{{topic}}");
 
-        final var expectedErrorMessage = "Invalid value {{start_offset:padding=FALSE}}-{{partition}}-{{topic}} "
-                + "for configuration file.name.template: unsupported set of template variables parameters, "
-                + "supported sets are: "
-                + "partition:padding=true|false,start_offset:padding=true|false,timestamp:unit=yyyy|MM|dd|HH";
+        final var expectedErrorMessage = "Invalid value {{start_offset:padding=FALSE}}-{{partition}}-{{topic}} for "
+                + "configuration file.name.template: FALSE is not a valid value for parameter padding, "
+                + "supported values are: true|false.";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -498,12 +501,12 @@ final class AzureSinkConfigTest {
 
         final var expectedErrorMessage = "Invalid value {{start_offset}}-{{partition}}-{{topic}}-{{timestamp}} "
                 + "for configuration file.name.template: parameter unit is required for the the variable timestamp, "
-                + "supported values are: yyyy|MM|dd|HH";
+                + "supported values are: yyyy|MM|dd|HH.";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -572,12 +575,12 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.name.template", "{{ topic }}{{ start_offset }}");
 
         final var expectedErrorMessage = "Invalid value {{ topic }}{{ start_offset }} for configuration file.name.template: "
-                + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES;
+                + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES + ".";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -586,12 +589,12 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.name.template", "{{ topic }}{{ partition }}");
 
         final var expectedErrorMessage = "Invalid value {{ topic }}{{ partition }} for configuration file.name.template: "
-                + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES;
+                + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES + ".";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -617,11 +620,13 @@ final class AzureSinkConfigTest {
         final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
                 "azure.storage.connection.string", "test", "file.name.template", "{{key}}", "file.max.records", "42");
 
-        // Should pass here, because ConfigDef validation doesn't check interdependencies.
-        assertConfigDefValidationPasses(properties);
+        final var expectedErrorMessage = "Invalid value 42 for configuration file.max.records: "
+                + "When file.name.template is {{key}}, file.max.records must be either 1 or not set.";
+
+        expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.max.records", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage("When file.name.template is {{key}}, file.max.records must be either 1 or not set");
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -652,14 +657,14 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "file.name.timestamp.timezone", "Europe/Berlin",
                 "file.name.timestamp.source", "UNKNOWN_TIMESTAMP_SOURCE");
 
-        final var expectedErrorMessage = "Invalid value UNKNOWN_TIMESTAMP_SOURCE for configuration "
-                + "file.name.timestamp.source: Unknown timestamp source: UNKNOWN_TIMESTAMP_SOURCE";
+        final var expectedErrorMessage = "Invalid value UNKNOWN_TIMESTAMP_SOURCE for configuration file.name.timestamp.source: "
+                + "String must be one of (case insensitive): EVENT, WALLCLOCK";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.timestamp.source",
                 expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @Test
@@ -695,14 +700,14 @@ final class AzureSinkConfigTest {
                 "azure.storage.connection.string", "test", "format.output.type", "unknown");
 
         final var expectedErrorMessage = "Invalid value unknown for configuration format.output.type: "
-                + "Supported values are: 'avro', 'csv', 'json', 'jsonl', 'parquet'";
+                + "String must be one of (case insensitive): PARQUET, CSV, JSON, AVRO, JSONL";
 
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "format.output.type", expectedErrorMessage);
         assertThat(configValue.recommendedValues()).containsExactly("avro", "csv", "json", "jsonl", "parquet");
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(expectedErrorMessage);
+                .hasMessageContaining(expectedErrorMessage);
     }
 
     @ParameterizedTest
@@ -712,8 +717,9 @@ final class AzureSinkConfigTest {
                 AzureBlobSinkConfig.FILE_MAX_RECORDS, "2", AzureBlobSinkConfig.AZURE_STORAGE_CONTAINER_NAME_CONFIG,
                 "any_container");
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
-                        fileNameTemplate));
+                .hasMessageContaining(
+                        String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
+                                fileNameTemplate));
     }
 
     private void assertConfigDefValidationPasses(final Map<String, String> properties) {
@@ -723,11 +729,11 @@ final class AzureSinkConfigTest {
     }
 
     private ConfigValue expectErrorMessageForConfigurationInConfigDefValidation(final Map<String, String> properties,
-            final String configuration, final String expectedErrorMessage) {
+            final String configuration, final String... expectedErrorMessages) {
         ConfigValue result = null;
         for (final ConfigValue configValue : AzureBlobSinkConfig.configDef().validate(properties)) {
             if (configValue.name().equals(configuration)) {
-                assertThat(configValue.errorMessages()).containsExactly(expectedErrorMessage);
+                assertThat(configValue.errorMessages()).containsExactlyInAnyOrder(expectedErrorMessages);
                 result = configValue;
             } else {
                 assertThat(configValue.errorMessages()).isEmpty();

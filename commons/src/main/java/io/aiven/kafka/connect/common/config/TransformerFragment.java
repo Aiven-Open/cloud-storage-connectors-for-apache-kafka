@@ -21,7 +21,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
@@ -53,11 +52,11 @@ public final class TransformerFragment extends ConfigFragment {
     /**
      * Construct the ConfigFragment.
      *
-     * @param cfg
-     *            the configuration that this fragment is associated with.
+     * @param dataAccess
+     *            the FragmentDataAccess that this fragment is associated with.
      */
-    public TransformerFragment(final AbstractConfig cfg) {
-        super(cfg);
+    public TransformerFragment(final FragmentDataAccess dataAccess) {
+        super(dataAccess);
     }
 
     /**
@@ -92,7 +91,7 @@ public final class TransformerFragment extends ConfigFragment {
      * @return the Input format for the
      */
     public InputFormat getInputFormat() {
-        return InputFormat.valueOf(cfg.getString(INPUT_FORMAT_KEY).toUpperCase(Locale.ROOT));
+        return InputFormat.valueOf(getString(INPUT_FORMAT_KEY).toUpperCase(Locale.ROOT));
     }
 
     /**
@@ -101,7 +100,7 @@ public final class TransformerFragment extends ConfigFragment {
      * @return the schema registry URL
      */
     public String getSchemaRegistryUrl() {
-        return cfg.getString(SCHEMA_REGISTRY_URL);
+        return getString(SCHEMA_REGISTRY_URL);
     }
 
     /**
@@ -110,7 +109,7 @@ public final class TransformerFragment extends ConfigFragment {
      * @return the maximum buffer size fo the BYTE input.
      */
     public int getTransformerMaxBufferSize() {
-        return cfg.getInt(TRANSFORMER_MAX_BUFFER_SIZE);
+        return getInt(TRANSFORMER_MAX_BUFFER_SIZE);
     }
 
     public static class InputFormatValidator extends ConfigDef.NonEmptyString {
