@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.common.config.validators.UsageLoggingValidator;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -355,17 +356,16 @@ public final class S3ConfigFragment extends ConfigFragment {
             }
         }, ConfigDef.Importance.MEDIUM, "Prefix for stored objects, for example cluster-1/");
 
-        configDef.define(OUTPUT_FIELDS, ConfigDef.Type.LIST, null, ConfigDef.LambdaValidator.with((name, value) -> {
-            if (Objects.nonNull(value)) {
-                logDeprecated(LOGGER, OUTPUT_FIELDS);
-            }
-            OutputFormatFragment.OUTPUT_FIELDS_VALIDATOR.ensureValid(name, value);
-        }, () -> OutputFormatFragment.OUTPUT_FIELDS_VALIDATOR.toString()), ConfigDef.Importance.MEDIUM,
+        configDef.define(OUTPUT_FIELDS, ConfigDef.Type.LIST, null, new UsageLoggingValidator(OutputFormatFragment.OUTPUT_FIELDS_VALIDATOR,
+                (name, value) -> logDeprecated(LOGGER, name, OutputFormatFragment.FORMAT_OUTPUT_FIELDS_CONFIG)),
+                ConfigDef.Importance.MEDIUM,
                 "Output fields. A comma separated list of one or more: " + OUTPUT_FIELD_NAME_KEY + ", "
                         + OUTPUT_FIELD_NAME_OFFSET + ", " + OUTPUT_FIELD_NAME_TIMESTAMP + ", " + OUTPUT_FIELD_NAME_VALUE
                         + ", " + OUTPUT_FIELD_NAME_HEADERS);
 
-        configDef.define(OUTPUT_COMPRESSION, ConfigDef.Type.STRING, null, FileNameFragment.COMPRESSION_TYPE_VALIDATOR,
+        configDef.define(OUTPUT_COMPRESSION, ConfigDef.Type.STRING, null,
+                new UsageLoggingValidator(FileNameFragment.COMPRESSION_TYPE_VALIDATOR,
+                        (name, value) -> logDeprecated(LOGGER, name, FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG)),
                 ConfigDef.Importance.MEDIUM, "Output compression.");
     }
 

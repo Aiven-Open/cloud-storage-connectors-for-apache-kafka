@@ -97,8 +97,6 @@ public final class GcsSinkConfig extends AivenCommonConfig {
         final GcsSinkConfigDef configDef = new GcsSinkConfigDef();
         addGcsConfigGroup(configDef);
         addFileConfigGroup(configDef);
-        // addOutputFieldsFormatConfigGroup(configDef, OutputFieldType.VALUE);
-        // addKafkaBackoffPolicy(configDef);
         addGcsRetryPolicies(configDef);
         addUserAgentConfig(configDef);
         return configDef;
