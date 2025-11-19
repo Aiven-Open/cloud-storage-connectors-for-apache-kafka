@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.config.validators.UsageLoggingValidator;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -39,6 +38,7 @@ import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
 import io.aiven.kafka.connect.common.config.validators.UrlValidator;
+import io.aiven.kafka.connect.common.config.validators.UsageLoggingValidator;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
@@ -356,8 +356,9 @@ public final class S3ConfigFragment extends ConfigFragment {
             }
         }, ConfigDef.Importance.MEDIUM, "Prefix for stored objects, for example cluster-1/");
 
-        configDef.define(OUTPUT_FIELDS, ConfigDef.Type.LIST, null, new UsageLoggingValidator(OutputFormatFragment.OUTPUT_FIELDS_VALIDATOR,
-                (name, value) -> logDeprecated(LOGGER, name, OutputFormatFragment.FORMAT_OUTPUT_FIELDS_CONFIG)),
+        configDef.define(OUTPUT_FIELDS, ConfigDef.Type.LIST, null,
+                new UsageLoggingValidator(OutputFormatFragment.OUTPUT_FIELDS_VALIDATOR,
+                        (name, value) -> logDeprecated(LOGGER, name, OutputFormatFragment.FORMAT_OUTPUT_FIELDS_CONFIG)),
                 ConfigDef.Importance.MEDIUM,
                 "Output fields. A comma separated list of one or more: " + OUTPUT_FIELD_NAME_KEY + ", "
                         + OUTPUT_FIELD_NAME_OFFSET + ", " + OUTPUT_FIELD_NAME_TIMESTAMP + ", " + OUTPUT_FIELD_NAME_VALUE

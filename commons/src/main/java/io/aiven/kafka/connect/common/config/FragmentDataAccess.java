@@ -30,15 +30,17 @@ import org.apache.kafka.common.utils.Utils;
 /**
  * The data access for a {@link ConfigFragment}.
  *
- * ConfigFragments require access to the parameter and string values from the configuration, but have different types
- * of data avialable to extract that data from.  This interface defines the methods that the ConfigFragment may use to
+ * ConfigFragments require access to the parameter and string values from the configuration, but have different types of
+ * data avialable to extract that data from. This interface defines the methods that the ConfigFragment may use to
  * retrieve data as well as providing implementations against both the {@link AbstractConfig} and a map of String to
  * {@link ConfigValue}.
  */
 public interface FragmentDataAccess {
     /**
      * Creates an implementation against an AbstractConfig.
-     * @param cfg the AbstractConfig to get values from.
+     *
+     * @param cfg
+     *            the AbstractConfig to get values from.
      * @return a FragmentDataAccess
      */
     static FragmentDataAccess from(final AbstractConfig cfg) {
@@ -92,7 +94,9 @@ public interface FragmentDataAccess {
 
     /**
      * Creates an implementation against a map of String to ConfigValues.
-     * @param configValues the map of string to ConfigValues.
+     *
+     * @param configValues
+     *            the map of string to ConfigValues.
      * @return a FragmentDataAccess
      */
     static FragmentDataAccess from(final Map<String, ConfigValue> configValues) {
@@ -170,13 +174,16 @@ public interface FragmentDataAccess {
 
     /**
      * Gets the map of String to value.
+     *
      * @return the map of String to value.
      */
     Map<String, ?> values();
 
     /**
      * Gets the String value from the key.
-     * @param key the key to lookup.
+     *
+     * @param key
+     *            the key to lookup.
      * @return the String value associated with the key.
      */
     String getString(String key);

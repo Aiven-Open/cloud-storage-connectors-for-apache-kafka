@@ -45,8 +45,11 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Constructor.
-     * @param definition the configuration definition.
-     * @param originals the initial configuration data.
+     *
+     * @param definition
+     *            the configuration definition.
+     * @param originals
+     *            the initial configuration data.
      */
     public SourceCommonConfig(final SourceCommonConfigDef definition, final Map<?, ?> originals) {
         super(definition, originals);
@@ -58,6 +61,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the input format.
+     *
      * @return the input format.
      */
     public InputFormat getInputFormat() {
@@ -66,6 +70,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the compression type for the file.
+     *
      * @return the compression type for the file.
      */
     public CompressionType getCompressionType() {
@@ -74,6 +79,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the schema registry URL.
+     *
      * @return the schema registry URL.
      */
     public String getSchemaRegistryUrl() {
@@ -82,6 +88,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the target topic to write messages to.
+     *
      * @return the target topic to write messages to.
      */
     public String getTargetTopic() {
@@ -90,6 +97,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the tolerance for errors.
+     *
      * @return the tolerance for errors.
      */
     public ErrorsTolerance getErrorsTolerance() {
@@ -98,6 +106,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the distribution type.
+     *
      * @return the distribution type.
      */
     public DistributionType getDistributionType() {
@@ -106,6 +115,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the maximum number of records to return in a single poll.
+     *
      * @return the maximum number of records to return in a single poll.
      */
     public int getMaxPollRecords() {
@@ -114,6 +124,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the transformer.
+     *
      * @return the transformer.
      */
     public Transformer getTransformer() {
@@ -122,6 +133,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the maximum buffer size for the transformer.
+     *
      * @return the maximum buffer size for hte transformer.
      */
     public int getTransformerMaxBufferSize() {
@@ -130,6 +142,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the name of the source file.
+     *
      * @return the name of the source file.
      */
     public String getSourceName() {
@@ -138,6 +151,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the native start key for the initial file to scan.
+     *
      * @return the native start key.
      */
     public String getNativeStartKey() {
@@ -146,6 +160,7 @@ public class SourceCommonConfig extends CommonConfig {
 
     /**
      * Gets the size of the ring buffer used to track read files.
+     *
      * @return the size of the ring buffer.
      */
     public int getRingBufferSize() {

@@ -41,8 +41,11 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Constructor.
-     * @param definition the definition for this SinkCommonConfig.
-     * @param originals the original data for the configuraiton.
+     *
+     * @param definition
+     *            the definition for this SinkCommonConfig.
+     * @param originals
+     *            the original data for the configuraiton.
      */
     public SinkCommonConfig(final SinkCommonConfigDef definition, final Map<String, String> originals) {
         super(definition, FileNameFragment.handleDeprecatedYyyyUppercase(originals));
@@ -59,6 +62,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Gets the format type for the output.
+     *
      * @return the format type for the output.
      */
     public FormatType getFormatType() {
@@ -67,6 +71,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Gets the compression type for the output.
+     *
      * @return The compression type for the output.
      */
     public CompressionType getCompressionType() {
@@ -75,6 +80,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Checks the envelope enabled flag.
+     *
      * @return {@code true} if the envelope is enabled, {@code false} otherwise.
      */
     public Boolean envelopeEnabled() {
@@ -83,6 +89,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Gets the output field encoding type.
+     *
      * @return the output field encoding type.
      */
     public OutputFieldEncodingType getOutputFieldEncodingType() {
@@ -91,6 +98,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Gets the file name template.
+     *
      * @return the file name template.
      */
     public final Template getFilenameTemplate() {
@@ -98,7 +106,7 @@ public class SinkCommonConfig extends CommonConfig {
     }
 
     /**
-     * Gets the file name.  This is parsed to create the Template.
+     * Gets the file name. This is parsed to create the Template.
      *
      * @return the file name.
      * @see #getFilenameTemplate()
@@ -109,6 +117,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Gets the timezone for the file name timestamp.
+     *
      * @return the timezone for the filename timestamp.
      */
     public final ZoneId getFilenameTimezone() {
@@ -117,6 +126,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Gets the source for the file name timestamp.
+     *
      * @return the source for the file name timestamp.
      */
     public final TimestampSource getFilenameTimestampSource() {
@@ -125,6 +135,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Gets the maximum records allowed in a single file.
+     *
      * @return the maximum records allowed in a single file.
      */
     public final int getMaxRecordsPerFile() {
@@ -133,6 +144,7 @@ public class SinkCommonConfig extends CommonConfig {
 
     /**
      * Gets the list of output fields.
+     *
      * @return the list of output fields.
      */
     public List<OutputField> getOutputFields() {
@@ -146,8 +158,11 @@ public class SinkCommonConfig extends CommonConfig {
 
         /**
          * Constructor.
-         * @param defaultFieldType the default output field type.
-         * @param compressionType the default file compression type.
+         *
+         * @param defaultFieldType
+         *            the default output field type.
+         * @param compressionType
+         *            the default file compression type.
          */
         public SinkCommonConfigDef(final OutputFieldType defaultFieldType, final CompressionType compressionType) {
             super();
