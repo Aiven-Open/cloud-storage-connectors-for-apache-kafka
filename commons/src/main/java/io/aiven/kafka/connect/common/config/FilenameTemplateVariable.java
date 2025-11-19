@@ -21,13 +21,13 @@ import java.util.List;
 import java.util.Objects;
 
 public enum FilenameTemplateVariable {
-    KEY("key"), TOPIC("topic"), PARTITION("partition",
-            new ParameterDescriptor("padding", false,
-                    List.of(Boolean.TRUE.toString(), Boolean.FALSE.toString()))), START_OFFSET(
-                            "start_offset",
-                            new ParameterDescriptor("padding", false,
-                                    List.of(Boolean.TRUE.toString(), Boolean.FALSE.toString()))), TIMESTAMP("timestamp",
-                                            new ParameterDescriptor("unit", true, List.of("yyyy", "MM", "dd", "HH")));
+    KEY("key"), //
+    TOPIC("topic"), //
+    PARTITION("partition",
+            new ParameterDescriptor("padding", false, List.of(Boolean.TRUE.toString(), Boolean.FALSE.toString()))), //
+    START_OFFSET("start_offset",
+            new ParameterDescriptor("padding", false, List.of(Boolean.TRUE.toString(), Boolean.FALSE.toString()))), //
+    TIMESTAMP("timestamp", new ParameterDescriptor("unit", true, List.of("yyyy", "MM", "dd", "HH")));
 
     public final String name;
 
@@ -98,5 +98,4 @@ public enum FilenameTemplateVariable {
             return Objects.hash(name, required, values);
         }
     }
-
 }

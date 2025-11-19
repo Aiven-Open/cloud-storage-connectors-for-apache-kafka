@@ -39,10 +39,6 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-/**
- * @deprecated switch to {@link SourcenameTemplateValidator} and specific sink/source validation.
- */
-@Deprecated
 public final class FilenameTemplateValidator implements ConfigDef.Validator {
 
     static final Map<String, ParameterDescriptor> SUPPORTED_VARIABLE_PARAMETERS = new LinkedHashMap<>();
@@ -52,10 +48,18 @@ public final class FilenameTemplateValidator implements ConfigDef.Validator {
         SUPPORTED_VARIABLE_PARAMETERS.put(TIMESTAMP.name, TIMESTAMP.parameterDescriptor);
     }
 
-    private final String configName;
+    public FilenameTemplateValidator() {
+    }
 
+    /**
+     *
+     * @param configName
+     * @deprecated use {@link #FilenameTemplateValidator()}.
+     */
+    @Deprecated
+    @SuppressWarnings("PMD.UnusedFormalParameter")
     public FilenameTemplateValidator(final String configName) {
-        this.configName = configName;
+        this();
     }
 
     @Override
@@ -69,7 +73,7 @@ public final class FilenameTemplateValidator implements ConfigDef.Validator {
         // See https://cloud.google.com/storage/docs/naming
         final String valueStr = (String) value;
         if (valueStr.startsWith(".well-known/acme-challenge")) {
-            throw new ConfigException(configName, value, "cannot start with '.well-known/acme-challenge'");
+            throw new ConfigException(name, value, "cannot start with '.well-known/acme-challenge'");
         }
 
         try {
@@ -79,7 +83,7 @@ public final class FilenameTemplateValidator implements ConfigDef.Validator {
             validateVariablesWithRequiredParameters(template.variablesWithParameters());
             RecordGrouperFactory.resolveRecordGrouperType(template);
         } catch (final IllegalArgumentException e) {
-            throw new ConfigException(configName, value, e.getMessage());
+            throw new ConfigException(name, value, e.getMessage());
         }
     }
 

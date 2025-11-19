@@ -19,7 +19,7 @@ package io.aiven.kafka.connect.common.config;
 public class FileNameFragmentFixture {// NOPMD
 
     public enum FileNameArgs {
-        GROUP_FILE(FileNameFragment.GROUP_FILE), FILE_COMPRESSION_TYPE_CONFIG(
+        GROUP_FILE(FileNameFragment.GROUP_NAME), FILE_COMPRESSION_TYPE_CONFIG(
                 FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG), FILE_MAX_RECORDS(
                         FileNameFragment.FILE_MAX_RECORDS), FILE_NAME_TIMESTAMP_TIMEZONE(
                                 FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE), FILE_NAME_TIMESTAMP_SOURCE(

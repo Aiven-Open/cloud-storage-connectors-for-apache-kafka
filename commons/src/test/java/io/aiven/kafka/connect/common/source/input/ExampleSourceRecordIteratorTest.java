@@ -88,7 +88,7 @@ public class ExampleSourceRecordIteratorTest
         public void build() {
             nativeClient = mock(ExampleNativeClient.class);
 
-            // when a listObjectV2 is requests, dequeue the answer from the blocks.
+            // when a listObjectV2 is requests deququ the answer from the blocks.
             when(nativeClient.listObjects()).thenAnswer(env -> dequeueData());
             // when an objectRequest is sent retrieve the response data.
             when(nativeClient.getObjectAsBytes(anyString())).thenAnswer(env -> getData(env.getArgument(0)));

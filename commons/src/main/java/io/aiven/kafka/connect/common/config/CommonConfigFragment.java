@@ -20,7 +20,6 @@ import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
 
 import java.util.Map;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
 
@@ -65,11 +64,11 @@ public class CommonConfigFragment extends ConfigFragment {
     /**
      * Create a fragment instance from an AbstractConfig.
      *
-     * @param cfg
-     *            the AbstractConfig to retrieve data from.
+     * @param dataAccess
+     *            the FragmentDataAccess to retrieve data from.
      */
-    public CommonConfigFragment(final AbstractConfig cfg) { // NOPMD
-        super(cfg);
+    public CommonConfigFragment(final FragmentDataAccess dataAccess) {
+        super(dataAccess);
     }
 
     /**
@@ -78,7 +77,7 @@ public class CommonConfigFragment extends ConfigFragment {
      * @return the task Id.
      */
     public Integer getTaskId() {
-        return cfg.getInt(TASK_ID);
+        return getInt(TASK_ID);
     }
 
     /**
@@ -87,7 +86,7 @@ public class CommonConfigFragment extends ConfigFragment {
      * @return the maximum number of tasks.
      */
     public Integer getMaxTasks() {
-        return cfg.getInt(ConnectorConfig.TASKS_MAX_CONFIG);
+        return getInt(ConnectorConfig.TASKS_MAX_CONFIG);
     }
 
     /**

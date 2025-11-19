@@ -24,6 +24,7 @@ import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
 import io.aiven.kafka.connect.common.config.ConfigFragment;
+import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.HttpLogDetailLevel;
@@ -64,7 +65,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
      *            the configuration that this fragment is associated with.
      */
     protected AzureBlobConfigFragment(final AbstractConfig cfg) {
-        super(cfg);
+        super(FragmentDataAccess.from(cfg));
     }
 
     /**
@@ -140,7 +141,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
 
     @Override
     public void validate() {
-        final String connectionString = cfg.getString(AZURE_STORAGE_CONNECTION_STRING_CONFIG);
+        final String connectionString = getString(AZURE_STORAGE_CONNECTION_STRING_CONFIG);
 
         if (connectionString == null) {
             throw new ConfigException(
@@ -148,39 +149,39 @@ public class AzureBlobConfigFragment extends ConfigFragment {
         }
     }
     public int getAzureFetchPageSize() {
-        return cfg.getInt(AZURE_FETCH_PAGE_SIZE);
+        return getInt(AZURE_FETCH_PAGE_SIZE);
     }
 
     public String getAzurePrefix() {
-        return cfg.getString(AZURE_PREFIX_CONFIG);
+        return getString(AZURE_PREFIX_CONFIG);
     }
 
     public String getConnectionString() {
-        return cfg.getString(AZURE_STORAGE_CONNECTION_STRING_CONFIG);
+        return getString(AZURE_STORAGE_CONNECTION_STRING_CONFIG);
     }
 
     public String getContainerName() {
-        return cfg.getString(AZURE_STORAGE_CONTAINER_NAME_CONFIG);
+        return getString(AZURE_STORAGE_CONTAINER_NAME_CONFIG);
     }
 
     public int getAzureRetryBackoffMaxAttempts() {
-        return cfg.getInt(AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG);
+        return getInt(AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG);
     }
 
     public Duration getAzureRetryBackoffInitialDelay() {
-        return Duration.ofMillis(cfg.getLong(AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG));
+        return Duration.ofMillis(getLong(AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG));
     }
 
     public Duration getAzureRetryBackoffMaxDelay() {
-        return Duration.ofMillis(cfg.getLong(AZURE_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG));
+        return Duration.ofMillis(getLong(AZURE_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG));
     }
 
     public String getUserAgent() {
-        return cfg.getString(AZURE_USER_AGENT);
+        return getString(AZURE_USER_AGENT);
     }
 
     public int getFetchBufferSize() {
-        return cfg.getInt(AZURE_FETCH_BUFFER_SIZE);
+        return getInt(AZURE_FETCH_BUFFER_SIZE);
     }
 
     public RetryOptions getAzureRetryOptions() {

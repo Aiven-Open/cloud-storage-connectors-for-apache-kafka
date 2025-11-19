@@ -21,14 +21,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigValue;
 
 import io.aiven.kafka.connect.common.templating.Template;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 public class SinkCommonConfig extends CommonConfig {
 
-    public static final String FILE_MAX_RECORDS = "file.max.records";
     /**
      * FileNameFragment to handle FileName based configuration queries.
      */
@@ -38,24 +36,17 @@ public class SinkCommonConfig extends CommonConfig {
      */
     protected final OutputFormatFragment outputFormatFragment;
 
-    @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
-    public SinkCommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
-        super(definition, originals);
-        // Construct FileNameFragment
-        fileNameFragment = new FileNameFragment(this);
-        outputFormatFragment = new OutputFormatFragment(this);
-        // TODO: calls getOutputFields, can be overridden in subclasses.
-        validate(); // NOPMD ConstructorCallsOverridableMethod
+    public SinkCommonConfig(final SinkCommonConfigDef definition, final Map<String, String> originals) {
+        super(definition, FileNameFragment.handleDeprecatedYyyyUppercase(originals));
+        final FragmentDataAccess fragmentDataAccess = FragmentDataAccess.from(this);
+        fileNameFragment = new FileNameFragment(fragmentDataAccess, false);
+        outputFormatFragment = new OutputFormatFragment(fragmentDataAccess);
     }
 
-    private void validate() {
-        outputFormatFragment.validate();
-        fileNameFragment.validateRecordGrouper();
-    }
-
-    protected static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
+    @Deprecated
+    public static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
             final OutputFieldType defaultFieldType) {
-        OutputFormatFragment.update(configDef, defaultFieldType);
+        // OutputFormatFragment.update(configDef, defaultFieldType);
     }
 
     public FormatType getFormatType() {
@@ -91,11 +82,31 @@ public class SinkCommonConfig extends CommonConfig {
     }
 
     public final int getMaxRecordsPerFile() {
-        return getInt(FILE_MAX_RECORDS);
+        return fileNameFragment.getMaxRecordsPerFile();
     }
 
     public List<OutputField> getOutputFields() {
         return outputFormatFragment.getOutputFields();
+    }
+
+    public static class SinkCommonConfigDef extends CommonConfigDef {
+
+        public SinkCommonConfigDef(final OutputFieldType defaultFieldType, final CompressionType compressionType) {
+            super();
+            OutputFormatFragment.update(this, defaultFieldType);
+            FileNameFragment.update(this, compressionType);
+            // not supported at this time.
+            configKeys().remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+        }
+
+        @Override
+        public Map<String, ConfigValue> multiValidate(final Map<String, ConfigValue> valueMap) {
+            final Map<String, ConfigValue> values = super.multiValidate(valueMap);
+            final FragmentDataAccess fragmentDataAccess = FragmentDataAccess.from(valueMap);
+            new OutputFormatFragment(fragmentDataAccess).validate(values);
+            new FileNameFragment(fragmentDataAccess, true).validate(values);
+            return values;
+        }
     }
 
 }

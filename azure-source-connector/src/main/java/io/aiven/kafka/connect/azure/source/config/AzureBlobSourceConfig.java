@@ -18,8 +18,6 @@ package io.aiven.kafka.connect.azure.source.config;
 
 import java.util.Map;
 
-import org.apache.kafka.common.config.ConfigDef;
-
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
@@ -37,7 +35,7 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
         validate();
     }
 
-    public static ConfigDef configDef() {
+    public static AzureBlobSourceConfigDef configDef() {
 
         final var configDef = new AzureBlobSourceConfigDef();
 

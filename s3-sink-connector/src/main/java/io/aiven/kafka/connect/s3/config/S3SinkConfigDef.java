@@ -16,15 +16,12 @@
 
 package io.aiven.kafka.connect.s3.config;
 
-import java.util.List;
-import java.util.Map;
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
+public class S3SinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef {
 
-public class S3SinkConfigDef extends ConfigDef {
-    @Override
-    public List<ConfigValue> validate(final Map<String, String> props) {
-        return super.validate(S3SinkConfig.preprocessProperties(props));
+    public S3SinkConfigDef() {
+        super(null, CompressionType.GZIP);
     }
 }
