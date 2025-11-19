@@ -25,6 +25,9 @@ import org.apache.kafka.common.config.ConfigValue;
 
 import io.aiven.kafka.connect.common.templating.Template;
 
+/**
+ * The configuration common to all Sink implementations.
+ */
 public class SinkCommonConfig extends CommonConfig {
 
     /**
@@ -36,6 +39,11 @@ public class SinkCommonConfig extends CommonConfig {
      */
     protected final OutputFormatFragment outputFormatFragment;
 
+    /**
+     * Constructor.
+     * @param definition the definition for this SinkCommonConfig.
+     * @param originals the original data for the configuraiton.
+     */
     public SinkCommonConfig(final SinkCommonConfigDef definition, final Map<String, String> originals) {
         super(definition, FileNameFragment.handleDeprecatedYyyyUppercase(originals));
         final FragmentDataAccess fragmentDataAccess = FragmentDataAccess.from(this);
@@ -49,48 +57,98 @@ public class SinkCommonConfig extends CommonConfig {
         // OutputFormatFragment.update(configDef, defaultFieldType);
     }
 
+    /**
+     * Gets the format type for the output.
+     * @return the format type for the output.
+     */
     public FormatType getFormatType() {
         return outputFormatFragment.getFormatType();
     }
 
+    /**
+     * Gets the compression type for the output.
+     * @return The compression type for the output.
+     */
     public CompressionType getCompressionType() {
         return fileNameFragment.getCompressionType();
     }
 
+    /**
+     * Checks the envelope enabled flag.
+     * @return {@code true} if the envelope is enabled, {@code false} otherwise.
+     */
     public Boolean envelopeEnabled() {
         return outputFormatFragment.envelopeEnabled();
     }
 
+    /**
+     * Gets the output field encoding type.
+     * @return the output field encoding type.
+     */
     public OutputFieldEncodingType getOutputFieldEncodingType() {
         return outputFormatFragment.getOutputFieldEncodingType();
     }
 
+    /**
+     * Gets the file name template.
+     * @return the file name template.
+     */
     public final Template getFilenameTemplate() {
         return fileNameFragment.getFilenameTemplate();
     }
 
+    /**
+     * Gets the file name.  This is parsed to create the Template.
+     *
+     * @return the file name.
+     * @see #getFilenameTemplate()
+     */
     public final String getFilename() {
         return fileNameFragment.getFilename();
     }
 
+    /**
+     * Gets the timezone for the file name timestamp.
+     * @return the timezone for the filename timestamp.
+     */
     public final ZoneId getFilenameTimezone() {
         return fileNameFragment.getFilenameTimezone();
     }
 
+    /**
+     * Gets the source for the file name timestamp.
+     * @return the source for the file name timestamp.
+     */
     public final TimestampSource getFilenameTimestampSource() {
         return fileNameFragment.getFilenameTimestampSource();
     }
 
+    /**
+     * Gets the maximum records allowed in a single file.
+     * @return the maximum records allowed in a single file.
+     */
     public final int getMaxRecordsPerFile() {
         return fileNameFragment.getMaxRecordsPerFile();
     }
 
+    /**
+     * Gets the list of output fields.
+     * @return the list of output fields.
+     */
     public List<OutputField> getOutputFields() {
         return outputFormatFragment.getOutputFields();
     }
 
+    /**
+     * The ConfigDef for the SinkCommonConfig
+     */
     public static class SinkCommonConfigDef extends CommonConfigDef {
 
+        /**
+         * Constructor.
+         * @param defaultFieldType the default output field type.
+         * @param compressionType the default file compression type.
+         */
         public SinkCommonConfigDef(final OutputFieldType defaultFieldType, final CompressionType compressionType) {
             super();
             OutputFormatFragment.update(this, defaultFieldType);
@@ -108,5 +166,4 @@ public class SinkCommonConfig extends CommonConfig {
             return values;
         }
     }
-
 }

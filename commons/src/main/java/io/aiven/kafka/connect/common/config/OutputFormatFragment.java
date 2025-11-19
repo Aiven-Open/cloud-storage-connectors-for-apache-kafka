@@ -27,11 +27,14 @@ import org.apache.kafka.common.config.ConfigValue;
 
 import com.google.common.annotations.VisibleForTesting;
 
+/**
+ * Handles the format.output configuration options.
+ */
 public final class OutputFormatFragment extends ConfigFragment {
     @VisibleForTesting
     static final String GROUP_FORMAT = "Format";
     @VisibleForTesting
-    static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
+    static public final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
     @VisibleForTesting
     static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
     @VisibleForTesting
@@ -64,6 +67,10 @@ public final class OutputFormatFragment extends ConfigFragment {
     public static final ConfigDef.Validator OUTPUT_FIELDS_ENCODING_VALIDATOR = ConfigDef.CaseInsensitiveValidString
             .in(OutputFieldEncodingType.names().toArray(new String[0]));
 
+    /**
+     * Constructor.
+     * @param dataAccess the data to use.
+     */
     public OutputFormatFragment(final FragmentDataAccess dataAccess) {
         super(dataAccess);
     }

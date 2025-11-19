@@ -81,6 +81,7 @@ public final class FilePatternUtils {
     public static String asPatterns(final Collection<String> variables, final String delimiter) {
         return variables.stream().map(FilePatternUtils::asPattern).collect(Collectors.joining(delimiter));
     }
+
     /**
      * Creates an instance of FilePatternUtils, this constructor is used to configure the Pattern that is used to
      * extract Context from Objects of type 'K'.
