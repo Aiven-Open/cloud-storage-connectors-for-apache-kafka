@@ -69,7 +69,9 @@ public final class OutputFormatFragment extends ConfigFragment {
 
     /**
      * Constructor.
-     * @param dataAccess the data to use.
+     *
+     * @param dataAccess
+     *            the data to use.
      */
     public OutputFormatFragment(final FragmentDataAccess dataAccess) {
         super(dataAccess);
