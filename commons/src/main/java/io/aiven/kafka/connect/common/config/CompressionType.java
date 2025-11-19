@@ -30,7 +30,6 @@ import java.util.zip.GZIPOutputStream;
 import com.github.luben.zstd.ZstdInputStream;
 import com.github.luben.zstd.ZstdOutputStream;
 import org.apache.commons.io.function.IOFunction;
-import org.apache.commons.io.function.IOSupplier;
 import org.xerial.snappy.SnappyInputStream;
 import org.xerial.snappy.SnappyOutputStream;
 
@@ -137,22 +136,6 @@ public enum CompressionType {
      */
     public final InputStream decompress(final InputStream input) throws IOException {
         return decompressor.apply(input);
-    }
-
-    /**
-     * Decompresses an input stream wrapped in an IOSupplier
-     *
-     * @param input
-     *            the input stream to read compressed data from.
-     * @return An input stream that returns decompressed data.
-     */
-    public final IOSupplier<InputStream> decompress(final IOSupplier<InputStream> input) {
-        return new IOSupplier<InputStream>() {
-            @Override
-            public InputStream get() throws IOException {
-                return decompress(input.get());
-            }
-        };
     }
 
     /**
