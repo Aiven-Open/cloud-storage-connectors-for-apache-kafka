@@ -27,14 +27,17 @@ import java.util.stream.Stream;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.commons.collections.RingBuffer;
+import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.source.input.ParquetTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 
+import com.google.common.annotations.VisibleForTesting;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.commons.lang3.ObjectUtils;
@@ -236,17 +239,25 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
      *            the SourceRecord that drives the creation of source records with values.
      * @return a stream of T created from the input stream of the native item.
      */
-    private Stream<T> convert(final T sourceRecord) {
+    @VisibleForTesting
+    Stream<T> convert(final T sourceRecord) {
         sourceRecord
                 .setKeyData(transformer.getKeyData(sourceRecord.getNativeKey(), sourceRecord.getTopic(), sourceConfig));
 
         lastSeenNativeKey = sourceRecord.getNativeKey();
 
+        // parquet handles compression internally.
+        final CompressionType compressionType = transformer instanceof ParquetTransformer
+                ? CompressionType.NONE
+                : sourceConfig.getCompressionType();
+        // create an IOSupplier with the specified compression
+        final IOSupplier<InputStream> inputStream = transformer instanceof ParquetTransformer
+                ? getInputStream(sourceRecord)
+                : compressionType.decompress(getInputStream(sourceRecord));
         return transformer
-                .getRecords(getInputStream(sourceRecord), sourceRecord.getNativeItemSize(), sourceRecord.getContext(),
-                        sourceConfig, sourceRecord.getRecordCount())
+                .getRecords(inputStream, sourceRecord.getNativeItemSize(), sourceRecord.getContext(), sourceConfig,
+                        sourceRecord.getRecordCount())
                 .map(new Mapper<N, K, O, T>(sourceRecord));
-
     }
 
     /**

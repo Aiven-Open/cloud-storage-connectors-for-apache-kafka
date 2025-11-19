@@ -142,11 +142,6 @@ public class SinkCommonConfig extends CommonConfig {
         return fileNameFragment.getFilenameTimestampSource();
     }
 
-    /**
-     * Gets the maximum records allowed in a single file.
-     *
-     * @return the maximum records allowed in a single file.
-     */
     public final int getMaxRecordsPerFile() {
         return fileNameFragment.getMaxRecordsPerFile();
     }
