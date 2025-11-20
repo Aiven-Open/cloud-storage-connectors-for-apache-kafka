@@ -26,7 +26,7 @@ import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
 public final class S3SourceConfigDef extends SourceCommonConfig.SourceCommonConfigDef {
 
-    public S3SourceConfigDef() {    
+    public S3SourceConfigDef() {
         super();
         S3ConfigFragment.update(this, false);
     }
