@@ -24,7 +24,6 @@ import java.util.Map;
 import org.apache.kafka.common.Configurable;
 
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.tools.AwsCredentialBaseConfig;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,9 +57,9 @@ final class AwsCredentialV2ProviderFactoryTest {
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
         props.put(S3ConfigFragment.AWS_STS_CONFIG_ENDPOINT, "https://sts.us-east-1.amazonaws.com");
 
-        final var config = new AwsCredentialBaseConfig(props);
+        final AwsCredentialTestingConfig config = new AwsCredentialTestingConfig(props);
 
-        final var credentialProvider = factory.getAwsV2Provider(new S3ConfigFragment(config));
+        final var credentialProvider = factory.getAwsV2Provider(config.getS3ConfigFragment());
         assertThat(credentialProvider).isInstanceOf(StsAssumeRoleCredentialsProvider.class);
     }
 
@@ -69,26 +68,26 @@ final class AwsCredentialV2ProviderFactoryTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
 
-        final var config = new AwsCredentialBaseConfig(props);
+        final AwsCredentialTestingConfig config = new AwsCredentialTestingConfig(props);
 
-        final var credentialProvider = factory.getAwsV2Provider(new S3ConfigFragment(config));
+        final var credentialProvider = factory.getAwsV2Provider(config.getS3ConfigFragment());
         assertThat(credentialProvider).isInstanceOf(StaticCredentialsProvider.class);
     }
 
     @Test
     void createDefaultCredentialsWhenNoCredentialsSpecified() {
-        final var config = new AwsCredentialBaseConfig(props);
+        final AwsCredentialTestingConfig config = new AwsCredentialTestingConfig(props);
 
-        final var credentialProvider = factory.getAwsV2Provider(new S3ConfigFragment(config));
+        final var credentialProvider = factory.getAwsV2Provider(config.getS3ConfigFragment());
         assertThat(credentialProvider).isInstanceOf(AwsCredentialsProvider.class);
     }
 
     @Test
     void customCredentialProviderTest() {
         props.put(S3ConfigFragment.AWS_CREDENTIALS_PROVIDER_CONFIG, DummyCredentialsProvider.class.getName());
-        final var config = new AwsCredentialBaseConfig(props);
+        final AwsCredentialTestingConfig config = new AwsCredentialTestingConfig(props);
 
-        final var credentialProvider = factory.getAwsV2Provider(new S3ConfigFragment(config));
+        final var credentialProvider = factory.getAwsV2Provider(config.getS3ConfigFragment());
         assertThat(credentialProvider).isInstanceOf(DummyCredentialsProvider.class);
         assertThat(((DummyCredentialsProvider) credentialProvider).configured).isTrue();
     }

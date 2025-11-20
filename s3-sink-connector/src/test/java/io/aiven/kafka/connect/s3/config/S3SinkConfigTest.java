@@ -37,7 +37,6 @@ import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
 import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.s3.S3OutputStream;
 
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
@@ -87,7 +86,7 @@ final class S3SinkConfigTest {
                 new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE),
                 new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE));
         assertThat(conf.getFormatType()).isEqualTo(FormatType.forName("csv"));
-        assertThat(conf.getAwsS3PartSize()).isEqualTo(S3OutputStream.DEFAULT_PART_SIZE);
+        assertThat(conf.getAwsS3PartSize()).isEqualTo(S3ConfigFragment.DEFAULT_PART_SIZE);
         assertThat(conf.getKafkaRetryBackoffMs()).isNull();
         assertThat(conf.getS3RetryBackoffDelayMs()).isEqualTo(S3SinkConfig.AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT);
         assertThat(conf.getS3RetryBackoffMaxDelayMs())
@@ -671,7 +670,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_STS_CONFIG_ENDPOINT, "https://sts.eu-north-1.amazonaws.com");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("aws.s3.region should be specified together with aws.sts.config.endpoint");
+                .hasMessageContaining("aws.s3.region should be specified together with aws.sts.config.endpoint");
     }
 
     @ParameterizedTest

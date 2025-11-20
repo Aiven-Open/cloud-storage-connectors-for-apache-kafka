@@ -32,7 +32,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public final class OutputFormatFragment extends ConfigFragment {
     @VisibleForTesting
-    static final String GROUP_FORMAT = "Format";
+    public static final String GROUP_NAME = "Format";
     @VisibleForTesting
     static public final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
     @VisibleForTesting
@@ -90,13 +90,13 @@ public final class OutputFormatFragment extends ConfigFragment {
         int formatGroupCounter = 0;
 
         configDef.define(FORMAT_OUTPUT_TYPE_CONFIG, ConfigDef.Type.STRING, FormatType.CSV.name, OUTPUT_TYPE_VALIDATOR,
-                ConfigDef.Importance.MEDIUM, "The format type of output content.", GROUP_FORMAT, ++formatGroupCounter,
+                ConfigDef.Importance.MEDIUM, "The format type of output content.", GROUP_NAME, ++formatGroupCounter,
                 ConfigDef.Width.NONE, FORMAT_OUTPUT_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(FormatType.names()));
 
         configDef.define(FORMAT_OUTPUT_FIELDS_CONFIG, ConfigDef.Type.LIST,
                 Objects.isNull(defaultFieldType) ? null : defaultFieldType.name, // NOPMD NullAssignment
-                OUTPUT_FIELDS_VALIDATOR, ConfigDef.Importance.MEDIUM, "Fields to put into output files.", GROUP_FORMAT,
+                OUTPUT_FIELDS_VALIDATOR, ConfigDef.Importance.MEDIUM, "Fields to put into output files.", GROUP_NAME,
                 ++formatGroupCounter, ConfigDef.Width.NONE, FORMAT_OUTPUT_FIELDS_CONFIG,
                 FixedSetRecommender.ofSupportedValues(OutputFieldType.names()));
 
@@ -104,11 +104,11 @@ public final class OutputFormatFragment extends ConfigFragment {
                 OutputFieldEncodingType.BASE64.name, OUTPUT_FIELDS_ENCODING_VALIDATOR, ConfigDef.Importance.MEDIUM,
                 "The type of encoding for the value field. " + "The supported values are: "
                         + OutputFieldEncodingType.SUPPORTED_FIELD_ENCODING_TYPES + ".",
-                GROUP_FORMAT, ++formatGroupCounter, ConfigDef.Width.NONE, FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG,
+                GROUP_NAME, ++formatGroupCounter, ConfigDef.Width.NONE, FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG,
                 FixedSetRecommender.ofSupportedValues(OutputFieldEncodingType.names()));
 
         configDef.define(FORMAT_OUTPUT_ENVELOPE_CONFIG, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.MEDIUM,
-                "Whether to enable envelope for entries with single field.", GROUP_FORMAT, ++formatGroupCounter,
+                "Whether to enable envelope for entries with single field.", GROUP_NAME, ++formatGroupCounter,
                 ConfigDef.Width.SHORT, FORMAT_OUTPUT_ENVELOPE_CONFIG);
         return formatGroupCounter;
     }

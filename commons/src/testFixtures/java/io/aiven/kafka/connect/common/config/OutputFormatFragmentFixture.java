@@ -19,7 +19,7 @@ package io.aiven.kafka.connect.common.config;
 public class OutputFormatFragmentFixture {// NOPMD
 
     public enum OutputFormatArgs {
-        GROUP_FORMAT(OutputFormatFragment.GROUP_FORMAT), FORMAT_OUTPUT_FIELDS_CONFIG(
+        GROUP_FORMAT(OutputFormatFragment.GROUP_NAME), FORMAT_OUTPUT_FIELDS_CONFIG(
                 OutputFormatFragment.FORMAT_OUTPUT_FIELDS_CONFIG), FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG(
                         OutputFormatFragment.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG), FORMAT_OUTPUT_ENVELOPE_CONFIG(
                                 OutputFormatFragment.FORMAT_OUTPUT_ENVELOPE_CONFIG), FORMAT_OUTPUT_TYPE_CONFIG(

@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import io.aiven.commons.collections.Scale;
-
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -41,8 +39,6 @@ import org.slf4j.LoggerFactory;
 public class S3OutputStream extends OutputStream {
 
     private final Logger logger = LoggerFactory.getLogger(S3OutputStream.class);
-
-    public static final int DEFAULT_PART_SIZE = (int) Scale.MiB.asBytes(5);
 
     private final AmazonS3 client;
 
