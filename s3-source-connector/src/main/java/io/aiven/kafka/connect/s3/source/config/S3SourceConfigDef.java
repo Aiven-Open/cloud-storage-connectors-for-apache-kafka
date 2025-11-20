@@ -16,8 +16,26 @@
 
 package io.aiven.kafka.connect.s3.source.config;
 
+import java.util.Map;
+
+import org.apache.kafka.common.config.ConfigValue;
+
+import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
-public class S3SourceConfigDef extends SourceCommonConfig.SourceCommonConfigDef {
+public final class S3SourceConfigDef extends SourceCommonConfig.SourceCommonConfigDef {
 
+    public S3SourceConfigDef() {
+        super();
+        S3ConfigFragment.update(this, false);
+    }
+
+    @Override
+    public Map<String, ConfigValue> multiValidate(final Map<String, ConfigValue> valueMap) {
+        final Map<String, ConfigValue> values = super.multiValidate(valueMap);
+        final FragmentDataAccess fragmentDataAccess = FragmentDataAccess.from(valueMap);
+        new S3ConfigFragment(fragmentDataAccess).validate(values);
+        return values;
+    }
 }

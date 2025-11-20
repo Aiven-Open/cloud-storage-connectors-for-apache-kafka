@@ -58,9 +58,9 @@ public final class FileNameFragment extends ConfigFragment {
     @VisibleForTesting
     static final String FILE_MAX_RECORDS = "file.max.records";
     @VisibleForTesting
-    static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
+    public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     @VisibleForTesting
-    static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
+    public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
     @VisibleForTesting
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     @VisibleForTesting
