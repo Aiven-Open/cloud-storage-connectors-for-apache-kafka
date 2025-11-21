@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
@@ -182,13 +183,13 @@ public final class S3ConfigFragment extends ConfigFragment {
     static void addS3RetryPolicies(final ConfigDef configDef) {
         var retryPolicyGroupCounter = 0;
         configDef.define(AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
-                AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT, ConfigDef.Range.atLeast(1L), ConfigDef.Importance.MEDIUM,
+                AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT, TimeScaleValidator.atLeast(1), ConfigDef.Importance.MEDIUM,
                 "S3 default base sleep time for non-throttled exceptions in milliseconds. " + "Default is "
                         + AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT + ".",
                 GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, ConfigDef.Width.NONE,
                 AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG);
         configDef.define(AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
-                AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT, ConfigDef.Range.atLeast(1L), ConfigDef.Importance.MEDIUM,
+                AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT, TimeScaleValidator.atLeast(1), ConfigDef.Importance.MEDIUM,
                 "S3 maximum back-off time before retrying a request in milliseconds. " + "Default is "
                         + AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT + ".",
                 GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, ConfigDef.Width.NONE,
