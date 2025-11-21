@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
@@ -38,6 +37,7 @@ public final class SourceConfigFragment extends ConfigFragment {
     private static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String TARGET_TOPIC = "topic";
     private static final String ERRORS_TOLERANCE = "errors.tolerance";
+
     private static final String DISTRIBUTION_TYPE = "distribution.type";
 
     /* public so that deprecated users can reference it */
@@ -57,13 +57,13 @@ public final class SourceConfigFragment extends ConfigFragment {
     }
 
     /**
-     * Construct the ConfigFragment.
+     * Construct the SourceConfigFragment.
      *
-     * @param cfg
-     *            the configuration that this fragment is associated with.
+     * @param dataAccess
+     *            the FragmentDataAccess that this fragment is associated with.
      */
-    public SourceConfigFragment(final AbstractConfig cfg) {
-        super(cfg);
+    public SourceConfigFragment(final FragmentDataAccess dataAccess) {
+        super(dataAccess);
     }
 
     public static ConfigDef update(final ConfigDef configDef) {
@@ -98,7 +98,7 @@ public final class SourceConfigFragment extends ConfigFragment {
      * @return the target topic.
      */
     public String getTargetTopic() {
-        return cfg.getString(TARGET_TOPIC);
+        return getString(TARGET_TOPIC);
     }
 
     /**
@@ -107,7 +107,7 @@ public final class SourceConfigFragment extends ConfigFragment {
      * @return The maximum number of records to poll at one time.
      */
     public int getMaxPollRecords() {
-        return cfg.getInt(MAX_POLL_RECORDS);
+        return getInt(MAX_POLL_RECORDS);
     }
 
     /**
@@ -116,7 +116,11 @@ public final class SourceConfigFragment extends ConfigFragment {
      * @return the errors tolerance.
      */
     public ErrorsTolerance getErrorsTolerance() {
-        return ErrorsTolerance.forName(cfg.getString(ERRORS_TOLERANCE));
+        return ErrorsTolerance.forName(getString(ERRORS_TOLERANCE));
+    }
+
+    public boolean hasDistributionType() {
+        return has(DISTRIBUTION_TYPE);
     }
 
     /**
@@ -125,7 +129,7 @@ public final class SourceConfigFragment extends ConfigFragment {
      * @return the distribution type.
      */
     public DistributionType getDistributionType() {
-        return DistributionType.forName(cfg.getString(DISTRIBUTION_TYPE));
+        return DistributionType.forName(getString(DISTRIBUTION_TYPE));
     }
 
     /**
@@ -134,7 +138,7 @@ public final class SourceConfigFragment extends ConfigFragment {
      * @return the ring buffer size.
      */
     public int getRingBufferSize() {
-        return cfg.getInt(RING_BUFFER_SIZE);
+        return getInt(RING_BUFFER_SIZE);
     }
 
     /**
@@ -143,7 +147,7 @@ public final class SourceConfigFragment extends ConfigFragment {
      * @return the key to start consuming records from.
      */
     public String getNativeStartKey() {
-        return cfg.getString(NATIVE_START_KEY);
+        return getString(NATIVE_START_KEY);
     }
 
     /**

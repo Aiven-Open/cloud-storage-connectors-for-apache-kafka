@@ -40,8 +40,6 @@ public class S3OutputStream extends OutputStream {
 
     private final Logger logger = LoggerFactory.getLogger(S3OutputStream.class);
 
-    public static final int DEFAULT_PART_SIZE = 5 * 1024 * 1024;
-
     private final AmazonS3 client;
 
     private final ByteBuffer byteBuffer;

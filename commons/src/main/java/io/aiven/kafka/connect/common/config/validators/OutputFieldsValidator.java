@@ -44,4 +44,9 @@ public class OutputFieldsValidator implements ConfigDef.Validator {
         }
     }
 
+    @Override
+    public String toString() {
+        return OutputField.SUPPORTED_OUTPUT_FIELDS;
+    }
+
 }

@@ -16,17 +16,26 @@
 
 package io.aiven.kafka.connect.s3.source.config;
 
-import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYyyyUppercase;
-
-import java.util.List;
 import java.util.Map;
 
-import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigValue;
 
-public class S3SourceConfigDef extends ConfigDef {
+import io.aiven.kafka.connect.common.config.FragmentDataAccess;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+
+public final class S3SourceConfigDef extends SourceCommonConfig.SourceCommonConfigDef {
+
+    public S3SourceConfigDef() {
+        super();
+        S3ConfigFragment.update(this, false);
+    }
+
     @Override
-    public List<ConfigValue> validate(final Map<String, String> props) {
-        return super.validate(handleDeprecatedYyyyUppercase(props));
+    public Map<String, ConfigValue> multiValidate(final Map<String, ConfigValue> valueMap) {
+        final Map<String, ConfigValue> values = super.multiValidate(valueMap);
+        final FragmentDataAccess fragmentDataAccess = FragmentDataAccess.from(valueMap);
+        new S3ConfigFragment(fragmentDataAccess).validate(values);
+        return values;
     }
 }

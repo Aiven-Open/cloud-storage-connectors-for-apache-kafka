@@ -37,7 +37,6 @@ import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
 import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.s3.S3OutputStream;
 
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
@@ -87,7 +86,7 @@ final class S3SinkConfigTest {
                 new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE),
                 new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE));
         assertThat(conf.getFormatType()).isEqualTo(FormatType.forName("csv"));
-        assertThat(conf.getAwsS3PartSize()).isEqualTo(S3OutputStream.DEFAULT_PART_SIZE);
+        assertThat(conf.getAwsS3PartSize()).isEqualTo(S3ConfigFragment.DEFAULT_PART_SIZE);
         assertThat(conf.getKafkaRetryBackoffMs()).isNull();
         assertThat(conf.getS3RetryBackoffDelayMs()).isEqualTo(S3SinkConfig.AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT);
         assertThat(conf.getS3RetryBackoffMaxDelayMs())
@@ -182,19 +181,25 @@ final class S3SinkConfigTest {
 
     @Test
     void wrongPartSize() {
-        final var wrongMaxPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
-                Long.toString(2_000_000_001L));
-        assertThatThrownBy(() -> new S3SinkConfig(wrongMaxPartSizeProps)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value 2000000001 for configuration aws.s3.part.size.bytes: "
-                        + "Part size must be no more: 2000000000 bytes (2GB)");
+        final Map<String, String> wrongPartSizeProps = new HashMap<>();
+        // Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
+        // S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
+        // Long.toString(2_000_000_001L),
+        // S3ConfigFragment.setter());
+        S3ConfigFragment.setter(wrongPartSizeProps)
+                .accessKeyId("blah-blah-key-id")
+                .accessKeySecret("bla-bla-access-key")
+                .bucketName("bla-bucket-name")
+                .partSize((long) Integer.MAX_VALUE + 1);
 
-        final var wrongMinPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
-                "0");
-        assertThatThrownBy(() -> new S3SinkConfig(wrongMinPartSizeProps)).isInstanceOf(ConfigException.class)
+        assertThatThrownBy(() -> new S3SinkConfig(wrongPartSizeProps)).isInstanceOf(ConfigException.class)
                 .hasMessage(
-                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Part size must be greater than 0");
+                        "Invalid value 2147483648 for configuration aws.s3.part.size.bytes: Value must be no more than 2.0 GiB (2147483647 B)");
+
+        S3ConfigFragment.setter(wrongPartSizeProps).partSize(0);
+        assertThatThrownBy(() -> new S3SinkConfig(wrongPartSizeProps)).isInstanceOf(ConfigException.class)
+                .hasMessage(
+                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Value must be at least 1.0 MiB (1048576 B)");
     }
 
     @Test
@@ -241,16 +246,16 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value  for configuration aws_s3_region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                .hasMessage(
+                        "Invalid value  for configuration aws_s3_region: See documentation for list of valid regions.");
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value  for configuration aws.s3.region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                .hasMessage(
+                        "Invalid value  for configuration aws.s3.region: See documentation for list of valid regions.");
     }
 
     @Test
@@ -261,16 +266,16 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION, "unknown");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value unknown for configuration aws_s3_region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                .hasMessage(
+                        "Invalid value unknown for configuration aws_s3_region: See documentation for list of valid regions.");
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value  for configuration aws.s3.region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                .hasMessage(
+                        "Invalid value  for configuration aws.s3.region: See documentation for list of valid regions.");
     }
 
     @Test
@@ -397,7 +402,7 @@ final class S3SinkConfigTest {
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [key, value, offset, timestamp, unsupported] "
                         + "for configuration output_fields: "
-                        + "supported values are: 'key', 'value', 'offset', 'timestamp', 'headers'");
+                        + "supported values are (case insensitive): key, value, offset, timestamp, headers");
 
         props.remove(S3ConfigFragment.OUTPUT_FIELDS);
         props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp,unsupported");
@@ -405,7 +410,7 @@ final class S3SinkConfigTest {
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [key, value, offset, timestamp, unsupported] "
                         + "for configuration format.output.fields: "
-                        + "supported values are: 'key', 'value', 'offset', 'timestamp', 'headers'");
+                        + "supported values are (case insensitive): key, value, offset, timestamp, headers");
     }
 
     @Test
@@ -430,14 +435,16 @@ final class S3SinkConfigTest {
                 S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongDelayProps)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value 0 for configuration aws.s3.backoff.delay.ms: Value must be at least 1");
+                .hasMessage(
+                        "Invalid value 0 for configuration aws.s3.backoff.delay.ms: Value must be at least 1 Milliseconds");
 
         final var wrongMaxDelayProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMaxDelayProps)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value 0 for configuration aws.s3.backoff.max.delay.ms: Value must be at least 1");
+                .hasMessage(
+                        "Invalid value 0 for configuration aws.s3.backoff.max.delay.ms: Value must be at least 1 Milliseconds");
 
         final var wrongMaxRetriesProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah",
@@ -522,15 +529,15 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.OUTPUT_COMPRESSION, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage(
-                        "Invalid value unsupported for configuration output_compression: 'none', 'gzip', 'snappy', 'zstd'");
+                .hasMessageContaining(
+                        "Invalid value unsupported for configuration file.compression.type: String must be one of (case insensitive): ZSTD, GZIP, NONE, SNAPPY");
 
         props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
         props.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage(
-                        "Invalid value unsupported for configuration file.compression.type: 'none', 'gzip', 'snappy', 'zstd'");
+                .hasMessageContaining(
+                        "Invalid value unsupported for configuration file.compression.type: String must be one of (case insensitive): ZSTD, GZIP, NONE, SNAPPY");
     }
 
     @ParameterizedTest
@@ -593,8 +600,8 @@ final class S3SinkConfigTest {
         props.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "unknown");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value unknown for configuration format.output.type: "
-                        + "Supported values are: 'avro', 'csv', 'json', 'jsonl', 'parquet'");
+                .hasMessageContaining("Invalid value unknown for configuration format.output.type: "
+                        + "String must be one of (case insensitive): PARQUET, CSV, JSON, AVRO, JSONL");
 
     }
 
@@ -665,19 +672,21 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_STS_CONFIG_ENDPOINT, "https://sts.eu-north-1.amazonaws.com");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("aws.s3.region should be specified together with aws.sts.config.endpoint");
+                .hasMessageContaining("aws.s3.region should be specified together with aws.sts.config.endpoint");
     }
 
     @ParameterizedTest
     @ValueSource(strings = { "{{key}}", "{{topic}}/{{partition}}/{{key}}" })
     void notSupportedFileMaxRecords(final String fileNameTemplate) {
-        final Map<String, String> properties = Map.of(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, fileNameTemplate,
-                S3SinkConfig.FILE_MAX_RECORDS, "2", S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key",
-                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        final Map<String, String> properties = new HashMap<>();
+        FileNameFragment.setter(properties).template(fileNameTemplate).maxRecordsPerFile(2);
+        properties.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id");
+        properties.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key");
+        properties.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
         assertThatThrownBy(() -> new S3SinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
-                        fileNameTemplate));
+                .hasMessageContaining(
+                        String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
+                                fileNameTemplate));
     }
 
 }
