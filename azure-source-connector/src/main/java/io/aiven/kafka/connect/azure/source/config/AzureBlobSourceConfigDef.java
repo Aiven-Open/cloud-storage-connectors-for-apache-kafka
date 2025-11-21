@@ -16,17 +16,8 @@
 
 package io.aiven.kafka.connect.azure.source.config;
 
-import java.util.List;
-import java.util.Map;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
+public class AzureBlobSourceConfigDef extends SourceCommonConfig.SourceCommonConfigDef {
 
-public class AzureBlobSourceConfigDef extends ConfigDef {
-    @Override
-    public List<ConfigValue> validate(final Map<String, String> props) { // NOPMD overriding method just calls super.
-                                                                         // (so far)
-        // TODO review if this required later before release
-        return super.validate(props);
-    }
 }

@@ -16,20 +16,28 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.ConfigValue;
 
 /**
  * The base configuration or all connectors.
  */
 public class CommonConfig extends AbstractConfig {
-    protected static final String GROUP_COMPRESSION = "File Compression";
-    protected static final String GROUP_FORMAT = "Format";
-    public static final String TASK_ID = "task.id";
-    public static final String MAX_TASKS = "tasks.max";
 
+    public static final String TASK_ID = "task.id";
+
+    private final BackoffPolicyFragment backoffPolicyConfig;
+    private final CommonConfigFragment commonConfigFragment;
     /**
      * @deprecated No longer needed.
      */
@@ -40,15 +48,64 @@ public class CommonConfig extends AbstractConfig {
     }
 
     /**
-     * Constructs the CommonConfig with the backoff policy.
+     * Checks the configuration definition for errors. If any errors are found an exception is thrown. Due to the point
+     * at which this is called there are no {@link ConfigDef.ConfigKey#validator} errors to worry about.
      *
      * @param definition
-     *            the definition to add the backoff policy too.
-     * @param props
-     *            The properties to construct the configuration with.
+     *            the ConfigDefinition to validate.
      */
-    protected CommonConfig(ConfigDef definition, Map<?, ?> props) { // NOPMD
-        super(BackoffPolicyConfig.update(definition), props);
+    private void doVerification(final ConfigDef definition, final Map<String, String> values) {
+        // if the call multiValidateValues if it is available otherwise just validate
+        final Stream<ConfigValue> configValueStream = definition instanceof CommonConfigDef
+                ? ((CommonConfigDef) definition).multiValidateValues(values).stream()
+                : definition.validate(values).stream();
+        // extract all the values with associated errors.
+        final List<ConfigValue> errorConfigs = configValueStream
+                .filter(configValue -> !configValue.errorMessages().isEmpty())
+                .collect(Collectors.toList());
+        if (!errorConfigs.isEmpty()) {
+            final String msg = errorConfigs.stream()
+                    .flatMap(configValue -> configValue.errorMessages().stream())
+                    .collect(Collectors.joining("\n"));
+            throw new ConfigException("There are errors in the configuration:\n" + msg);
+        }
+    }
+
+    /**
+     * Verifies that all the settings are strings or null.
+     *
+     * @return the map of key to setting string.
+     */
+    private Map<String, String> originalsNullableStrings() {
+        final Map<String, String> result = new HashMap<>();
+        for (final Map.Entry<String, Object> entry : originals().entrySet()) {
+            if (entry.getValue() != null && !(entry.getValue() instanceof String)) {
+                throw new ClassCastException("Non-string value found in original settings for key " + entry.getKey()
+                        + ": " + entry.getValue().getClass().getName());
+            }
+            if (entry.getKey() == null) {
+                throw new ClassCastException("Null key found in original settings.");
+            }
+            result.put(entry.getKey(), (String) entry.getValue());
+        }
+        return result;
+    }
+
+    public CommonConfig(final ConfigDef definition, final Map<?, ?> originals) {
+        super(definition, originals);
+        doVerification(definition, originalsNullableStrings());
+        final FragmentDataAccess dataAccess = FragmentDataAccess.from(this);
+        commonConfigFragment = new CommonConfigFragment(dataAccess);
+        backoffPolicyConfig = new BackoffPolicyFragment(dataAccess);
+    }
+
+    /**
+     * Avoid Finalizer attack
+     */
+    @Override
+    @SuppressWarnings("PMD.EmptyFinalizer")
+    protected final void finalize() {
+        // Do nothing
     }
 
     /**
@@ -57,7 +114,7 @@ public class CommonConfig extends AbstractConfig {
      * @return The Kafka retry backoff time in MS.
      */
     public Long getKafkaRetryBackoffMs() {
-        return new BackoffPolicyConfig(this).getKafkaRetryBackoffMs();
+        return backoffPolicyConfig.getKafkaRetryBackoffMs();
     }
 
     /**
@@ -68,9 +125,7 @@ public class CommonConfig extends AbstractConfig {
      * @return The maximum number of tasks that should be run by this connector configuration
      */
     public int getMaxTasks() {
-        // TODO when Connect framework is upgraded it will be possible to retrieve this information from the configDef
-        // as tasksMax
-        return Integer.parseInt(this.originalsStrings().get(MAX_TASKS));
+        return commonConfigFragment.getMaxTasks();
     }
     /**
      * Get the task id for this configuration
@@ -78,7 +133,57 @@ public class CommonConfig extends AbstractConfig {
      * @return The task id for this configuration
      */
     public int getTaskId() {
-        return Integer.parseInt(this.originalsStrings().get(TASK_ID));
+        return commonConfigFragment.getTaskId();
     }
 
+    public static class CommonConfigDef extends ConfigDef {
+        /**
+         * Constructor .
+         */
+        public CommonConfigDef() {
+            super();
+            BackoffPolicyFragment.update(this);
+            CommonConfigFragment.update(this);
+        }
+
+        /**
+         * Gathers in depth, multi argument configuration issues. This method should be overridden when the Fragments
+         * added to the config have validation rules that required inspection of multiple properties.
+         * <p>
+         * Overriding methods should call the parent method to update the map and then add error messages to the
+         * {@link ConfigValue} associated with property name that is in error.
+         * </p>
+         *
+         * @param valueMap
+         *            the map of configuration names to values.
+         * @return the updated map.
+         */
+        protected Map<String, ConfigValue> multiValidate(final Map<String, ConfigValue> valueMap) {
+            new BackoffPolicyFragment(FragmentDataAccess.from(valueMap)).validate(valueMap);
+            return valueMap;
+        }
+
+        /**
+         * Validate the configuration properties using the multiValidate process.
+         *
+         * @param props
+         *            the properties to validate
+         * @return the collection of ConfigValues from the validation.
+         */
+        final Collection<ConfigValue> multiValidateValues(final Map<String, String> props) {
+            return multiValidate(validateAll(props)).values();
+        }
+
+        @Override
+        public final List<ConfigValue> validate(final Map<String, String> props) {
+            final Map<String, ConfigValue> valueMap = validateAll(props);
+
+            try {
+                return new ArrayList<>(multiValidate(valueMap).values());
+            } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
+                // any exceptions thrown in the above block are accounted for in the super.validate(props) call.
+                return new ArrayList<>(valueMap.values());
+            }
+        }
+    }
 }

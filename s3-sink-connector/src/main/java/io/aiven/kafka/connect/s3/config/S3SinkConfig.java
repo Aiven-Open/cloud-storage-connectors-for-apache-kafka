@@ -72,16 +72,15 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
     }
 
     static Map<String, String> preprocessProperties(final Map<String, String> properties) {
+        final Map<String, String> result = S3ConfigFragment.handleDeprecations(properties);
         // Add other preprocessings when needed here. Mind the order.
-        return S3CommonConfig.handleDeprecatedYyyyUppercase(properties);
+        return S3CommonConfig.handleDeprecatedYyyyUppercase(result);
     }
 
-    public static ConfigDef configDef() {
+    public static S3SinkConfigDef configDef() {
         final var configDef = new S3SinkConfigDef();
         S3ConfigFragment.update(configDef);
         addS3partSizeConfig(configDef);
-        FileNameFragment.update(configDef);
-        addOutputFieldsFormatConfigGroup(configDef, null);
         addDeprecatedTimestampConfig(configDef);
 
         return configDef;

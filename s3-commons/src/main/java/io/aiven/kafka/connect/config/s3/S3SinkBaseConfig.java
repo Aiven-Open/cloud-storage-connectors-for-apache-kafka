@@ -34,7 +34,8 @@ import com.amazonaws.regions.Region;
 public class S3SinkBaseConfig extends SinkCommonConfig {
     private final S3ConfigFragment s3ConfigFragment;
 
-    protected S3SinkBaseConfig(ConfigDef definition, Map<String, String> originals) { // NOPMD UnusedAssignment
+    protected S3SinkBaseConfig(SinkCommonConfigDef definition, Map<String, String> originals) { // NOPMD
+                                                                                                // UnusedAssignment
         super(definition, handleDeprecatedYyyyUppercase(originals));
         s3ConfigFragment = new S3ConfigFragment(this);
         validate();

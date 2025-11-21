@@ -21,24 +21,60 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.ConfigValue;
 
-import io.aiven.kafka.connect.common.config.validators.OutputFieldsEncodingValidator;
-import io.aiven.kafka.connect.common.config.validators.OutputFieldsValidator;
-import io.aiven.kafka.connect.common.config.validators.OutputTypeValidator;
+import com.google.common.annotations.VisibleForTesting;
 
+/**
+ * Handles the format.output configuration options.
+ */
 public final class OutputFormatFragment extends ConfigFragment {
-    // package protected for testing
+    @VisibleForTesting
     static final String GROUP_FORMAT = "Format";
-    static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
+    @VisibleForTesting
+    static public final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
+    @VisibleForTesting
     static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
+    @VisibleForTesting
     static final String FORMAT_OUTPUT_TYPE_CONFIG = "format.output.type";
+    @VisibleForTesting
     static final String FORMAT_OUTPUT_ENVELOPE_CONFIG = "format.output.envelope";
 
-    public OutputFormatFragment(final AbstractConfig cfg) {
-        super(cfg);
+    @VisibleForTesting
+    public static final ConfigDef.Validator OUTPUT_TYPE_VALIDATOR = ConfigDef.CompositeValidator.of(
+            new ConfigDef.NonEmptyString(),
+            ConfigDef.CaseInsensitiveValidString.in(FormatType.names().toArray(new String[0])));
+    @VisibleForTesting
+    public static final ConfigDef.Validator OUTPUT_FIELDS_VALIDATOR = ConfigDef.LambdaValidator.with((name, value) -> {
+        if (Objects.nonNull(value)) {
+            @SuppressWarnings("unchecked")
+            final List<String> valueList = (List<String>) value;
+            if (valueList.isEmpty()) {
+                throw new ConfigException(name, valueList, "cannot be empty");
+            }
+            for (final String fieldName : valueList) {
+                if (!OutputFieldType.isValidName(fieldName)) {
+                    throw new ConfigException(name, value,
+                            "supported values are (case insensitive): " + String.join(", ", OutputFieldType.names()));
+                }
+            }
+        }
+    }, () -> String.join(", ", OutputFieldType.names()));
+
+    @VisibleForTesting
+    public static final ConfigDef.Validator OUTPUT_FIELDS_ENCODING_VALIDATOR = ConfigDef.CaseInsensitiveValidString
+            .in(OutputFieldEncodingType.names().toArray(new String[0]));
+
+    /**
+     * Constructor.
+     *
+     * @param dataAccess
+     *            the data to use.
+     */
+    public OutputFormatFragment(final FragmentDataAccess dataAccess) {
+        super(dataAccess);
     }
 
     /**
@@ -48,41 +84,33 @@ public final class OutputFormatFragment extends ConfigFragment {
      *            the configuration definition to update.
      * @param defaultFieldType
      *            the default FieldType. May be {@code null}.
-     * @return The update ConfigDef.
+     * @return the number of OutputFormat groups items.
      */
-    public static ConfigDef update(final ConfigDef configDef, final OutputFieldType defaultFieldType) {
+    public static int update(final ConfigDef configDef, final OutputFieldType defaultFieldType) {
         int formatGroupCounter = 0;
 
-        final String supportedFormatTypes = FormatType.names()
-                .stream()
-                .map(f -> "'" + f + "'")
-                .collect(Collectors.joining(", "));
-
-        configDef.define(FORMAT_OUTPUT_TYPE_CONFIG, ConfigDef.Type.STRING, FormatType.CSV.name,
-                new OutputTypeValidator(), ConfigDef.Importance.MEDIUM,
-                "The format type of output content" + "The supported values are: " + supportedFormatTypes + ".",
-                GROUP_FORMAT, 0, ConfigDef.Width.NONE, FORMAT_OUTPUT_TYPE_CONFIG,
+        configDef.define(FORMAT_OUTPUT_TYPE_CONFIG, ConfigDef.Type.STRING, FormatType.CSV.name, OUTPUT_TYPE_VALIDATOR,
+                ConfigDef.Importance.MEDIUM, "The format type of output content.", GROUP_FORMAT, ++formatGroupCounter,
+                ConfigDef.Width.NONE, FORMAT_OUTPUT_TYPE_CONFIG,
                 FixedSetRecommender.ofSupportedValues(FormatType.names()));
 
         configDef.define(FORMAT_OUTPUT_FIELDS_CONFIG, ConfigDef.Type.LIST,
                 Objects.isNull(defaultFieldType) ? null : defaultFieldType.name, // NOPMD NullAssignment
-                new OutputFieldsValidator(), ConfigDef.Importance.MEDIUM,
-                "Fields to put into output files. " + "The supported values are: " + OutputField.SUPPORTED_OUTPUT_FIELDS
-                        + ".",
-                GROUP_FORMAT, formatGroupCounter++, ConfigDef.Width.NONE, FORMAT_OUTPUT_FIELDS_CONFIG,
+                OUTPUT_FIELDS_VALIDATOR, ConfigDef.Importance.MEDIUM, "Fields to put into output files.", GROUP_FORMAT,
+                ++formatGroupCounter, ConfigDef.Width.NONE, FORMAT_OUTPUT_FIELDS_CONFIG,
                 FixedSetRecommender.ofSupportedValues(OutputFieldType.names()));
 
         configDef.define(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, ConfigDef.Type.STRING,
-                OutputFieldEncodingType.BASE64.name, new OutputFieldsEncodingValidator(), ConfigDef.Importance.MEDIUM,
+                OutputFieldEncodingType.BASE64.name, OUTPUT_FIELDS_ENCODING_VALIDATOR, ConfigDef.Importance.MEDIUM,
                 "The type of encoding for the value field. " + "The supported values are: "
                         + OutputFieldEncodingType.SUPPORTED_FIELD_ENCODING_TYPES + ".",
-                GROUP_FORMAT, formatGroupCounter++, ConfigDef.Width.NONE, FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG,
+                GROUP_FORMAT, ++formatGroupCounter, ConfigDef.Width.NONE, FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG,
                 FixedSetRecommender.ofSupportedValues(OutputFieldEncodingType.names()));
 
         configDef.define(FORMAT_OUTPUT_ENVELOPE_CONFIG, ConfigDef.Type.BOOLEAN, true, ConfigDef.Importance.MEDIUM,
-                "Whether to enable envelope for entries with single field.", GROUP_FORMAT, formatGroupCounter,
+                "Whether to enable envelope for entries with single field.", GROUP_FORMAT, ++formatGroupCounter,
                 ConfigDef.Width.SHORT, FORMAT_OUTPUT_ENVELOPE_CONFIG);
-        return configDef;
+        return formatGroupCounter;
     }
 
     /**
@@ -100,11 +128,24 @@ public final class OutputFormatFragment extends ConfigFragment {
     public void validate() {
         // Special checks for output json envelope config.
         final int outputFieldCount = hasOutputFields() ? getOutputFields().size() : 0;
-        final Boolean outputEnvelopConfig = envelopeEnabled();
-        if (!outputEnvelopConfig && outputFieldCount != 1) {
-            final String msg = String.format("When %s is %s, %s must contain only one field",
-                    FORMAT_OUTPUT_ENVELOPE_CONFIG, false, FORMAT_OUTPUT_FIELDS_CONFIG);
-            throw new ConfigException(msg);
+        if (!envelopeEnabled() && outputFieldCount != 1) {
+            throw new ConfigException(FORMAT_OUTPUT_ENVELOPE_CONFIG,
+                    String.format("When %s is %s, %s must contain only one field", FORMAT_OUTPUT_ENVELOPE_CONFIG, false,
+                            FORMAT_OUTPUT_FIELDS_CONFIG));
+        }
+    }
+
+    @Override
+    public void validate(final Map<String, ConfigValue> configMap) {
+        // Special checks for output json envelope config.
+        final int outputFieldCount = hasOutputFields() ? getOutputFields().size() : 0;
+        if (!envelopeEnabled() && outputFieldCount != 1) {
+            configMap
+                    .compute(FORMAT_OUTPUT_ENVELOPE_CONFIG,
+                            (key, value) -> value == null ? new ConfigValue(key) : value)
+                    .addErrorMessage(validationMessage(FORMAT_OUTPUT_ENVELOPE_CONFIG, false,
+                            String.format("When %s is %s, %s must contain only one field",
+                                    FORMAT_OUTPUT_ENVELOPE_CONFIG, false, FORMAT_OUTPUT_FIELDS_CONFIG)));
         }
     }
 
@@ -114,7 +155,7 @@ public final class OutputFormatFragment extends ConfigFragment {
      * @return the FormatType.
      */
     public FormatType getFormatType() {
-        return FormatType.forName(cfg.getString(FORMAT_OUTPUT_TYPE_CONFIG));
+        return FormatType.forName(getString(FORMAT_OUTPUT_TYPE_CONFIG));
     }
 
     /**
@@ -123,7 +164,7 @@ public final class OutputFormatFragment extends ConfigFragment {
      * @return the envelope enabled state.
      */
     public Boolean envelopeEnabled() {
-        return cfg.getBoolean(FORMAT_OUTPUT_ENVELOPE_CONFIG);
+        return getBoolean(FORMAT_OUTPUT_ENVELOPE_CONFIG);
     }
 
     /**
@@ -132,7 +173,7 @@ public final class OutputFormatFragment extends ConfigFragment {
      * @return the Output field encodging type.
      */
     public OutputFieldEncodingType getOutputFieldEncodingType() {
-        return OutputFieldEncodingType.forName(cfg.getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG));
+        return OutputFieldEncodingType.forName(getString(FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG));
     }
 
     /**
@@ -142,6 +183,10 @@ public final class OutputFormatFragment extends ConfigFragment {
      */
     public List<OutputField> getOutputFields() {
         return getOutputFields(FORMAT_OUTPUT_FIELDS_CONFIG);
+    }
+
+    public List<OutputFieldType> getOutputFieldTypes() {
+        return getList(FORMAT_OUTPUT_FIELDS_CONFIG).stream().map(OutputFieldType::forName).collect(Collectors.toList());
     }
 
     /**
@@ -162,7 +207,7 @@ public final class OutputFormatFragment extends ConfigFragment {
      * @return a list of OutputField objects as specified by {@code configEntry}.
      */
     public List<OutputField> getOutputFields(final String configEntry) {
-        final List<String> fields = cfg.getList(configEntry);
+        final List<String> fields = getList(configEntry);
         return fields.stream().map(fieldName -> {
             final var type = OutputFieldType.forName(fieldName);
             final var encoding = type == OutputFieldType.KEY || type == OutputFieldType.VALUE
