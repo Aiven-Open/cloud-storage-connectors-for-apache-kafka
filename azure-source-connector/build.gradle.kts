@@ -59,8 +59,8 @@ dependencies {
   compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
   compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
-  implementation(apache.commons.io)
-  implementation(apache.commons.lang3)
+  implementation("commons-io:commons-io:2.18.0")
+  implementation("org.apache.commons:commons-lang3:3.17.0")
   implementation(project(":commons"))
   implementation(apache.commons.collection4)
   implementation("com.azure:azure-storage-blob:12.30.0")
@@ -176,7 +176,7 @@ publishing {
         licenses {
           license {
             name = "Apache 2.0"
-            url = "https://www.apache.org/licenses/LICENSE-2.0"
+            url = "http://www.apache.org/licenses/LICENSE-2.0"
             distribution = "repo"
           }
         }
