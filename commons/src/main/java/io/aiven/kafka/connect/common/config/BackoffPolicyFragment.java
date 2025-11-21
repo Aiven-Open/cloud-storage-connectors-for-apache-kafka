@@ -16,9 +16,13 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import io.aiven.commons.collections.TimeScale;
-import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
+import java.util.Objects;
+
 import org.apache.kafka.common.config.ConfigDef;
+
+import io.aiven.commons.collections.TimeScale;
+import io.aiven.kafka.connect.common.config.validators.PredicateGatedValidator;
+import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
 
 /**
  * Defines the backoff policy for connectors.
@@ -40,8 +44,9 @@ public final class BackoffPolicyFragment extends ConfigFragment {
      * @return the number of items in the backoff policy group.
      */
     public static int update(final ConfigDef configDef) {
-        configDef.define(KAFKA_RETRY_BACKOFF_MS_CONFIG, ConfigDef.Type.LONG, TimeScale.SECONDS.asMilliseconds(30),
-                TimeScaleValidator.between(0, TimeScale.DAYS.asMilliseconds(1)),
+        configDef.define(KAFKA_RETRY_BACKOFF_MS_CONFIG, ConfigDef.Type.LONG, null,
+                new PredicateGatedValidator(
+                        Objects::nonNull, TimeScaleValidator.between(0, TimeScale.DAYS.asMilliseconds(1))),
                 ConfigDef.Importance.MEDIUM,
                 "The retry backoff in milliseconds. "
                         + "This config is used to notify Kafka Connect to retry delivering a message batch or "
@@ -52,7 +57,7 @@ public final class BackoffPolicyFragment extends ConfigFragment {
     }
 
     /**
-     * Gets the kafka retry backoff time..
+     * Gets the kafka retry backoff time.
      *
      * @return the Kafka retry backoff time in MS.
      */
