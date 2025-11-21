@@ -18,9 +18,9 @@ package io.aiven.kafka.connect.common.config;
 
 import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
 
+import java.util.Collections;
 import java.util.Map;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
 
@@ -53,23 +53,24 @@ public class CommonConfigFragment extends ConfigFragment {
         int orderInGroup = 0;
         final String commonGroup = "commons";
 
-        return configDef
-                .define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH,
-                        "Maximum number of tasks to use for this connector.", commonGroup, ++orderInGroup,
-                        ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG)
-                .define(TASK_ID, ConfigDef.Type.INT, 1, atLeast(0), ConfigDef.Importance.HIGH,
-                        "The task ID that this connector is working with.", commonGroup, ++orderInGroup,
-                        ConfigDef.Width.SHORT, TASK_ID);
+        configDef.define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH,
+                "Maximum number of tasks to use for this connector.", commonGroup, ++orderInGroup,
+                ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG);
+
+        final ConfigDef.ConfigKey key = new ConfigDef.ConfigKey(TASK_ID, ConfigDef.Type.INT, 0, atLeast(0),
+                ConfigDef.Importance.HIGH, "The task ID that this connector is working with.", commonGroup,
+                ++orderInGroup, ConfigDef.Width.SHORT, TASK_ID, Collections.emptyList(), null, true);
+        return configDef.define(key);
     }
 
     /**
      * Create a fragment instance from an AbstractConfig.
      *
-     * @param cfg
-     *            the AbstractConfig to retrieve data from.
+     * @param dataAccess
+     *            the FragmentDataAccess to retrieve data from.
      */
-    public CommonConfigFragment(final AbstractConfig cfg) { // NOPMD
-        super(cfg);
+    public CommonConfigFragment(final FragmentDataAccess dataAccess) {
+        super(dataAccess);
     }
 
     /**
@@ -78,7 +79,7 @@ public class CommonConfigFragment extends ConfigFragment {
      * @return the task Id.
      */
     public Integer getTaskId() {
-        return cfg.getInt(TASK_ID);
+        return getInt(TASK_ID);
     }
 
     /**
@@ -87,7 +88,7 @@ public class CommonConfigFragment extends ConfigFragment {
      * @return the maximum number of tasks.
      */
     public Integer getMaxTasks() {
-        return cfg.getInt(ConnectorConfig.TASKS_MAX_CONFIG);
+        return getInt(ConnectorConfig.TASKS_MAX_CONFIG);
     }
 
     /**

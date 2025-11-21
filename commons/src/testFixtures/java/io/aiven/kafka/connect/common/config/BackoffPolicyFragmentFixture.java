@@ -19,8 +19,8 @@ package io.aiven.kafka.connect.common.config;
 public class BackoffPolicyFragmentFixture {// NOPMD
 
     public enum BackoffPolicyArgs {
-        GROUP_RETRY_BACKOFF_POLICY(BackoffPolicyConfig.GROUP_RETRY_BACKOFF_POLICY), KAFKA_RETRY_BACKOFF_MS_CONFIG(
-                BackoffPolicyConfig.KAFKA_RETRY_BACKOFF_MS_CONFIG);
+        GROUP_RETRY_BACKOFF_POLICY(BackoffPolicyFragment.GROUP_RETRY_BACKOFF_POLICY), KAFKA_RETRY_BACKOFF_MS_CONFIG(
+                BackoffPolicyFragment.KAFKA_RETRY_BACKOFF_MS_CONFIG);
         final String key;// NOPMD
         BackoffPolicyArgs(final String key) {
             this.key = key;

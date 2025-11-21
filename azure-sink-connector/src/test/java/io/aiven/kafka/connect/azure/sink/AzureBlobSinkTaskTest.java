@@ -40,6 +40,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.azure.sink.testutils.AzureBlobAccessor;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.storage.blob.BlobClient;
@@ -118,7 +119,7 @@ final class AzureBlobSinkTaskTest {
         final List<BlobItem> blobItems = generateTestBlobItems(compression);
         when(pagedIterable.spliterator()).thenReturn(blobItems.spliterator());
         when(blobContainerClient.listBlobs()).thenReturn(pagedIterable);
-        properties.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        FileNameFragment.setter(properties).fileCompression(CompressionType.forName(compression));
         task = new AzureBlobSinkTask(properties, blobServiceClient);
 
         final List<SinkRecord> records = createBasicRecords();

@@ -39,24 +39,25 @@ class TransformerFragmentTest {
         final Map<String, Object> props = new HashMap<>();
         props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, bufferSize);
 
-        final TransformerFragment schemaReg = new TransformerFragment(new AbstractConfig(configDef, props));
+        final TransformerFragment schemaReg = new TransformerFragment(
+                FragmentDataAccess.from(new AbstractConfig(configDef, props)));
         assertThat(schemaReg.getTransformerMaxBufferSize()).isEqualTo(bufferSize);
     }
 
     @ParameterizedTest
     @CsvSource({
             "21474836471,Invalid value 21474836471 for configuration transformer.max.buffer.size: Not a number of type INT",
-            "-1,Invalid value -1 for configuration transformer.max.buffer.size: Value must be at least 1",
+            "-1,Invalid value -1 for configuration transformer.max.buffer.size: Value must be at least 1 B",
             "MAX,Invalid value MAX for configuration transformer.max.buffer.size: Not a number of type INT",
-            "0,Invalid value 0 for configuration transformer.max.buffer.size: Value must be at least 1",
-            "-9000,Invalid value -9000 for configuration transformer.max.buffer.size: Value must be at least 1",
+            "0,Invalid value 0 for configuration transformer.max.buffer.size: Value must be at least 1 B",
+            "-9000,Invalid value -9000 for configuration transformer.max.buffer.size: Value must be at least 1 B",
             "MTA=,Invalid value MTA= for configuration transformer.max.buffer.size: Not a number of type INT" })
     void validateInvalidBufferSizeThrowsConfigException(final String value, final String expectedMessage) {
         final ConfigDef configDef = TransformerFragment.update(new ConfigDef());
         final Map<String, Object> props = new HashMap<>();
 
         props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, value);
-        assertThatThrownBy(() -> new TransformerFragment(new AbstractConfig(configDef, props)))
+        assertThatThrownBy(() -> new TransformerFragment(FragmentDataAccess.from(new AbstractConfig(configDef, props))))
                 .isInstanceOf(ConfigException.class)
                 .hasMessage(expectedMessage);
     }

@@ -43,7 +43,7 @@ dependencyResolutionManagement {
           "org.apache.commons:commons-collections4:$commonsCollections4Version")
       library("commons-io", "commons-io:commons-io:$commonsIOVersion")
       library("commons-lang3", "org.apache.commons:commons-lang3:$commonsLang3Version")
-      library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaAPIVersion")
+      library("kafka-connect-api", "org.apache.kafka:connect-api:$kafkaVersion")
       library("kafka-connect-json", "org.apache.kafka:connect-json:$kafkaVersion")
       library("kafka-connect-runtime", "org.apache.kafka:connect-runtime:$kafkaVersion")
       library("kafka-connect-transforms", "org.apache.kafka:connect-transforms:$kafkaVersion")
