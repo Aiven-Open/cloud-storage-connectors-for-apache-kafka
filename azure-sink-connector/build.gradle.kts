@@ -71,6 +71,9 @@ idea {
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
+  compileOnly(project(":site"))
+  compileOnly(apache.velocity.engine.core)
+  compileOnly(apache.velocity.tools)
 
   implementation(project(":commons"))
 
@@ -189,7 +192,7 @@ publishing {
         licenses {
           license {
             name = "Apache 2.0"
-            url = "http://www.apache.org/licenses/LICENSE-2.0"
+            url = "https://www.apache.org/licenses/LICENSE-2.0"
             distribution = "repo"
           }
         }
@@ -249,3 +252,47 @@ signing {
   }
   signatureTypes = ASCSignatureProvider()
 }
+
+/** ******************************* */
+/* Documentation building section */
+/** ******************************* */
+tasks.register("buildDocs") {
+  dependsOn("buildConfigMd")
+  dependsOn("buildConfigYml")
+}
+
+tasks.register<JavaExec>("buildConfigMd") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig",
+          "configDef",
+          "src/templates/configData.md.vm",
+          "build/site/markdown/azure-sink-connector/AzureSinkConfig.md")
+}
+
+tasks.register<JavaExec>("buildConfigYml") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig",
+          "configDef",
+          "src/templates/configData.yml.vm",
+          "build/site/azure-sink-connector/AzureSinkConfig.yml")
+}
+
+/** ****************************** */
+/*  End of documentation section */
+/** ****************************** */

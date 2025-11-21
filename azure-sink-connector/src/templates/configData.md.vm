@@ -1,0 +1,15 @@
+
+# Azure Blob Sink Configuration
+
+The complete Azure Blob source configuration file
+
+#foreach ($section in $sections)
+${esc.hash}${esc.hash} ${section.displayName}
+ - Default value: ${section.getDefaultValue()|"none"}
+ - Type:  $section.type
+ - Valid values:  ${section.validator|"no restrictions"}
+ - Importance: $section.importance
+
+ $section.documentation
+
+#end

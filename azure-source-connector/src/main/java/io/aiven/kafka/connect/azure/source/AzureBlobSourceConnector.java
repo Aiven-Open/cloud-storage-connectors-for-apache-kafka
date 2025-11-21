@@ -28,7 +28,7 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
-import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig;
+import io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfigDef;
 import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
 
 import org.slf4j.Logger;
@@ -46,7 +46,7 @@ public class AzureBlobSourceConnector extends SourceConnector {
 
     @Override
     public ConfigDef config() {
-        return AzureBlobSourceConfig.configDef();
+        return new AzureBlobSourceConfigDef();
     }
 
     @Override

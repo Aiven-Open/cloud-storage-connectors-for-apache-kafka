@@ -36,6 +36,11 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,8 +68,8 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
     void basicTest(final String compression) throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY);
+        FileNameFragment.setter(connectorConfig).fileCompression(CompressionType.forName(compression));
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -118,10 +123,11 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
     void groupByTimestampVariable(final String compression) throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        connectorConfig.put(AzureBlobSinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}-"
-                + "{{timestamp:unit=yyyy}}-{{timestamp:unit=MM}}-{{timestamp:unit=dd}}");
+        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY);
+        FileNameFragment.setter(connectorConfig)
+                .fileCompression(CompressionType.forName(compression))
+                .template("{{topic}}-{{partition}}-{{start_offset}}-"
+                        + "{{timestamp:unit=yyyy}}-{{timestamp:unit=MM}}-{{timestamp:unit=dd}}");
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -176,10 +182,12 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
     void oneFilePerRecordWithPlainValues(final String compression) throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
-        connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
-        connectorConfig.put(AzureBlobSinkConfig.FILE_MAX_RECORDS, "1");
+        FileNameFragment.setter(connectorConfig)
+                .maxRecordsPerFile(1)
+                .fileCompression(CompressionType.forName(compression));
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.VALUE)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -226,9 +234,10 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         final CompressionType compressionType = CompressionType.forName(compression);
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        connectorConfig.put(AzureBlobSinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{key}}" + compressionType.extension());
+        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY);
+        FileNameFragment.setter(connectorConfig)
+                .fileCompression(CompressionType.forName(compression))
+                .template("{{key}}" + compressionType.extension());
         createConnector(connectorConfig);
 
         final Map<TopicPartition, List<String>> keysPerTopicPartition = new HashMap<>();
@@ -292,14 +301,14 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     void jsonlOutput() throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         final String compression = "none";
-        final String contentType = "jsonl";
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, contentType);
+        FileNameFragment.setter(connectorConfig).fileCompression(CompressionType.NONE);
+        OutputFormatFragment.setter(connectorConfig)
+                .withFormatType(FormatType.JSONL)
+                .withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -353,16 +362,16 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     void jsonOutput() throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         final String compression = "none";
-        final String contentType = "json";
         connectorConfig.put("azure.storage.connection.string",
                 azureEndpoint != null ? azureEndpoint : azureConnectionString); // NOPMD
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, contentType);
+        FileNameFragment.setter(connectorConfig).fileCompression(CompressionType.NONE);
+        OutputFormatFragment.setter(connectorConfig)
+                .withFormatType(FormatType.JSONL)
+                .withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         createConnector(connectorConfig);
 
         final int numEpochs = 10;

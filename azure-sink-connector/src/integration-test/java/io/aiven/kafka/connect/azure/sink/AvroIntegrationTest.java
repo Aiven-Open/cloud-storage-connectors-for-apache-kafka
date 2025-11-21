@@ -35,6 +35,11 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
@@ -95,8 +100,9 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     @Test
     void avroOutput() throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "avro");
+        OutputFormatFragment.setter(connectorConfig)
+                .withFormatType(FormatType.AVRO)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
         createConnector(connectorConfig);
 
         final int recordCountPerPartition = 10;
@@ -161,10 +167,11 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     void avroOutputPlainValueWithoutEnvelope(final String avroCodec, final String compression)
             throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_ENVELOPE_CONFIG, "false");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "avro");
-        connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        OutputFormatFragment.setter(connectorConfig)
+                .withFormatType(FormatType.AVRO)
+                .withOutputFields(OutputFieldType.VALUE)
+                .envelopeEnabled(false);
+        FileNameFragment.setter(connectorConfig).fileCompression(CompressionType.forName(compression));
         connectorConfig.put("avro.codec", avroCodec);
         createConnector(connectorConfig);
 
@@ -223,10 +230,12 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     @Test
     void schemaChanged() throws ExecutionException, InterruptedException, IOException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_ENVELOPE_CONFIG, "false");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "avro");
+        OutputFormatFragment.setter(connectorConfig)
+                .withFormatType(FormatType.AVRO)
+                .withOutputFields(OutputFieldType.VALUE)
+                .envelopeEnabled(false)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
+
         createConnector(connectorConfig);
 
         final Schema evolvedAvroInputDataSchema = new Schema.Parser()
@@ -279,10 +288,12 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     void jsonlOutput() throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         final String compression = "none";
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
-        connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl");
+        OutputFormatFragment.setter(connectorConfig)
+                .withFormatType(FormatType.JSONL)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
+        FileNameFragment.setter(connectorConfig).fileCompression(CompressionType.NONE);
+
         createConnector(connectorConfig);
 
         final int recordCountPerPartition = 10;
@@ -334,12 +345,12 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
         return config;
     }
 
-    protected String getAvroBlobName(final int partition, final int startOffset, final String compression) {
+    String getAvroBlobName(final int partition, final int startOffset, final String compression) {
         return super.getBaseBlobName(partition, startOffset) + ".avro"
                 + CompressionType.forName(compression).extension();
     }
 
-    protected String getAvroBlobName(final int partition, final int startOffset) {
+    String getAvroBlobName(final int partition, final int startOffset) {
         return super.getBaseBlobName(partition, startOffset) + ".avro";
     }
 }
