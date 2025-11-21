@@ -36,7 +36,7 @@ public class CommonConfig extends AbstractConfig {
 
     public static final String TASK_ID = "task.id";
 
-    private final BackoffPolicyConfig backoffPolicyConfig;
+    private final BackoffPolicyFragment backoffPolicyConfig;
     private final CommonConfigFragment commonConfigFragment;
     /**
      * @deprecated No longer needed.
@@ -96,7 +96,7 @@ public class CommonConfig extends AbstractConfig {
         doVerification(definition, originalsNullableStrings());
         final FragmentDataAccess dataAccess = FragmentDataAccess.from(this);
         commonConfigFragment = new CommonConfigFragment(dataAccess);
-        backoffPolicyConfig = new BackoffPolicyConfig(dataAccess);
+        backoffPolicyConfig = new BackoffPolicyFragment(dataAccess);
     }
 
     /**
@@ -142,7 +142,7 @@ public class CommonConfig extends AbstractConfig {
          */
         public CommonConfigDef() {
             super();
-            BackoffPolicyConfig.update(this);
+            BackoffPolicyFragment.update(this);
             CommonConfigFragment.update(this);
         }
 
@@ -159,7 +159,7 @@ public class CommonConfig extends AbstractConfig {
          * @return the updated map.
          */
         protected Map<String, ConfigValue> multiValidate(final Map<String, ConfigValue> valueMap) {
-            new BackoffPolicyConfig(FragmentDataAccess.from(valueMap)).validate(valueMap);
+            new BackoffPolicyFragment(FragmentDataAccess.from(valueMap)).validate(valueMap);
             return valueMap;
         }
 
