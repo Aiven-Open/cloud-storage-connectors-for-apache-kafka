@@ -10,6 +10,6 @@ ${esc.hash}${esc.hash} ${section.displayName}
  - Valid values:  ${section.validator|"no restrictions"}
  - Importance: $section.importance
 
- $section.documentation
+ ${esc.markdown($section.documentation)}
 
 #end
