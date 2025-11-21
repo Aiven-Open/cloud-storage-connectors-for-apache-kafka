@@ -26,39 +26,35 @@ import java.util.Locale;
 public enum TimeScale {
     MILLISECONDS(1) {
         @Override
-        public String format(final long milliseconds ) {
-            return String.format("%s %s", milliseconds, this.name());
+        public String format(final long milliseconds) {
+            return String.format("%s %s", milliseconds, unitName());
         }
     },
-    SECONDS(MILLISECONDS.milliseconds * 1000),
-    MINUTES( SECONDS.milliseconds * 60),
-    HOURS(MINUTES.milliseconds * 60 ),
-    DAYS(HOURS.milliseconds * 24);
-
+    SECONDS(MILLISECONDS.milliseconds * 1000), MINUTES(SECONDS.milliseconds * 60), HOURS(
+            MINUTES.milliseconds * 60), DAYS(HOURS.milliseconds * 24);
 
     final DecimalFormat dec = new DecimalFormat("0.0 ");
 
     public final long milliseconds;
 
     TimeScale(final long milliseconds) {
-        this.milliseconds  = milliseconds;
+        this.milliseconds = milliseconds;
     }
 
     public String displayValue(final long value) {
         return format(value) + (this == MILLISECONDS ? "" : " (" + MILLISECONDS.format(value) + ")");
     }
 
-    private String unitName() {
+    public String unitName() {
         return this.name().charAt(0) + this.name().substring(1).toLowerCase(Locale.ROOT);
     }
 
     public String format(final long milliseconds) {
-        double unitCount = milliseconds * 1.0 / this.milliseconds;
-        return dec.format(unitCount).concat(unitName());
+        return dec.format(milliseconds * 1.0 / this.milliseconds).concat(unitName());
     }
 
     public String units(final int unitCount) {
-        return dec.format(unitCount * milliseconds).concat(this.name());
+        return dec.format(unitCount * milliseconds).concat(unitName());
     }
 
     public long asMilliseconds(final double unitCount) {

@@ -16,9 +16,10 @@
 
 package io.aiven.kafka.connect.common.config.validators;
 
-import io.aiven.commons.collections.TimeScale;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+
+import io.aiven.commons.collections.TimeScale;
 
 public class TimeScaleValidator implements ConfigDef.Validator {
     private final Number min;

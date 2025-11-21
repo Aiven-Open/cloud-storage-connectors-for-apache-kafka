@@ -19,6 +19,7 @@ package io.aiven.commons.collections;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @SuppressWarnings("PMD.FieldNamingConventions")
@@ -37,13 +38,13 @@ public enum Scale {
     /**
      * The IEC scale
      */
-    public static final List<Scale> IEC = Arrays.asList(KiB, MiB, GiB, TiB, PiB);
+    public static final List<Scale> IEC = Collections.unmodifiableList(Arrays.asList(KiB, MiB, GiB, TiB, PiB));
 
     /**
      * The SI scale
      */
     @SuppressWarnings("PMD.ShortVariable")
-    public static final List<Scale> SI = Arrays.asList(KB, MB, GB, TB, PB);
+    public static final List<Scale> SI = Collections.unmodifiableList(Arrays.asList(KB, MB, GB, TB, PB));
 
     final DecimalFormat dec = new DecimalFormat("0.0 ");
 
