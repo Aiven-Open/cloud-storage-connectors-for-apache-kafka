@@ -16,21 +16,19 @@
 
 package io.aiven.kafka.connect.common.config;
 
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-
+import io.aiven.commons.collections.TimeScale;
+import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 
 /**
  * Defines the backoff policy for connectors.
  */
-public final class BackoffPolicyConfig extends ConfigFragment {
+public final class BackoffPolicyFragment extends ConfigFragment {
 
     static final String GROUP_RETRY_BACKOFF_POLICY = "Retry backoff policy";
     static final String KAFKA_RETRY_BACKOFF_MS_CONFIG = "kafka.retry.backoff.ms";
 
-    public BackoffPolicyConfig(final FragmentDataAccess dataAccess) {
+    public BackoffPolicyFragment(final FragmentDataAccess dataAccess) {
         super(dataAccess);
     }
 
@@ -42,31 +40,14 @@ public final class BackoffPolicyConfig extends ConfigFragment {
      * @return the number of items in the backoff policy group.
      */
     public static int update(final ConfigDef configDef) {
-        configDef.define(KAFKA_RETRY_BACKOFF_MS_CONFIG, ConfigDef.Type.LONG, null, new ConfigDef.Validator() {
-
-            final long maximumBackoffPolicy = TimeUnit.HOURS.toMillis(24);
-
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                if (Objects.isNull(value)) {
-                    return;
-                }
-                assert value instanceof Long;
-                final var longValue = (Long) value;
-                if (longValue < 0) {
-                    throw new ConfigException(name, value, "Value must be at least 0");
-                } else if (longValue > maximumBackoffPolicy) {
-                    throw new ConfigException(name, value,
-                            "Value must be no more than " + maximumBackoffPolicy + " (24 hours)");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM,
+        configDef.define(KAFKA_RETRY_BACKOFF_MS_CONFIG, ConfigDef.Type.LONG, TimeScale.SECONDS.asMilliseconds(30),
+                TimeScaleValidator.between(0, TimeScale.DAYS.asMilliseconds(1)),
+                ConfigDef.Importance.MEDIUM,
                 "The retry backoff in milliseconds. "
                         + "This config is used to notify Kafka Connect to retry delivering a message batch or "
                         + "performing recovery in case of transient exceptions. Maximum value is "
-                        + TimeUnit.HOURS.toMillis(24) + " (24 hours).",
+                        + TimeScale.DAYS.displayValue(TimeScale.DAYS.asMilliseconds(1)),
                 GROUP_RETRY_BACKOFF_POLICY, 1, ConfigDef.Width.NONE, KAFKA_RETRY_BACKOFF_MS_CONFIG);
-
         return 1;
     }
 
