@@ -78,6 +78,9 @@ idea {
 dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
+  compileOnly(project(":site"))
+  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
+  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
   implementation(project(":commons"))
   implementation("com.google.cloud:google-cloud-storage:2.52.3")
@@ -271,8 +274,7 @@ tasks.register<JavaExec>("buildConfigMd") {
           .plus(sourceSets.main.get().runtimeClasspath)
   args =
       listOf(
-          "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
-          "configDef",
+          "io.aiven.kafka.connect.gcs.GcsSinkConfigDef",
           "src/templates/configData.md.vm",
           "build/site/markdown/gcs-sink-connector/GCSSinkConfig.md")
 }
@@ -287,10 +289,9 @@ tasks.register<JavaExec>("buildConfigYml") {
           .plus(sourceSets.main.get().runtimeClasspath)
   args =
       listOf(
-          "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
-          "configDef",
+          "io.aiven.kafka.connect.gcs.GcsSinkConfigDef",
           "src/templates/configData.yml.vm",
-          "build/site/s3-source-connector/S3SourceConfig.yml")
+          "build/site/gcs-sink-connector/GCSSinkConfig.yml")
 }
 
 /** ****************************** */
