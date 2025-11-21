@@ -26,6 +26,7 @@ import org.apache.kafka.common.config.ConfigValue;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.gcs.GcsSinkConfig;
+import io.aiven.kafka.connect.gcs.GcsSinkConfigDef;
 
 import org.junit.jupiter.api.Test;
 
@@ -39,8 +40,7 @@ final class GcsSinkConfigValidationTest {
         final Map<String, String> connectorProps = new HashMap<>();
         connectorProps.put("file.compression.type", "unknown");
 
-        final ConfigValue configValue = GcsSinkConfig.configDef()
-                .validate(connectorProps)
+        final ConfigValue configValue = new GcsSinkConfigDef().validate(connectorProps)
                 .stream()
                 .filter(x -> "file.compression.type".equals(x.name()))
                 .findFirst()
@@ -53,8 +53,7 @@ final class GcsSinkConfigValidationTest {
         final Map<String, String> connectorProps = new HashMap<>();
         connectorProps.put("format.output.fields", "unknown");
 
-        final ConfigValue configValue = GcsSinkConfig.configDef()
-                .validate(connectorProps)
+        final ConfigValue configValue = new GcsSinkConfigDef().validate(connectorProps)
                 .stream()
                 .filter(x -> "format.output.fields".equals(x.name()))
                 .findFirst()
