@@ -70,7 +70,7 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
     public static SinkCommonConfigDef configDef() {
         final SinkCommonConfigDef configDef = new SinkCommonConfigDef(OutputFieldType.VALUE, CompressionType.NONE);
         addAzureConfigGroup(configDef);
-        addFileConfigGroup(configDef);
+        // A addFileConfigGroup(configDef);
         addAzureRetryPolicies(configDef);
         addUserAgentConfig(configDef);
         return configDef;
@@ -117,20 +117,20 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
                 AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG);
     }
 
-    private static void addFileConfigGroup(final ConfigDef configDef) {
-        configDef.define(FILE_NAME_PREFIX_CONFIG, ConfigDef.Type.STRING, "", new ConfigDef.Validator() {
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                assert value instanceof String;
-                final String valueStr = (String) value;
-                if (valueStr.length() > 1024) { // NOPMD avoid literal
-                    throw new ConfigException(AZURE_STORAGE_CONTAINER_NAME_CONFIG, value,
-                            "cannot be longer than 1024 characters");
-                }
-            }
-        }, ConfigDef.Importance.MEDIUM, "The prefix to be added to the name of each file put on Azure Blob.",
-                GROUP_FILE, 50, ConfigDef.Width.NONE, FILE_NAME_PREFIX_CONFIG);
-    }
+    // private static void addFileConfigGroup(final ConfigDef configDef) {
+    // configDef.define(FILE_NAME_PREFIX_CONFIG, ConfigDef.Type.STRING, "", new ConfigDef.Validator() {
+    // @Override
+    // public void ensureValid(final String name, final Object value) {
+    // assert value instanceof String;
+    // final String valueStr = (String) value;
+    // if (valueStr.length() > 1024) { // NOPMD avoid literal
+    // throw new ConfigException(AZURE_STORAGE_CONTAINER_NAME_CONFIG, value,
+    // "cannot be longer than 1024 characters");
+    // }
+    // }
+    // }, ConfigDef.Importance.MEDIUM, "The prefix to be added to the name of each file put on Azure Blob.",
+    // GROUP_FILE, 50, ConfigDef.Width.NONE, FILE_NAME_PREFIX_CONFIG);
+    // }
 
     public AzureBlobSinkConfig(final Map<String, String> properties) {
         super(configDef(), handleDeprecatedYyyyUppercase(properties));

@@ -74,7 +74,7 @@ public class ConfigFragment implements FragmentDataAccess {
      * @param message
      *            the message for the error.
      */
-    protected void registerIssue(final Map<String, ConfigValue> configMap, final String name, final Object value,
+    public static void registerIssue(final Map<String, ConfigValue> configMap, final String name, final Object value,
             final String message) {
         configMap.get(name).addErrorMessage(validationMessage(name, value, message));
     }
