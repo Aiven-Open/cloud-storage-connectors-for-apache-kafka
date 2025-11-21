@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.common.config;
 
 import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
 
+import java.util.Collections;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
@@ -52,13 +53,14 @@ public class CommonConfigFragment extends ConfigFragment {
         int orderInGroup = 0;
         final String commonGroup = "commons";
 
-        return configDef
-                .define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH,
-                        "Maximum number of tasks to use for this connector.", commonGroup, ++orderInGroup,
-                        ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG)
-                .define(TASK_ID, ConfigDef.Type.INT, 1, atLeast(0), ConfigDef.Importance.HIGH,
-                        "The task ID that this connector is working with.", commonGroup, ++orderInGroup,
-                        ConfigDef.Width.SHORT, TASK_ID);
+        configDef.define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH,
+                "Maximum number of tasks to use for this connector.", commonGroup, ++orderInGroup,
+                ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG);
+
+        final ConfigDef.ConfigKey key = new ConfigDef.ConfigKey(TASK_ID, ConfigDef.Type.INT, 0, atLeast(0),
+                ConfigDef.Importance.HIGH, "The task ID that this connector is working with.", commonGroup,
+                ++orderInGroup, ConfigDef.Width.SHORT, TASK_ID, Collections.emptyList(), null, true);
+        return configDef.define(key);
     }
 
     /**

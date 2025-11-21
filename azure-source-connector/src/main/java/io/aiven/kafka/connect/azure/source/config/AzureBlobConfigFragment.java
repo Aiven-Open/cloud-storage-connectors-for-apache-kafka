@@ -25,6 +25,7 @@ import org.apache.kafka.common.config.ConfigException;
 import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
 import io.aiven.kafka.connect.common.config.ConfigFragment;
 import io.aiven.kafka.connect.common.config.FragmentDataAccess;
+import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
 
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.HttpLogDetailLevel;
@@ -152,11 +153,11 @@ public class AzureBlobConfigFragment extends ConfigFragment {
     private static void addAzureRetryPolicies(final ConfigDef configDef) {
         int retryPolicyGroupCounter = 0;
         configDef.define(AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
-                AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT, ConfigDef.Range.atLeast(0L), ConfigDef.Importance.MEDIUM,
-                "Initial retry delay in milliseconds.", GROUP_AZURE_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter,
-                ConfigDef.Width.NONE, AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG);
+                AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT, TimeScaleValidator.atLeast(0),
+                ConfigDef.Importance.MEDIUM, "Initial retry delay in milliseconds.", GROUP_AZURE_RETRY_BACKOFF_POLICY,
+                ++retryPolicyGroupCounter, ConfigDef.Width.NONE, AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG);
         configDef.define(AZURE_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
-                AZURE_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT, ConfigDef.Range.atLeast(0L), ConfigDef.Importance.MEDIUM,
+                AZURE_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT, TimeScaleValidator.atLeast(0), ConfigDef.Importance.MEDIUM,
                 "Maximum retry delay in milliseconds.", GROUP_AZURE_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter,
                 ConfigDef.Width.NONE, AZURE_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG);
         configDef.define(AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG, ConfigDef.Type.INT,
