@@ -53,7 +53,7 @@ class FileNameFragmentTest {
     void configDefTest(final String arg, final ConfigDef.Type type, final Object defaultValue,
             final boolean validatorPresent, final ConfigDef.Importance importance, final boolean recommenderPresent) {
         final ConfigDef configDef = new ConfigDef();
-        FileNameFragment.update(configDef);
+        FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         final ConfigDef.ConfigKey key = configDef.configKeys().get(arg);
 
         assertThat(arg).as("Wrong key name").isEqualTo(key.name);
@@ -84,8 +84,10 @@ class FileNameFragmentTest {
                 .collect(Collectors.toList());
         names.remove(FileNameFragment.GROUP_NAME);
         names.remove(FileNameFragment.DEFAULT_FILENAME_TEMPLATE);
-        // TODO remove this when we understand what it is for.
+        // TODO remove these vv when we understand what it is for.
         names.remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+        names.remove(FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+        // TODO remove these ^^ when we understand what it is for.
         configDefSource().map(a -> (String) a.get()[0]).forEach(names::remove);
         assertThat(names.isEmpty())
                 .as(() -> "Tests do not process the following arguments: " + String.join(", ", names))
@@ -118,7 +120,7 @@ class FileNameFragmentTest {
     void validateRecordGrouperTest(final String sourceName, final int maxRecords, final List<String> messages) {
 
         final ConfigDef configDef = new ConfigDef();
-        FileNameFragment.update(configDef);
+        FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         final Map<String, String> props = new HashMap<>();
         FileNameFragment.setter(props).template(sourceName).maxRecordsPerFile(maxRecords);
 
@@ -151,7 +153,7 @@ class FileNameFragmentTest {
     @MethodSource("fileNameSource")
     void testGetFilename(final String expected, final Map<String, String> props) {
         final ConfigDef configDef = new ConfigDef();
-        FileNameFragment.update(configDef);
+        FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         OutputFormatFragment.update(configDef, null);
         final AbstractConfig cfg = new AbstractConfig(configDef, props);
         final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
@@ -193,7 +195,7 @@ class FileNameFragmentTest {
     @MethodSource("fileNameSource")
     void testGetFilenameTemplate(final String expected, final Map<String, String> props) {
         final ConfigDef configDef = new ConfigDef();
-        FileNameFragment.update(configDef);
+        FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         OutputFormatFragment.update(configDef, null);
         final AbstractConfig cfg = new AbstractConfig(configDef, props);
         final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
@@ -204,7 +206,7 @@ class FileNameFragmentTest {
     @Test
     void testGetFilenameTimezone() {
         final ConfigDef configDef = new ConfigDef();
-        FileNameFragment.update(configDef);
+        FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         final Map<String, String> props = new HashMap<>();
         props.put(FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE, "Europe/Dublin");
         AbstractConfig cfg = new AbstractConfig(configDef, props);
@@ -226,7 +228,7 @@ class FileNameFragmentTest {
     @Test
     void testGetFilenameTimestampSource() {
         final ConfigDef configDef = new ConfigDef();
-        FileNameFragment.update(configDef);
+        FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         final Map<String, String> props = new HashMap<>();
         AbstractConfig cfg = new AbstractConfig(configDef, props);
         FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
@@ -248,7 +250,7 @@ class FileNameFragmentTest {
     @Test
     void testGetMaxRecordsPerFile() {
         final ConfigDef configDef = new ConfigDef();
-        FileNameFragment.update(configDef);
+        FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         final Map<String, String> props = new HashMap<>();
         AbstractConfig cfg = new AbstractConfig(configDef, props);
         FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
@@ -275,7 +277,7 @@ class FileNameFragmentTest {
             "*.gz,object_hash", "'([a-zA-Z0-9_-]{3,5}.gz',object_hash" })
     void validateBasicSourceNamesPass(final String sourceName, final String distributionType) {
 
-        assertThatCode(() -> FileNameFragment.TEMPLATE_VALIDATOR.ensureValid(TEST_CONFIG_NAME, sourceName))
+        assertThatCode(() -> FileNameFragment.PREFIX_VALIDATOR.ensureValid(TEST_CONFIG_NAME, sourceName))
                 .doesNotThrowAnyException();
     }
 
@@ -285,7 +287,7 @@ class FileNameFragmentTest {
             final boolean isSink, final List<String> messages) {
 
         final ConfigDef configDef = new ConfigDef();
-        FileNameFragment.update(configDef);
+        FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         SourceConfigFragment.update(configDef);
         final Map<String, String> props = new HashMap<>();
         FileNameFragment.setter(props).template(sourceName);

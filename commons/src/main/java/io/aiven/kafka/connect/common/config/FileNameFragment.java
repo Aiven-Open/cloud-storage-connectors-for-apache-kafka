@@ -49,6 +49,9 @@ import org.slf4j.LoggerFactory;
  * Fragment to handle all file name extraction operations.
  */
 public final class FileNameFragment extends ConfigFragment {
+    public enum PrefixTemplateSupport {
+        TRUE, FALSE
+    }
     /**
      * The name of the group that this fragment places items in.
      */
@@ -67,6 +70,8 @@ public final class FileNameFragment extends ConfigFragment {
     static final String DEFAULT_FILENAME_TEMPLATE = "{{topic}}-{{partition}}-{{start_offset}}";
     @VisibleForTesting
     public static final String FILE_PATH_PREFIX_TEMPLATE_CONFIG = "file.prefix.template";
+    @VisibleForTesting
+    public static final String FILE_NAME_PREFIX_CONFIG = "file.name.prefix";
 
     public static final ConfigDef.Validator COMPRESSION_TYPE_VALIDATOR = new PredicateGatedValidator(Objects::nonNull,
             ConfigDef.CaseInsensitiveValidString.in(CompressionType.names().toArray(new String[0])));
@@ -77,7 +82,7 @@ public final class FileNameFragment extends ConfigFragment {
                     .collect(Collectors.toList())
                     .toArray(new String[0]));
 
-    public static final ConfigDef.Validator TEMPLATE_VALIDATOR = ConfigDef.LambdaValidator.with((name, value) -> {
+    public static final ConfigDef.Validator PREFIX_VALIDATOR = ConfigDef.LambdaValidator.with((name, value) -> {
         if (value == null) {
             return;
         }
@@ -90,7 +95,7 @@ public final class FileNameFragment extends ConfigFragment {
         } catch (IllegalArgumentException e) {
             throw new ConfigException(name, value, e.getMessage());
         }
-    }, () -> "See documentation for proper template construction.");
+    }, () -> "may not start with '.well-known/acme-challenge'");
 
     /**
      * The flag that indicates this fragment is being used as for a sink connector.
@@ -258,25 +263,15 @@ public final class FileNameFragment extends ConfigFragment {
      *
      * @param configDef
      *            the configuration definition to update.
-     * @return the updated configuration definition.
-     */
-    public static int update(final ConfigDef configDef) {
-        return update(configDef, CompressionType.NONE);
-    }
-
-    /**
-     * Adds the FileName properties to the configuration definition.
-     *
-     * @param configDef
-     *            the configuration definition to update.
      * @param defaultCompressionType
      *            The default compression type. May be {@code null}.
-     * @return number of items in the file group..
+     * @return number of items in the file group.
      */
-    public static int update(final ConfigDef configDef, final CompressionType defaultCompressionType) {
+    public static int update(final ConfigDef configDef, final CompressionType defaultCompressionType,
+            final PrefixTemplateSupport prefixTemplateSupport) {
         int fileGroupCounter = 0;
 
-        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, TEMPLATE_VALIDATOR,
+        configDef.define(FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, PREFIX_VALIDATOR,
                 ConfigDef.Importance.MEDIUM,
                 "The template for file names on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
@@ -287,17 +282,22 @@ public final class FileNameFragment extends ConfigFragment {
                         + "There is also `key` only variable {{key}} for grouping by keys",
                 GROUP_NAME, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
-        configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, TEMPLATE_VALIDATOR,
-                ConfigDef.Importance.MEDIUM,
-                "The template for file names prefixes on storage system. "
-                        + "Supports `{{ variable }}` placeholders for substituting variables. "
-                        + "Currently supported variables are `topic`, `partition`, and `start_offset` "
-                        + "(the offset of the first record in the file). "
-                        + "Only some combinations of variables are valid, which currently are:\n"
-                        + "- `topic`, `partition`, `start_offset`."
-                        + "There is also `key` only variable {{key}} for grouping by keys",
-                GROUP_NAME, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_PATH_PREFIX_TEMPLATE_CONFIG);
-
+        if (prefixTemplateSupport.equals(PrefixTemplateSupport.TRUE)) {
+            configDef.define(FILE_PATH_PREFIX_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null, PREFIX_VALIDATOR,
+                    ConfigDef.Importance.MEDIUM,
+                    "The template for file names prefixes on storage system. "
+                            + "Supports `{{ variable }}` placeholders for substituting variables. "
+                            + "Currently supported variables are `topic`, `partition`, and `start_offset` "
+                            + "(the offset of the first record in the file). "
+                            + "Only some combinations of variables are valid, which currently are:\n"
+                            + "- `topic`, `partition`, `start_offset`."
+                            + "There is also `key` only variable {{key}} for grouping by keys",
+                    GROUP_NAME, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+        } else {
+            configDef.define(FILE_NAME_PREFIX_CONFIG, ConfigDef.Type.STRING, "", PREFIX_VALIDATOR,
+                    ConfigDef.Importance.MEDIUM, "The prefix to be added to the name of each file.",
+                    FileNameFragment.GROUP_NAME, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_NAME_PREFIX_CONFIG);
+        }
         configDef.define(FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING, defaultCompressionType.name(),
                 COMPRESSION_TYPE_VALIDATOR, ConfigDef.Importance.MEDIUM, "The compression type used for files.",
                 GROUP_NAME, ++fileGroupCounter, ConfigDef.Width.NONE, FILE_COMPRESSION_TYPE_CONFIG,
@@ -394,6 +394,9 @@ public final class FileNameFragment extends ConfigFragment {
         return getString(FILE_PATH_PREFIX_TEMPLATE_CONFIG);
     }
 
+    public String getPrefix() {
+        return getString(FILE_NAME_PREFIX_CONFIG);
+    }
     public static void replaceYyyyUppercase(final String name, final Map<String, String> properties) {
         String template = properties.get(name);
         if (template != null) {
@@ -521,6 +524,17 @@ public final class FileNameFragment extends ConfigFragment {
          */
         public Setter prefixTemplate(final String prefixTemplate) {
             return setValue(FILE_PATH_PREFIX_TEMPLATE_CONFIG, prefixTemplate);
+        }
+
+        /**
+         * Sets the file name prefix template.
+         *
+         * @param prefix
+         *            the prefix to use.
+         * @return this
+         */
+        public Setter prefix(final String prefix) {
+            return setValue(FILE_NAME_PREFIX_CONFIG, prefix);
         }
     }
 }

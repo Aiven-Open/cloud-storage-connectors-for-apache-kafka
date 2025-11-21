@@ -78,6 +78,6 @@ public final class GcsSinkConnector extends SinkConnector {
 
     @Override
     public ConfigDef config() {
-        return GcsSinkConfig.configDef();
+        return new GcsSinkConfigDef();
     }
 }
