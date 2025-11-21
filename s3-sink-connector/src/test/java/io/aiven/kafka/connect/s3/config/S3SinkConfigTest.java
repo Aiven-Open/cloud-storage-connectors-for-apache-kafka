@@ -435,14 +435,16 @@ final class S3SinkConfigTest {
                 S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongDelayProps)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value 0 for configuration aws.s3.backoff.delay.ms: Value must be at least 1");
+                .hasMessage(
+                        "Invalid value 0 for configuration aws.s3.backoff.delay.ms: Value must be at least 1 Milliseconds");
 
         final var wrongMaxDelayProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMaxDelayProps)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value 0 for configuration aws.s3.backoff.max.delay.ms: Value must be at least 1");
+                .hasMessage(
+                        "Invalid value 0 for configuration aws.s3.backoff.max.delay.ms: Value must be at least 1 Milliseconds");
 
         final var wrongMaxRetriesProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah",
                 S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah",
