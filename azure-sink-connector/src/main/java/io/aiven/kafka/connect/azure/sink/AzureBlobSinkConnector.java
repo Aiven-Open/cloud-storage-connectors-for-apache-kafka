@@ -49,8 +49,8 @@ public final class AzureBlobSinkConnector extends SinkConnector {
     @Override
     public void start(final Map<String, String> props) {
         Objects.requireNonNull(props, "props cannot be null");
-
         this.configProps = Collections.unmodifiableMap(props);
+        AzureBlobSinkConfig.configDef().validate(props);
         this.config = new AzureBlobSinkConfig(props);
         LOG.info("Starting connector {}", config.getConnectorName());
     }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.connect.azure.source.config;
+package io.aiven.kafka.connect.azure.sink;
 
 import java.time.Duration;
 import java.util.regex.Pattern;
@@ -22,7 +22,6 @@ import java.util.regex.Pattern;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
 import io.aiven.kafka.connect.common.config.ConfigFragment;
 import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 
@@ -35,15 +34,15 @@ import com.azure.storage.blob.BlobServiceAsyncClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 
 /**
- * The configuration fragment that defines the Azure specific characteristics.
+ * The configuration fragment that defines the Azure specific characteristics. TODO merge this with the Azure source
+ * version.
  */
-public class AzureBlobConfigFragment extends ConfigFragment {
+public final class AzureBlobConfigFragment extends ConfigFragment {
 
     public static final String AZURE_PREFIX_CONFIG = "azure.blob.prefix";
     public static final String AZURE_FETCH_PAGE_SIZE = "azure.blob.fetch.page.size";
     private static final String USER_AGENT_HEADER_FORMAT = "Azure Blob Source/%s (GPN: Aiven;)";
-    public static final String USER_AGENT_HEADER_VALUE = String.format(USER_AGENT_HEADER_FORMAT,
-            new VersionInfo().getVersion());
+    public static final String USER_AGENT_HEADER_VALUE = String.format(USER_AGENT_HEADER_FORMAT, Version.VERSION);
     private static final String GROUP_AZURE = "Azure";
     public static final String AZURE_STORAGE_CONNECTION_STRING_CONFIG = "azure.storage.connection.string";
     public static final String AZURE_STORAGE_CONTAINER_NAME_CONFIG = "azure.storage.container.name";
@@ -98,7 +97,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
      * @param dataAccess
      *            the configuration that this fragment is associated with.
      */
-    protected AzureBlobConfigFragment(final FragmentDataAccess dataAccess) {
+    public AzureBlobConfigFragment(final FragmentDataAccess dataAccess) {
         super(dataAccess);
     }
 
@@ -149,7 +148,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
         }
     }
 
-    private static void addAzureRetryPolicies(final ConfigDef configDef) {
+    static void addAzureRetryPolicies(final ConfigDef configDef) {
         int retryPolicyGroupCounter = 0;
         configDef.define(AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
                 AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT, ConfigDef.Range.atLeast(0L), ConfigDef.Importance.MEDIUM,

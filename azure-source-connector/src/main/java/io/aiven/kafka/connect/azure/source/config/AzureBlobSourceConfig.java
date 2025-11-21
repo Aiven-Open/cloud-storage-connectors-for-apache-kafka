@@ -18,10 +18,8 @@ package io.aiven.kafka.connect.azure.source.config;
 
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
-import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.config.TransformerFragment;
 
 import com.azure.storage.blob.BlobServiceAsyncClient;
 
@@ -30,22 +28,8 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
     // TODO AzureBlobFragment needs to be extracted from Azure Sink.
     private final AzureBlobConfigFragment azureBlobConfigFragment;
     public AzureBlobSourceConfig(final Map<?, ?> properties) {
-        super(configDef(), properties);
-        azureBlobConfigFragment = new AzureBlobConfigFragment(this);
-        validate();
-    }
-
-    public static AzureBlobSourceConfigDef configDef() {
-
-        final var configDef = new AzureBlobSourceConfigDef();
-
-        FileNameFragment.update(configDef);
-        SourceConfigFragment.update(configDef);
-        TransformerFragment.update(configDef);
-        AzureBlobConfigFragment.update(configDef);
-        return configDef;
-    }
-    private void validate() {
+        super(new AzureBlobSourceConfigDef(), properties);
+        azureBlobConfigFragment = new AzureBlobConfigFragment(FragmentDataAccess.from(this));
     }
 
     public int getAzureFetchPageSize() {
