@@ -142,15 +142,6 @@ public class ConfigDoc {
 
     public static class Escaper extends EscapeTool {
 
-        private static String[] charParser(final String charText) {
-            char[] chars = charText.toCharArray();
-            String[] result = new String[chars.length];
-            for (int i = 0; i < chars.length; i++) {
-                result[i] = String.valueOf(chars[i]);
-            }
-            return result;
-        }
-
         /**
          * The characters to escape for markdown.
          */
@@ -159,6 +150,15 @@ public class ConfigDoc {
          * The characters to escape for APT (Almost Plain Text).
          */
         private static final String[] APT_CHARS = charParser("\\~=-+*[]<>{}");
+
+        private static String[] charParser(final String charText) {
+            final char[] chars = charText.toCharArray();
+            final String[] result = new String[chars.length];
+            for (int i = 0; i < chars.length; i++) {
+                result[i] = String.valueOf(chars[i]);
+            }
+            return result;
+        }
 
         /**
          * Escapes a text string.
@@ -174,8 +174,8 @@ public class ConfigDoc {
                 return "";
             }
             String result = text;
-            for (String c : chars) {
-                result = result.replace(c, "\\" + c);
+            for (final String chrStr : chars) {
+                result = result.replace(chrStr, "\\" + chrStr);
             }
             return result;
         }
