@@ -16,17 +16,8 @@
 
 package io.aiven.kafka.connect.s3.source.config;
 
-import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYyyyUppercase;
+import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
-import java.util.List;
-import java.util.Map;
+public class S3SourceConfigDef extends SourceCommonConfig.SourceCommonConfigDef {
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigValue;
-
-public class S3SourceConfigDef extends ConfigDef {
-    @Override
-    public List<ConfigValue> validate(final Map<String, String> props) {
-        return super.validate(handleDeprecatedYyyyUppercase(props));
-    }
 }

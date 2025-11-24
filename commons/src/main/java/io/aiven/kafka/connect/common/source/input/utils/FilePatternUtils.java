@@ -16,9 +16,11 @@
 
 package io.aiven.kafka.connect.common.source.input.utils;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.ConfigException;
 
@@ -38,10 +40,10 @@ public final class FilePatternUtils {
     public static final String PATTERN_PARTITION_KEY = "partition";
     public static final String PATTERN_TOPIC_KEY = "topic";
     public static final String PATTERN_START_OFFSET_KEY = "startOffset"; // no undercore allowed as it breaks the regex.
-    public static final String START_OFFSET_PATTERN = "{{start_offset}}";
-    public static final String TIMESTAMP_PATTERN = "{{timestamp}}";
-    public static final String PARTITION_PATTERN = "{{" + PATTERN_PARTITION_KEY + "}}";
-    public static final String TOPIC_PATTERN = "{{" + PATTERN_TOPIC_KEY + "}}";
+    public static final String START_OFFSET_PATTERN = asPattern("start_offset");
+    public static final String TIMESTAMP_PATTERN = asPattern("timestamp");
+    public static final String PARTITION_PATTERN = asPattern(PATTERN_PARTITION_KEY);
+    public static final String TOPIC_PATTERN = asPattern(PATTERN_TOPIC_KEY);
 
     // Use a named group to return the partition in a complex string to always get the correct information for the
     // partition number.
@@ -55,6 +57,30 @@ public final class FilePatternUtils {
     private final boolean startOffsetConfigured;
     private final boolean partitionConfigured;
     private final boolean topicConfigured;
+
+    /**
+     * Formats a string as a pattern.
+     *
+     * @param name
+     *            the name of the pattern.
+     * @return the name surrounded by "{{" and "}}"
+     */
+    public static String asPattern(final String name) {
+        return "{{" + name + "}}";
+    }
+
+    /**
+     * Formats a set of string as patterns separated by a delimiter
+     *
+     * @param variables
+     *            the names to make into patterns.
+     * @param delimiter
+     *            the delimiter between the patterns
+     * @return the string of patterns.
+     */
+    public static String asPatterns(final Collection<String> variables, final String delimiter) {
+        return variables.stream().map(FilePatternUtils::asPattern).collect(Collectors.joining(delimiter));
+    }
 
     /**
      * Creates an instance of FilePatternUtils, this constructor is used to configure the Pattern that is used to

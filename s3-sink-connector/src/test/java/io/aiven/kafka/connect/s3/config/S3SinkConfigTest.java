@@ -397,7 +397,7 @@ final class S3SinkConfigTest {
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [key, value, offset, timestamp, unsupported] "
                         + "for configuration output_fields: "
-                        + "supported values are: 'key', 'value', 'offset', 'timestamp', 'headers'");
+                        + "supported values are (case insensitive): key, value, offset, timestamp, headers");
 
         props.remove(S3ConfigFragment.OUTPUT_FIELDS);
         props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp,unsupported");
@@ -405,7 +405,7 @@ final class S3SinkConfigTest {
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value [key, value, offset, timestamp, unsupported] "
                         + "for configuration format.output.fields: "
-                        + "supported values are: 'key', 'value', 'offset', 'timestamp', 'headers'");
+                        + "supported values are (case insensitive): key, value, offset, timestamp, headers");
     }
 
     @Test
@@ -522,15 +522,15 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.OUTPUT_COMPRESSION, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage(
-                        "Invalid value unsupported for configuration output_compression: 'none', 'gzip', 'snappy', 'zstd'");
+                .hasMessageContaining(
+                        "Invalid value unsupported for configuration file.compression.type: String must be one of (case insensitive): ZSTD, GZIP, NONE, SNAPPY");
 
         props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
         props.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, "unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage(
-                        "Invalid value unsupported for configuration file.compression.type: 'none', 'gzip', 'snappy', 'zstd'");
+                .hasMessageContaining(
+                        "Invalid value unsupported for configuration file.compression.type: String must be one of (case insensitive): ZSTD, GZIP, NONE, SNAPPY");
     }
 
     @ParameterizedTest
@@ -593,8 +593,8 @@ final class S3SinkConfigTest {
         props.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "unknown");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value unknown for configuration format.output.type: "
-                        + "Supported values are: 'avro', 'csv', 'json', 'jsonl', 'parquet'");
+                .hasMessageContaining("Invalid value unknown for configuration format.output.type: "
+                        + "String must be one of (case insensitive): PARQUET, CSV, JSON, AVRO, JSONL");
 
     }
 
@@ -671,13 +671,15 @@ final class S3SinkConfigTest {
     @ParameterizedTest
     @ValueSource(strings = { "{{key}}", "{{topic}}/{{partition}}/{{key}}" })
     void notSupportedFileMaxRecords(final String fileNameTemplate) {
-        final Map<String, String> properties = Map.of(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, fileNameTemplate,
-                S3SinkConfig.FILE_MAX_RECORDS, "2", S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id",
-                S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key",
-                S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        final Map<String, String> properties = new HashMap<>();
+        FileNameFragment.setter(properties).template(fileNameTemplate).maxRecordsPerFile(2);
+        properties.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "any_access_key_id");
+        properties.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "any_secret_key");
+        properties.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
         assertThatThrownBy(() -> new S3SinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
-                        fileNameTemplate));
+                .hasMessageContaining(
+                        String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
+                                fileNameTemplate));
     }
 
 }

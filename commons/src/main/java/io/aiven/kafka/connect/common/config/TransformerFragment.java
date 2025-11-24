@@ -21,10 +21,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.commons.collections.Scale;
+import io.aiven.kafka.connect.common.config.validators.ScaleValidator;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 
 /**
@@ -53,11 +54,11 @@ public final class TransformerFragment extends ConfigFragment {
     /**
      * Construct the ConfigFragment.
      *
-     * @param cfg
-     *            the configuration that this fragment is associated with.
+     * @param dataAccess
+     *            the FragmentDataAccess that this fragment is associated with.
      */
-    public TransformerFragment(final AbstractConfig cfg) {
-        super(cfg);
+    public TransformerFragment(final FragmentDataAccess dataAccess) {
+        super(dataAccess);
     }
 
     /**
@@ -76,10 +77,12 @@ public final class TransformerFragment extends ConfigFragment {
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.MEDIUM, "SCHEMA REGISTRY URL", TRANSFORMER_GROUP,
                 ++transformerCounter, ConfigDef.Width.NONE, VALUE_CONVERTER_SCHEMA_REGISTRY_URL);
         configDef.define(INPUT_FORMAT_KEY, ConfigDef.Type.STRING, InputFormat.BYTES.getValue(),
-                new InputFormatValidator(), ConfigDef.Importance.MEDIUM, "Input format of messages read from source",
-                TRANSFORMER_GROUP, transformerCounter++, ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
+                ConfigDef.CaseInsensitiveValidString
+                        .in(Arrays.stream(InputFormat.values()).map(Object::toString).toArray(String[]::new)),
+                ConfigDef.Importance.MEDIUM, "Input format of messages read from source", TRANSFORMER_GROUP,
+                transformerCounter++, ConfigDef.Width.NONE, INPUT_FORMAT_KEY);
         configDef.define(TRANSFORMER_MAX_BUFFER_SIZE, ConfigDef.Type.INT, DEFAULT_MAX_BUFFER_SIZE,
-                ConfigDef.Range.between(1, Integer.MAX_VALUE), ConfigDef.Importance.MEDIUM,
+                ScaleValidator.between(1, Integer.MAX_VALUE, Scale.IEC), ConfigDef.Importance.MEDIUM,
                 "Max Size of the byte buffer when using the BYTE Transformer", TRANSFORMER_GROUP, ++transformerCounter,
                 ConfigDef.Width.NONE, TRANSFORMER_MAX_BUFFER_SIZE);
 
@@ -92,7 +95,7 @@ public final class TransformerFragment extends ConfigFragment {
      * @return the Input format for the
      */
     public InputFormat getInputFormat() {
-        return InputFormat.valueOf(cfg.getString(INPUT_FORMAT_KEY).toUpperCase(Locale.ROOT));
+        return InputFormat.valueOf(getString(INPUT_FORMAT_KEY).toUpperCase(Locale.ROOT));
     }
 
     /**
@@ -101,7 +104,7 @@ public final class TransformerFragment extends ConfigFragment {
      * @return the schema registry URL
      */
     public String getSchemaRegistryUrl() {
-        return cfg.getString(SCHEMA_REGISTRY_URL);
+        return getString(SCHEMA_REGISTRY_URL);
     }
 
     /**
@@ -110,7 +113,7 @@ public final class TransformerFragment extends ConfigFragment {
      * @return the maximum buffer size fo the BYTE input.
      */
     public int getTransformerMaxBufferSize() {
-        return cfg.getInt(TRANSFORMER_MAX_BUFFER_SIZE);
+        return getInt(TRANSFORMER_MAX_BUFFER_SIZE);
     }
 
     public static class InputFormatValidator extends ConfigDef.NonEmptyString {

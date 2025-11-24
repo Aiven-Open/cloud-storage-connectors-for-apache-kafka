@@ -65,7 +65,7 @@ final class GcsSinkCredentialsConfigTest {
         assertThat(configValue.errorMessages()).isNotEmpty();
 
         assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessageStartingWith("Invalid value ");
+                .hasMessageStartingWith("There are errors in the configuration:\n" + "Invalid value ");
     }
 
     @Test
