@@ -54,10 +54,19 @@ public class SinkCommonConfig extends CommonConfig {
         outputFormatFragment = new OutputFormatFragment(fragmentDataAccess);
     }
 
+    /**
+     * This method to be removed.
+     *
+     * @param configDef
+     *            the definition.
+     * @param defaultFieldType
+     *            the field type.
+     * @deprecated To be removed when AivenCommonConfig is removed
+     */
     @Deprecated
     public static void addOutputFieldsFormatConfigGroup(final ConfigDef configDef,
             final OutputFieldType defaultFieldType) {
-        // OutputFormatFragment.update(configDef, defaultFieldType);
+        // Does nothing as output fields handled elsewhere.
     }
 
     /**

@@ -353,12 +353,6 @@ class FileNameFragmentTest {
         arguments.add(Arguments.of("", "object_hash", isSink, Arrays.asList(
                 "RecordGrouper requires that the template [] has variables defined. Supported variables are: topic,partition,start_offset,timestamp; topic,partition,key,start_offset,timestamp; key; key,topic,partition")));
 
-        // arguments.add(Arguments.of(" ", "object_hash", isSource, Arrays.asList("Invalid value must not be empty or
-        // not set for configuration")));
-        //
-        // arguments.add(Arguments.of(".well-known/acme-challenge/whooo", "object_hash", isSource,
-        // Arrays.asList("Invalid value must not be empty or not set for configuration")));
-
         return arguments;
     }
 
