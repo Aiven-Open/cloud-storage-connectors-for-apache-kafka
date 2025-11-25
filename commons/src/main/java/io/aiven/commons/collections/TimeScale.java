@@ -35,10 +35,9 @@ public enum TimeScale {
         }
     }, //
     SECONDS(MILLISECONDS.milliseconds * 1000), //
-    MINUTES( SECONDS.milliseconds * 60), //
-    HOURS(MINUTES.milliseconds * 60 ), //
+    MINUTES(SECONDS.milliseconds * 60), //
+    HOURS(MINUTES.milliseconds * 60), //
     DAYS(HOURS.milliseconds * 24);
-
 
     /**
      * The Decimal format for the TimeUnit displays.
