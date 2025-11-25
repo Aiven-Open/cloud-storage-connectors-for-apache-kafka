@@ -182,10 +182,6 @@ final class S3SinkConfigTest {
     @Test
     void wrongPartSize() {
         final Map<String, String> wrongPartSizeProps = new HashMap<>();
-        // Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
-        // S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
-        // Long.toString(2_000_000_001L),
-        // S3ConfigFragment.setter());
         S3ConfigFragment.setter(wrongPartSizeProps)
                 .accessKeyId("blah-blah-key-id")
                 .accessKeySecret("bla-bla-access-key")

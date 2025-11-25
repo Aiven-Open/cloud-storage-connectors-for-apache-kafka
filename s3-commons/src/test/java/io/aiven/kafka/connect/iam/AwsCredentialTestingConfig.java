@@ -39,19 +39,6 @@ public class AwsCredentialTestingConfig extends SinkCommonConfig {
         return s3ConfigFragment;
     }
 
-    // private static ConfigDef getBaseConfigDefinition() {
-    // final ConfigDef definition = new ConfigDef();
-    // addOutputFieldsFormatConfigGroup(definition, OutputFieldType.VALUE);
-    // definition.define(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, ConfigDef.Type.STRING, null,
-    // ConfigDef.Importance.MEDIUM, "File name template");
-    // definition.define(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, ConfigDef.Type.STRING,
-    // CompressionType.NONE.name, ConfigDef.Importance.MEDIUM, "File compression");
-    // definition.define(FILE_MAX_RECORDS, ConfigDef.Type.INT, 0, ConfigDef.Importance.MEDIUM,
-    // "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
-    // + "0 is interpreted as \"unlimited\", which is the default.");
-    // return definition;
-    // }
-    //
     public static class CredTestingDef extends SinkCommonConfig.SinkCommonConfigDef {
 
         public CredTestingDef() {
@@ -59,5 +46,4 @@ public class AwsCredentialTestingConfig extends SinkCommonConfig {
             S3ConfigFragment.update(this, true);
         }
     }
-
 }
