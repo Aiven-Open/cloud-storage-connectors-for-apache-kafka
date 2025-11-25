@@ -17,45 +17,34 @@
 package io.aiven.kafka.connect.s3.config;
 
 import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigDef.Importance;
-import org.apache.kafka.common.config.ConfigDef.Type;
-import org.apache.kafka.common.config.ConfigException;
-
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import io.aiven.kafka.connect.common.config.TimestampSource;
-import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
-import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
 import io.aiven.kafka.connect.common.templating.Template;
-import io.aiven.kafka.connect.config.s3.S3CommonConfig;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.config.s3.S3SinkBaseConfig;
-import io.aiven.kafka.connect.s3.S3OutputStream;
+import io.aiven.kafka.connect.iam.AwsStsRole;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Region;
-import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.regions.Regions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
-final public class S3SinkConfig extends S3SinkBaseConfig {
+public final class S3SinkConfig extends SinkCommonConfig {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SinkConfig.class);
 
-    private static final String GROUP_AWS = "AWS";
-    private static final String GROUP_FILE = "File";
     // Default values from AWS SDK, since they are hidden
     public static final int AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT = 100;
     public static final int AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 20_000;
@@ -67,68 +56,19 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
     // in other words we can't use values greater than 30
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
 
+    private final S3ConfigFragment s3ConfigFragment;
+
     public S3SinkConfig(final Map<String, String> properties) {
-        super(configDef(), preprocessProperties(properties));
+        super(new S3SinkConfigDef(), preprocessProperties(properties));
+        s3ConfigFragment = new S3ConfigFragment(FragmentDataAccess.from(this));
+    }
+
+    public S3ConfigFragment getS3ConfigFragment() {
+        return s3ConfigFragment;
     }
 
     static Map<String, String> preprocessProperties(final Map<String, String> properties) {
-        final Map<String, String> result = S3ConfigFragment.handleDeprecations(properties);
-        // Add other preprocessings when needed here. Mind the order.
-        return S3CommonConfig.handleDeprecatedYyyyUppercase(result);
-    }
-
-    public static S3SinkConfigDef configDef() {
-        final var configDef = new S3SinkConfigDef();
-        S3ConfigFragment.update(configDef);
-        addS3partSizeConfig(configDef);
-        addDeprecatedTimestampConfig(configDef);
-
-        return configDef;
-    }
-
-    private static void addS3partSizeConfig(final ConfigDef configDef) {
-
-        // add awsS3SinkCounter if more S3 Sink Specific config is added
-        // This is used to set orderInGroup
-        configDef.define(S3ConfigFragment.AWS_S3_PART_SIZE, Type.INT, S3OutputStream.DEFAULT_PART_SIZE,
-                new ConfigDef.Validator() {
-
-                    static final int MAX_BUFFER_SIZE = 2_000_000_000;
-
-                    @Override
-                    public void ensureValid(final String name, final Object value) {
-                        if (value == null) {
-                            throw new ConfigException(name, null, "Part size must be non-null");
-                        }
-                        final var number = (Number) value;
-                        if (number.longValue() <= 0) {
-                            throw new ConfigException(name, value, "Part size must be greater than 0");
-                        }
-                        if (number.longValue() > MAX_BUFFER_SIZE) {
-                            throw new ConfigException(name, value,
-                                    "Part size must be no more: " + MAX_BUFFER_SIZE + " bytes (2GB)");
-                        }
-                    }
-                }, Importance.MEDIUM,
-                "The Part Size in S3 Multi-part Uploads in bytes. Maximum is " + Integer.MAX_VALUE
-                        + " (2GB) and default is " + S3OutputStream.DEFAULT_PART_SIZE + " (5MB)",
-                GROUP_AWS, 0, ConfigDef.Width.NONE, S3ConfigFragment.AWS_S3_PART_SIZE);
-
-    }
-
-    private static void addDeprecatedTimestampConfig(final ConfigDef configDef) {
-        int timestampGroupCounter = 0;
-
-        configDef.define(S3ConfigFragment.TIMESTAMP_TIMEZONE, Type.STRING, ZoneOffset.UTC.toString(),
-                new TimeZoneValidator(), Importance.LOW,
-                "Specifies the timezone in which the dates and time for the timestamp variable will be treated. "
-                        + "Use standard shot and long names. Default is UTC",
-                GROUP_FILE, timestampGroupCounter++, ConfigDef.Width.SHORT, S3ConfigFragment.TIMESTAMP_TIMEZONE);
-
-        configDef.define(S3ConfigFragment.TIMESTAMP_SOURCE, Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
-                new TimestampSourceValidator(), Importance.LOW,
-                "Specifies the the timestamp variable source. Default is wall-clock.", GROUP_FILE,
-                timestampGroupCounter, ConfigDef.Width.SHORT, S3ConfigFragment.TIMESTAMP_SOURCE);
+        return S3ConfigFragment.handleDeprecatedOptions(properties);
     }
 
     @Override
@@ -143,6 +83,57 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
             return CompressionType.forName(getString(S3ConfigFragment.OUTPUT_COMPRESSION));
         }
         return CompressionType.GZIP;
+    }
+
+    public long getS3RetryBackoffDelayMs() {
+        return s3ConfigFragment.getS3RetryBackoffDelayMs();
+    }
+
+    public long getS3RetryBackoffMaxDelayMs() {
+        return s3ConfigFragment.getS3RetryBackoffMaxDelayMs();
+    }
+
+    public int getS3RetryBackoffMaxRetries() {
+        return s3ConfigFragment.getS3RetryBackoffMaxRetries();
+    }
+
+    @Deprecated
+    public Region getAwsS3Region() {
+        return s3ConfigFragment.getAwsS3Region();
+    }
+
+    public String getAwsS3BucketName() {
+        return s3ConfigFragment.getAwsS3BucketName();
+    }
+
+    public int getAwsS3PartSize() {
+        return s3ConfigFragment.getAwsS3PartSize();
+    }
+
+    public String getServerSideEncryptionAlgorithmName() {
+        return s3ConfigFragment.getServerSideEncryptionAlgorithmName();
+    }
+
+    public String getAwsS3EndPoint() {
+        return s3ConfigFragment.getAwsS3EndPoint();
+    }
+
+    @Deprecated
+    public BasicAWSCredentials getAwsCredentials() {
+        return s3ConfigFragment.getAwsCredentials();
+    }
+
+    @Deprecated
+    public AWSCredentialsProvider getCustomCredentialsProvider() {
+        return s3ConfigFragment.getCustomCredentialsProvider();
+    }
+
+    public String getAwsS3Prefix() {
+        return s3ConfigFragment.getAwsS3Prefix();
+    }
+
+    public AwsStsRole getStsRole() {
+        return s3ConfigFragment.getStsRole();
     }
 
     /**
@@ -162,7 +153,6 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
             return outputFormatFragment.getOutputFields(S3ConfigFragment.OUTPUT_FIELDS);
         }
         return List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
-
     }
 
     /**
@@ -184,7 +174,7 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
     }
 
     public Template getPrefixTemplate() {
-        final var template = Template.of(getAwsS3Prefix());
+        final var template = Template.of(s3ConfigFragment.getAwsS3Prefix());
         template.instance().bindVariable("utc_date", () -> {
             LOGGER.info("utc_date variable is deprecated please read documentation for the new name");
             return "";
@@ -201,27 +191,6 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
 
     public TimestampSource getTimestampSource() {
         return TimestampSource.of(getTimezone(), TimestampSource.Type.of(getString(S3ConfigFragment.TIMESTAMP_SOURCE)));
-    }
-
-    /**
-     * Deprecated please use S3ConfigFragment.AwsRegionValidator
-     */
-    @Deprecated
-    protected static class AwsRegionValidator implements ConfigDef.Validator {
-        private static final String SUPPORTED_AWS_REGIONS = Arrays.stream(Regions.values())
-                .map(Regions::getName)
-                .collect(Collectors.joining(", "));
-
-        @Override
-        public void ensureValid(final String name, final Object value) {
-            if (Objects.nonNull(value)) {
-                final String valueStr = (String) value;
-                final Region region = RegionUtils.getRegion(valueStr);
-                if (!RegionUtils.getRegions().contains(region)) {
-                    throw new ConfigException(name, valueStr, "supported values are: " + SUPPORTED_AWS_REGIONS);
-                }
-            }
-        }
     }
 
     public Boolean usesFileNameTemplate() {

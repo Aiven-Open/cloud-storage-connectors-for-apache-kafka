@@ -72,6 +72,9 @@ idea {
 dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
+  compileOnly(project(":site"))
+  compileOnly(apache.velocity.engine.core)
+  compileOnly(apache.velocity.tools)
 
   implementation(project(":commons"))
   implementation(project(":s3-commons"))
@@ -254,3 +257,45 @@ signing {
   }
   signatureTypes = ASCSignatureProvider()
 }
+
+/** ******************************* */
+/* Documentation building section */
+/** ******************************* */
+tasks.register("buildDocs") {
+  dependsOn("buildConfigMd")
+  dependsOn("buildConfigYml")
+}
+
+tasks.register<JavaExec>("buildConfigMd") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.s3.config.S3SinkConfigDef",
+          "src/templates/configData.md.vm",
+          "build/site/markdown/s3-sink-connector/S3SinkConfig.md")
+}
+
+tasks.register<JavaExec>("buildConfigYml") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.s3.config.S3SinkConfigDef",
+          "src/templates/configData.yml.vm",
+          "build/site/s3-sink-connector/S3SinkConfig.yml")
+}
+
+/** ****************************** */
+/*  End of documentation section */
+/** ****************************** */

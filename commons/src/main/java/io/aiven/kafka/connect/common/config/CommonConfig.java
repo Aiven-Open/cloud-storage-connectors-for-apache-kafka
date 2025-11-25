@@ -175,13 +175,14 @@ public class CommonConfig extends AbstractConfig {
         }
 
         @Override
+        @SuppressWarnings("PMD.AvoidCatchingGenericException")
         public final List<ConfigValue> validate(final Map<String, String> props) {
             final Map<String, ConfigValue> valueMap = validateAll(props);
 
             try {
                 return new ArrayList<>(multiValidate(valueMap).values());
-            } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
-                // any exceptions thrown in the above block are accounted for in the super.validate(props) call.
+            } catch (RuntimeException e) {
+                // any exceptions thrown in the above block are accounted for in the validateAll(props) call.
                 return new ArrayList<>(valueMap.values());
             }
         }

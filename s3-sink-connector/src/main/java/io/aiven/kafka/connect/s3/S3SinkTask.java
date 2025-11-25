@@ -42,7 +42,6 @@ import io.aiven.kafka.connect.common.grouper.RecordGrouper;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.output.OutputWriter;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
-import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.config.S3SinkConfig;
 
@@ -97,7 +96,7 @@ public final class S3SinkTask extends SinkTask {
                                 Math.toIntExact(config.getS3RetryBackoffMaxDelayMs())),
                         config.getS3RetryBackoffMaxRetries(), false));
         final var s3ClientBuilder = AmazonS3ClientBuilder.standard()
-                .withCredentials(credentialFactory.getProvider(new S3ConfigFragment(config)))
+                .withCredentials(credentialFactory.getProvider(config.getS3ConfigFragment()))
                 .withClientConfiguration(clientConfig);
         if (Objects.isNull(awsEndpointConfig)) {
             s3ClientBuilder.withRegion(config.getAwsS3Region().getName());

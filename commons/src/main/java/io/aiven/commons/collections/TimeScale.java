@@ -33,9 +33,11 @@ public enum TimeScale {
         public String format(final long milliseconds) {
             return String.format("%s %s", milliseconds, unitName());
         }
-    },
-    SECONDS(MILLISECONDS.milliseconds * 1000), MINUTES(SECONDS.milliseconds * 60), HOURS(
-            MINUTES.milliseconds * 60), DAYS(HOURS.milliseconds * 24);
+    }, //
+    SECONDS(MILLISECONDS.milliseconds * 1000), //
+    MINUTES(SECONDS.milliseconds * 60), //
+    HOURS(MINUTES.milliseconds * 60), //
+    DAYS(HOURS.milliseconds * 24);
 
     /**
      * The Decimal format for the TimeUnit displays.

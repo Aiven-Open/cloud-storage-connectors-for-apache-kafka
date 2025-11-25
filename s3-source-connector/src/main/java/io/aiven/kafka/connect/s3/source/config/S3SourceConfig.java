@@ -16,10 +16,9 @@
 
 package io.aiven.kafka.connect.s3.source.config;
 
-import static io.aiven.kafka.connect.config.s3.S3CommonConfig.handleDeprecatedYyyyUppercase;
-
 import java.util.Map;
 
+import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
@@ -37,25 +36,9 @@ final public class S3SourceConfig extends SourceCommonConfig {
     private final AwsCredentialProviderFactory awsCredentialsProviderFactory;
 
     public S3SourceConfig(final Map<String, String> properties) {
-        super(configDef(), handleDeprecatedYyyyUppercase(properties));
-        s3ConfigFragment = new S3ConfigFragment(this);
+        super(new S3SourceConfigDef(), properties);
+        s3ConfigFragment = new S3ConfigFragment(FragmentDataAccess.from(this));
         awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
-        validate(); // NOPMD ConstructorCallsOverridableMethod getStsRole is called
-    }
-
-    public static S3SourceConfigDef configDef() {
-        final var configDef = new S3SourceConfigDef();
-        S3ConfigFragment.update(configDef);
-        return configDef;
-    }
-
-    private void validate() {
-
-        // s3ConfigFragment is validated in this method as it is created here.
-        // Other Fragments created in the ConfigDef are validated in the parent classes their instances are created in.
-        // e.g. SourceConfigFragment, FileNameFragment, TransformerFragment and OutputFormatFragment are all
-        // validated in SourceCommonConfig.
-        s3ConfigFragment.validate();
     }
 
     public AwsStsRole getStsRole() {
