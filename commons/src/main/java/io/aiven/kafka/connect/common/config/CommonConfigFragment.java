@@ -57,6 +57,7 @@ public class CommonConfigFragment extends ConfigFragment {
                 "Maximum number of tasks to use for this connector.", commonGroup, ++orderInGroup,
                 ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG);
 
+        // make TASK_ID an internal configuration (not visible to users)
         final ConfigDef.ConfigKey key = new ConfigDef.ConfigKey(TASK_ID, ConfigDef.Type.INT, 0, atLeast(0),
                 ConfigDef.Importance.HIGH, "The task ID that this connector is working with.", commonGroup,
                 ++orderInGroup, ConfigDef.Width.SHORT, TASK_ID, Collections.emptyList(), null, true);
