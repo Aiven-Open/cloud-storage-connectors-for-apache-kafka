@@ -192,7 +192,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.VALUE)
-                .envelopeEnabled(Boolean.getBoolean(envelopeEnabled))
+                .envelopeEnabled(Boolean.parseBoolean(envelopeEnabled))
                 .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");

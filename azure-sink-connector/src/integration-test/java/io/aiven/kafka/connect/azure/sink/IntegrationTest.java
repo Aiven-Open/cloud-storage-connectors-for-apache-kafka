@@ -68,7 +68,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
     void basicTest(final String compression) throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY);
+        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
         FileNameFragment.setter(connectorConfig).fileCompression(CompressionType.forName(compression));
         createConnector(connectorConfig);
 
@@ -123,7 +123,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
     void groupByTimestampVariable(final String compression) throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY);
+        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
         FileNameFragment.setter(connectorConfig)
                 .fileCompression(CompressionType.forName(compression))
                 .template("{{topic}}-{{partition}}-{{start_offset}}-"
@@ -234,7 +234,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         final CompressionType compressionType = CompressionType.forName(compression);
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY);
+        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
         FileNameFragment.setter(connectorConfig)
                 .fileCompression(CompressionType.forName(compression))
                 .template("{{key}}" + compressionType.extension());
@@ -307,7 +307,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         FileNameFragment.setter(connectorConfig).fileCompression(CompressionType.NONE);
         OutputFormatFragment.setter(connectorConfig)
                 .withFormatType(FormatType.JSONL)
-                .withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
                 .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         createConnector(connectorConfig);
 
@@ -369,8 +369,8 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         connectorConfig.put("value.converter.schemas.enable", "false");
         FileNameFragment.setter(connectorConfig).fileCompression(CompressionType.NONE);
         OutputFormatFragment.setter(connectorConfig)
-                .withFormatType(FormatType.JSONL)
-                .withOutputFields(OutputFieldType.VALUE, OutputFieldType.KEY)
+                .withFormatType(FormatType.JSON)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
                 .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         createConnector(connectorConfig);
 

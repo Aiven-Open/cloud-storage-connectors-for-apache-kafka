@@ -255,7 +255,7 @@ public final class OutputFormatFragment extends ConfigFragment {
         }
 
         /**
-         * Sets the list of output fields.
+         * Sets the list of output fields. The order of output fields will match the order they are added.
          *
          * @param outputFields
          *            the list of output fields
@@ -267,7 +267,7 @@ public final class OutputFormatFragment extends ConfigFragment {
         }
 
         /**
-         * Sets the list of output fields.
+         * Sets the list of output fields. The order of output fields will match the order they are added.
          *
          * @param outputFields
          *            the list of output fields
