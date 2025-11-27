@@ -16,8 +16,25 @@
 
 package io.aiven.kafka.connect.azure.source.config;
 
+import java.util.Map;
+
+import org.apache.kafka.common.config.ConfigValue;
+
+import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
-public class AzureBlobSourceConfigDef extends SourceCommonConfig.SourceCommonConfigDef {
+public final class AzureBlobSourceConfigDef extends SourceCommonConfig.SourceCommonConfigDef {
 
+    public AzureBlobSourceConfigDef() {
+        super();
+        AzureBlobConfigFragment.update(this, false);
+    }
+
+    @Override
+    public Map<String, ConfigValue> multiValidate(final Map<String, ConfigValue> valueMap) {
+        final Map<String, ConfigValue> result = super.multiValidate(valueMap);
+        final FragmentDataAccess dataAccess = FragmentDataAccess.from(result);
+        new AzureBlobConfigFragment(dataAccess).validate(result);
+        return result;
+    }
 }

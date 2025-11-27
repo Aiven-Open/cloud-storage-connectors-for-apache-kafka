@@ -74,11 +74,13 @@ public class ConfigDoc {
         final Collection<ConfigDef.ConfigKey> keys = configDef.configKeys().values();
         final Map<String, ConfigData> sections = new TreeMap<>();
         for (final ConfigDef.ConfigKey key : keys) {
-            sections.put(key.name, new ConfigData(key));
+            if (!key.internalConfig) {
+                sections.put(key.name, new ConfigData(key));
+            }
         }
 
         context.put("sections", sections.values());
-        context.put("esc", new EscapeTool());
+        context.put("esc", new Escaper());
 
         final File file = new File(output);
         if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
@@ -138,4 +140,67 @@ public class ConfigDoc {
         }
     }
 
+    public static class Escaper extends EscapeTool {
+
+        /**
+         * The characters to escape for markdown.
+         */
+        private static final String[] MARKDOWN_CHARS = charParser("\\`*_{}[]<>()#+-.!|");
+        /**
+         * The characters to escape for APT (Almost Plain Text).
+         */
+        private static final String[] APT_CHARS = charParser("\\~=-+*[]<>{}");
+
+        private static String[] charParser(final String charText) {
+            final char[] chars = charText.toCharArray();
+            final String[] result = new String[chars.length];
+            for (int i = 0; i < chars.length; i++) {
+                result[i] = String.valueOf(chars[i]);
+            }
+            return result;
+        }
+
+        /**
+         * Escapes a text string.
+         *
+         * @param text
+         *            the text to escape.
+         * @param chars
+         *            the characters to escape.
+         * @return the escaped string.
+         */
+        private String escape(final String text, final String[] chars) {
+            if (text == null) {
+                return "";
+            }
+            String result = text;
+            for (final String chrStr : chars) {
+                result = result.replace(chrStr, "\\" + chrStr);
+            }
+            return result;
+        }
+
+        /**
+         * Escapes a string for markdown.
+         *
+         * @param text
+         *            the text to escape.
+         * @return the text with the markdown specific characters escaped.
+         */
+        public String markdown(final String text) {
+            return escape(text, MARKDOWN_CHARS);
+        }
+
+        /**
+         * Escapes a string for APT (almost plain text).
+         *
+         * @param text
+         *            the text to escape.
+         * @return the text with the APT specific characters escaped.
+         */
+        public String apt(final String text) {
+            return escape(text, APT_CHARS);
+        }
+
+    }
 }

@@ -16,15 +16,81 @@
 
 package io.aiven.kafka.connect.azure.sink;
 
-import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
 
-public class AzureBlobSinkConfigDef extends ConfigDef {
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FragmentDataAccess;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
+
+public final class AzureBlobSinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef {
+
+    private final static Pattern CONTAINER_NAME_PATTERN = Pattern.compile("[0-9a-z][0-9a-z\\-]+[0-9a-z]");
+
+    /**
+     * From Azure documentation:
+     * <ul>
+     * <li>Container names must start or end with a letter or number, and can contain only letters, numbers, and the
+     * hyphen/minus (-) character.</li>
+     * <li>Every hyphen/minus (-) character must be immediately preceded and followed by a letter or number; consecutive
+     * hyphens aren't permitted in container names.</li>
+     * <li>All letters in a container name must be lowercase.</li>
+     * <li>Container names must be from 3 through 63 characters long.</li>
+     * </ul>
+     */
+    public static final ConfigDef.Validator CONTAINER_NAME_VALIDATOR = ConfigDef.CompositeValidator
+            .of(ConfigDef.LambdaValidator.with((name, value) -> {
+                final int len = value == null ? 0 : value.toString().length();
+                if (len < 3 || len > 63) {
+                    throw new ConfigException(name, value, "names must be from 3 through 63 characters long.");
+                }
+            }, () -> "must be from 3 through 63 characters long"), ConfigDef.LambdaValidator.with((name, value) -> {
+                if (value.toString().contains("--")) {
+                    throw new ConfigException(name, value,
+                            "Every hyphen/minus (-) character must be immediately preceded and followed by a letter or number; consecutive hyphens aren't permitted in container names.");
+                }
+            }, () -> "consecutive hyphens aren't permitted in container names"),
+                    // regex last for speed
+                    ConfigDef.LambdaValidator.with((name, value) -> {
+                        if (!CONTAINER_NAME_PATTERN.matcher(value.toString()).matches()) {
+                            throw new ConfigException(name, value,
+                                    "must start or end with a letter or number, and can contain only lower case letters, numbers, and the hyphen/minus (-) character.");
+                        }
+                    }, () -> "start or end with a letter or number, and can contain only lower case letters, numbers, and the hyphen/minus (-) character"));
+
+    AzureBlobSinkConfigDef() {
+        super(OutputFieldType.VALUE, CompressionType.NONE);
+        AzureBlobConfigFragment.update(this, true);
+        addFileConfigGroup(this);
+    }
+
+    static void addFileConfigGroup(final ConfigDef configDef) {
+
+        configDef.define(AzureBlobSinkConfig.FILE_NAME_PREFIX_CONFIG, ConfigDef.Type.STRING, "",
+                ConfigDef.LambdaValidator.with((name, value) -> {
+                    assert value instanceof String;
+                    final String valueStr = (String) value;
+                    if (valueStr.length() > 1024) { // NOPMD avoid literal
+                        throw new ConfigException(AzureBlobSinkConfig.AZURE_STORAGE_CONTAINER_NAME_CONFIG, value,
+                                "cannot be longer than 1024 characters");
+                    }
+                }, () -> ""), ConfigDef.Importance.MEDIUM,
+                "The prefix to be added to the name of each file put on Azure Blob.", FileNameFragment.GROUP_NAME, 10,
+                ConfigDef.Width.NONE, AzureBlobSinkConfig.FILE_NAME_PREFIX_CONFIG);
+
+    }
+
     @Override
-    public List<ConfigValue> validate(final Map<String, String> props) {
-        return super.validate(AzureBlobSinkConfig.handleDeprecatedYyyyUppercase(props));
+    public Map<String, ConfigValue> multiValidate(final Map<String, ConfigValue> valueMap) {
+        final Map<String, ConfigValue> result = super.multiValidate(valueMap);
+        final FragmentDataAccess dataAccess = FragmentDataAccess.from(result);
+        new AzureBlobConfigFragment(dataAccess).validate(result);
+        return result;
     }
 }

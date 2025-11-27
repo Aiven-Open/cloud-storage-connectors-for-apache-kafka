@@ -1,5 +1,5 @@
 
-# Azure Blob Source Configuration
+# Azure Blob Sink Configuration
 
 The complete Azure Blob source configuration file
 
@@ -10,6 +10,6 @@ ${esc.hash}${esc.hash} ${section.displayName}
  - Valid values:  ${section.validator|"no restrictions"}
  - Importance: $section.importance
 
-  ${esc.markdown($section.documentation)}
+ ${esc.markdown($section.documentation)}
 
 #end

@@ -34,6 +34,12 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 
 import org.apache.avro.generic.GenericRecord;
@@ -68,8 +74,10 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
     void allOutputFields() throws ExecutionException, InterruptedException, IOException {
         final var compression = "none";
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset,timestamp,headers");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET,
+                        OutputFieldType.TIMESTAMP, OutputFieldType.HEADERS)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
         createConnector(connectorConfig);
@@ -123,8 +131,10 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
     void allOutputFieldsJsonValueAsString() throws ExecutionException, InterruptedException, IOException {
         final var compression = "none";
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset,timestamp,headers");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET,
+                        OutputFieldType.TIMESTAMP, OutputFieldType.HEADERS)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
         createConnector(connectorConfig);
@@ -180,9 +190,10 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
             throws ExecutionException, InterruptedException, IOException {
         final var compression = "none";
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_ENVELOPE_CONFIG, envelopeEnabled);
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.VALUE)
+                .envelopeEnabled(Boolean.parseBoolean(envelopeEnabled))
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         createConnector(connectorConfig);
@@ -237,8 +248,9 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
     void schemaChanged() throws ExecutionException, InterruptedException, IOException {
         final var compression = "none";
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
-        connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.VALUE)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         createConnector(connectorConfig);
@@ -306,8 +318,9 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
         config.put(AzureBlobSinkConfig.FILE_NAME_PREFIX_CONFIG, azurePrefix);
         config.put("topics", testTopic0 + "," + testTopic1);
-        config.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        config.put(AzureBlobSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "parquet");
+        FileNameFragment.setter(config).fileCompression(CompressionType.forName(compression));
+        OutputFormatFragment.setter(config).withFormatType(FormatType.PARQUET);
+
         return config;
     }
 
