@@ -521,8 +521,7 @@ final class AzureSinkConfigTest {
         final var expectedErrorMessage = "Invalid value {{start_offset:}}-{{partition}}-{{topic}} "
                 + "for configuration file.name.template: Wrong variable with parameter definition";
 
-        // expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template",
-        // expectedErrorMessage);
+        assertValidationContainsMessage(properties, "file.name.template", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
                 .hasMessage(expectedErrorMessage);
@@ -537,8 +536,7 @@ final class AzureSinkConfigTest {
         final var expectedErrorMessage = "Invalid value {{:padding=true}}-{{partition}}-{{topic}} "
                 + "for configuration file.name.template: Variable name hasn't been set for template: {{:padding=true}}-{{partition}}-{{topic}}";
 
-        // expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template",
-        // expectedErrorMessage);
+        assertValidationContainsMessage(properties, "file.name.template", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
                 .hasMessage(expectedErrorMessage);
