@@ -49,6 +49,10 @@ import org.slf4j.LoggerFactory;
  * Fragment to handle all file name extraction operations.
  */
 public final class FileNameFragment extends ConfigFragment {
+    /**
+     * Flag to support Prefix Template as opposed to a prefix string.
+     * TODO To be removed when all implementations support the prefix template.
+     */
     public enum PrefixTemplateSupport {
         TRUE, FALSE
     }
@@ -102,6 +106,7 @@ public final class FileNameFragment extends ConfigFragment {
      */
     private final boolean isSink;
 
+    /** Map of template variable name to the template variable definition */
     private static final Map<String, FilenameTemplateVariable> FILENAME_VARIABLES = new TreeMap<>();
 
     static {
