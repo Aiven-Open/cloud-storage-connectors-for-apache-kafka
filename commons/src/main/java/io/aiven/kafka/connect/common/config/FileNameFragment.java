@@ -108,10 +108,15 @@ public final class FileNameFragment extends ConfigFragment {
 
     /** Map of template variable name to the template variable definition */
     private static final Map<String, FilenameTemplateVariable> FILENAME_VARIABLES = new TreeMap<>();
+    private static final String TEMPLATE_GROUPINGS;
 
     static {
         Arrays.stream(FilenameTemplateVariable.values())
                 .forEach(variable -> FILENAME_VARIABLES.put(variable.name, variable));
+        TEMPLATE_GROUPINGS = "[" + RecordGrouperFactory.getSupportedVariableGroups().stream()
+                .map(strings -> FilePatternUtils.asPatterns(strings, ", "))
+                .collect(Collectors.joining("] \n ["))
+        +"]";
     }
 
     /**
@@ -280,11 +285,10 @@ public final class FileNameFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM,
                 "The template for file names on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
-                        + "Currently supported variables are `topic`, `partition`, and `start_offset` "
-                        + "(the offset of the first record in the file). "
-                        + "Only some combinations of variables are valid, which currently are:\n"
-                        + "- `topic`, `partition`, `start_offset`."
-                        + "There is also `key` only variable {{key}} for grouping by keys",
+                        + "Currently supported variables are "
+                + String.join(", ", FilePatternUtils.asPatterns(FILENAME_VARIABLES.keySet(), ", "))
+                        + ". Only some combinations of variables are valid, which currently are: "
+                        + TEMPLATE_GROUPINGS,
                 GROUP_NAME, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
         if (prefixTemplateSupport.equals(PrefixTemplateSupport.TRUE)) {

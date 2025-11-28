@@ -73,7 +73,9 @@ class FileNameFragmentTest {
     @Test
     void allConfigDefsAccountForTest() {
         final List<String> names = Arrays.stream(FileNameFragment.class.getDeclaredFields())
-                .filter(field -> Modifier.isStatic(field.getModifiers()) && field.getType().equals(String.class))
+                .filter(field -> Modifier.isStatic(field.getModifiers())
+                        && !Modifier.isPrivate(field.getModifiers())
+                        && field.getType().equals(String.class))
                 .map(field -> {
                     try {
                         return field.get(null).toString();

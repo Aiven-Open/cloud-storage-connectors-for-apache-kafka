@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.grouper;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -118,6 +119,16 @@ public final class RecordGrouperFactory {
             .stream()
             .map(v -> v.stream().map(Pair::getLeft).collect(Collectors.joining(",")))
             .collect(Collectors.joining("; "));
+
+    public static List<List<String>> getSupportedVariableGroups() {
+//        List<List<String>> supportedVariableGroups = new ArrayList<>();
+//        for (List<Pair<String, Boolean>> l : SUPPORTED_VARIABLES.values()) {
+//            supportedVariableGroups.add(l.stream().map(Pair::getLeft).collect(Collectors.toList()));
+//        }
+//        return supportedVariableGroups;
+        return SUPPORTED_VARIABLES.values().stream().map(lstPair -> lstPair.stream().map(Pair::getLeft).collect(Collectors.toList()))
+                .collect(Collectors.toList());
+    }
 
     private RecordGrouperFactory() {
     }
