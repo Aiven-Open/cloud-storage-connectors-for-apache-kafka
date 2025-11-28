@@ -18,6 +18,8 @@ package io.aiven.kafka.connect.gcs;
 
 import java.util.Map;
 
+import io.aiven.commons.collections.TimeScale;
+import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigValue;
 
@@ -42,10 +44,10 @@ public final class GcsSinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef
     public static final String GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_CONFIG = "gcs.retry.backoff.total.timeout.ms";
     public static final String GCS_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG = "gcs.retry.backoff.max.attempts";
     // All default from GCS client, hardcoded here since GCS hadn't constants
-    public static final long GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT = 1_000L;
-    public static final long GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 32_000L;
+    public static final long GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT = TimeScale.SECONDS.asMilliseconds(1);
+    public static final long GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = TimeScale.SECONDS.asMilliseconds(32);
     public static final double GCS_RETRY_BACKOFF_DELAY_MULTIPLIER_DEFAULT = 2.0D;
-    public static final long GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT = 50_000L;
+    public static final long GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT = TimeScale.SECONDS.asMilliseconds(50);
     public static final int GCS_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT = 6;
     private static final String GCS_GROUP = "GCS";
     private static final String GCS_GROUP_RETRY_BACKOFF_POLICY = "GCS retry backoff policy";
@@ -93,14 +95,15 @@ public final class GcsSinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef
     static void addGcsRetryPolicies(final ConfigDef configDef) {
         var retryPolicyGroupCounter = 0;
         configDef.define(GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG, Type.LONG,
-                GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT, Range.atLeast(0L), Importance.MEDIUM,
+                GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT, TimeScaleValidator.atLeast(0L), Importance.MEDIUM,
                 "Initial retry delay in milliseconds. The default value is "
-                        + GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT,
+                        + TimeScale.size(GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT),
                 GCS_GROUP_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, Width.NONE,
                 GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG);
         configDef.define(GCS_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, Type.LONG, GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT,
-                Range.atLeast(0L), Importance.MEDIUM,
-                "Maximum retry delay in milliseconds. The default value is " + GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT,
+                TimeScaleValidator.atLeast(0L), Importance.MEDIUM,
+                "Maximum retry delay in milliseconds. The default value is "
+                        + TimeScale.size(GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT),
                 GCS_GROUP_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, Width.NONE,
                 GCS_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG);
         configDef.define(GCS_RETRY_BACKOFF_DELAY_MULTIPLIER_CONFIG, Type.DOUBLE,
@@ -114,8 +117,10 @@ public final class GcsSinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef
                 GCS_GROUP_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, Width.NONE,
                 GCS_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG);
         configDef.define(GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_CONFIG, Type.LONG,
-                GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT, ConfigDef.Range.between(0L, 86_400_000L), Importance.MEDIUM,
-                "Retry total timeout in milliseconds.", GCS_GROUP_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter,
+                GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT, TimeScaleValidator.between(0L, TimeScale.DAYS.asMilliseconds(1)), Importance.MEDIUM,
+                "Retry total timeout in milliseconds. The default value is "
+                        + TimeScale.size(GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT),
+                GCS_GROUP_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter,
                 Width.NONE, GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_CONFIG);
     }
 

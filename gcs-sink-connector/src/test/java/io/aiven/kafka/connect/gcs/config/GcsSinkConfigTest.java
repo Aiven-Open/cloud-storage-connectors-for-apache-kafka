@@ -193,12 +193,12 @@ final class GcsSinkConfigTest {
                 "-1");
         assertThatThrownBy(() -> new GcsSinkConfig(initialDelayProp)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value -1 for configuration gcs.retry.backoff.initial.delay.ms: "
-                        + "Value must be at least 0");
+                        + "Value must be at least 0 Milliseconds");
 
         final var maxDelayProp = Map.of("gcs.bucket.name", "test-bucket", "gcs.retry.backoff.max.delay.ms", "-1");
         assertThatThrownBy(() -> new GcsSinkConfig(maxDelayProp)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value -1 for configuration gcs.retry.backoff.max.delay.ms: "
-                        + "Value must be at least 0");
+                        + "Value must be at least 0 Milliseconds");
 
         final var delayMultiplayerProp = Map.of("gcs.bucket.name", "test-bucket", "gcs.retry.backoff.delay.multiplier",
                 "-1", "gcs.retry.backoff.total.timeout.ms", "-1", "gcs.retry.backoff.max.attempts", "-1");
@@ -215,14 +215,14 @@ final class GcsSinkConfigTest {
                 "-1");
         assertThatThrownBy(() -> new GcsSinkConfig(totalTimeoutProp)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value -1 for configuration gcs.retry.backoff.total.timeout.ms: "
-                        + "Value must be at least 0");
+                        + "Value must be at least 0 Milliseconds");
 
         final var tooBigTotalTimeoutProp = Map.of("gcs.bucket.name", "test-bucket",
                 "gcs.retry.backoff.total.timeout.ms", String.valueOf(TimeUnit.HOURS.toMillis(25)));
 
         assertThatThrownBy(() -> new GcsSinkConfig(tooBigTotalTimeoutProp)).isInstanceOf(ConfigException.class)
                 .hasMessage(
-                        "Invalid value 90000000 for configuration gcs.retry.backoff.total.timeout.ms: Value must be no more than 86400000");
+                        "Invalid value 90000000 for configuration gcs.retry.backoff.total.timeout.ms: Value must be no more than 1.0 Days (86400000 Milliseconds)");
     }
 
     @ParameterizedTest
