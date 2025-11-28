@@ -362,8 +362,7 @@ tasks.register<JavaExec>("buildConfigMd") {
           .plus(sourceSets.main.get().runtimeClasspath)
   args =
       listOf(
-          "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
-          "configDef",
+          "io.aiven.kafka.connect.s3.source.config.S3SourceConfigDef",
           "src/templates/configData.md.vm",
           "build/site/markdown/s3-source-connector/S3SourceConfig.md")
 }
@@ -378,8 +377,7 @@ tasks.register<JavaExec>("buildConfigYml") {
           .plus(sourceSets.main.get().runtimeClasspath)
   args =
       listOf(
-          "io.aiven.kafka.connect.s3.source.config.S3SourceConfig",
-          "configDef",
+          "io.aiven.kafka.connect.s3.source.config.S3SourceConfigDef",
           "src/templates/configData.yml.vm",
           "build/site/s3-source-connector/S3SourceConfig.yml")
 }

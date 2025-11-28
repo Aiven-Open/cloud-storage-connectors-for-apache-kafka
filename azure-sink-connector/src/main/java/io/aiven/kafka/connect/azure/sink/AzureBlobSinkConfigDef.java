@@ -67,23 +67,6 @@ public final class AzureBlobSinkConfigDef extends SinkCommonConfig.SinkCommonCon
     AzureBlobSinkConfigDef() {
         super(OutputFieldType.VALUE, CompressionType.NONE);
         AzureBlobConfigFragment.update(this, true);
-        addFileConfigGroup(this);
-    }
-
-    static void addFileConfigGroup(final ConfigDef configDef) {
-
-        configDef.define(AzureBlobSinkConfig.FILE_NAME_PREFIX_CONFIG, ConfigDef.Type.STRING, "",
-                ConfigDef.LambdaValidator.with((name, value) -> {
-                    assert value instanceof String;
-                    final String valueStr = (String) value;
-                    if (valueStr.length() > 1024) { // NOPMD avoid literal
-                        throw new ConfigException(AzureBlobSinkConfig.AZURE_STORAGE_CONTAINER_NAME_CONFIG, value,
-                                "cannot be longer than 1024 characters");
-                    }
-                }, () -> ""), ConfigDef.Importance.MEDIUM,
-                "The prefix to be added to the name of each file put on Azure Blob.", FileNameFragment.GROUP_NAME, 10,
-                ConfigDef.Width.NONE, AzureBlobSinkConfig.FILE_NAME_PREFIX_CONFIG);
-
     }
 
     @Override
