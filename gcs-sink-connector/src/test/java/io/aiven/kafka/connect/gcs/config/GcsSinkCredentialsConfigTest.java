@@ -23,14 +23,18 @@ import static org.mockito.Mockito.mockStatic;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
 
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.gcs.GcsSinkConfig;
+import io.aiven.kafka.connect.gcs.GcsSinkConfigDef;
 
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -56,10 +60,9 @@ final class GcsSinkCredentialsConfigTest {
     void incorrectFilenameTemplates(final String template) {
         final Map<String, String> properties = Map.of("file.name.template", template, "gcs.bucket.name", "some-bucket");
 
-        final ConfigValue configValue = GcsSinkConfig.configDef()
-                .validate(properties)
+        final ConfigValue configValue = new GcsSinkConfigDef().validate(properties)
                 .stream()
-                .filter(x -> GcsSinkConfig.FILE_NAME_TEMPLATE_CONFIG.equals(x.name()))
+                .filter(x -> FileNameFragment.FILE_NAME_TEMPLATE_CONFIG.equals(x.name()))
                 .findFirst()
                 .orElseThrow();
         assertThat(configValue.errorMessages()).isNotEmpty();
@@ -105,8 +108,8 @@ final class GcsSinkCredentialsConfigTest {
      */
     @Test
     void gcsCredentialsNoCredentialsWhenDefaultCredentialsFalse() {
-        final Map<String, String> properties = Map.of(GcsSinkConfig.GCS_BUCKET_NAME_CONFIG, "test-bucket",
-                GcsSinkConfig.GCS_CREDENTIALS_DEFAULT_CONFIG, String.valueOf(false));
+        final Map<String, String> properties = Map.of(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, "test-bucket",
+                GcsSinkConfigDef.GCS_CREDENTIALS_DEFAULT_CONFIG, String.valueOf(false));
 
         assertConfigDefValidationPasses(properties);
 
@@ -119,7 +122,7 @@ final class GcsSinkCredentialsConfigTest {
     /** Verifies that NoCredentials are used when no credential configurations is supplied. */
     @Test
     void gcsCredentialsNoCredentialsWhenNoCredentialsSupplied() {
-        final Map<String, String> properties = Map.of(GcsSinkConfig.GCS_BUCKET_NAME_CONFIG, "test-bucket");
+        final Map<String, String> properties = Map.of(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, "test-bucket");
 
         assertConfigDefValidationPasses(properties);
 
@@ -131,8 +134,8 @@ final class GcsSinkCredentialsConfigTest {
 
     @Test
     void gcsCredentialsDefault() {
-        final Map<String, String> properties = Map.of(GcsSinkConfig.GCS_BUCKET_NAME_CONFIG, "test-bucket",
-                GcsSinkConfig.GCS_CREDENTIALS_DEFAULT_CONFIG, String.valueOf(true));
+        final Map<String, String> properties = Map.of(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, "test-bucket",
+                GcsSinkConfigDef.GCS_CREDENTIALS_DEFAULT_CONFIG, String.valueOf(true));
 
         assertConfigDefValidationPasses(properties);
 
@@ -155,18 +158,37 @@ final class GcsSinkCredentialsConfigTest {
     void gcsCredentialsExclusivity(final Boolean defaultCredentials, final String credentialsJson,
             final String credentialsPath) {
         final Map<String, String> properties = new HashMap<>();
-        properties.put(GcsSinkConfig.GCS_BUCKET_NAME_CONFIG, "test-bucket");
-        properties.put(GcsSinkConfig.GCS_CREDENTIALS_DEFAULT_CONFIG,
+        properties.put(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, "test-bucket");
+        properties.put(GcsSinkConfigDef.GCS_CREDENTIALS_DEFAULT_CONFIG,
                 defaultCredentials == null ? null : String.valueOf(defaultCredentials));
-        properties.put(GcsSinkConfig.GCS_CREDENTIALS_JSON_CONFIG, credentialsJson);
-        properties.put(GcsSinkConfig.GCS_CREDENTIALS_PATH_CONFIG, credentialsPath);
+        properties.put(GcsSinkConfigDef.GCS_CREDENTIALS_JSON_CONFIG, credentialsJson);
+        properties.put(GcsSinkConfigDef.GCS_CREDENTIALS_PATH_CONFIG, credentialsPath);
 
-        // Should pass here, because ConfigDef validation doesn't check interdependencies.
-        assertConfigDefValidationPasses(properties);
+        final List<String> errMsgs = new ArrayList<>();
+
+        if (credentialsPath != null) {
+            if (credentialsJson != null) {
+                errMsgs.add(
+                        "Invalid value path for configuration gcs.credentials.path: if gcs.credentials.path is set, gcs.credentials.json may not be set.");
+            }
+            if (defaultCredentials != null) {
+                errMsgs.add(
+                        "Invalid value path for configuration gcs.credentials.path: if gcs.credentials.path is set, gcs.credentials.default may not be set.");
+            }
+        }
+
+        if (credentialsJson != null && defaultCredentials != null) {
+            errMsgs.add(
+                    "Invalid value [hidden] for configuration gcs.credentials.json: if gcs.credentials.json is set, gcs.credentials.default may not be set.");
+        }
+
+        final String[] msgs = errMsgs.toArray(new String[0]);
+
+        GcsSinkConfigTest.expectErrorMessageForConfigurationInConfigDefValidation(properties, "gcs.credentials.path",
+                msgs);
 
         assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessage(
-                        "Only one of gcs.credentials.default, gcs.credentials.json, and gcs.credentials.path can be non-null.");
+                .hasMessageContainingAll(msgs);
     }
 
     private static Stream<Arguments> provideMoreThanOneNonNull() {
@@ -176,7 +198,7 @@ final class GcsSinkCredentialsConfigTest {
     }
 
     private void assertConfigDefValidationPasses(final Map<String, String> properties) {
-        for (final ConfigValue configValue : GcsSinkConfig.configDef().validate(properties)) {
+        for (final ConfigValue configValue : new GcsSinkConfigDef().validate(properties)) {
             assertThat(configValue.errorMessages()).isEmpty();
         }
     }

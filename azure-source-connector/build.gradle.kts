@@ -255,8 +255,7 @@ tasks.register<JavaExec>("buildConfigMd") {
           .plus(sourceSets.main.get().runtimeClasspath)
   args =
       listOf(
-          "io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig",
-          "configDef",
+          "io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfigDef",
           "src/templates/configData.md.vm",
           "build/site/markdown/azure-source-connector/AzureBlobSourceConfig.md")
 }
@@ -271,8 +270,7 @@ tasks.register<JavaExec>("buildConfigYml") {
           .plus(sourceSets.main.get().runtimeClasspath)
   args =
       listOf(
-          "io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfig",
-          "configDef",
+          "io.aiven.kafka.connect.azure.source.config.AzureBlobSourceConfigDef",
           "src/templates/configData.yml.vm",
           "build/site/azure-source-connector/AzureBlobSourceConfig.yml")
 }

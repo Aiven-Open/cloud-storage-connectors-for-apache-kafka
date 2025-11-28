@@ -141,7 +141,7 @@ public enum TimeScale {
      * @return the String representation.
      * @see #scaleOf(long)
      */
-    public static String size(final int milliseconds) {
+    public static String size(final long milliseconds) {
         return scaleOf(milliseconds).format(milliseconds);
     }
 

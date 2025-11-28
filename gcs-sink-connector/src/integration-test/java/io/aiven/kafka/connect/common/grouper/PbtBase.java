@@ -27,7 +27,10 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import io.aiven.kafka.connect.gcs.GcsSinkConfig;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.gcs.GcsSinkConfigDef;
 
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
@@ -125,10 +128,10 @@ class PbtBase {
 
     Map<String, String> basicTaskProps() {
         final Map<String, String> taskProps = new HashMap<>();
-        taskProps.put(GcsSinkConfig.GCS_BUCKET_NAME_CONFIG, TEST_BUCKET);
-        taskProps.put(GcsSinkConfig.FILE_NAME_PREFIX_CONFIG, PREFIX);
-        taskProps.put(GcsSinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
-        taskProps.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,offset");
+        FileNameFragment.setter(taskProps).prefix(PREFIX).template("{{topic}}-{{partition}}-{{start_offset}}");
+        OutputFormatFragment.setter(taskProps)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET);
+        taskProps.put(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, TEST_BUCKET);
         return taskProps;
     }
 }

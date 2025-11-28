@@ -176,9 +176,7 @@ public class SinkCommonConfig extends CommonConfig {
         public SinkCommonConfigDef(final OutputFieldType defaultFieldType, final CompressionType compressionType) {
             super();
             OutputFormatFragment.update(this, defaultFieldType);
-            FileNameFragment.update(this, compressionType);
-            // not supported at this time.
-            configKeys().remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+            FileNameFragment.update(this, compressionType, FileNameFragment.PrefixTemplateSupport.FALSE);
         }
 
         @Override
