@@ -57,13 +57,6 @@ public final class FileNameFragment extends ConfigFragment {
         TRUE, FALSE
     }
     /**
-     * Flag to support Prefix Template as opposed to a prefix string. TODO To be removed when all implementations
-     * support the prefix template.
-     */
-    public enum PrefixTemplateSupport {
-        TRUE, FALSE
-    }
-    /**
      * The name of the group that this fragment places items in.
      */
     public static final String GROUP_NAME = "File";
