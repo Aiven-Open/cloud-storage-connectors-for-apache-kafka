@@ -108,6 +108,7 @@ public class AwsCredentialProviderFactory {
             return StsAssumeRoleCredentialsProvider.builder()
                     .refreshRequest(() -> AssumeRoleRequest.builder()
                             .roleArn(config.getStsRole().getArn())
+                            .externalId(config.getStsRole().getExternalId())
                             // Maker this a unique identifier
                             .roleSessionName("AwsV2SDKConnectorSession")
                             .build())
