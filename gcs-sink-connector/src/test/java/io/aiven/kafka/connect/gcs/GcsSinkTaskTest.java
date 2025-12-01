@@ -48,6 +48,11 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTaskContext;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.gcs.testutils.BucketAccessor;
 import io.aiven.kafka.connect.gcs.testutils.Record;
 import io.aiven.kafka.connect.gcs.testutils.Utils;
@@ -61,7 +66,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 
 final class GcsSinkTaskTest {
@@ -102,9 +107,8 @@ final class GcsSinkTaskTest {
         return records;
     }
 
-    private Map<String, Collection<Record>> toBlobNameWithRecordsMap(final String compression,
+    private Map<String, Collection<Record>> toBlobNameWithRecordsMap(final CompressionType compressionType,
             final List<Record> records) {
-        final CompressionType compressionType = CompressionType.forName(compression);
         final String extension = compressionType.extension();
         final Map<String, Integer> topicPartitionMinimumOffset = new HashMap<>();
         final Map<String, Collection<Record>> blobNameWithRecordsMap = new HashMap<>();
@@ -136,7 +140,7 @@ final class GcsSinkTaskTest {
         testBucketAccessor = new BucketAccessor(storage, TEST_BUCKET);
 
         properties = new HashMap<>();
-        properties.put(GcsSinkConfig.GCS_BUCKET_NAME_CONFIG, TEST_BUCKET);
+        properties.put(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, TEST_BUCKET);
     }
 
     @Test
@@ -146,9 +150,9 @@ final class GcsSinkTaskTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void basic(final String compression) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+    @EnumSource(CompressionType.class)
+    void basic(final CompressionType compression) {
+        FileNameFragment.setter(properties).fileCompression(compression);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         task.put(basicRecords);
@@ -168,10 +172,12 @@ final class GcsSinkTaskTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void basicWithHeaders(final String compression) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,timestamp,offset,headers");
+    @EnumSource(CompressionType.class)
+    void basicWithHeaders(final CompressionType compression) {
+        FileNameFragment.setter(properties).fileCompression(compression);
+        OutputFormatFragment.setter(properties)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.TIMESTAMP,
+                        OutputFieldType.OFFSET, OutputFieldType.HEADERS);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         final List<Record> records = createTestRecords();
@@ -192,10 +198,10 @@ final class GcsSinkTaskTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void basicValuesPlain(final String compression) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
+    @EnumSource(CompressionType.class)
+    void basicValuesPlain(final CompressionType compression) {
+        FileNameFragment.setter(properties).fileCompression(compression);
+        OutputFormatFragment.setter(properties).withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         task.put(basicRecords);
@@ -215,15 +221,13 @@ final class GcsSinkTaskTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void compression(final String compression) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+    @EnumSource(CompressionType.class)
+    void compression(final CompressionType compressionType) {
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         task.put(basicRecords);
         task.flush(null);
-
-        final CompressionType compressionType = CompressionType.forName(compression);
 
         final List<String> names = Arrays.asList("topic0-0-10", "topic0-1-20", "topic0-2-50", "topic1-0-30",
                 "topic1-1-40");
@@ -232,23 +236,23 @@ final class GcsSinkTaskTest {
                 .collect(Collectors.toList());
 
         assertThat(testBucketAccessor.getBlobNames()).containsExactlyElementsOf(blobNames);
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-10" + compressionType.extension(), compression, 0))
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-10" + compressionType.extension(), compressionType, 0))
                 .containsExactly(Collections.singletonList("value0"), Collections.singletonList("value5"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-1-20" + compressionType.extension(), compression, 0))
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-1-20" + compressionType.extension(), compressionType, 0))
                 .containsExactly(Collections.singletonList("value1"), Collections.singletonList("value6"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-2-50" + compressionType.extension(), compression, 0))
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-2-50" + compressionType.extension(), compressionType, 0))
                 .containsExactly(Collections.singletonList("value4"), Collections.singletonList("value9"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-0-30" + compressionType.extension(), compression, 0))
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-0-30" + compressionType.extension(), compressionType, 0))
                 .containsExactly(Collections.singletonList("value2"), Collections.singletonList("value7"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-1-40" + compressionType.extension(), compression, 0))
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-1-40" + compressionType.extension(), compressionType, 0))
                 .containsExactly(Collections.singletonList("value3"), Collections.singletonList("value8"));
     }
 
     @ParameterizedTest
     @CsvSource({ "none,none", "gzip,none", "none,gzip", "gzip,gzip" })
     void contentEncodingAwareDownload(final String compression, final String encoding) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.GCS_OBJECT_CONTENT_ENCODING_CONFIG, encoding);
+        FileNameFragment.setter(properties).fileCompression(CompressionType.forName(compression));
+        properties.put(GcsSinkConfigDef.GCS_OBJECT_CONTENT_ENCODING_CONFIG, encoding);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         task.put(basicRecords);
@@ -279,42 +283,50 @@ final class GcsSinkTaskTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void allFields(final String compression) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,timestamp,offset");
+    @EnumSource(CompressionType.class)
+    void allFields(final CompressionType compressionType) {
+        FileNameFragment.setter(properties).fileCompression(compressionType);
+        OutputFormatFragment.setter(properties)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.TIMESTAMP,
+                        OutputFieldType.OFFSET);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         task.put(basicRecords);
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic0-2-50" + compressionType.extension(),
                 "topic1-0-30" + compressionType.extension(), "topic1-1-40" + compressionType.extension());
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-10" + compressionType.extension(), compression, 0, 1))
+        assertThat(
+                readSplittedAndDecodedLinesFromBlob("topic0-0-10" + compressionType.extension(), compressionType, 0, 1))
                 .containsExactly(Arrays.asList("key0", "value0", "1000", "10"),
                         Arrays.asList("key5", "value5", "1005", "11"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-1-20" + compressionType.extension(), compression, 0, 1))
+        assertThat(
+                readSplittedAndDecodedLinesFromBlob("topic0-1-20" + compressionType.extension(), compressionType, 0, 1))
                 .containsExactly(Arrays.asList("key1", "value1", "1001", "20"),
                         Arrays.asList("key6", "value6", "1006", "21"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-2-50" + compressionType.extension(), compression, 0, 1))
+        assertThat(
+                readSplittedAndDecodedLinesFromBlob("topic0-2-50" + compressionType.extension(), compressionType, 0, 1))
                 .containsExactly(Arrays.asList("key4", "value4", "1004", "50"),
                         Arrays.asList("key9", "value9", "1009", "51"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-0-30" + compressionType.extension(), compression, 0, 1))
+        assertThat(
+                readSplittedAndDecodedLinesFromBlob("topic1-0-30" + compressionType.extension(), compressionType, 0, 1))
                 .containsExactly(Arrays.asList("key2", "value2", "1002", "30"),
                         Arrays.asList("key7", "value7", "1007", "31"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic1-1-40" + compressionType.extension(), compression, 0, 1))
+        assertThat(
+                readSplittedAndDecodedLinesFromBlob("topic1-1-40" + compressionType.extension(), compressionType, 0, 1))
                 .containsExactly(Arrays.asList("key3", "value3", "1003", "40"),
                         Arrays.asList("key8", "value8", "1008", "41"));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void nullKeyValueAndTimestamp(final String compression) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,timestamp,offset");
+    @EnumSource(CompressionType.class)
+    void nullKeyValueAndTimestamp(final CompressionType compressionType) {
+        FileNameFragment.setter(properties).fileCompression(compressionType);
+        OutputFormatFragment.setter(properties)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.TIMESTAMP,
+                        OutputFieldType.OFFSET);
+        properties.put(GcsSinkConfigDef.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,timestamp,offset");
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         final List<SinkRecord> records = Arrays.asList(createNullRecord("topic0", 0, 10),
@@ -322,17 +334,15 @@ final class GcsSinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension());
-        assertThat(readRawLinesFromBlob("topic0-0-10" + compressionType.extension(), compression))
+        assertThat(readRawLinesFromBlob("topic0-0-10" + compressionType.extension(), compressionType.name()))
                 .containsExactly(",,,10", ",,,11", ",,,12");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void multipleFlush(final String compression) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+    @EnumSource(CompressionType.class)
+    void multipleFlush(final CompressionType compressionType) {
+        FileNameFragment.setter(properties).fileCompression(compressionType);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         task.put(List.of(createRecord("topic0", 0, "key0", "value0", 100, 1000)));
@@ -345,21 +355,20 @@ final class GcsSinkTaskTest {
         task.put(List.of(createRecord("topic0", 0, "key5", "value5", 105, 1005)));
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-100" + compressionType.extension(),
                 "topic0-0-102" + compressionType.extension(), "topic0-0-104" + compressionType.extension());
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-100" + compressionType.extension(), compression, 0))
+        assertThat(
+                readSplittedAndDecodedLinesFromBlob("topic0-0-100" + compressionType.extension(), compressionType, 0))
                 .containsExactly(List.of("value0"), List.of("value1"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-102" + compressionType.extension(), compression, 0))
+        assertThat(
+                readSplittedAndDecodedLinesFromBlob("topic0-0-102" + compressionType.extension(), compressionType, 0))
                 .containsExactly(List.of("value2"), List.of("value3"));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void maxRecordPerFile(final String compression) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FILE_MAX_RECORDS, "1");
+    @EnumSource(CompressionType.class)
+    void maxRecordPerFile(final CompressionType compressionType) {
+        FileNameFragment.setter(properties).fileCompression(compressionType).maxRecordsPerFile(1);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         final int recordNum = 100;
@@ -370,16 +379,13 @@ final class GcsSinkTaskTest {
         }
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         assertThat(testBucketAccessor.getBlobNames()).containsExactlyElementsOf(IntStream.range(0, recordNum)
                 .mapToObj(i -> "topic0-0-" + i + compressionType.extension())
                 .sorted()
                 .collect(Collectors.toList()));
         for (int i = 0; i < recordNum; i++) {
-            assertThat(
-                    readSplittedAndDecodedLinesFromBlob("topic0-0-" + i + compressionType.extension(), compression, 0))
-                    .containsExactly(Collections.singletonList("value" + i));
+            assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-" + i + compressionType.extension(),
+                    compressionType, 0)).containsExactly(Collections.singletonList("value" + i));
         }
     }
 
@@ -407,14 +413,14 @@ final class GcsSinkTaskTest {
         assertThat(headers).containsExactly(entry("user-agent", "Google GCS Sink/test-version (GPN: Aiven;)"));
         assertThat(retrySettings.isJittered()).isTrue();
         assertThat(retrySettings.getInitialRetryDelayDuration())
-                .isEqualTo(Duration.ofMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT));
+                .isEqualTo(Duration.ofMillis(GcsSinkConfigDef.GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT));
         assertThat(retrySettings.getMaxRetryDelayDuration())
-                .isEqualTo(Duration.ofMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT));
+                .isEqualTo(Duration.ofMillis(GcsSinkConfigDef.GCS_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT));
         assertThat(retrySettings.getRetryDelayMultiplier())
-                .isEqualTo(GcsSinkConfig.GCS_RETRY_BACKOFF_DELAY_MULTIPLIER_DEFAULT);
+                .isEqualTo(GcsSinkConfigDef.GCS_RETRY_BACKOFF_DELAY_MULTIPLIER_DEFAULT);
         assertThat(retrySettings.getTotalTimeoutDuration())
-                .isEqualTo(Duration.ofMillis(GcsSinkConfig.GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT));
-        assertThat(retrySettings.getMaxAttempts()).isEqualTo(GcsSinkConfig.GCS_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT);
+                .isEqualTo(Duration.ofMillis(GcsSinkConfigDef.GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT));
+        assertThat(retrySettings.getMaxAttempts()).isEqualTo(GcsSinkConfigDef.GCS_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT);
     }
 
     @SuppressWarnings("deprecation")
@@ -455,7 +461,7 @@ final class GcsSinkTaskTest {
 
     @Test
     void prefix() {
-        properties.put(GcsSinkConfig.FILE_NAME_PREFIX_CONFIG, "prefix-");
+        FileNameFragment.setter(properties).prefix("prefix-");
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         task.put(basicRecords);
@@ -466,11 +472,10 @@ final class GcsSinkTaskTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void groupByKey(final String compression) {
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        properties.put("file.name.template", "{{key}}");
+    @EnumSource(CompressionType.class)
+    void groupByKey(final CompressionType compressionType) {
+        FileNameFragment.setter(properties).fileCompression(compressionType).template("{{key}}");
+        OutputFormatFragment.setter(properties).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
 
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
@@ -491,21 +496,21 @@ final class GcsSinkTaskTest {
 
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("key0", "key1", "key2", "null");
 
-        assertThat(readSplittedAndDecodedLinesFromBlob("key0", compression, 0, 1))
+        assertThat(readSplittedAndDecodedLinesFromBlob("key0", compressionType, 0, 1))
                 .containsExactly(Arrays.asList("key0", "value6"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("key1", compression, 0, 1))
+        assertThat(readSplittedAndDecodedLinesFromBlob("key1", compressionType, 0, 1))
                 .containsExactly(Arrays.asList("key1", "value8"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("key2", compression, 0, 1))
+        assertThat(readSplittedAndDecodedLinesFromBlob("key2", compressionType, 0, 1))
                 .containsExactly(Arrays.asList("key2", "value2"));
-        assertThat(readSplittedAndDecodedLinesFromBlob("null", compression, 0, 1))
+        assertThat(readSplittedAndDecodedLinesFromBlob("null", compressionType, 0, 1))
                 .containsExactly(Arrays.asList("", "value5"));// null is written as an empty string to files
     }
 
     @Test
     void failedForStringValuesByDefault() {
-        final String compression = "none";
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
+        final CompressionType compression = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compression);
+        OutputFormatFragment.setter(properties).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
 
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
@@ -525,10 +530,11 @@ final class GcsSinkTaskTest {
 
     @Test
     void supportStringValuesForJsonL() {
-        final String compression = "none";
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl");
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
+        OutputFormatFragment.setter(properties)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
+                .withFormatType(FormatType.JSONL);
 
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
@@ -540,24 +546,22 @@ final class GcsSinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compression))
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name()))
                 .containsExactly("{\"value\":\"value0\",\"key\":\"key0\"}");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compression))
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name()))
                 .containsExactly("{\"value\":\"value1\",\"key\":\"key1\"}");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compression))
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name()))
                 .containsExactly("{\"value\":\"value2\",\"key\":\"key2\"}");
     }
 
     @Test
     void failedForStructValuesByDefault() {
-        final String compression = "none";
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
+        OutputFormatFragment.setter(properties).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
         final List<SinkRecord> records = Arrays.asList(
@@ -576,10 +580,11 @@ final class GcsSinkTaskTest {
 
     @Test
     void supportStructValuesForJsonL() {
-        final String compression = "none";
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl");
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
+        OutputFormatFragment.setter(properties)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
+                .withFormatType(FormatType.JSONL);
 
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
@@ -593,26 +598,25 @@ final class GcsSinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compression))
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name()))
                 .containsExactly("{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compression))
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name()))
                 .containsExactly("{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compression))
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name()))
                 .containsExactly("{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}");
     }
 
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndJsonL() {
-        final String compression = "none";
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_ENVELOPE_CONFIG, "false");
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "jsonl");
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
+        OutputFormatFragment.setter(properties)
+                .withOutputFields(OutputFieldType.VALUE)
+                .withFormatType(FormatType.JSONL)
+                .envelopeEnabled(false);
 
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
@@ -624,22 +628,21 @@ final class GcsSinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compression)).containsExactly("{\"name\":\"name0\"}");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compression)).containsExactly("{\"name\":\"name1\"}");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compression)).containsExactly("{\"name\":\"name2\"}");
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name())).containsExactly("{\"name\":\"name0\"}");
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name())).containsExactly("{\"name\":\"name1\"}");
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name())).containsExactly("{\"name\":\"name2\"}");
     }
 
     @Test
     void supportStructValuesForClassicJson() {
-        final String compression = "none";
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "json");
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
+        OutputFormatFragment.setter(properties)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
+                .withFormatType(FormatType.JSON);
 
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
@@ -653,26 +656,25 @@ final class GcsSinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compression)).containsExactly("[",
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name())).containsExactly("[",
                 "{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}", "]");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compression)).containsExactly("[",
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name())).containsExactly("[",
                 "{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}", "]");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compression)).containsExactly("[",
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name())).containsExactly("[",
                 "{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}", "]");
     }
 
     @Test
     void supportUnwrappedJsonEnvelopeForStructAndClassicJson() {
-        final String compression = "none";
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "value");
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_ENVELOPE_CONFIG, "false");
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, "json");
+        final CompressionType compressionType = CompressionType.NONE;
+        FileNameFragment.setter(properties).fileCompression(compressionType);
+        OutputFormatFragment.setter(properties)
+                .withOutputFields(OutputFieldType.VALUE)
+                .envelopeEnabled(false)
+                .withFormatType(FormatType.JSON);
 
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
 
@@ -684,14 +686,15 @@ final class GcsSinkTaskTest {
         task.put(records);
         task.flush(null);
 
-        final CompressionType compressionType = CompressionType.forName(compression);
-
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compression)).containsExactly("[", "{\"name\":\"name0\"}", "]");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compression)).containsExactly("[", "{\"name\":\"name1\"}", "]");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compression)).containsExactly("[", "{\"name\":\"name2\"}", "]");
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name())).containsExactly("[",
+                "{\"name\":\"name0\"}", "]");
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name())).containsExactly("[",
+                "{\"name\":\"name1\"}", "]");
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name())).containsExactly("[",
+                "{\"name\":\"name2\"}", "]");
     }
 
     private SinkRecord createRecordWithStructValueSchema(final String topic, final int partition, final String key,
@@ -743,8 +746,8 @@ final class GcsSinkTaskTest {
                 TimestampType.NO_TIMESTAMP_TYPE);
     }
 
-    private List<Record> readRecords(final String blobName, final String compression) {
-        return testBucketAccessor.decodeToRecords(blobName, compression);
+    private List<Record> readRecords(final String blobName, final CompressionType compression) {
+        return testBucketAccessor.decodeToRecords(blobName, compression.name());
     }
 
     private Collection<String> readRawLinesFromBlob(final String blobName, final String compression) {
@@ -752,8 +755,8 @@ final class GcsSinkTaskTest {
     }
 
     private Collection<List<String>> readSplittedAndDecodedLinesFromBlob(final String blobName,
-            final String compression, final int... fieldsToDecode) {
-        return testBucketAccessor.readAndDecodeLines(blobName, compression, fieldsToDecode);
+            final CompressionType compression, final int... fieldsToDecode) {
+        return testBucketAccessor.readAndDecodeLines(blobName, compression.name(), fieldsToDecode);
     }
 
     private Collection<List<String>> readDecodedFieldsFromDownload(final String blobName, final String compression,
@@ -761,8 +764,7 @@ final class GcsSinkTaskTest {
         return testBucketAccessor.downloadBlobAndDecodeFields(blobName, compression, fieldsToDecode);
     }
 
-    private Map<String, Collection<List<String>>> buildBlobNameValuesMap(final String compression) {
-        final CompressionType compressionType = CompressionType.forName(compression);
+    private Map<String, Collection<List<String>>> buildBlobNameValuesMap(final CompressionType compressionType) {
         final String extension = compressionType.extension();
         final Map<String, Collection<List<String>>> blobNameValuesMap = new HashMap<>();
         blobNameValuesMap.put("topic0-0-10" + extension, toCollectionOfLists("value0", "value5"));

@@ -78,6 +78,9 @@ idea {
 dependencies {
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
+  compileOnly(project(":site"))
+  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
+  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
   implementation(project(":commons"))
   implementation("com.google.cloud:google-cloud-storage:2.52.3")
@@ -192,7 +195,7 @@ publishing {
         licenses {
           license {
             name = "Apache 2.0"
-            url = "https://www.apache.org/licenses/LICENSE-2.0"
+            url = "http://www.apache.org/licenses/LICENSE-2.0"
             distribution = "repo"
           }
         }
@@ -252,3 +255,45 @@ signing {
   }
   signatureTypes = ASCSignatureProvider()
 }
+
+/** ******************************* */
+/* Documentation building section */
+/** ******************************* */
+tasks.register("buildDocs") {
+  dependsOn("buildConfigMd")
+  dependsOn("buildConfigYml")
+}
+
+tasks.register<JavaExec>("buildConfigMd") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.gcs.GcsSinkConfigDef",
+          "src/templates/configData.md.vm",
+          "build/site/markdown/gcs-sink-connector/GCSSinkConfig.md")
+}
+
+tasks.register<JavaExec>("buildConfigYml") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.gcs.GcsSinkConfigDef",
+          "src/templates/configData.yml.vm",
+          "build/site/gcs-sink-connector/GCSSinkConfig.yml")
+}
+
+/** ****************************** */
+/*  End of documentation section */
+/** ****************************** */

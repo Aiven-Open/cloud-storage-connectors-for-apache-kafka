@@ -56,6 +56,7 @@ under the License.
             <item name="Azure - Microsoft Azure Blob Storage">
                 <item name="Sink">
                     <item name="Introduction" href="azure-sink-connector/index.html"/>
+                    <item name="Configuration" href="azure-sink-connector/AzureSinkConfig.html"/>
                     <item name="Javadoc" href="azure-sink-connector/javadoc/index.html"/>
                 </item>
                 <item name="Source">
@@ -69,6 +70,7 @@ under the License.
             <item name="GCS - Google Cloud Storage">
                 <item name="Sink">
                     <item name="Introduction" href="gcs-sink-connector/index.html"/>
+                    <item name="Configuration" href="gcs-sink-connector/GCSSinkConfig.html"/>
                     <item name="Javadoc" href="gcs-sink-connector/javadoc/index.html"/>
                 </item>
             </item>

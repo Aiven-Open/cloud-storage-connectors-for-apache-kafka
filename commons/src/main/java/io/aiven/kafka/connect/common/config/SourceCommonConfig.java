@@ -179,7 +179,7 @@ public class SourceCommonConfig extends CommonConfig {
             super();
             TransformerFragment.update(this);
             SourceConfigFragment.update(this);
-            FileNameFragment.update(this);
+            FileNameFragment.update(this, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.TRUE);
         }
 
         @Override

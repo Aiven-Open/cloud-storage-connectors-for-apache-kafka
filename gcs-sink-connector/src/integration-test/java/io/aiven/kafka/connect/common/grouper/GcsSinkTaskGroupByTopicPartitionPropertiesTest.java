@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import io.aiven.kafka.connect.gcs.GcsSinkConfig;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.gcs.GcsSinkTask;
 import io.aiven.kafka.connect.gcs.testutils.BucketAccessor;
 
@@ -70,7 +70,7 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
 
         final Map<String, String> taskProps = basicTaskProps();
         if (maxRecordsPerFile != null) {
-            taskProps.put(GcsSinkConfig.FILE_MAX_RECORDS, Integer.toString(maxRecordsPerFile));
+            FileNameFragment.setter(taskProps).maxRecordsPerFile(maxRecordsPerFile);
         }
         final GcsSinkTask task = new GcsSinkTask(taskProps, storage);
 

@@ -27,7 +27,9 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import io.aiven.kafka.connect.gcs.GcsSinkConfig;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.gcs.GcsSinkTask;
 import io.aiven.kafka.connect.gcs.testutils.BucketAccessor;
 
@@ -54,8 +56,8 @@ final class GcsSinkTaskGroupByKeyPropertiesTest extends PbtBase {
         final BucketAccessor testBucketAccessor = new BucketAccessor(storage, TEST_BUCKET, true);
 
         final Map<String, String> taskProps = basicTaskProps();
-        taskProps.put(GcsSinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{key}}");
-        taskProps.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
+        FileNameFragment.setter(taskProps).template("{{key}}");
+        OutputFormatFragment.setter(taskProps).withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         final GcsSinkTask task = new GcsSinkTask(taskProps, storage);
 
         for (final List<SinkRecord> recordBatch : recordBatches) {
