@@ -17,10 +17,7 @@
 package io.aiven.kafka.connect.azure.sink;
 
 import java.util.Map;
-import java.util.regex.Pattern;
 
-import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
@@ -29,7 +26,7 @@ import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 
 public final class AzureBlobSinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef {
-    
+
     AzureBlobSinkConfigDef() {
         super(OutputFieldType.VALUE, CompressionType.NONE);
         AzureBlobConfigFragment.update(this, true);

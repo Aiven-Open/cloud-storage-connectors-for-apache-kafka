@@ -120,12 +120,11 @@ public final class RecordGrouperFactory {
             .map(v -> v.stream().map(Pair::getLeft).collect(Collectors.joining(",")))
             .collect(Collectors.joining("; "));
 
+    /**
+     * Gets a list of the supported variable groupings.  Each list within the list is a grouping of variables that is supported.
+     * @return a list of supported variable groupings.
+     */
     public static List<List<String>> getSupportedVariableGroups() {
-//        List<List<String>> supportedVariableGroups = new ArrayList<>();
-//        for (List<Pair<String, Boolean>> l : SUPPORTED_VARIABLES.values()) {
-//            supportedVariableGroups.add(l.stream().map(Pair::getLeft).collect(Collectors.toList()));
-//        }
-//        return supportedVariableGroups;
         return SUPPORTED_VARIABLES.values().stream().map(lstPair -> lstPair.stream().map(Pair::getLeft).collect(Collectors.toList()))
                 .collect(Collectors.toList());
     }
