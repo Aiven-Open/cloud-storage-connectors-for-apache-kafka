@@ -50,8 +50,8 @@ import org.slf4j.LoggerFactory;
  */
 public final class FileNameFragment extends ConfigFragment {
     /**
-     * Flag to support Prefix Template as opposed to a prefix string.
-     * TODO To be removed when all implementations support the prefix template.
+     * Flag to support Prefix Template as opposed to a prefix string. TODO To be removed when all implementations
+     * support the prefix template.
      */
     public enum PrefixTemplateSupport {
         TRUE, FALSE
@@ -113,10 +113,10 @@ public final class FileNameFragment extends ConfigFragment {
     static {
         Arrays.stream(FilenameTemplateVariable.values())
                 .forEach(variable -> FILENAME_VARIABLES.put(variable.name, variable));
-        TEMPLATE_GROUPINGS = "[" + RecordGrouperFactory.getSupportedVariableGroups().stream()
+        TEMPLATE_GROUPINGS = "[" + RecordGrouperFactory.getSupportedVariableGroups()
+                .stream()
                 .map(strings -> FilePatternUtils.asPatterns(strings, ", "))
-                .collect(Collectors.joining("] \n ["))
-        +"]";
+                .collect(Collectors.joining("] \n [")) + "]";
     }
 
     /**
@@ -286,9 +286,8 @@ public final class FileNameFragment extends ConfigFragment {
                 "The template for file names on storage system. "
                         + "Supports `{{ variable }}` placeholders for substituting variables. "
                         + "Currently supported variables are "
-                + String.join(", ", FilePatternUtils.asPatterns(FILENAME_VARIABLES.keySet(), ", "))
-                        + ". Only some combinations of variables are valid, which currently are: "
-                        + TEMPLATE_GROUPINGS,
+                        + String.join(", ", FilePatternUtils.asPatterns(FILENAME_VARIABLES.keySet(), ", "))
+                        + ". Only some combinations of variables are valid, which currently are: " + TEMPLATE_GROUPINGS,
                 GROUP_NAME, ++fileGroupCounter, ConfigDef.Width.LONG, FILE_NAME_TEMPLATE_CONFIG);
 
         if (prefixTemplateSupport.equals(PrefixTemplateSupport.TRUE)) {

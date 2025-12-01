@@ -18,16 +18,16 @@ package io.aiven.kafka.connect.gcs;
 
 import java.util.Map;
 
-import io.aiven.commons.collections.TimeScale;
-import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigValue;
 
+import io.aiven.commons.collections.TimeScale;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.ConfigFragment;
 import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.SinkCommonConfig;
+import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
 
 public final class GcsSinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef {
     public static final String GCS_ENDPOINT_CONFIG = "gcs.endpoint";
@@ -117,11 +117,12 @@ public final class GcsSinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef
                 GCS_GROUP_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, Width.NONE,
                 GCS_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG);
         configDef.define(GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_CONFIG, Type.LONG,
-                GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT, TimeScaleValidator.between(0L, TimeScale.DAYS.asMilliseconds(1)), Importance.MEDIUM,
+                GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT,
+                TimeScaleValidator.between(0L, TimeScale.DAYS.asMilliseconds(1)), Importance.MEDIUM,
                 "Retry total timeout in milliseconds. The default value is "
                         + TimeScale.size(GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT),
-                GCS_GROUP_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter,
-                Width.NONE, GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_CONFIG);
+                GCS_GROUP_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, Width.NONE,
+                GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_CONFIG);
     }
 
     static void addUserAgentConfig(final ConfigDef configDef) {
