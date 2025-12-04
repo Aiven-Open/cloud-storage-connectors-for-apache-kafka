@@ -17,35 +17,27 @@
 package io.aiven.kafka.connect.common.config;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
+import org.apache.kafka.connect.runtime.ConnectorConfig;
+import org.apache.kafka.connect.runtime.isolation.Plugins;
 
 /**
  * The base configuration or all connectors.
  */
-public class CommonConfig extends AbstractConfig {
+public class CommonConfig extends ConnectorConfig {
 
     public static final String TASK_ID = "task.id";
 
     private final BackoffPolicyFragment backoffPolicyConfig;
     private final CommonConfigFragment commonConfigFragment;
-    /**
-     * @deprecated No longer needed.
-     */
-    @Deprecated
-    protected static void addKafkaBackoffPolicy(final ConfigDef configDef) { // NOPMD
-        // not required since it is loaded in automatically when AivenCommonConfig is called, in the super method of
-        // Common Config.
-    }
+
+    protected final FragmentDataAccess dataAccess;
 
     /**
      * Checks the configuration definition for errors. If any errors are found an exception is thrown. Due to the point
@@ -54,13 +46,14 @@ public class CommonConfig extends AbstractConfig {
      * @param definition
      *            the ConfigDefinition to validate.
      */
-    private void doVerification(final ConfigDef definition, final Map<String, String> values) {
-        // if the call multiValidateValues if it is available otherwise just validate
-        final Stream<ConfigValue> configValueStream = definition instanceof CommonConfigDef
-                ? ((CommonConfigDef) definition).multiValidateValues(values).stream()
-                : definition.validate(values).stream();
+    private Map<String, ConfigValue> doVerification(final CommonConfigDef definition,
+            final Map<String, String> values) {
+        final Map<String, ConfigValue> verificationMap = definition.validateAll(values);
+
         // extract all the values with associated errors.
-        final List<ConfigValue> errorConfigs = configValueStream
+        final List<ConfigValue> errorConfigs = definition.multiValidate(verificationMap)
+                .values()
+                .stream()
                 .filter(configValue -> !configValue.errorMessages().isEmpty())
                 .collect(Collectors.toList());
         if (!errorConfigs.isEmpty()) {
@@ -69,32 +62,12 @@ public class CommonConfig extends AbstractConfig {
                     .collect(Collectors.joining("\n"));
             throw new ConfigException("There are errors in the configuration:\n" + msg);
         }
+        return verificationMap;
     }
 
-    /**
-     * Verifies that all the settings are strings or null.
-     *
-     * @return the map of key to setting string.
-     */
-    private Map<String, String> originalsNullableStrings() {
-        final Map<String, String> result = new HashMap<>();
-        for (final Map.Entry<String, Object> entry : originals().entrySet()) {
-            if (entry.getValue() != null && !(entry.getValue() instanceof String)) {
-                throw new ClassCastException("Non-string value found in original settings for key " + entry.getKey()
-                        + ": " + entry.getValue().getClass().getName());
-            }
-            if (entry.getKey() == null) {
-                throw new ClassCastException("Null key found in original settings.");
-            }
-            result.put(entry.getKey(), (String) entry.getValue());
-        }
-        return result;
-    }
-
-    public CommonConfig(final ConfigDef definition, final Map<?, ?> originals) {
-        super(definition, originals);
-        doVerification(definition, originalsNullableStrings());
-        final FragmentDataAccess dataAccess = FragmentDataAccess.from(this);
+    public CommonConfig(final CommonConfigDef definition, final Map<String, String> originals) {
+        super(new Plugins(originals), definition, originals);
+        dataAccess = FragmentDataAccess.from(doVerification(definition, originals));
         commonConfigFragment = new CommonConfigFragment(dataAccess);
         backoffPolicyConfig = new BackoffPolicyFragment(dataAccess);
     }
@@ -136,12 +109,17 @@ public class CommonConfig extends AbstractConfig {
         return commonConfigFragment.getTaskId();
     }
 
+    public String getConnectorName() {
+        return commonConfigFragment.getConnectorName();
+    }
+
     public static class CommonConfigDef extends ConfigDef {
         /**
          * Constructor .
          */
         public CommonConfigDef() {
             super();
+            ConnectorConfig.configDef().configKeys().values().forEach(this::define);
             BackoffPolicyFragment.update(this);
             CommonConfigFragment.update(this);
         }
@@ -161,17 +139,6 @@ public class CommonConfig extends AbstractConfig {
         protected Map<String, ConfigValue> multiValidate(final Map<String, ConfigValue> valueMap) {
             new BackoffPolicyFragment(FragmentDataAccess.from(valueMap)).validate(valueMap);
             return valueMap;
-        }
-
-        /**
-         * Validate the configuration properties using the multiValidate process.
-         *
-         * @param props
-         *            the properties to validate
-         * @return the collection of ConfigValues from the validation.
-         */
-        final Collection<ConfigValue> multiValidateValues(final Map<String, String> props) {
-            return multiValidate(validateAll(props)).values();
         }
 
         @Override

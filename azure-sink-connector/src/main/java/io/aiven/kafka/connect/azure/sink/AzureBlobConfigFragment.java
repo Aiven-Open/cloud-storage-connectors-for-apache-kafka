@@ -39,8 +39,8 @@ import com.azure.storage.blob.BlobServiceClientBuilder;
  */
 public final class AzureBlobConfigFragment extends ConfigFragment {
 
-    public static final String AZURE_PREFIX_CONFIG = "azure.blob.prefix";
-    public static final String AZURE_FETCH_PAGE_SIZE = "azure.blob.fetch.page.size";
+    private static final String AZURE_PREFIX_CONFIG = "azure.blob.prefix";
+    private static final String AZURE_FETCH_PAGE_SIZE = "azure.blob.fetch.page.size";
     private static final String USER_AGENT_HEADER_FORMAT = "Azure Blob Source/%s (GPN: Aiven;)";
     public static final String USER_AGENT_HEADER_VALUE = String.format(USER_AGENT_HEADER_FORMAT, Version.VERSION);
     private static final String GROUP_AZURE = "Azure";

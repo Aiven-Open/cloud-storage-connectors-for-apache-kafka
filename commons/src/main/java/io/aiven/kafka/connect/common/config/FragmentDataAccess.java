@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.common.config;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.apache.kafka.common.Configurable;
 import org.apache.kafka.common.KafkaException;
@@ -36,62 +37,6 @@ import org.apache.kafka.common.utils.Utils;
  * {@link ConfigValue}.
  */
 public interface FragmentDataAccess {
-    /**
-     * Creates an implementation against an AbstractConfig.
-     *
-     * @param cfg
-     *            the AbstractConfig to get values from.
-     * @return a FragmentDataAccess
-     */
-    static FragmentDataAccess from(final AbstractConfig cfg) {
-        return new FragmentDataAccess() {
-            @Override
-            public Map<String, ?> values() {
-                return cfg.values();
-            }
-
-            @Override
-            public String getString(final String key) {
-                return cfg.getString(key);
-            }
-
-            @Override
-            public boolean has(final String key) {
-                return cfg.values().get(key) != null;
-            }
-
-            @Override
-            public Integer getInt(final String key) {
-                return cfg.getInt(key);
-            }
-
-            @Override
-            public Long getLong(final String key) {
-                return cfg.getLong(key);
-            }
-
-            @Override
-            public Boolean getBoolean(final String key) {
-                return cfg.getBoolean(key);
-            }
-
-            @Override
-            public List<String> getList(final String key) {
-                return cfg.getList(key);
-            }
-
-            @Override
-            public Password getPassword(final String key) {
-                return cfg.getPassword(key);
-            }
-
-            @Override
-            public <T> T getConfiguredInstance(final String key, final Class<? extends T> clazz) {
-                return cfg.getConfiguredInstance(key, clazz);
-            }
-        };
-    }
-
     /**
      * Creates an implementation against a map of String to ConfigValues.
      *
@@ -178,6 +123,10 @@ public interface FragmentDataAccess {
      * @return the map of String to value.
      */
     Map<String, ?> values();
+
+    default <T> T nullOrValue(final String key, final Function<String, T> func) {
+        return has(key) ? func.apply(key) : null;
+    }
 
     /**
      * Gets the String value from the key.

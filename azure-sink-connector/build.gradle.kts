@@ -71,6 +71,7 @@ idea {
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
+  compileOnly(apache.kafka.connect.runtime)
   compileOnly(project(":site"))
   compileOnly(apache.velocity.engine.core)
   compileOnly(apache.velocity.tools)

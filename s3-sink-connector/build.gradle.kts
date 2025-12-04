@@ -96,10 +96,10 @@ dependencies {
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
   testImplementation("io.findify:s3mock_2.13:$s3mockVersion")
-
   testImplementation(testinglibs.mockito.core)
   testImplementation(testinglibs.mockito.junit.jupiter)
 
+  testImplementation(amazonawssdk.s3)
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
 

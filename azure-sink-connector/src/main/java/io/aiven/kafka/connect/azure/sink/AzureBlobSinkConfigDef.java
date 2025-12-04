@@ -27,7 +27,7 @@ import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 
 public final class AzureBlobSinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef {
 
-    AzureBlobSinkConfigDef() {
+    public AzureBlobSinkConfigDef() {
         super(OutputFieldType.VALUE, CompressionType.NONE);
         AzureBlobConfigFragment.update(this, true);
     }

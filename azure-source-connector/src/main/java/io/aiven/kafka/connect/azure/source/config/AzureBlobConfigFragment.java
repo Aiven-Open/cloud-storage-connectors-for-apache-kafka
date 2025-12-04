@@ -24,6 +24,7 @@ import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.azure.source.utils.VersionInfo;
 import io.aiven.kafka.connect.common.config.ConfigFragment;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
 
@@ -138,7 +139,11 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                 "Prefix for storage file names, generally specifies directory like"
                         + " structures that do not contain any templated fields.",
                 GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
-        if (!isSink) {
+        if (isSink) {
+            // remove FileNameFragmentPrefix
+            configDef.configKeys().remove(FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+            configDef.configKeys().remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+        } else {
             configDef.define(AZURE_FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
                     ConfigDef.Importance.MEDIUM, "Azure fetch page size", GROUP_AZURE, ++azureGroupCounter,
                     ConfigDef.Width.NONE, AZURE_FETCH_PAGE_SIZE);

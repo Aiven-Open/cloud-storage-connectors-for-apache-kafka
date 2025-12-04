@@ -33,7 +33,6 @@ import org.apache.kafka.connect.converters.ByteArrayConverter;
 import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
@@ -110,7 +109,7 @@ public abstract class AbstractOffsetManagerIntegrationTest<K extends Comparable<
         try {
             // Start the Connector
             final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 1, InputFormat.BYTES);
-            KafkaFragment.setter(connectorConfig)
+            CommonConfigFragment.setter(connectorConfig)
                     .name(getConnectorName())
                     .keyConverter(ByteArrayConverter.class)
                     .valueConverter(ByteArrayConverter.class);
@@ -186,11 +185,11 @@ public abstract class AbstractOffsetManagerIntegrationTest<K extends Comparable<
             final int maxTasks, final InputFormat inputFormat) {
         final Map<String, String> configData = createConnectorConfig(localPrefix);
 
-        KafkaFragment.setter(configData).connector(getConnectorClass());
-
         SourceConfigFragment.setter(configData).targetTopic(topic);
 
-        final CommonConfigFragment.Setter setter = CommonConfigFragment.setter(configData).maxTasks(maxTasks);
+        final CommonConfigFragment.Setter setter = CommonConfigFragment.setter(configData)
+                .connector(getConnectorClass())
+                .maxTasks(maxTasks);
         if (taskId > TASK_NOT_SET) {
             setter.taskId(taskId);
         }

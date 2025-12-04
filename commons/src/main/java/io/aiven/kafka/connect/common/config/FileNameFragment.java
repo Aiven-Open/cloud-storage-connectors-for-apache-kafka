@@ -20,10 +20,8 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
@@ -33,7 +31,6 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
 
-import io.aiven.kafka.connect.common.config.validators.PredicateGatedValidator;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
@@ -42,12 +39,14 @@ import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.LoggerFactory;
 
 /**
  * Fragment to handle all file name extraction operations.
  */
+@SuppressWarnings("PMD.GodClass")
 public final class FileNameFragment extends ConfigFragment {
     /**
      * Flag to support Prefix Template as opposed to a prefix string. TODO To be removed when all implementations
@@ -77,8 +76,8 @@ public final class FileNameFragment extends ConfigFragment {
     @VisibleForTesting
     public static final String FILE_NAME_PREFIX_CONFIG = "file.name.prefix";
 
-    public static final ConfigDef.Validator COMPRESSION_TYPE_VALIDATOR = new PredicateGatedValidator(Objects::nonNull,
-            ConfigDef.CaseInsensitiveValidString.in(CompressionType.names().toArray(new String[0])));
+    public static final ConfigDef.Validator COMPRESSION_TYPE_VALIDATOR = ConfigDef.CaseInsensitiveValidString
+            .in(CompressionType.names().toArray(new String[0]));
 
     public static final ConfigDef.Validator TIMESTAMP_SOURCE_VALIDATOR = ConfigDef.CaseInsensitiveValidString
             .in(Arrays.stream(TimestampSource.Type.values())
@@ -164,9 +163,21 @@ public final class FileNameFragment extends ConfigFragment {
      *            the distribution type for the validator
      */
     @Override
-    @SuppressWarnings("PMD.EmptyCatchBlock")
     public void validate(final Map<String, ConfigValue> configMap) {
+        // prefix or prefix template
+        final ConfigValue pfx = configMap.get(FILE_NAME_PREFIX_CONFIG);
+        final ConfigValue pfxTemplate = configMap.get(FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+        if (pfx != null && pfx.value() != null && pfxTemplate != null && pfxTemplate.value() != null
+                && StringUtils.isNotEmpty(pfx.value().toString())
+                && StringUtils.isNotEmpty(pfxTemplate.value().toString())) {
+            registerIssue(configMap, FILE_NAME_PREFIX_CONFIG, configMap.get(FILE_NAME_PREFIX_CONFIG).value(), String
+                    .format("%s and %s may not be used together.", FILE_NAME_PREFIX_CONFIG, FILE_NAME_TEMPLATE_CONFIG));
+        }
+        validateTemplate(configMap);
+    }
 
+    @SuppressWarnings("PMD.EmptyCatchBlock")
+    private void validateTemplate(final Map<String, ConfigValue> configMap) {
         try {
             final Template template = getFilenameTemplate();
 
@@ -352,9 +363,7 @@ public final class FileNameFragment extends ConfigFragment {
      * @return the defined compression type or {@link CompressionType#NONE} if there is no defined compression type.
      */
     public CompressionType getCompressionType() {
-        return has(FILE_COMPRESSION_TYPE_CONFIG)
-                ? CompressionType.forName(getString(FILE_COMPRESSION_TYPE_CONFIG))
-                : CompressionType.NONE;
+        return CompressionType.forName(getString(FILE_COMPRESSION_TYPE_CONFIG));
     }
 
     /**
@@ -398,49 +407,72 @@ public final class FileNameFragment extends ConfigFragment {
         return getString(FILE_NAME_TEMPLATE_CONFIG);
     }
 
+    /**
+     * Gets the prefix template for the file name.
+     *
+     * @return the prefix tempalte for the file name.
+     */
     public String getPrefixTemplate() {
         return getString(FILE_PATH_PREFIX_TEMPLATE_CONFIG);
     }
 
+    /**
+     * Gets the prefix for the file name.
+     *
+     * @return the prefix for the file name or {@code null} if not set.
+     */
     public String getPrefix() {
-        return getString(FILE_NAME_PREFIX_CONFIG);
-    }
-    public static void replaceYyyyUppercase(final String name, final Map<String, String> properties) {
-        String template = properties.get(name);
-        if (template != null) {
-            final String originalTemplate = template;
-
-            final var unitYyyyPattern = Pattern.compile("\\{\\{\\s*timestamp\\s*:\\s*unit\\s*=\\s*YYYY\\s*}}");
-            template = unitYyyyPattern.matcher(template)
-                    .replaceAll(matchResult -> matchResult.group().replace("YYYY", "yyyy"));
-
-            if (!template.equals(originalTemplate)) {
-                LoggerFactory.getLogger(FileNameFragment.class)
-                        .warn("{{timestamp:unit=YYYY}} is no longer supported, "
-                                + "please use {{timestamp:unit=yyyy}} instead. " + "It was automatically replaced: {}",
-                                template);
-            }
-            properties.put(name, template);
-        }
+        return nullOrValue(FILE_NAME_PREFIX_CONFIG, this::getString);
     }
 
     /**
-     * Handle the deprecated YYYY template pattern
+     * Return true if the prefix has been set.
+     *
+     * @return true if the prefix has been set.
+     */
+    public boolean hasPrefix() {
+        return StringUtils.isNotBlank(getPrefix());
+    }
+
+    /**
+     * Replace "YYYY" with "yyyy" for all the named templates in the properties file.
+     *
+     * @param keys
+     *            the keys for the template properties.
+     * @param properties
+     *            the map property keys to values.
+     */
+    public static Map<String, String> replaceYyyyUppercase(final Map<String, String> properties, final String... keys) {
+        final var unitYyyyPattern = Pattern.compile("\\{\\{\\s*timestamp\\s*:\\s*unit\\s*=\\s*YYYY\\s*}}");
+        for (final String name : keys) {
+            String template = properties.get(name);
+            if (template != null) {
+                final String originalTemplate = template;
+                template = unitYyyyPattern.matcher(template)
+                        .replaceAll(matchResult -> matchResult.group().replace("YYYY", "yyyy"));
+
+                if (!template.equals(originalTemplate)) {
+                    LoggerFactory.getLogger(FileNameFragment.class)
+                            .warn("{{timestamp:unit=YYYY}} is no longer supported, "
+                                    + "please use {{timestamp:unit=yyyy}} instead. "
+                                    + "It was automatically replaced: {}", template);
+                }
+                properties.put(name, template);
+            }
+        }
+        return properties;
+    }
+
+    /**
+     * Handle the deprecated YYYY template patternin well known templates.
      *
      * @param properties
      *            the properties to modify
-     * @return the properties with the YYYY templage fixed.
+     * @return the properties with the well known templates fixed.
      */
     public static Map<String, String> handleDeprecatedYyyyUppercase(final Map<String, String> properties) {
-        if (properties.containsKey(FILE_NAME_TEMPLATE_CONFIG)
-                || properties.containsKey(FILE_PATH_PREFIX_TEMPLATE_CONFIG)) {
-            final Map<String, String> result = new HashMap<>(properties);
-            for (final String key : Arrays.asList(FILE_NAME_TEMPLATE_CONFIG, FILE_PATH_PREFIX_TEMPLATE_CONFIG)) {
-                replaceYyyyUppercase(key, result);
-            }
-            return result;
-        }
-        return properties;
+        return replaceYyyyUppercase(properties, FILE_NAME_TEMPLATE_CONFIG, FILE_NAME_PREFIX_CONFIG,
+                FILE_PATH_PREFIX_TEMPLATE_CONFIG);
     }
 
     /**
@@ -465,7 +497,10 @@ public final class FileNameFragment extends ConfigFragment {
          * @return this
          */
         public Setter fileCompression(final CompressionType compressionType) {
-            return setValue(FILE_COMPRESSION_TYPE_CONFIG, compressionType.name());
+            if (compressionType != null) {
+                return setValue(FILE_COMPRESSION_TYPE_CONFIG, compressionType.name());
+            }
+            return removeValue(FILE_COMPRESSION_TYPE_CONFIG);
         }
 
         /**

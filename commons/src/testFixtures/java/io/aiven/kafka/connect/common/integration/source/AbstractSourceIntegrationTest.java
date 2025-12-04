@@ -42,7 +42,6 @@ import org.apache.kafka.connect.json.JsonConverter;
 import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
@@ -134,12 +133,12 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
     private Map<String, String> createConfig(final String localPrefix, final String topic, final int taskId,
             final int maxTasks, final InputFormat inputFormat) {
         final Map<String, String> configData = createConnectorConfig(localPrefix);
-
-        KafkaFragment.setter(configData).connector(getConnectorClass()).name(getConnectorName());
-
         SourceConfigFragment.setter(configData).targetTopic(topic);
 
-        final CommonConfigFragment.Setter setter = CommonConfigFragment.setter(configData).maxTasks(maxTasks);
+        final CommonConfigFragment.Setter setter = CommonConfigFragment.setter(configData)
+                .connector(getConnectorClass())
+                .name(getConnectorName())
+                .maxTasks(maxTasks);
         if (taskId > TASK_NOT_SET) {
             setter.taskId(taskId);
         }
@@ -179,7 +178,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
         try {
             // Start the Connector
             final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 1, InputFormat.BYTES);
-            KafkaFragment.setter(connectorConfig)
+            CommonConfigFragment.setter(connectorConfig)
                     .name(getConnectorName())
                     .keyConverter(ByteArrayConverter.class)
                     .valueConverter(ByteArrayConverter.class);
@@ -242,7 +241,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
         try {
             // Start the Connector
             final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 1, InputFormat.BYTES);
-            KafkaFragment.setter(connectorConfig)
+            CommonConfigFragment.setter(connectorConfig)
                     .name(getConnectorName())
                     .keyConverter(ByteArrayConverter.class)
                     .valueConverter(ByteArrayConverter.class);
@@ -298,7 +297,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
 
             // Start the Connector
             final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 1, inputFormat);
-            KafkaFragment.setter(connectorConfig)
+            CommonConfigFragment.setter(connectorConfig)
                     .name(getConnectorName())
                     .keyConverter(ByteArrayConverter.class)
                     .valueConverter(ByteArrayConverter.class);
@@ -349,7 +348,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
             // Start the Connector
             final Map<String, String> connectorConfig = createConfig(localPrefix, topic, TASK_NOT_SET, 1,
                     InputFormat.BYTES);
-            KafkaFragment.setter(connectorConfig)
+            CommonConfigFragment.setter(connectorConfig)
                     .keyConverter(ByteArrayConverter.class)
                     .valueConverter(ByteArrayConverter.class);
             SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.PARTITION);
@@ -404,7 +403,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
         try {
             // configure the consumer
             final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 1, InputFormat.BYTES);
-            KafkaFragment.setter(connectorConfig)
+            CommonConfigFragment.setter(connectorConfig)
                     .name(getConnectorName())
                     .keyConverter(ByteArrayConverter.class)
                     .valueConverter(ByteArrayConverter.class);
@@ -466,7 +465,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
         try {
             // create configuration
             final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 4, InputFormat.AVRO);
-            KafkaFragment.setter(connectorConfig).name(getConnectorName()).valueConverter(AvroConverter.class);
+            CommonConfigFragment.setter(connectorConfig).name(getConnectorName()).valueConverter(AvroConverter.class);
 
             // start the manager
             final KafkaManager kafkaManager = setupKafka();
@@ -532,7 +531,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
         assertThat(getNativeStorage()).hasSize(1);
 
         final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 4, InputFormat.PARQUET);
-        KafkaFragment.setter(connectorConfig)
+        CommonConfigFragment.setter(connectorConfig)
                 .name(getConnectorName())
                 .keyConverter(ByteArrayConverter.class)
                 .valueConverter(AvroConverter.class);
@@ -585,7 +584,7 @@ public abstract class AbstractSourceIntegrationTest<K extends Comparable<K>, N, 
         try {
 
             final Map<String, String> connectorConfig = createConfig(topic, TASK_NOT_SET, 1, InputFormat.JSONL);
-            KafkaFragment.setter(connectorConfig).name(getConnectorName()).valueConverter(JsonConverter.class);
+            CommonConfigFragment.setter(connectorConfig).name(getConnectorName()).valueConverter(JsonConverter.class);
             SourceConfigFragment.setter(connectorConfig).distributionType(DistributionType.PARTITION);
 
             final KafkaManager kafkaManager = setupKafka();

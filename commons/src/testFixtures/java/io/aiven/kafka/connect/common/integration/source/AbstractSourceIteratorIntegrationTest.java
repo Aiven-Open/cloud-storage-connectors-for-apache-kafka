@@ -37,7 +37,6 @@ import org.apache.kafka.connect.storage.OffsetStorageReader;
 
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.format.AvroTestDataFixture;
@@ -142,11 +141,11 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
             final int maxTasks, final InputFormat inputFormat) {
         final Map<String, String> configData = createConnectorConfig(localPrefix);
 
-        KafkaFragment.setter(configData).connector(getConnectorClass());
-
         SourceConfigFragment.setter(configData).targetTopic(topic);
 
-        final CommonConfigFragment.Setter setter = CommonConfigFragment.setter(configData).maxTasks(maxTasks);
+        final CommonConfigFragment.Setter setter = CommonConfigFragment.setter(configData)
+                .connector(getConnectorClass())
+                .maxTasks(maxTasks);
         if (taskId > TASK_NOT_SET) {
             setter.taskId(taskId);
         }
@@ -222,7 +221,7 @@ public abstract class AbstractSourceIteratorIntegrationTest<K extends Comparable
         final int taskId = 0;
 
         final Map<String, String> configData = createConfig(topic, taskId, maxTasks, InputFormat.AVRO);
-        KafkaFragment.setter(configData).valueConverter(AvroConverter.class);
+        CommonConfigFragment.setter(configData).valueConverter(AvroConverter.class);
 
         final int numberOfRecords = 5000;
 

@@ -20,6 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 
+import org.apache.kafka.connect.connector.Connector;
+
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
@@ -40,6 +43,7 @@ final class S3SourceConfigTest {
                 .bucketName("the-bucket")
                 .endpoint("AWS_S3_ENDPOINT")
                 .region(Region.US_EAST_1);
+        CommonConfigFragment.setter(props).name("S3SourceConfigTest").connector(Connector.class);
         TransformerFragment.setter(props).inputFormat(InputFormat.AVRO).schemaRegistry("localhost:8081");
         SourceConfigFragment.setter(props).targetTopic("testtopic");
         FileNameFragment.setter(props).template("any-old-file");

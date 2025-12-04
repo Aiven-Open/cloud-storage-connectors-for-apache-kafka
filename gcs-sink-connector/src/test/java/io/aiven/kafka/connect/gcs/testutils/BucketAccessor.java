@@ -128,7 +128,7 @@ public final class BucketAccessor {
         }
     }
 
-    public String readStringContent(final String blobName, final String compression) {
+    public String readStringContent(final String blobName, final CompressionType compression) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         if (cache) {
             return stringContentCache.computeIfAbsent(blobName, k -> readStringContent0(blobName, compression));
@@ -137,10 +137,10 @@ public final class BucketAccessor {
         }
     }
 
-    private String readStringContent0(final String blobName, final String compression) {
+    private String readStringContent0(final String blobName, final CompressionType compression) {
         final byte[] blobBytes = storage.readAllBytes(bucketName, blobName);
         try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
-                InputStream decompressedStream = getDecompressedStream(bais, compression);
+                InputStream decompressedStream = compression.decompress(bais);
                 InputStreamReader reader = new InputStreamReader(decompressedStream, StandardCharsets.UTF_8);
                 BufferedReader bufferedReader = new BufferedReader(reader)) {
             return bufferedReader.readLine();
@@ -149,7 +149,7 @@ public final class BucketAccessor {
         }
     }
 
-    public List<String> readLines(final String blobName, final String compression) {
+    public List<String> readLines(final String blobName, final CompressionType compression) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         if (cache) {
             return linesCache.computeIfAbsent(blobName, k -> readLines0(blobName, compression));
@@ -162,11 +162,11 @@ public final class BucketAccessor {
         return storage.readAllBytes(bucketName, blobName);
     }
 
-    private List<String> readLines0(final String blobName, final String compression) {
+    private List<String> readLines0(final String blobName, final CompressionType compression) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         final byte[] blobBytes = storage.readAllBytes(bucketName, blobName);
         try (ByteArrayInputStream bais = new ByteArrayInputStream(blobBytes);
-                InputStream decompressedStream = getDecompressedStream(bais, compression);
+                InputStream decompressedStream = compression.decompress(bais);
                 InputStreamReader reader = new InputStreamReader(decompressedStream, StandardCharsets.UTF_8);
                 BufferedReader bufferedReader = new BufferedReader(reader)) {
             return bufferedReader.lines().collect(Collectors.toList());
@@ -221,7 +221,7 @@ public final class BucketAccessor {
         return compressionType.decompress(inputStream);
     }
 
-    public List<List<String>> readAndDecodeLines(final String blobName, final String compression,
+    public List<List<String>> readAndDecodeLines(final String blobName, final CompressionType compression,
             final int... fieldsToDecode) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         Objects.requireNonNull(fieldsToDecode, "fieldsToDecode cannot be null");
@@ -234,7 +234,7 @@ public final class BucketAccessor {
         }
     }
 
-    private List<List<String>> readAndDecodeLines0(final String blobName, final String compression,
+    private List<List<String>> readAndDecodeLines0(final String blobName, final CompressionType compression,
             final int[] fieldsToDecode) {
         return readLines(blobName, compression).stream()
                 .map(l -> l.split(","))
@@ -274,7 +274,7 @@ public final class BucketAccessor {
         return result;
     }
 
-    public List<Record> decodeToRecords(final String blobName, final String compression) {
+    public List<Record> decodeToRecords(final String blobName, final CompressionType compression) {
         return readLines(blobName, compression).stream()
                 .map(l -> l.split(","))
                 .map(this::decodeRequiredFieldsToRecord)

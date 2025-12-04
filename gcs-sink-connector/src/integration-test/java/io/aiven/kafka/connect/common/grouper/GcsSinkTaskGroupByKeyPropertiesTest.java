@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.sink.SinkRecord;
 
+import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
@@ -84,7 +85,7 @@ final class GcsSinkTaskGroupByKeyPropertiesTest extends PbtBase {
             final SinkRecord record = lastRecordPerKey.get(entry.getKey());
             final String filename = createFilename(entry.getKey());
 
-            final List<String> lines = testBucketAccessor.readLines(filename, "none");
+            final List<String> lines = testBucketAccessor.readLines(filename, CompressionType.NONE);
             assertThat(lines).hasSize(1);
 
             final String expectedKeySubstring;

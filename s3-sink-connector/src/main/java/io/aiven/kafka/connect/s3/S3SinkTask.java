@@ -169,7 +169,7 @@ public final class S3SinkTask extends SinkTask {
         final var prefix = config.getPrefixTemplate()
                 .instance()
                 .bindVariable(FilenameTemplateVariable.TIMESTAMP.name,
-                        new StableTimeFormatter(config.getTimestampSource()).apply(record))
+                        new StableTimeFormatter(config.getFilenameTimestampSource()).apply(record))
                 .bindVariable(FilenameTemplateVariable.PARTITION.name, () -> record.kafkaPartition().toString())
                 .bindVariable(FilenameTemplateVariable.START_OFFSET.name,
                         parameter -> OldFullKeyFormatters.KAFKA_OFFSET.apply(record, parameter))

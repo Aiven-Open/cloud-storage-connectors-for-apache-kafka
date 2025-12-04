@@ -39,8 +39,11 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import io.aiven.kafka.connect.azure.sink.testutils.AzureBlobAccessor;
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.storage.blob.BlobClient;
@@ -53,7 +56,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -89,8 +92,9 @@ final class AzureBlobSinkTaskTest {
         properties = new HashMap<>();
         properties.put("azure.storage.connection.string", "UseDevelopmentStorage=true");
         properties.put("azure.storage.container.name", TEST_CONTAINER_NAME);
-        properties.put("file.name.template", "{{topic}}-{{partition}}-{{start_offset}}");
-        properties.put("format.output.fields", "value");
+        FileNameFragment.setter(properties).template("{{topic}}-{{partition}}-{{start_offset}}");
+        OutputFormatFragment.setter(properties).withOutputFields(OutputFieldType.VALUE);
+        CommonConfigFragment.setter(properties).name("testing-name").connector(AzureBlobSinkConnector.class);
 
         // Initialize the task with the mocked dependencies
         task = new AzureBlobSinkTask(properties, blobServiceClient);
@@ -114,12 +118,12 @@ final class AzureBlobSinkTaskTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void basic(final String compression) {
+    @EnumSource(CompressionType.class)
+    void basic(final CompressionType compression) {
         final List<BlobItem> blobItems = generateTestBlobItems(compression);
         when(pagedIterable.spliterator()).thenReturn(blobItems.spliterator());
         when(blobContainerClient.listBlobs()).thenReturn(pagedIterable);
-        FileNameFragment.setter(properties).fileCompression(CompressionType.forName(compression));
+        FileNameFragment.setter(properties).fileCompression(compression);
         task = new AzureBlobSinkTask(properties, blobServiceClient);
 
         final List<SinkRecord> records = createBasicRecords();
@@ -133,7 +137,7 @@ final class AzureBlobSinkTaskTest {
         assertThat(testBlobAccessor.getBlobNames()).containsAll(blobNameWithExtensionValuesMap.keySet());
     }
 
-    private List<BlobItem> generateTestBlobItems(final String compression) {
+    private List<BlobItem> generateTestBlobItems(final CompressionType compression) {
         // Create mock BlobItems for different compression types
         final List<BlobItem> blobItems = new ArrayList<>();
 
@@ -147,17 +151,9 @@ final class AzureBlobSinkTaskTest {
         return blobItems;
     }
 
-    private BlobItem createMockBlobItem(final String name, final String compression) {
+    private BlobItem createMockBlobItem(final String name, final CompressionType compression) {
         final BlobItem blobItem = mock(BlobItem.class);
-        if ("none".equals(compression)) {
-            when(blobItem.getName()).thenReturn(name);
-        } else if ("gzip".equals(compression)) {
-            when(blobItem.getName()).thenReturn(name + ".gz");
-        } else if ("zstd".equals(compression)) {
-            when(blobItem.getName()).thenReturn(name + ".zst");
-        } else {
-            when(blobItem.getName()).thenReturn(name + "." + compression);
-        }
+        when(blobItem.getName()).thenReturn(name + compression.extension());
         return blobItem;
     }
 
@@ -180,9 +176,8 @@ final class AzureBlobSinkTaskTest {
                 createRecord("topic0", 2, "key9", "value9", 51, 1009));
     }
 
-    private Map<String, Collection<List<String>>> buildBlobNameValuesMap(final String compression) {
-        final CompressionType compressionType = CompressionType.forName(compression);
-        final String extension = compressionType.extension();
+    private Map<String, Collection<List<String>>> buildBlobNameValuesMap(final CompressionType compression) {
+        final String extension = compression.extension();
         final Map<String, Collection<List<String>>> blobNameValuesMap = new HashMap<>();
         blobNameValuesMap.put("topic0-0-10" + extension, toCollectionOfLists("value0", "value5"));
         blobNameValuesMap.put("topic0-1-20" + extension, toCollectionOfLists("value1", "value6"));
