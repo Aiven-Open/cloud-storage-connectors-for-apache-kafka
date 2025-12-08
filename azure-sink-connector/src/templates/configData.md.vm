@@ -4,10 +4,11 @@
 The complete Azure Blob source configuration file
 
 #foreach ($section in $sections)
-${esc.hash}${esc.hash} ${section.displayName}
- - Default value: ${section.getDefaultValue()|"none"}
+${esc.hash}${esc.hash} ${section.displayName} #if (${section.displayName} != ${section.name}) (${section.name}) #end
+ - Group: ${section.group|"--none--"}
+ - Default value: ${section.getDefaultValue()|"--none--"}
  - Type:  $section.type
- - Valid values:  ${section.validator|"no restrictions"}
+ - Valid values:  ${section.validator|"--no restrictions--"}
  - Importance: $section.importance
 
  ${esc.markdown($section.documentation)}

@@ -272,8 +272,7 @@ tasks.register<JavaExec>("buildConfigMd") {
           .plus(sourceSets.main.get().runtimeClasspath)
   args =
       listOf(
-          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig",
-          "configDef",
+          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfigDef",
           "src/templates/configData.md.vm",
           "build/site/markdown/azure-sink-connector/AzureSinkConfig.md")
 }
@@ -288,8 +287,7 @@ tasks.register<JavaExec>("buildConfigYml") {
           .plus(sourceSets.main.get().runtimeClasspath)
   args =
       listOf(
-          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig",
-          "configDef",
+          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfigDef",
           "src/templates/configData.yml.vm",
           "build/site/azure-sink-connector/AzureSinkConfig.yml")
 }

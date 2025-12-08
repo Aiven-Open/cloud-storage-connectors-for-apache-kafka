@@ -4,12 +4,12 @@
 The complete GCS sink configuration file
 
 #foreach ($section in $sections)
-${esc.hash}${esc.hash} ${section.displayName}
- - Default value: ${section.getDefaultValue()|"none"}
- - Type:  $section.type
- - Valid values:  ${section.validator|"no restrictions"}
- - Importance: $section.importance
+    ${esc.hash}${esc.hash} ${section.displayName} #if (${section.displayName} != ${section.name}) (${section.name}) #end
+- Group: ${section.group|"--none--"}
+- Default value: ${section.getDefaultValue()|"--none--"}
+- Type:  $section.type
+- Valid values:  ${section.validator|"--no restrictions--"}
+- Importance: $section.importance
 
-${esc.markdown($section.documentation)}
-
+    ${esc.markdown($section.documentation)}
 #end
