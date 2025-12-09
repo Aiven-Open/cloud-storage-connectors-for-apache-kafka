@@ -34,8 +34,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
@@ -129,6 +131,7 @@ class TransformerStreamingTest {
     static Stream<Arguments> testData() throws IOException {
         final List<Arguments> lst = new ArrayList<>();
         final Map<String, String> props = new HashMap<>();
+        CommonConfigFragment.setter(props).name("testing name").connector(Connector.class);
         OutputFormatFragment.setter(props).withFormatType(FormatType.AVRO);
         FileNameFragment.setter(props).template(".*");
 

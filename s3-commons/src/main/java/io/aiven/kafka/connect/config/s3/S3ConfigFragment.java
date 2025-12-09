@@ -18,10 +18,10 @@ package io.aiven.kafka.connect.config.s3;
 
 import java.net.URI;
 import java.time.Duration;
-import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.ConfigDef;
@@ -31,13 +31,14 @@ import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.commons.collections.Scale;
 import io.aiven.kafka.connect.common.config.AbstractFragmentSetter;
+import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.ConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.config.validators.NonEmptyPassword;
+import io.aiven.kafka.connect.common.config.validators.PredicateGatedValidator;
 import io.aiven.kafka.connect.common.config.validators.ScaleValidator;
 import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
@@ -101,10 +102,7 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_S3_REGION = "aws_s3_region";
     @Deprecated
     public static final String AWS_S3_PREFIX = "aws_s3_prefix";
-    // FIXME since we support so far both old style and new style of property names
-    // Importance was set to medium,
-    // as soon we will migrate to new values it must be set to HIGH
-    // same for default value
+
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     public static final String AWS_CREDENTIALS_PROVIDER_CONFIG = "aws.credentials.provider";
@@ -120,7 +118,7 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_S3_ENDPOINT_CONFIG = "aws.s3.endpoint";
     public static final String AWS_S3_REGION_CONFIG = "aws.s3.region";
     public static final String AWS_S3_PART_SIZE = "aws.s3.part.size.bytes";
-
+    @Deprecated
     public static final String AWS_S3_PREFIX_CONFIG = "aws.s3.prefix";
     public static final String AWS_STS_ROLE_ARN = "aws.sts.role.arn";
     public static final String AWS_STS_ROLE_EXTERNAL_ID = "aws.sts.role.external.id";
@@ -173,6 +171,7 @@ public final class S3ConfigFragment extends ConfigFragment {
         addAwsConfigGroup(configDef, isSink);
         addAwsStsConfigGroup(configDef);
         addS3RetryPolicies(configDef);
+        modifyFilenamePrefixDefinition(configDef);
         return configDef;
     }
 
@@ -180,6 +179,23 @@ public final class S3ConfigFragment extends ConfigFragment {
         return new Setter(configData);
     }
 
+    private static void modifyFilenamePrefixDefinition(final ConfigDef configDef) {
+        final ConfigDef.ConfigKey oldKey = configDef.configKeys().get(FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+        if (oldKey != null) {
+            configDef.configKeys().remove(FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+            configDef.define(oldKey.name, oldKey.type, null,
+                    ConfigDef.CompositeValidator.of(new ConfigDef.NonEmptyString(), oldKey.validator),
+                    oldKey.importance, oldKey.documentation, oldKey.group, oldKey.orderInGroup, oldKey.width,
+                    oldKey.displayName);
+        }
+    }
+
+    /**
+     * Set the options with default values from AWS SDK, since they are hidden
+     *
+     * @param configDef
+     *            the configuration definition to update.
+     */
     static void addS3RetryPolicies(final ConfigDef configDef) {
         var retryPolicyGroupCounter = 0;
         configDef.define(AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
@@ -194,6 +210,12 @@ public final class S3ConfigFragment extends ConfigFragment {
                         + AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT + ".",
                 GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, ConfigDef.Width.NONE,
                 AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG);
+        // Comment in AWS SDK for max retries:
+        // Maximum retry limit. Avoids integer overflow issues.
+        //
+        // NOTE: If the value is greater than 30, there can be integer overflow
+        // issues during delay calculation.
+        // in other words we can't use values greater than 30
         configDef.define(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, ConfigDef.Type.INT,
                 S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT, ConfigDef.Range.between(1L, 30), ConfigDef.Importance.MEDIUM,
                 "Maximum retry limit " + "(if the value is greater than 30, "
@@ -238,10 +260,6 @@ public final class S3ConfigFragment extends ConfigFragment {
         configDef.define(AWS_S3_REGION_CONFIG, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
                 ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, ++awsGroupCounter,
                 ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
-
-        configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AWS, ++awsGroupCounter,
-                ConfigDef.Width.NONE, AWS_S3_PREFIX_CONFIG);
 
         configDef.define(FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "AWS S3 Fetch page size", GROUP_AWS, ++awsGroupCounter,
@@ -303,27 +321,33 @@ public final class S3ConfigFragment extends ConfigFragment {
         counter = deprecation(counter, configDef, AWS_S3_BUCKET, AWS_S3_BUCKET_NAME_CONFIG);
         counter = deprecation(counter, configDef, AWS_S3_ENDPOINT, AWS_S3_ENDPOINT_CONFIG);
         counter = deprecation(counter, configDef, AWS_S3_REGION, AWS_S3_REGION_CONFIG);
-        deprecation(counter, configDef, AWS_S3_PREFIX, AWS_S3_PREFIX_CONFIG);
+        if (isSink) {
+            counter = deprecation(counter, configDef, AWS_S3_PREFIX, FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+            deprecation(counter, configDef, AWS_S3_PREFIX_CONFIG, FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+        } else {
+            counter = deprecation(counter, configDef, AWS_S3_PREFIX, FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+            deprecation(counter, configDef, AWS_S3_PREFIX_CONFIG, FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
+        }
 
         // deprecations in different groups
 
         configDef.define(OUTPUT_COMPRESSION, ConfigDef.Type.STRING, null,
-                new UsageLoggingValidator(FileNameFragment.COMPRESSION_TYPE_VALIDATOR,
+                new UsageLoggingValidator(
+                        new PredicateGatedValidator(Objects::nonNull, FileNameFragment.COMPRESSION_TYPE_VALIDATOR),
                         (name, value) -> logDeprecated(LOGGER, name, FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG)),
                 ConfigDef.Importance.MEDIUM, "Output compression.", FileNameFragment.GROUP_NAME, 50,
                 ConfigDef.Width.SHORT, OUTPUT_COMPRESSION);
 
-        configDef.define(TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(),
-                new UsageLoggingValidator(new TimeZoneValidator(),
-                        (n, v) -> logDeprecated(LOGGER, TIMESTAMP_TIMEZONE,
-                                FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE)),
+        configDef.define(TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, null, new UsageLoggingValidator(
+                new PredicateGatedValidator(Objects::nonNull, new TimeZoneValidator()),
+                (n, v) -> logDeprecated(LOGGER, TIMESTAMP_TIMEZONE, FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE)),
                 ConfigDef.Importance.LOW,
                 "Specifies the timezone in which the dates and time for the timestamp variable will be treated. "
                         + "Use standard shot and long names. Default is UTC",
                 FileNameFragment.GROUP_NAME, 51, ConfigDef.Width.SHORT, TIMESTAMP_TIMEZONE);
 
-        configDef.define(TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
-                new UsageLoggingValidator(new TimestampSourceValidator(),
+        configDef.define(TIMESTAMP_SOURCE, ConfigDef.Type.STRING, null,
+                new UsageLoggingValidator(new PredicateGatedValidator(Objects::nonNull, new TimestampSourceValidator()),
                         (n, v) -> logDeprecated(LOGGER, TIMESTAMP_SOURCE, FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE)),
                 ConfigDef.Importance.LOW, "Specifies the the timestamp variable source. Default is wall-clock.",
                 FileNameFragment.GROUP_NAME, 52, ConfigDef.Width.SHORT, TIMESTAMP_SOURCE);
@@ -516,43 +540,25 @@ public final class S3ConfigFragment extends ConfigFragment {
      */
     @Deprecated
     public com.amazonaws.regions.Region getAwsS3Region() {
-        // we have priority of properties if old one not set or both old and new one set
-        // the new property value will be selected
         if (Objects.nonNull(getString(AWS_S3_REGION_CONFIG))) {
             return RegionUtils.getRegion(getString(AWS_S3_REGION_CONFIG));
-        } else if (Objects.nonNull(getString(AWS_S3_REGION))) {
-            return RegionUtils.getRegion(getString(AWS_S3_REGION));
-        } else {
-            return RegionUtils.getRegion(Regions.US_EAST_1.getName());
         }
+        return RegionUtils.getRegion(Regions.US_EAST_1.getName());
     }
 
     public Region getAwsS3RegionV2() {
-        // we have priority of properties if old one not set or both old and new one set
-        // the new property value will be selected
         if (Objects.nonNull(getString(AWS_S3_REGION_CONFIG))) {
             return Region.of(getString(AWS_S3_REGION_CONFIG));
-        } else if (Objects.nonNull(getString(AWS_S3_REGION))) {
-            return Region.of(getString(AWS_S3_REGION));
-        } else {
-            return Region.of(Regions.US_EAST_1.getName());
         }
+        return Region.of(Regions.US_EAST_1.getName());
     }
 
     public String getAwsS3BucketName() {
-        return Objects.nonNull(getString(AWS_S3_BUCKET_NAME_CONFIG))
-                ? getString(AWS_S3_BUCKET_NAME_CONFIG)
-                : getString(AWS_S3_BUCKET);
+        return getString(AWS_S3_BUCKET_NAME_CONFIG);
     }
 
     public String getServerSideEncryptionAlgorithmName() {
         return getString(AWS_S3_SSE_ALGORITHM_CONFIG);
-    }
-
-    public String getAwsS3Prefix() {
-        return Objects.nonNull(getString(AWS_S3_PREFIX_CONFIG))
-                ? getString(AWS_S3_PREFIX_CONFIG)
-                : getString(AWS_S3_PREFIX);
     }
 
     public int getAwsS3PartSize() {
@@ -598,37 +604,75 @@ public final class S3ConfigFragment extends ConfigFragment {
     }
 
     /**
+     * Copies deprecated key data to valid key data if valid key data is not set and deprecated key data is valid.
+     *
+     * @param properties
+     *            the map of properties.
+     * @param deprecatedKey
+     *            the deprecated key
+     * @param depFilter
+     *            if {@code true} this the deprecated key value is valid.
+     * @param validKey
+     *            the valid key.
+     * @param mayOverwrite
+     *            if {@code true} the valid key data may be overwritten.
+     * @return
+     */
+    private static boolean moveData(final Map<String, String> properties, final String deprecatedKey,
+            final Predicate<String> depFilter, final String validKey, final Predicate<String> mayOverwrite) {
+        // is the deprecatedKey data valid ?
+        if (properties.containsKey(deprecatedKey) && depFilter.test(properties.get(deprecatedKey))) {
+            // should we overwrite the validKey ?
+            if (!properties.containsKey(validKey) || mayOverwrite.test(properties.get(validKey))) {
+                logDeprecated(LOGGER, deprecatedKey, "value of %s is being placed into %s", deprecatedKey, validKey);
+                properties.put(validKey, properties.get(deprecatedKey));
+                return true;
+            } else {
+                logDeprecated(LOGGER, deprecatedKey, validKey);
+            }
+        }
+        return false;
+    }
+
+    /**
      * Handle moving deprecated values.
      *
      * @param properties
      *            the properties to update.
      * @return the updated properties.
      */
-    public static Map<String, String> handleDeprecatedOptions(final Map<String, String> properties) {
+    public static Map<String, String> handleDeprecatedOptions(final Map<String, String> properties,
+            final CompressionType defaultCompression) {
         // we need to have the old OUTPUT_COMPRESSION take priority over the new FILE_COMPRESSION_TYPE_CONFIG
-        final String newValue = properties.get(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG);
-        final String oldValue = properties.get(OUTPUT_COMPRESSION);
-        if (oldValue != null) {
-            logDeprecated(LOGGER, OUTPUT_COMPRESSION, FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG);
-            if (newValue == null) {
-                logDeprecated(LOGGER, OUTPUT_COMPRESSION, "value of %s is being placed into %s", OUTPUT_COMPRESSION,
-                        FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG);
-                properties.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, oldValue);
-            }
+        moveData(properties, OUTPUT_COMPRESSION, Objects::nonNull, FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG,
+                t -> t == null || defaultCompression.name().equalsIgnoreCase(t));
+
+        FileNameFragment.replaceYyyyUppercase(properties, AWS_S3_PREFIX_CONFIG, AWS_S3_PREFIX);
+
+        moveData(properties, AWS_S3_FETCH_BUFFER_SIZE, x -> true, SourceConfigFragment.RING_BUFFER_SIZE, x -> true);
+
+        // ensure that FileNameFragment.FILE_NAME_PREFIX_CONFIG contains the prefix if it is set.
+        // order of precedence: FileNameFragment.FILE_NAME_PREFIX_CONFIG, AWS_S3_PREFIX_CONFIG, AWS_S3_PREFIX
+        if (!moveData(properties, AWS_S3_PREFIX_CONFIG, Objects::nonNull, FileNameFragment.FILE_NAME_PREFIX_CONFIG,
+                x -> x != null && x.isBlank())) {
+            moveData(properties, AWS_S3_PREFIX, Objects::nonNull, FileNameFragment.FILE_NAME_PREFIX_CONFIG,
+                    x -> x != null && x.isBlank());
         }
 
-        FileNameFragment.replaceYyyyUppercase(AWS_S3_PREFIX_CONFIG, properties);
+        moveData(properties, OUTPUT_FIELDS, Objects::nonNull, OutputFormatFragment.FORMAT_OUTPUT_FIELDS_CONFIG,
+                Objects::isNull);
 
-        if (properties.containsKey(AWS_S3_FETCH_BUFFER_SIZE)) {
-            logDeprecated(LOGGER, AWS_S3_FETCH_BUFFER_SIZE, SourceConfigFragment.RING_BUFFER_SIZE);
-            if (!properties.containsKey(SourceConfigFragment.RING_BUFFER_SIZE)) {
-                logDeprecated(LOGGER, AWS_S3_FETCH_BUFFER_SIZE, "value of %s is being placed into %s",
-                        AWS_S3_FETCH_BUFFER_SIZE, SourceConfigFragment.RING_BUFFER_SIZE);
-                SourceConfigFragment.setter(properties)
-                        .ringBufferSize(Integer.parseInt(properties.get(AWS_S3_FETCH_BUFFER_SIZE)));
-            }
-            // properties.remove(AWS_S3_FETCH_BUFFER_SIZE);
-        }
+        moveData(properties, TIMESTAMP_TIMEZONE, Objects::nonNull, FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE,
+                Objects::isNull);
+
+        moveData(properties, TIMESTAMP_SOURCE, Objects::nonNull, FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE,
+                Objects::isNull);
+
+        moveData(properties, AWS_ACCESS_KEY_ID, Objects::nonNull, AWS_ACCESS_KEY_ID_CONFIG, Objects::isNull);
+        moveData(properties, AWS_SECRET_ACCESS_KEY, Objects::nonNull, AWS_SECRET_ACCESS_KEY_CONFIG, Objects::isNull);
+        moveData(properties, AWS_S3_BUCKET, Objects::nonNull, AWS_S3_BUCKET_NAME_CONFIG, Objects::isNull);
+        moveData(properties, AWS_S3_ENDPOINT, Objects::nonNull, AWS_S3_ENDPOINT_CONFIG, Objects::isNull);
+        moveData(properties, AWS_S3_REGION, Objects::nonNull, AWS_S3_REGION_CONFIG, Objects::isNull);
 
         return properties;
     }

@@ -33,7 +33,17 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.connect.converters.ByteArrayConverter;
+import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.storage.StringConverter;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 
 import org.apache.avro.generic.GenericRecord;
@@ -66,12 +76,15 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
     @Test
     void allOutputFields() throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
-        connectorConfig.put("format.output.fields", "key,value,offset,timestamp,headers");
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET,
+                        OutputFieldType.TIMESTAMP, OutputFieldType.HEADERS)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
+        CommonConfigFragment.setter(connectorConfig)
+                .keyConverter(StringConverter.class)
+                .valueConverter(StringConverter.class);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -121,12 +134,15 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
     @Test
     void allOutputFieldsJsonValueAsString() throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
-        connectorConfig.put("format.output.fields", "key,value,offset,timestamp,headers");
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET,
+                        OutputFieldType.TIMESTAMP, OutputFieldType.HEADERS)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
+        CommonConfigFragment.setter(connectorConfig)
+                .keyConverter(StringConverter.class)
+                .valueConverter(StringConverter.class);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -178,13 +194,15 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
     @CsvSource({ "true, {\"value\": {\"name\": \"%s\"}} ", "false, {\"name\": \"%s\"}" })
     void jsonValue(final String envelopeEnabled, final String expectedOutput)
             throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
-        connectorConfig.put("format.output.fields", "value");
-        connectorConfig.put("format.output.envelope", envelopeEnabled);
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.VALUE)
+                .envelopeEnabled(true)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
+        CommonConfigFragment.setter(connectorConfig)
+                .keyConverter(StringConverter.class)
+                .valueConverter(JsonConverter.class);
         createConnector(connectorConfig);
 
         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
@@ -235,12 +253,14 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
     @Test
     void schemaChanged() throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
-        connectorConfig.put("format.output.fields", "value");
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.VALUE)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
+        CommonConfigFragment.setter(connectorConfig)
+                .keyConverter(StringConverter.class)
+                .valueConverter(JsonConverter.class);
         createConnector(connectorConfig);
 
         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
@@ -290,13 +310,16 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
         }
         assertThat(blobContents).containsExactlyInAnyOrderElementsOf(expectedRecords);
     }
-    private Map<String, String> basicConnectorConfig(final String compression) {
+    private Map<String, String> basicConnectorConfig(final CompressionType compression) {
         final Map<String, String> config = new HashMap<>();
-        config.put("name", CONNECTOR_NAME);
-        config.put("connector.class", GcsSinkConnector.class.getName());
-        config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put("tasks.max", "1");
+        CommonConfigFragment.setter(config)
+                .name(CONNECTOR_NAME)
+                .connector(GcsSinkConnector.class)
+                .keyConverter(ByteArrayConverter.class)
+                .valueConverter(ByteArrayConverter.class);
+        CommonConfigFragment.setter(config).maxTasks(1);
+        FileNameFragment.setter(config).fileCompression(compression).prefix(gcsPrefix);
+        OutputFormatFragment.setter(config).withFormatType(FormatType.PARQUET);
         if (gcsCredentialsPath != null) {
             config.put("gcs.credentials.path", gcsCredentialsPath);
         }
@@ -307,10 +330,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
             config.put("gcs.endpoint", gcsEndpoint);
         }
         config.put("gcs.bucket.name", testBucketName);
-        config.put("file.name.prefix", gcsPrefix);
         config.put("topics", testTopic0 + "," + testTopic1);
-        config.put("file.compression.type", compression);
-        config.put("format.output.type", "parquet");
         return config;
     }
 

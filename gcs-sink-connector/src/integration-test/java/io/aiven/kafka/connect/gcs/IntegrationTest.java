@@ -35,8 +35,17 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.connect.converters.ByteArrayConverter;
+import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.storage.StringConverter;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -46,6 +55,7 @@ import com.github.tomakehurst.wiremock.matching.UrlPattern;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -67,10 +77,10 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
 
     @ParameterizedTest
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void basicTest(final String compression) throws ExecutionException, InterruptedException {
+    void basicTest(final CompressionType compression) throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("file.compression.type", compression);
+        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
+        FileNameFragment.setter(connectorConfig).fileCompression(compression);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -121,13 +131,14 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void groupByTimestampVariable(final String compression) throws ExecutionException, InterruptedException {
+    @EnumSource(CompressionType.class)
+    void groupByTimestampVariable(final CompressionType compression) throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("file.compression.type", compression);
-        connectorConfig.put("file.name.template", "{{topic}}-{{partition}}-{{start_offset}}-"
-                + "{{timestamp:unit=yyyy}}-{{timestamp:unit=MM}}-{{timestamp:unit=dd}}");
+        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
+        FileNameFragment.setter(connectorConfig)
+                .fileCompression(compression)
+                .template("{{topic}}-{{partition}}-{{start_offset}}-"
+                        + "{{timestamp:unit=yyyy}}-{{timestamp:unit=MM}}-{{timestamp:unit=dd}}");
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -179,13 +190,14 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void oneFilePerRecordWithPlainValues(final String compression) throws ExecutionException, InterruptedException {
+    @EnumSource(CompressionType.class)
+    void oneFilePerRecordWithPlainValues(final CompressionType compression)
+            throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        connectorConfig.put("format.output.fields", "value");
-        connectorConfig.put("file.compression.type", compression);
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("file.max.records", "1");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.VALUE)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
+        FileNameFragment.setter(connectorConfig).fileCompression(compression).maxRecordsPerFile(1);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -227,14 +239,14 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void groupByKey(final String compression) throws ExecutionException, InterruptedException {
+    @EnumSource(CompressionType.class)
+    void groupByKey(final CompressionType compression) throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        final CompressionType compressionType = CompressionType.forName(compression);
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("file.compression.type", compression);
-        connectorConfig.put("file.name.template", "{{key}}" + compressionType.extension());
+        CommonConfigFragment.setter(connectorConfig).keyConverter(StringConverter.class);
+        FileNameFragment.setter(connectorConfig)
+                .fileCompression(compression)
+                .template("{{key}}" + compression.extension());
+        OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
         createConnector(connectorConfig);
 
         final Map<TopicPartition, List<String>> keysPerTopicPartition = new HashMap<>();
@@ -280,7 +292,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                     .stream()
                     .map(fields -> String.join(",", fields))
                     .collect(Collectors.joining());
-            final String keyInBlobName = blobName.replace(gcsPrefix, "").replace(compressionType.extension(), "");
+            final String keyInBlobName = blobName.replace(gcsPrefix, "").replace(compression.extension(), "");
             final String value;
             final String expectedBlobContent;
             if ("null".equals(keyInBlobName)) {
@@ -295,17 +307,18 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     }
 
     @Test
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     void jsonlOutput() throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        final String compression = "none";
-        final String contentType = "jsonl";
-        connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
-        connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compression);
-        connectorConfig.put("format.output.type", contentType);
+        final CompressionType compression = CompressionType.NONE;
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE)
+                .withFormatType(FormatType.JSONL);
+        CommonConfigFragment.setter(connectorConfig)
+                .keyConverter(StringConverter.class)
+                .valueConverter(JsonConverter.class);
+        FileNameFragment.setter(connectorConfig).fileCompression(compression);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -333,10 +346,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
 
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final List<String> items = new ArrayList<>(testBucketAccessor.readLines(blobName, compression)); // NOPMD
-                                                                                                             // instantiation
-                                                                                                             // in a
-                                                                                                             // loop
+            final List<String> items = new ArrayList<>(testBucketAccessor.readLines(blobName, compression));
             blobContents.put(blobName, items);
         }
 
@@ -347,7 +357,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 final String value = "[{" + "\"name\":\"user-" + cnt + "\"}]";
                 cnt += 1;
 
-                final String blobName = getBlobName(partition, 0, "none");
+                final String blobName = getBlobName(partition, 0, compression);
                 final String actualLine = blobContents.get(blobName).get(i);
                 final String expectedLine = "{\"value\":" + value + ",\"key\":\"" + key + "\"}";
                 assertThat(actualLine).isEqualTo(expectedLine);
@@ -359,16 +369,17 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     void jsonOutput() throws ExecutionException, InterruptedException {
         final var faultyProxy = enableFaultyProxy();
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        final String compression = "none";
-        final String contentType = "json";
+        final CompressionType compression = CompressionType.NONE;
         connectorConfig.put("gcs.endpoint", faultyProxy.baseUrl());
-        connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE)
+                .withFormatType(FormatType.JSON);
+        CommonConfigFragment.setter(connectorConfig)
+                .keyConverter(StringConverter.class)
+                .valueConverter(JsonConverter.class);
+        FileNameFragment.setter(connectorConfig).fileCompression(compression);
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compression);
-        connectorConfig.put("format.output.type", contentType);
         createConnector(connectorConfig);
 
         final int numEpochs = 10;
@@ -436,11 +447,12 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
 
     private Map<String, String> basicConnectorConfig() {
         final Map<String, String> config = new HashMap<>();
-        config.put("name", CONNECTOR_NAME);
-        config.put("connector.class", GcsSinkConnector.class.getName());
-        config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put("tasks.max", "1");
+        CommonConfigFragment.setter(config)
+                .name(CONNECTOR_NAME)
+                .connector(GcsSinkConnector.class)
+                .valueConverter(ByteArrayConverter.class)
+                .keyConverter(ByteArrayConverter.class);
+        CommonConfigFragment.setter(config).maxTasks(1);
         if (gcsCredentialsPath != null) {
             config.put("gcs.credentials.path", gcsCredentialsPath);
         }
@@ -451,7 +463,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
             config.put("gcs.endpoint", gcsEndpoint);
         }
         config.put("gcs.bucket.name", testBucketName);
-        config.put("file.name.prefix", gcsPrefix);
+        FileNameFragment.setter(config).prefix(gcsPrefix);
         config.put("topics", testTopic0 + "," + testTopic1);
         return config;
     }

@@ -34,6 +34,7 @@ import java.util.stream.Stream;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FormatType;
@@ -41,6 +42,7 @@ import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 
+import io.confluent.connect.avro.AvroConverter;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableByteArrayInput;
@@ -287,12 +289,12 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     @Test
     void jsonlOutput() throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        final String compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         OutputFormatFragment.setter(connectorConfig)
                 .withFormatType(FormatType.JSONL)
                 .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
                 .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
-        FileNameFragment.setter(connectorConfig).fileCompression(CompressionType.NONE);
+        FileNameFragment.setter(connectorConfig).fileCompression(compression);
 
         createConnector(connectorConfig);
 
@@ -317,7 +319,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 final String value = "{" + "\"name\":\"user-" + cnt + "\"}";
                 cnt += 1;
 
-                final String blobName = getBlobName(partition, 0, "none");
+                final String blobName = getBlobName(partition, 0, compression);
                 final String actualLine = blobContents.get(blobName).get(i);
                 final String expectedLine = "{\"value\":" + value + ",\"key\":\"" + key + "\"}";
                 assertThat(actualLine).isEqualTo(expectedLine);
@@ -327,20 +329,21 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
 
     private Map<String, String> basicConnectorConfig() {
         final Map<String, String> config = new HashMap<>();
-        config.put(AzureBlobSinkConfig.NAME_CONFIG, CONNECTOR_NAME);
-        config.put("connector.class", AzureBlobSinkConnector.class.getName());
-        config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
+        CommonConfigFragment.setter(config)
+                .name(CONNECTOR_NAME)
+                .connector(AzureBlobSinkConnector.class)
+                .keyConverter(AvroConverter.class)
+                .valueConverter(AvroConverter.class)
+                .maxTasks(1);
+        FileNameFragment.setter(config).prefix(azurePrefix);
         config.put("key.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         config.put("value.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        config.put("tasks.max", "1");
         if (useFakeAzure()) {
             config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONNECTION_STRING_CONFIG, azureEndpoint);
         } else {
             config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONNECTION_STRING_CONFIG, azureConnectionString);
         }
         config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONTAINER_NAME_CONFIG, testContainerName);
-        config.put(AzureBlobSinkConfig.FILE_NAME_PREFIX_CONFIG, azurePrefix);
         config.put("topics", testTopic0 + "," + testTopic1);
         return config;
     }

@@ -34,8 +34,15 @@ import java.util.stream.Stream;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 
+import io.confluent.connect.avro.AvroConverter;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableByteArrayInput;
@@ -277,11 +284,12 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     @Test
     void jsonlOutput() throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
-        final String compression = "none";
-        connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("file.compression.type", compression);
-        connectorConfig.put("format.output.type", "jsonl");
+        final CompressionType compression = CompressionType.NONE;
+        FileNameFragment.setter(connectorConfig).fileCompression(compression);
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE)
+                .withFormatType(FormatType.JSONL);
         createConnector(connectorConfig);
 
         final int recordCountPerPartition = 10;
@@ -306,7 +314,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
                 final String value = "{" + "\"name\":\"user-" + cnt + "\"}";
                 cnt += 1;
 
-                final String blobName = getBlobName(partition, 0, "none");
+                final String blobName = getBlobName(partition, 0, compression);
                 final String actualLine = blobContents.get(blobName).get(i);
                 final String expectedLine = "{\"value\":" + value + ",\"key\":\"" + key + "\"}";
                 assertThat(actualLine).isEqualTo(expectedLine);
@@ -316,13 +324,14 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
 
     private Map<String, String> basicConnectorConfig() {
         final Map<String, String> config = new HashMap<>();
-        config.put("name", CONNECTOR_NAME);
-        config.put("connector.class", GcsSinkConnector.class.getName());
-        config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
+        CommonConfigFragment.setter(config)
+                .name(CONNECTOR_NAME)
+                .connector(GcsSinkConnector.class)
+                .keyConverter(AvroConverter.class)
+                .valueConverter(AvroConverter.class);
+        CommonConfigFragment.setter(config).maxTasks(1);
         config.put("key.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         config.put("value.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        config.put("tasks.max", "1");
         if (gcsCredentialsPath != null) {
             config.put("gcs.credentials.path", gcsCredentialsPath);
         }
@@ -333,7 +342,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
             config.put("gcs.endpoint", gcsEndpoint);
         }
         config.put("gcs.bucket.name", testBucketName);
-        config.put("file.name.prefix", gcsPrefix);
+        FileNameFragment.setter(config).prefix(gcsPrefix);
         config.put("topics", testTopic0 + "," + testTopic1);
         return config;
     }

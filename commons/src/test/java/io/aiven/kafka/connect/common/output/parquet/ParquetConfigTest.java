@@ -21,8 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Collections;
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.jupiter.api.Test;
@@ -46,11 +46,11 @@ class ParquetConfigTest {
 
     @Test
     void testConvertCompressionTypeToParquetCompressorName() {
-        assertThat(new ParquetConfig(Map.of(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name))
+        assertThat(new ParquetConfig(Map.of(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name))
                 .compressionCodecName()).isEqualTo(CompressionCodecName.UNCOMPRESSED);
         assertThat(new ParquetConfig(Collections.emptyMap()).compressionCodecName())
                 .isEqualTo(CompressionCodecName.UNCOMPRESSED);
-        assertThat(new ParquetConfig(Map.of(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.ZSTD.name))
+        assertThat(new ParquetConfig(Map.of(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.ZSTD.name))
                 .compressionCodecName()).isEqualTo(CompressionCodecName.ZSTD);
     }
 }

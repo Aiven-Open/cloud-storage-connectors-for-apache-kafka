@@ -18,11 +18,11 @@ package io.aiven.kafka.connect.iam;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.common.Configurable;
 
+import io.aiven.kafka.connect.config.s3.S3ConfigDefDefaults;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -43,19 +43,18 @@ final class AwsCredentialV2ProviderFactoryTest {
     @BeforeEach
     public void setUp() {
         factory = new AwsCredentialProviderFactory();
-        props = new HashMap<>();
-        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "any-bucket");
+        props = S3ConfigDefDefaults.defaultProperties();
     }
 
     @Test
     void createsStsCredentialProviderIfSpecified() {
-
-        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
-        props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
-        props.put(S3ConfigFragment.AWS_STS_CONFIG_ENDPOINT, "https://sts.us-east-1.amazonaws.com");
+        S3ConfigFragment.setter(props)
+                .accessKeyId("blah-blah-blah")
+                .accessKeySecret("blah-blah-blah")
+                .stsRoleArn("arn:aws:iam::12345678910:role/S3SinkTask")
+                .stsRoleSessionName("SESSION_NAME")
+                .region(Region.US_EAST_1)
+                .stsEndpoint("https://sts.us-east-1.amazonaws.com");
 
         final AwsCredentialTestingConfig config = new AwsCredentialTestingConfig(props);
 
@@ -65,8 +64,7 @@ final class AwsCredentialV2ProviderFactoryTest {
 
     @Test
     void createStaticCredentialProviderByDefault() {
-        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        S3ConfigFragment.setter(props).accessKeyId("blah-blah-blah").accessKeySecret("blah-blah-blah");
 
         final AwsCredentialTestingConfig config = new AwsCredentialTestingConfig(props);
 
@@ -84,7 +82,7 @@ final class AwsCredentialV2ProviderFactoryTest {
 
     @Test
     void customCredentialProviderTest() {
-        props.put(S3ConfigFragment.AWS_CREDENTIALS_PROVIDER_CONFIG, DummyCredentialsProvider.class.getName());
+        S3ConfigFragment.setter(props).credentialsProvider(DummyCredentialsProvider.class.getName());
         final AwsCredentialTestingConfig config = new AwsCredentialTestingConfig(props);
 
         final var credentialProvider = factory.getAwsV2Provider(config.getS3ConfigFragment());

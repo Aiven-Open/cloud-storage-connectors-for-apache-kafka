@@ -53,6 +53,7 @@ import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.gcs.config.GcsSinkConfigDefaults;
 import io.aiven.kafka.connect.gcs.testutils.BucketAccessor;
 import io.aiven.kafka.connect.gcs.testutils.Record;
 import io.aiven.kafka.connect.gcs.testutils.Utils;
@@ -139,7 +140,7 @@ final class GcsSinkTaskTest {
         storage = LocalStorageHelper.getOptions().getService();
         testBucketAccessor = new BucketAccessor(storage, TEST_BUCKET);
 
-        properties = new HashMap<>();
+        properties = GcsSinkConfigDefaults.defaultProperties();
         properties.put(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, TEST_BUCKET);
     }
 
@@ -335,7 +336,7 @@ final class GcsSinkTaskTest {
         task.flush(null);
 
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension());
-        assertThat(readRawLinesFromBlob("topic0-0-10" + compressionType.extension(), compressionType.name()))
+        assertThat(readRawLinesFromBlob("topic0-0-10" + compressionType.extension(), compressionType))
                 .containsExactly(",,,10", ",,,11", ",,,12");
     }
 
@@ -396,8 +397,9 @@ final class GcsSinkTaskTest {
         final var task = new GcsSinkTask();
         task.initialize(mockedContext);
 
-        final var props = Map.of("gcs.bucket.name", "the_bucket", "gcs.credentials.path",
-                Thread.currentThread().getContextClassLoader().getResource("test_gcs_credentials.json").getPath());
+        final var props = GcsSinkConfigDefaults.defaultProperties(Map.of("gcs.bucket.name", "the_bucket",
+                "gcs.credentials.path",
+                Thread.currentThread().getContextClassLoader().getResource("test_gcs_credentials.json").getPath()));
 
         task.start(props);
 
@@ -431,12 +433,14 @@ final class GcsSinkTaskTest {
         final var task = new GcsSinkTask();
         task.initialize(mockedContext);
 
-        final var props = Map.of("gcs.bucket.name", "the_bucket", "gcs.credentials.path",
+        final var props = GcsSinkConfigDefaults.defaultProperties(Map.of("gcs.bucket.name", "the_bucket",
+                "gcs.credentials.path",
                 Thread.currentThread().getContextClassLoader().getResource("test_gcs_credentials.json").getPath(),
-                "kafka.retry.backoff.ms", "1", "gcs.retry.backoff.initial.delay.ms", "2",
-                "gcs.retry.backoff.max.delay.ms", "3", "gcs.retry.backoff.delay.multiplier", "4",
-                "gcs.retry.backoff.total.timeout.ms", "5", "gcs.retry.backoff.max.attempts", "6", "gcs.user.agent",
-                "foo");
+                "kafka.retry.backoff.ms", "1", GcsSinkConfigDef.GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_CONFIG, "2",
+                GcsSinkConfigDef.GCS_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, "3",
+                GcsSinkConfigDef.GCS_RETRY_BACKOFF_DELAY_MULTIPLIER_CONFIG, "4",
+                GcsSinkConfigDef.GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_CONFIG, "5",
+                GcsSinkConfigDef.GCS_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG, "6", GcsSinkConfigDef.GCS_USER_AGENT, "foo"));
 
         task.start(props);
 
@@ -549,11 +553,11 @@ final class GcsSinkTaskTest {
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name()))
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType))
                 .containsExactly("{\"value\":\"value0\",\"key\":\"key0\"}");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name()))
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType))
                 .containsExactly("{\"value\":\"value1\",\"key\":\"key1\"}");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name()))
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType))
                 .containsExactly("{\"value\":\"value2\",\"key\":\"key2\"}");
     }
 
@@ -601,11 +605,11 @@ final class GcsSinkTaskTest {
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name()))
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType))
                 .containsExactly("{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name()))
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType))
                 .containsExactly("{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name()))
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType))
                 .containsExactly("{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}");
     }
 
@@ -631,9 +635,9 @@ final class GcsSinkTaskTest {
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name())).containsExactly("{\"name\":\"name0\"}");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name())).containsExactly("{\"name\":\"name1\"}");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name())).containsExactly("{\"name\":\"name2\"}");
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType)).containsExactly("{\"name\":\"name0\"}");
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType)).containsExactly("{\"name\":\"name1\"}");
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType)).containsExactly("{\"name\":\"name2\"}");
     }
 
     @Test
@@ -659,11 +663,11 @@ final class GcsSinkTaskTest {
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name())).containsExactly("[",
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType)).containsExactly("[",
                 "{\"value\":{\"name\":\"name0\"},\"key\":\"key0\"}", "]");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name())).containsExactly("[",
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType)).containsExactly("[",
                 "{\"value\":{\"name\":\"name1\"},\"key\":\"key1\"}", "]");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name())).containsExactly("[",
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType)).containsExactly("[",
                 "{\"value\":{\"name\":\"name2\"},\"key\":\"key2\"}", "]");
     }
 
@@ -689,12 +693,12 @@ final class GcsSinkTaskTest {
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
                 "topic0-1-20" + compressionType.extension(), "topic1-0-30" + compressionType.extension());
 
-        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType.name())).containsExactly("[",
-                "{\"name\":\"name0\"}", "]");
-        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType.name())).containsExactly("[",
-                "{\"name\":\"name1\"}", "]");
-        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType.name())).containsExactly("[",
-                "{\"name\":\"name2\"}", "]");
+        assertThat(readRawLinesFromBlob("topic0-0-10", compressionType)).containsExactly("[", "{\"name\":\"name0\"}",
+                "]");
+        assertThat(readRawLinesFromBlob("topic0-1-20", compressionType)).containsExactly("[", "{\"name\":\"name1\"}",
+                "]");
+        assertThat(readRawLinesFromBlob("topic1-0-30", compressionType)).containsExactly("[", "{\"name\":\"name2\"}",
+                "]");
     }
 
     private SinkRecord createRecordWithStructValueSchema(final String topic, final int partition, final String key,
@@ -747,16 +751,16 @@ final class GcsSinkTaskTest {
     }
 
     private List<Record> readRecords(final String blobName, final CompressionType compression) {
-        return testBucketAccessor.decodeToRecords(blobName, compression.name());
+        return testBucketAccessor.decodeToRecords(blobName, compression);
     }
 
-    private Collection<String> readRawLinesFromBlob(final String blobName, final String compression) {
+    private Collection<String> readRawLinesFromBlob(final String blobName, final CompressionType compression) {
         return testBucketAccessor.readLines(blobName, compression);
     }
 
     private Collection<List<String>> readSplittedAndDecodedLinesFromBlob(final String blobName,
             final CompressionType compression, final int... fieldsToDecode) {
-        return testBucketAccessor.readAndDecodeLines(blobName, compression.name(), fieldsToDecode);
+        return testBucketAccessor.readAndDecodeLines(blobName, compression, fieldsToDecode);
     }
 
     private Collection<List<String>> readDecodedFieldsFromDownload(final String blobName, final String compression,
