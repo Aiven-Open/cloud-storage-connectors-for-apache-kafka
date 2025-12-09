@@ -113,8 +113,6 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
         addUserAgentConfig(configDef);
         addAzureConfigGroup(configDef, isSink);
         addAzureRetryPolicies(configDef);
-        // TODO deprecate AZURE_SINK_PREFIX to FILE_NAME_PREFIX_CONFIG
-        configDef.configKeys().remove(FileNameFragment.FILE_NAME_PREFIX_CONFIG);
         configDef.configKeys().remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
         return configDef;
     }

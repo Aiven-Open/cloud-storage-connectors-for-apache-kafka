@@ -22,12 +22,12 @@ import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import com.azure.storage.blob.BlobServiceAsyncClient;
 
-public class AzureBlobSourceConfig extends SourceCommonConfig {
+public final class AzureBlobSourceConfig extends SourceCommonConfig {
 
     // TODO AzureBlobFragment needs to be extracted from Azure Sink.
     private final AzureBlobConfigFragment azureBlobConfigFragment;
     public AzureBlobSourceConfig(final Map<String, String> properties) {
-        super(new AzureBlobSourceConfigDef(), properties);
+        super(new AzureBlobSourceConfigDef(), AzureBlobConfigFragment.handleDeprecatedOptions(properties));
         azureBlobConfigFragment = new AzureBlobConfigFragment(dataAccess);
     }
 
@@ -35,14 +35,9 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
         return azureBlobConfigFragment.getAzureFetchPageSize();
     }
 
+    @Deprecated
     public String getAzurePrefix() {
-        return azureBlobConfigFragment.getAzurePrefix();
-    }
-
-    // TODO deprecate azure prefix and the azure prefix config option.
-    @Override
-    public String getPrefix() {
-        return getAzurePrefix();
+        return getPrefix();
     }
 
     public BlobServiceAsyncClient getAzureServiceAsyncClient() {

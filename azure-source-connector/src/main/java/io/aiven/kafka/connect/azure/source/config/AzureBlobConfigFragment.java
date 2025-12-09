@@ -17,8 +17,15 @@
 package io.aiven.kafka.connect.azure.source.config;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.config.validators.UsageLoggingValidator;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
@@ -35,12 +42,14 @@ import com.azure.core.http.policy.RetryOptions;
 import com.azure.core.http.policy.UserAgentPolicy;
 import com.azure.storage.blob.BlobServiceAsyncClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The configuration fragment that defines the Azure specific characteristics.
  */
 public class AzureBlobConfigFragment extends ConfigFragment {
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(AzureBlobConfigFragment.class);
     public static final String AZURE_PREFIX_CONFIG = "azure.blob.prefix";
     public static final String AZURE_FETCH_PAGE_SIZE = "azure.blob.fetch.page.size";
     private static final String USER_AGENT_HEADER_FORMAT = "Azure Blob Source/%s (GPN: Aiven;)";
@@ -115,7 +124,6 @@ public class AzureBlobConfigFragment extends ConfigFragment {
         addUserAgentConfig(configDef);
         addAzureConfigGroup(configDef, isSink);
         addAzureRetryPolicies(configDef);
-        configDef.configKeys().remove(FileNameFragment.FILE_NAME_PREFIX_CONFIG);
         configDef.configKeys().remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
         return configDef;
     }
@@ -123,6 +131,22 @@ public class AzureBlobConfigFragment extends ConfigFragment {
     private static void addUserAgentConfig(final ConfigDef configDef) {
         configDef.define(AZURE_USER_AGENT, ConfigDef.Type.STRING, USER_AGENT_HEADER_VALUE, ConfigDef.Importance.LOW,
                 "A custom user agent used while contacting Azure");
+    }
+
+    private static String deprecatedDescription(final String deprecatedKey, final ConfigDef.ConfigKey validKey) {
+        return String.format("%s property is deprecated, use %s. %s", deprecatedKey, validKey.name,
+                validKey.documentation);
+    }
+
+    private static int deprecation(final int counter, final ConfigDef configDef, final String deprecatedKey,
+                                   final String validKey) {
+        final int result = counter + 1;
+        final ConfigDef.ConfigKey key = configDef.configKeys().get(validKey);
+        final String description = deprecatedDescription(deprecatedKey, key);
+        configDef.define(deprecatedKey, key.type(), null,
+                new UsageLoggingValidator(key.validator, (n, v) -> logDeprecated(LOGGER, deprecatedKey, validKey)),
+                key.importance, description, GROUP_AZURE, result, key.width, deprecatedKey);
+        return result;
     }
 
     private static void addAzureConfigGroup(final ConfigDef configDef, final boolean isSink) {
@@ -150,11 +174,12 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                     "Azure fetch buffer size. This is the number of object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
                     GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_FETCH_BUFFER_SIZE);
 
-            configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                    ConfigDef.Importance.MEDIUM,
-                    "Prefix for storage file names, generally specifies directory like"
-                            + " structures that do not contain any templated fields.",
-                    GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
+            azureGroupCounter = deprecation(azureGroupCounter, configDef, AZURE_PREFIX_CONFIG, FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+//            configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, FileNameFragment.PREFIX_VALIDATOR,
+//                    ConfigDef.Importance.MEDIUM,
+//                    "Prefix for storage file names, generally specifies directory like"
+//                            + " structures that do not contain any templated fields.",
+//                    GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
 
         }
     }
@@ -174,6 +199,50 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                 "Retry max attempts. The default value is " + AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT,
                 GROUP_AZURE_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, ConfigDef.Width.NONE,
                 AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG);
+    }
+
+    /**
+     * Copies deprecated key data to valid key data if valid key data is not set and deprecated key data is valid.
+     *
+     * @param properties
+     *            the map of properties.
+     * @param deprecatedKey
+     *            the deprecated key
+     * @param depFilter
+     *            if {@code true} this the deprecated key value is valid.
+     * @param validKey
+     *            the valid key.
+     * @param mayOverwrite
+     *            if {@code true} the valid key data may be overwritten.
+     * @return
+     */
+    private static boolean moveData(final Map<String, String> properties, final String deprecatedKey,
+                                    final Predicate<String> depFilter, final String validKey, final Predicate<String> mayOverwrite) {
+        // is the deprecatedKey data valid ?
+        if (properties.containsKey(deprecatedKey) && depFilter.test(properties.get(deprecatedKey))) {
+            // should we overwrite the validKey ?
+            if (!properties.containsKey(validKey) || mayOverwrite.test(properties.get(validKey))) {
+                logDeprecated(LOGGER, deprecatedKey, "value of %s is being placed into %s", deprecatedKey, validKey);
+                properties.put(validKey, properties.get(deprecatedKey));
+                return true;
+            } else {
+                logDeprecated(LOGGER, deprecatedKey, validKey);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Handle moving deprecated values.
+     *
+     * @param properties
+     *            the properties to update.
+     * @return the updated properties.
+     */
+    public static Map<String, String> handleDeprecatedOptions(final Map<String, String> properties) {
+        moveData(properties, AZURE_PREFIX_CONFIG, Objects::nonNull, FileNameFragment.FILE_NAME_PREFIX_CONFIG,
+                x -> x != null && x.isBlank());
+        return properties;
     }
 
     public int getAzureFetchPageSize() {
