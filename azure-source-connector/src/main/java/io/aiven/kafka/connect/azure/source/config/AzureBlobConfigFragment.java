@@ -115,6 +115,8 @@ public class AzureBlobConfigFragment extends ConfigFragment {
         addUserAgentConfig(configDef);
         addAzureConfigGroup(configDef, isSink);
         addAzureRetryPolicies(configDef);
+        configDef.configKeys().remove(FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+        configDef.configKeys().remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
         return configDef;
     }
 
@@ -134,11 +136,6 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                 "The Azure Blob container that files will be written to or read from.", GROUP_AZURE,
                 ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_STORAGE_CONTAINER_NAME_CONFIG);
 
-        configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM,
-                "Prefix for storage file names, generally specifies directory like"
-                        + " structures that do not contain any templated fields.",
-                GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
         if (isSink) {
             // remove FileNameFragmentPrefix
             configDef.configKeys().remove(FileNameFragment.FILE_NAME_PREFIX_CONFIG);
@@ -152,6 +149,13 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                     ConfigDef.Importance.MEDIUM,
                     "Azure fetch buffer size. This is the number of object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
                     GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_FETCH_BUFFER_SIZE);
+
+            configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+                    ConfigDef.Importance.MEDIUM,
+                    "Prefix for storage file names, generally specifies directory like"
+                            + " structures that do not contain any templated fields.",
+                    GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
+
         }
     }
 

@@ -39,6 +39,12 @@ public class AzureBlobSourceConfig extends SourceCommonConfig {
         return azureBlobConfigFragment.getAzurePrefix();
     }
 
+    // TODO deprecate azure prefix and the azure prefix config option.
+    @Override
+    public String getPrefix() {
+        return getAzurePrefix();
+    }
+
     public BlobServiceAsyncClient getAzureServiceAsyncClient() {
         return azureBlobConfigFragment.getAzureServiceAsyncClient();
     }
