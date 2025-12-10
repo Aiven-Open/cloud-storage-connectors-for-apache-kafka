@@ -29,3 +29,13 @@ tasks.register<Copy>("copySiteAssets") {
   }
   into("${project.layout.projectDirectory.asFile}/site/build/site/markdown")
 }
+
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force("com.fasterxml.jackson.core:jackson-databind:2.15.3")
+            force("com.fasterxml.jackson.core:jackson-core:2.15.3")
+            force("com.fasterxml.jackson.core:jackson-annotations:2.15.3")
+        }
+    }
+}
