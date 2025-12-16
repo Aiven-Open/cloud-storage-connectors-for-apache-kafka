@@ -40,6 +40,7 @@ import com.google.common.collect.Lists;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.constraints.IntRange;
+import org.apache.kafka.connect.sink.SinkTaskContext;
 import org.junit.jupiter.api.Disabled;
 
 /**

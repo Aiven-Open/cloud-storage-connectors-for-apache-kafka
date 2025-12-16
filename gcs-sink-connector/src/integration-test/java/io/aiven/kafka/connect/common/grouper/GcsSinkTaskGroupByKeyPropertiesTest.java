@@ -37,6 +37,7 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
+import org.apache.kafka.connect.sink.SinkTaskContext;
 
 /**
  * This is a property-based test for {@link GcsSinkTask} (grouping records by the key) using
