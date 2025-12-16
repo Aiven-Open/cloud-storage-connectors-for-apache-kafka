@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.grouper;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -35,6 +36,7 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
+import org.apache.kafka.connect.sink.SinkTaskContext;
 
 /**
  * This is a property-based test for {@link GcsSinkTask} (grouping records by the key) using
@@ -56,7 +58,9 @@ final class GcsSinkTaskGroupByKeyPropertiesTest extends PbtBase {
         final Map<String, String> taskProps = basicTaskProps();
         taskProps.put(GcsSinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{key}}");
         taskProps.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
+        final var mockedContext = mock(SinkTaskContext.class);
         final GcsSinkTask task = new GcsSinkTask(taskProps, storage);
+        task.initialize(mockedContext);
 
         for (final List<SinkRecord> recordBatch : recordBatches) {
             task.put(recordBatch);
