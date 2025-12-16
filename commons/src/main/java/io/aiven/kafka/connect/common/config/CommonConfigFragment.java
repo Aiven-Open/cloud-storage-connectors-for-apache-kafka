@@ -63,9 +63,6 @@ public class CommonConfigFragment extends ConfigFragment {
 
         // change the validator errors tolerance.
         key = configDef.configKeys().get(CommonConfig.ERRORS_TOLERANCE_CONFIG);
-
-        // configDef.configKeys().remove(CommonConfig.ERRORS_TOLERANCE_CONFIG);
-
         final ConfigDef.ConfigKey newKey = new ConfigDef.ConfigKey(key.name, key.type, key.defaultValue,
                 ConfigDef.CaseInsensitiveValidString.in(ToleranceType.NONE.value(), ToleranceType.ALL.value()),
                 key.importance, key.documentation, key.group, key.orderInGroup, key.width, key.displayName,

@@ -1,7 +1,7 @@
 S3SourceConfigDef:
 #foreach ($section in $sections)
 -
-    name: ${section.displayName}
+  name: ${section.displayName}
   documentation:  $section.documentation
   type:  $section.type
   default: ${section.getDefaultValue()|"none"}

@@ -66,7 +66,7 @@ public final class AzureBlobSinkTask extends SinkTask {
     }
 
     // for testing
-    public AzureBlobSinkTask(final Map<String, String> props, final BlobServiceClient blobServiceClient) {
+    AzureBlobSinkTask(final Map<String, String> props, final BlobServiceClient blobServiceClient) {
         super();
         Objects.requireNonNull(props, "props cannot be null");
         Objects.requireNonNull(blobServiceClient, "blobServiceClient cannot be null");

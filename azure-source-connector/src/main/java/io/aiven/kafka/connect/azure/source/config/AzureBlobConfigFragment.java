@@ -171,8 +171,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                     "Azure fetch buffer size. This is the number of object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
                     GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_FETCH_BUFFER_SIZE);
 
-            deprecation(azureGroupCounter, configDef, AZURE_PREFIX_CONFIG,
-                    FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+            deprecation(azureGroupCounter, configDef, AZURE_PREFIX_CONFIG, FileNameFragment.FILE_NAME_PREFIX_CONFIG);
         }
     }
 
