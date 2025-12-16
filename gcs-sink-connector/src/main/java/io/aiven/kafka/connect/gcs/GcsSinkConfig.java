@@ -83,6 +83,8 @@ public final class GcsSinkConfig extends AivenCommonConfig {
 
     public static final String GCS_RETRY_BACKOFF_MAX_ATTEMPTS_CONFIG = "gcs.retry.backoff.max.attempts";
 
+    public static final String GCS_REQUEST_COMMIT_INTERVAL_MS_CONFIG = "gcs.request.commit.interval.ms";
+
     // All default from GCS client, hardcoded here since GCS hadn't constants
     public static final long GCS_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT = 1_000L;
 
@@ -93,6 +95,8 @@ public final class GcsSinkConfig extends AivenCommonConfig {
     public static final long GCS_RETRY_BACKOFF_TOTAL_TIMEOUT_MS_DEFAULT = 50_000L;
 
     public static final int GCS_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT = 6;
+
+    public static final long GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT = -1L; // disabled by default
 
     public static final String NAME_CONFIG = "name";
 
@@ -107,6 +111,7 @@ public final class GcsSinkConfig extends AivenCommonConfig {
         addKafkaBackoffPolicy(configDef);
         addGcsRetryPolicies(configDef);
         addUserAgentConfig(configDef);
+        addSinkTaskConfig(configDef);
         return configDef;
     }
 
@@ -299,6 +304,30 @@ public final class GcsSinkConfig extends AivenCommonConfig {
 
     }
 
+    private static void addSinkTaskConfig(final ConfigDef configDef) {
+        configDef.define(
+            GCS_REQUEST_COMMIT_INTERVAL_MS_CONFIG,
+            ConfigDef.Type.LONG,
+            GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT,
+            new ConfigDef.Validator() {
+                @Override
+                public void ensureValid(final String name, final Object value) {
+                    if (Objects.isNull(value)) {
+                        return;
+                    }
+                    if (!(value instanceof Long)) {
+                        throw new ConfigException(name, value, "must be a long number");
+                    }
+                }
+            },
+            ConfigDef.Importance.LOW,
+            "The interval in milliseconds at which the sink task will request commit."
+                + " The default value is " + GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT
+                + ", which means this setting is disabled, and will utilize the connect worker's"
+                + " offset flush interval. This feature is operational only if the assigned value"
+                + " is non-negative and is less than the connect worker's offset flush interval.");
+    }
+
     public GcsSinkConfig(final Map<String, String> properties) {
         super(configDef(), handleDeprecatedYyyyUppercase(properties));
         validate();
@@ -437,5 +466,9 @@ public final class GcsSinkConfig extends AivenCommonConfig {
 
     public String getUserAgent() {
         return getString(GCS_USER_AGENT);
+    }
+
+    public long getGcsRequestCommitIntervalMs() {
+        return getLong(GCS_REQUEST_COMMIT_INTERVAL_MS_CONFIG);
     }
 }
