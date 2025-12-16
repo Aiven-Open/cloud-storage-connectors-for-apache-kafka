@@ -19,11 +19,11 @@ package io.aiven.kafka.connect.azure.sink;
 import java.time.Duration;
 import java.util.regex.Pattern;
 
-import io.aiven.kafka.connect.common.config.FileNameFragment;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.ConfigFragment;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 
 import com.azure.core.http.policy.ExponentialBackoffOptions;

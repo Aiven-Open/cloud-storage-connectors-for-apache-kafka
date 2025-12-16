@@ -22,10 +22,6 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
-import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.config.OutputFormatFragment;
-import io.aiven.kafka.connect.common.config.SourceConfigFragment;
-import io.aiven.kafka.connect.common.config.validators.UsageLoggingValidator;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
@@ -34,6 +30,7 @@ import io.aiven.kafka.connect.common.config.ConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.validators.TimeScaleValidator;
+import io.aiven.kafka.connect.common.config.validators.UsageLoggingValidator;
 
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.HttpLogDetailLevel;
@@ -139,7 +136,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
     }
 
     private static int deprecation(final int counter, final ConfigDef configDef, final String deprecatedKey,
-                                   final String validKey) {
+            final String validKey) {
         final int result = counter + 1;
         final ConfigDef.ConfigKey key = configDef.configKeys().get(validKey);
         final String description = deprecatedDescription(deprecatedKey, key);
@@ -174,12 +171,13 @@ public class AzureBlobConfigFragment extends ConfigFragment {
                     "Azure fetch buffer size. This is the number of object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
                     GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_FETCH_BUFFER_SIZE);
 
-            azureGroupCounter = deprecation(azureGroupCounter, configDef, AZURE_PREFIX_CONFIG, FileNameFragment.FILE_NAME_PREFIX_CONFIG);
-//            configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, FileNameFragment.PREFIX_VALIDATOR,
-//                    ConfigDef.Importance.MEDIUM,
-//                    "Prefix for storage file names, generally specifies directory like"
-//                            + " structures that do not contain any templated fields.",
-//                    GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
+            azureGroupCounter = deprecation(azureGroupCounter, configDef, AZURE_PREFIX_CONFIG,
+                    FileNameFragment.FILE_NAME_PREFIX_CONFIG);
+            // configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, FileNameFragment.PREFIX_VALIDATOR,
+            // ConfigDef.Importance.MEDIUM,
+            // "Prefix for storage file names, generally specifies directory like"
+            // + " structures that do not contain any templated fields.",
+            // GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
 
         }
     }
@@ -217,7 +215,7 @@ public class AzureBlobConfigFragment extends ConfigFragment {
      * @return
      */
     private static boolean moveData(final Map<String, String> properties, final String deprecatedKey,
-                                    final Predicate<String> depFilter, final String validKey, final Predicate<String> mayOverwrite) {
+            final Predicate<String> depFilter, final String validKey, final Predicate<String> mayOverwrite) {
         // is the deprecatedKey data valid ?
         if (properties.containsKey(deprecatedKey) && depFilter.test(properties.get(deprecatedKey))) {
             // should we overwrite the validKey ?
