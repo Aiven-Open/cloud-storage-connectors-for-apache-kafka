@@ -42,7 +42,7 @@ tasks.register<Test>("integrationTest") {
   testClassesDirs = integrationTest.output.classesDirs
   classpath = integrationTest.runtimeClasspath
 
-    environment(mapOf("api.version" to "1.44"))
+  environment(mapOf("api.version" to "1.44"))
   // defines testing order
   shouldRunAfter("test")
   // requires archive for connect runner
