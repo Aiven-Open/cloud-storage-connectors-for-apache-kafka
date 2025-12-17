@@ -198,7 +198,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.VALUE)
-                .envelopeEnabled(true)
+                .envelopeEnabled(Boolean.valueOf(envelopeEnabled))
                 .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
         CommonConfigFragment.setter(connectorConfig)
                 .keyConverter(StringConverter.class)

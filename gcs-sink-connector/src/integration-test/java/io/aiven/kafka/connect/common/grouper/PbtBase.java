@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
+import io.aiven.kafka.connect.gcs.GcsSinkConnector;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
@@ -128,6 +130,7 @@ class PbtBase {
 
     Map<String, String> basicTaskProps() {
         final Map<String, String> taskProps = new HashMap<>();
+        CommonConfigFragment.setter(taskProps).name("PbtBase").connector(GcsSinkConnector.class);
         FileNameFragment.setter(taskProps).prefix(PREFIX).template("{{topic}}-{{partition}}-{{start_offset}}");
         OutputFormatFragment.setter(taskProps)
                 .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET);
