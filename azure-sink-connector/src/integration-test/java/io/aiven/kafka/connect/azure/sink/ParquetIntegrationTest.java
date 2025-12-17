@@ -33,7 +33,11 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.connect.converters.ByteArrayConverter;
+import org.apache.kafka.connect.json.JsonConverter;
+import org.apache.kafka.connect.storage.StringConverter;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FormatType;
@@ -72,14 +76,15 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
     @Test
     void allOutputFields() throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET,
                         OutputFieldType.TIMESTAMP, OutputFieldType.HEADERS)
                 .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.storage.StringConverter");
+        CommonConfigFragment.setter(connectorConfig)
+                .valueConverter(StringConverter.class)
+                .keyConverter(StringConverter.class);
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
@@ -129,7 +134,7 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
     @Test
     void allOutputFieldsJsonValueAsString() throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET,
@@ -188,14 +193,15 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
     @CsvSource({ "true, {\"value\": {\"name\": \"%s\"}} ", "false, {\"name\": \"%s\"}" })
     void jsonValue(final String envelopeEnabled, final String expectedOutput)
             throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.VALUE)
                 .envelopeEnabled(Boolean.parseBoolean(envelopeEnabled))
                 .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        CommonConfigFragment.setter(connectorConfig)
+                .keyConverter(StringConverter.class)
+                .valueConverter(JsonConverter.class);
         createConnector(connectorConfig);
 
         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
@@ -246,13 +252,14 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
 
     @Test
     void schemaChanged() throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.VALUE)
                 .withOutputFieldEncodingType(OutputFieldEncodingType.NONE);
-        connectorConfig.put("key.converter", "org.apache.kafka.connect.storage.StringConverter");
-        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        CommonConfigFragment.setter(connectorConfig)
+                .keyConverter(StringConverter.class)
+                .valueConverter(JsonConverter.class);
         createConnector(connectorConfig);
 
         final var jsonMessageSchema = "{\"type\":\"struct\",\"fields\":[{\"type\":\"string\",\"field\":\"name\"}]}";
@@ -302,24 +309,24 @@ final class ParquetIntegrationTest extends AbstractIntegrationTest<byte[], byte[
         }
         assertThat(blobContents).containsExactlyInAnyOrderElementsOf(expectedRecords);
     }
-    private Map<String, String> basicConnectorConfig(final String compression) {
+    private Map<String, String> basicConnectorConfig(final CompressionType compression) {
         final Map<String, String> config = new HashMap<>();
-        config.put(AzureBlobSinkConfig.NAME_CONFIG, CONNECTOR_NAME);
-        config.put("connector.class", AzureBlobSinkConnector.class.getName());
-        config.put("key.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put("value.converter", "org.apache.kafka.connect.converters.ByteArrayConverter");
-        config.put("tasks.max", "1");
+        CommonConfigFragment.setter(config)
+                .name(CONNECTOR_NAME)
+                .connector(AzureBlobSinkConnector.class)
+                .keyConverter(ByteArrayConverter.class)
+                .valueConverter(ByteArrayConverter.class);
+        CommonConfigFragment.setter(config).maxTasks(1);
+        OutputFormatFragment.setter(config).withFormatType(FormatType.PARQUET);
+        FileNameFragment.setter(config).fileCompression(compression).prefix(azurePrefix);
+
         config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONTAINER_NAME_CONFIG, testContainerName);
         if (useFakeAzure()) {
             config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONNECTION_STRING_CONFIG, azureEndpoint);
         } else {
             config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONNECTION_STRING_CONFIG, azureConnectionString);
         }
-
-        config.put(AzureBlobSinkConfig.FILE_NAME_PREFIX_CONFIG, azurePrefix);
         config.put("topics", testTopic0 + "," + testTopic1);
-        FileNameFragment.setter(config).fileCompression(CompressionType.forName(compression));
-        OutputFormatFragment.setter(config).withFormatType(FormatType.PARQUET);
 
         return config;
     }

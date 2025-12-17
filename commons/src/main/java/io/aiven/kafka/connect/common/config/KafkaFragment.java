@@ -22,15 +22,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.metrics.MetricsReporter;
-import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
 import org.apache.kafka.connect.runtime.WorkerConfig;
-import org.apache.kafka.connect.storage.Converter;
 
 /**
  * Defines the configuration for Kafka. This fragment only has the Setter and a few constants for Connectors.
  */
-public final class KafkaFragment {
+public final class KafkaFragment extends ConfigFragment {
 
     /**
      * Enum for setting discovery.
@@ -44,8 +42,8 @@ public final class KafkaFragment {
      */
     private final static String PLUGIN_DISCOVERY = "plugin.discovery";
 
-    private KafkaFragment() {
-        // do not instantiate.
+    public KafkaFragment(final FragmentDataAccess dataAccess) {
+        super(dataAccess);
     }
 
     /**
@@ -72,50 +70,6 @@ public final class KafkaFragment {
          */
         private Setter(final Map<String, String> data) {
             super(data);
-        }
-
-        /**
-         * THe class for the connector.
-         *
-         * @param connectorClass
-         *            the class for the connector.
-         * @return this
-         */
-        public Setter connector(final Class<? extends Connector> connectorClass) {
-            return setValue(ConnectorConfig.CONNECTOR_CLASS_CONFIG, connectorClass);
-        }
-
-        /**
-         * Sets the key converter.
-         *
-         * @param converter
-         *            the Key converter class.
-         * @return this
-         */
-        public Setter keyConverter(final Class<? extends Converter> converter) {
-            return setValue(ConnectorConfig.KEY_CONVERTER_CLASS_CONFIG, converter);
-        }
-
-        /**
-         * Sets the value converter.
-         *
-         * @param converter
-         *            the value converter class.
-         * @return this
-         */
-        public Setter valueConverter(final Class<? extends Converter> converter) {
-            return setValue(ConnectorConfig.VALUE_CONVERTER_CLASS_CONFIG, converter);
-        }
-
-        /**
-         * Sets the header converter.
-         *
-         * @param header
-         *            the header converter class.
-         * @return this.
-         */
-        public Setter headerConverter(final Class<? extends Converter> header) {
-            return setValue(ConnectorConfig.HEADER_CONVERTER_CLASS_CONFIG, header);
         }
 
         /**

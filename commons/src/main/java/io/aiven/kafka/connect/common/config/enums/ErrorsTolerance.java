@@ -20,7 +20,12 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.connect.runtime.errors.ToleranceType;
 
+/**
+ * Deprecated use {@link ToleranceType}
+ */
+@Deprecated
 public enum ErrorsTolerance {
 
     NONE("none"), ALL("all");

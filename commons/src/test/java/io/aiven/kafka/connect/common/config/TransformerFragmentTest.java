@@ -17,14 +17,12 @@
 package io.aiven.kafka.connect.common.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.config.ConfigValue;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,11 +34,11 @@ class TransformerFragmentTest {
     void validateCorrectBufferSizeIsAccepted() {
         final int bufferSize = 50;
         final ConfigDef configDef = TransformerFragment.update(new ConfigDef());
-        final Map<String, Object> props = new HashMap<>();
-        props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, bufferSize);
+        final Map<String, String> props = new HashMap<>();
+        TransformerFragment.setter(props).maxBufferSize(bufferSize);
 
         final TransformerFragment schemaReg = new TransformerFragment(
-                FragmentDataAccess.from(new AbstractConfig(configDef, props)));
+                FragmentDataAccess.from(configDef.validateAll(props)));
         assertThat(schemaReg.getTransformerMaxBufferSize()).isEqualTo(bufferSize);
     }
 
@@ -54,12 +52,11 @@ class TransformerFragmentTest {
             "MTA=,Invalid value MTA= for configuration transformer.max.buffer.size: Not a number of type INT" })
     void validateInvalidBufferSizeThrowsConfigException(final String value, final String expectedMessage) {
         final ConfigDef configDef = TransformerFragment.update(new ConfigDef());
-        final Map<String, Object> props = new HashMap<>();
-
+        final Map<String, String> props = new HashMap<>();
         props.put(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE, value);
-        assertThatThrownBy(() -> new TransformerFragment(FragmentDataAccess.from(new AbstractConfig(configDef, props))))
-                .isInstanceOf(ConfigException.class)
-                .hasMessage(expectedMessage);
+        final Map<String, ConfigValue> dataMap = configDef.validateAll(props);
+        assertThat(dataMap.get(TransformerFragment.TRANSFORMER_MAX_BUFFER_SIZE).errorMessages())
+                .contains(expectedMessage);
     }
 
 }

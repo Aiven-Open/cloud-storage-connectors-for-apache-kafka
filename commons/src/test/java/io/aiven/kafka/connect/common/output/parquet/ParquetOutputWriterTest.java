@@ -45,6 +45,7 @@ import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.io.DelegatingSeekableInputStream;
 import org.apache.parquet.io.InputFile;
@@ -216,6 +217,7 @@ class ParquetOutputWriterTest {
         return records;
     }
 
+    @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
     static class ParquetInputFile implements InputFile {
 
         final SeekableByteChannel seekableByteChannel;

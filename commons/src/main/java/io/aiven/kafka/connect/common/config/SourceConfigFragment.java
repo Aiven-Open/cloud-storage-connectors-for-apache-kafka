@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.runtime.ConnectorConfig;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
@@ -36,7 +37,6 @@ public final class SourceConfigFragment extends ConfigFragment {
 
     private static final String MAX_POLL_RECORDS = "max.poll.records";
     public static final String TARGET_TOPIC = "topic";
-    private static final String ERRORS_TOLERANCE = "errors.tolerance";
 
     private static final String DISTRIBUTION_TYPE = "distribution.type";
 
@@ -72,10 +72,6 @@ public final class SourceConfigFragment extends ConfigFragment {
 
         configDef.define(MAX_POLL_RECORDS, ConfigDef.Type.INT, 500, ConfigDef.Range.atLeast(1),
                 ConfigDef.Importance.MEDIUM, "Max poll records");
-        // KIP-298 Error Handling in Connect
-        configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, ErrorsTolerance.NONE.name(),
-                new ErrorsToleranceValidator(), ConfigDef.Importance.MEDIUM,
-                "Indicates to the connector what level of exceptions are allowed before the connector stops.");
 
         // Offset Storage config group includes target topics
         configDef.define(TARGET_TOPIC, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
@@ -114,9 +110,11 @@ public final class SourceConfigFragment extends ConfigFragment {
      * Gets the errors tolerance.
      *
      * @return the errors tolerance.
+     * @deprecated use {@link ConnectorConfig#errorToleranceType}.
      */
+    @Deprecated
     public ErrorsTolerance getErrorsTolerance() {
-        return ErrorsTolerance.forName(getString(ERRORS_TOLERANCE));
+        return ErrorsTolerance.forName(getString(ConnectorConfig.ERRORS_TOLERANCE_CONFIG));
     }
 
     public boolean hasDistributionType() {
@@ -148,28 +146,6 @@ public final class SourceConfigFragment extends ConfigFragment {
      */
     public String getNativeStartKey() {
         return getString(NATIVE_START_KEY);
-    }
-
-    /**
-     * The errors tolerance validator.
-     */
-    private static class ErrorsToleranceValidator implements ConfigDef.Validator {
-        @Override
-        public void ensureValid(final String name, final Object value) {
-            final String errorsTolerance = (String) value;
-            if (StringUtils.isNotBlank(errorsTolerance)) {
-                // This will throw an Exception if not a valid value.
-                ErrorsTolerance.forName(errorsTolerance);
-            }
-        }
-
-        @Override
-        public String toString() {
-            return Arrays.stream(ErrorsTolerance.values())
-                    .map(ErrorsTolerance::toString)
-                    .collect(Collectors.joining(", "));
-        }
-
     }
 
     /**
@@ -226,7 +202,7 @@ public final class SourceConfigFragment extends ConfigFragment {
          * @return this.
          */
         public Setter errorsTolerance(final ErrorsTolerance tolerance) {
-            return setValue(ERRORS_TOLERANCE, tolerance.name());
+            return setValue(ConnectorConfig.ERRORS_TOLERANCE_CONFIG, tolerance.name());
         }
 
         /**

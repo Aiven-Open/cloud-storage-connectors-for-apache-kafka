@@ -23,6 +23,7 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.connect.common.config.ConfigFragment;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 
 import com.azure.core.http.policy.ExponentialBackoffOptions;
@@ -39,8 +40,8 @@ import com.azure.storage.blob.BlobServiceClientBuilder;
  */
 public final class AzureBlobConfigFragment extends ConfigFragment {
 
-    public static final String AZURE_PREFIX_CONFIG = "azure.blob.prefix";
-    public static final String AZURE_FETCH_PAGE_SIZE = "azure.blob.fetch.page.size";
+    private static final String AZURE_PREFIX_CONFIG = "azure.blob.prefix";
+    private static final String AZURE_FETCH_PAGE_SIZE = "azure.blob.fetch.page.size";
     private static final String USER_AGENT_HEADER_FORMAT = "Azure Blob Source/%s (GPN: Aiven;)";
     public static final String USER_AGENT_HEADER_VALUE = String.format(USER_AGENT_HEADER_FORMAT, Version.VERSION);
     private static final String GROUP_AZURE = "Azure";
@@ -112,6 +113,7 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
         addUserAgentConfig(configDef);
         addAzureConfigGroup(configDef, isSink);
         addAzureRetryPolicies(configDef);
+        configDef.configKeys().remove(FileNameFragment.FILE_PATH_PREFIX_TEMPLATE_CONFIG);
         return configDef;
     }
 
@@ -131,11 +133,6 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
                 "The Azure Blob container that files will be written to or read from.", GROUP_AZURE,
                 ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_STORAGE_CONTAINER_NAME_CONFIG);
 
-        configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
-                ConfigDef.Importance.MEDIUM,
-                "Prefix for storage file names, generally specifies directory like"
-                        + " structures that do not contain any templated fields.",
-                GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
         if (!isSink) {
             configDef.define(AZURE_FETCH_PAGE_SIZE, ConfigDef.Type.INT, 10, ConfigDef.Range.atLeast(1),
                     ConfigDef.Importance.MEDIUM, "Azure fetch page size", GROUP_AZURE, ++azureGroupCounter,
@@ -145,6 +142,12 @@ public final class AzureBlobConfigFragment extends ConfigFragment {
                     ConfigDef.Importance.MEDIUM,
                     "Azure fetch buffer size. This is the number of object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
                     GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_FETCH_BUFFER_SIZE);
+
+            configDef.define(AZURE_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
+                    ConfigDef.Importance.MEDIUM,
+                    "Prefix for storage file names, generally specifies directory like"
+                            + " structures that do not contain any templated fields.",
+                    GROUP_AZURE, ++azureGroupCounter, ConfigDef.Width.NONE, AZURE_PREFIX_CONFIG);
         }
     }
 

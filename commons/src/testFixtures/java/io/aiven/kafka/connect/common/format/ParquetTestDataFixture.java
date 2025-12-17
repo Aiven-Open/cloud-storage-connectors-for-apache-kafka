@@ -42,11 +42,11 @@ import io.aiven.kafka.connect.common.output.parquet.ParquetOutputWriter;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.commons.io.FileUtils;
 import org.apache.parquet.avro.AvroParquetReader;
 import org.apache.parquet.io.DelegatingSeekableInputStream;
 import org.apache.parquet.io.InputFile;
 import org.apache.parquet.io.SeekableInputStream;
-import org.testcontainers.shaded.org.apache.commons.io.FileUtils;
 
 /**
  * A testing feature to generate/read Parquet data.

@@ -22,7 +22,10 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
+import org.apache.kafka.connect.runtime.errors.ToleranceType;
+import org.apache.kafka.connect.storage.Converter;
 
 /**
  * The common configuration fragment.
@@ -30,7 +33,6 @@ import org.apache.kafka.connect.runtime.ConnectorConfig;
 public class CommonConfigFragment extends ConfigFragment {
     /** The task id configuration option */
     private static final String TASK_ID = "task.id";
-
     /**
      * Gets a setter for this fragment.
      *
@@ -53,15 +55,20 @@ public class CommonConfigFragment extends ConfigFragment {
         int orderInGroup = 0;
         final String commonGroup = "commons";
 
-        configDef.define(ConnectorConfig.TASKS_MAX_CONFIG, ConfigDef.Type.INT, 1, atLeast(1), ConfigDef.Importance.HIGH,
-                "Maximum number of tasks to use for this connector.", commonGroup, ++orderInGroup,
-                ConfigDef.Width.SHORT, ConnectorConfig.TASKS_MAX_CONFIG);
-
         // make TASK_ID an internal configuration (not visible to users)
-        final ConfigDef.ConfigKey key = new ConfigDef.ConfigKey(TASK_ID, ConfigDef.Type.INT, 0, atLeast(0),
+        ConfigDef.ConfigKey key = new ConfigDef.ConfigKey(TASK_ID, ConfigDef.Type.INT, 0, atLeast(0),
                 ConfigDef.Importance.HIGH, "The task ID that this connector is working with.", commonGroup,
                 ++orderInGroup, ConfigDef.Width.SHORT, TASK_ID, Collections.emptyList(), null, true);
-        return configDef.define(key);
+        configDef.define(key);
+
+        // change the validator errors tolerance.
+        key = configDef.configKeys().get(CommonConfig.ERRORS_TOLERANCE_CONFIG);
+        final ConfigDef.ConfigKey newKey = new ConfigDef.ConfigKey(key.name, key.type, key.defaultValue,
+                ConfigDef.CaseInsensitiveValidString.in(ToleranceType.NONE.value(), ToleranceType.ALL.value()),
+                key.importance, key.documentation, key.group, key.orderInGroup, key.width, key.displayName,
+                key.dependents, key.recommender, key.internalConfig);
+        configDef.configKeys().replace(CommonConfig.ERRORS_TOLERANCE_CONFIG, newKey);
+        return configDef;
     }
 
     /**
@@ -83,11 +90,10 @@ public class CommonConfigFragment extends ConfigFragment {
         return getInt(TASK_ID);
     }
 
-    /**
-     * Get the maximum number of tasks.
-     *
-     * @return the maximum number of tasks.
-     */
+    public String getConnectorName() {
+        return getString(ConnectorConfig.NAME_CONFIG);
+    }
+
     public Integer getMaxTasks() {
         return getInt(ConnectorConfig.TASKS_MAX_CONFIG);
     }
@@ -126,6 +132,61 @@ public class CommonConfigFragment extends ConfigFragment {
          */
         public Setter maxTasks(final int maxTasks) {
             return setValue(ConnectorConfig.TASKS_MAX_CONFIG, maxTasks);
+        }
+
+        /**
+         * The class for the connector.
+         *
+         * @param connectorClass
+         *            the class for the connector.
+         * @return this
+         */
+        public Setter connector(final Class<? extends Connector> connectorClass) {
+            return setValue(ConnectorConfig.CONNECTOR_CLASS_CONFIG, connectorClass);
+        }
+
+        /**
+         * Sets the key converter.
+         *
+         * @param converter
+         *            the Key converter class.
+         * @return this
+         */
+        public Setter keyConverter(final Class<? extends Converter> converter) {
+            return setValue(ConnectorConfig.KEY_CONVERTER_CLASS_CONFIG, converter);
+        }
+
+        /**
+         * Sets the value converter.
+         *
+         * @param converter
+         *            the value converter class.
+         * @return this
+         */
+        public Setter valueConverter(final Class<? extends Converter> converter) {
+            return setValue(ConnectorConfig.VALUE_CONVERTER_CLASS_CONFIG, converter);
+        }
+
+        /**
+         * Sets the header converter.
+         *
+         * @param header
+         *            the header converter class.
+         * @return this.
+         */
+        public Setter headerConverter(final Class<? extends Converter> header) {
+            return setValue(ConnectorConfig.HEADER_CONVERTER_CLASS_CONFIG, header);
+        }
+
+        /**
+         * Sets the connector name.
+         *
+         * @param name
+         *            the connector name.
+         * @return this
+         */
+        public Setter name(final String name) {
+            return setValue(ConnectorConfig.NAME_CONFIG, name);
         }
     }
 }

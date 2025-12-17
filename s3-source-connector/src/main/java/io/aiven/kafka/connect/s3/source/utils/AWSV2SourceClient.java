@@ -79,7 +79,7 @@ public class AWSV2SourceClient {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .maxKeys(s3SourceConfig.getFetchPageSize())
-                .prefix(s3SourceConfig.getAwsS3Prefix())
+                .prefix(StringUtils.defaultIfEmpty(s3SourceConfig.getPrefix(), null))
                 .startAfter(StringUtils.defaultIfBlank(startToken, null))
                 .build();
 

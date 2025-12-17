@@ -175,14 +175,14 @@ class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
         return String.format("%s%s-%d-%d", gcsPrefix, testTopic0, partition, startOffset);
     }
 
-    protected String getBlobName(final int partition, final int startOffset, final String compression) {
+    protected String getBlobName(final int partition, final int startOffset, final CompressionType compression) {
         final String result = getBaseBlobName(partition, startOffset);
-        return result + CompressionType.forName(compression).extension();
+        return result + compression.extension();
     }
 
-    protected String getBlobName(final String key, final String compression) {
+    protected String getBlobName(final String key, final CompressionType compression) {
         final String result = String.format("%s%s", gcsPrefix, key);
-        return result + CompressionType.forName(compression).extension();
+        return result + compression.extension();
     }
 
     protected void awaitAllBlobsWritten(final int expectedBlobCount) {

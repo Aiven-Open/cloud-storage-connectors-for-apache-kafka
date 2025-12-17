@@ -16,20 +16,14 @@
 
 package io.aiven.kafka.connect.s3.config;
 
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.SinkCommonConfig;
-import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsStsRole;
@@ -45,22 +39,11 @@ public final class S3SinkConfig extends SinkCommonConfig {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SinkConfig.class);
 
-    // Default values from AWS SDK, since they are hidden
-    public static final int AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT = 100;
-    public static final int AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 20_000;
-    // Comment in AWS SDK for max retries:
-    // Maximum retry limit. Avoids integer overflow issues.
-    //
-    // NOTE: If the value is greater than 30, there can be integer overflow
-    // issues during delay calculation.
-    // in other words we can't use values greater than 30
-    public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
-
     private final S3ConfigFragment s3ConfigFragment;
 
     public S3SinkConfig(final Map<String, String> properties) {
         super(new S3SinkConfigDef(), preprocessProperties(properties));
-        s3ConfigFragment = new S3ConfigFragment(FragmentDataAccess.from(this));
+        s3ConfigFragment = new S3ConfigFragment(dataAccess);
     }
 
     public S3ConfigFragment getS3ConfigFragment() {
@@ -68,21 +51,7 @@ public final class S3SinkConfig extends SinkCommonConfig {
     }
 
     static Map<String, String> preprocessProperties(final Map<String, String> properties) {
-        return S3ConfigFragment.handleDeprecatedOptions(properties);
-    }
-
-    @Override
-    public CompressionType getCompressionType() {
-        // we have priority of properties if old one not set or both old and new one set
-        // the new property value will be selected
-        // default value is GZIP
-        if (Objects.nonNull(getString(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG))) {
-            return CompressionType.forName(getString(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG));
-        }
-        if (Objects.nonNull(getString(S3ConfigFragment.OUTPUT_COMPRESSION))) {
-            return CompressionType.forName(getString(S3ConfigFragment.OUTPUT_COMPRESSION));
-        }
-        return CompressionType.GZIP;
+        return S3ConfigFragment.handleDeprecatedOptions(properties, S3SinkConfigDef.DEFAULT_COMPRESSION);
     }
 
     public long getS3RetryBackoffDelayMs() {
@@ -128,10 +97,6 @@ public final class S3SinkConfig extends SinkCommonConfig {
         return s3ConfigFragment.getCustomCredentialsProvider();
     }
 
-    public String getAwsS3Prefix() {
-        return s3ConfigFragment.getAwsS3Prefix();
-    }
-
     public AwsStsRole getStsRole() {
         return s3ConfigFragment.getStsRole();
     }
@@ -147,10 +112,6 @@ public final class S3SinkConfig extends SinkCommonConfig {
     public List<OutputField> getOutputFields() {
         if (outputFormatFragment.hasOutputFields()) {
             return super.getOutputFields();
-        }
-
-        if (outputFormatFragment.has(S3ConfigFragment.OUTPUT_FIELDS)) {
-            return outputFormatFragment.getOutputFields(S3ConfigFragment.OUTPUT_FIELDS);
         }
         return List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
     }
@@ -174,7 +135,7 @@ public final class S3SinkConfig extends SinkCommonConfig {
     }
 
     public Template getPrefixTemplate() {
-        final var template = Template.of(s3ConfigFragment.getAwsS3Prefix());
+        final var template = Template.of(getPrefix());
         template.instance().bindVariable("utc_date", () -> {
             LOGGER.info("utc_date variable is deprecated please read documentation for the new name");
             return "";
@@ -185,17 +146,13 @@ public final class S3SinkConfig extends SinkCommonConfig {
         return template;
     }
 
-    public ZoneId getTimezone() {
-        return ZoneId.of(getString(S3ConfigFragment.TIMESTAMP_TIMEZONE));
-    }
-
-    public TimestampSource getTimestampSource() {
-        return TimestampSource.of(getTimezone(), TimestampSource.Type.of(getString(S3ConfigFragment.TIMESTAMP_SOURCE)));
-    }
-
+    /**
+     * Uses file name template if the prefix is not set.
+     *
+     * @return true if the file name prefix was not set.
+     */
     public Boolean usesFileNameTemplate() {
-        return Objects.isNull(getString(S3ConfigFragment.AWS_S3_PREFIX_CONFIG))
-                && Objects.isNull(getString(S3ConfigFragment.AWS_S3_PREFIX));
+        return !fileNameFragment.hasPrefix();
     }
 
 }

@@ -33,8 +33,14 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
+import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 
+import io.confluent.connect.avro.AvroConverter;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
@@ -64,7 +70,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     @Test
     void allOutputFields(@TempDir final Path tmpDir) throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         connectorConfig.put("format.output.fields", "key,value,offset,timestamp,headers");
         connectorConfig.put("format.output.fields.value.encoding", "none");
@@ -116,7 +122,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
             for (int partition = 0; partition < 4; partition++) {
                 final var name = "user-" + cnt;
                 final var value = "value-" + cnt;
-                final String blobName = getBlobName(partition, 0, "none");
+                final String blobName = getBlobName(partition, 0, compression);
                 final GenericRecord record = blobContents.get(blobName).get(i);
                 final var expectedKey = "key-" + cnt;
                 final var expectedValue = "{\"name\": \"" + name + "\", \"value\": \"" + value + "\"}";
@@ -132,7 +138,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     @Test
     void valueComplexType(@TempDir final Path tmpDir) throws ExecutionException, InterruptedException, IOException {
-        final String compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
@@ -184,7 +190,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
             for (int partition = 0; partition < 4; partition++) {
                 final var name = "user-" + cnt;
                 final var value = "value-" + cnt;
-                final String blobName = getBlobName(partition, 0, "none");
+                final String blobName = getBlobName(partition, 0, compression);
                 final GenericRecord record = blobContents.get(blobName).get(i);
                 final var recordValue = (GenericRecord) record.get("value");
                 assertThat(recordValue.get("name")).hasToString(name);
@@ -196,7 +202,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     @Test
     void schemaChanged(@TempDir final Path tmpDir) throws ExecutionException, InterruptedException, IOException {
-        final String compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
@@ -273,15 +279,16 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         assertThat(blobContents).containsExactlyInAnyOrderElementsOf(expectedRecords);
     }
 
-    private Map<String, String> basicConnectorConfig(final String compression) {
+    private Map<String, String> basicConnectorConfig(final CompressionType compression) {
         final Map<String, String> config = new HashMap<>();
-        config.put("name", CONNECTOR_NAME);
-        config.put("connector.class", GcsSinkConnector.class.getName());
-        config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
+        CommonConfigFragment.setter(config)
+                .name(CONNECTOR_NAME)
+                .connector(GcsSinkConnector.class)
+                .keyConverter(AvroConverter.class)
+                .valueConverter(AvroConverter.class);
+        CommonConfigFragment.setter(config).maxTasks(1);
         config.put("key.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         config.put("value.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        config.put("tasks.max", "1");
         if (gcsCredentialsPath != null) {
             config.put("gcs.credentials.path", gcsCredentialsPath);
         }
@@ -292,10 +299,9 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
             config.put("gcs.endpoint", gcsEndpoint);
         }
         config.put("gcs.bucket.name", testBucketName);
-        config.put("file.name.prefix", gcsPrefix);
+        FileNameFragment.setter(config).prefix(gcsPrefix).fileCompression(compression);
+        OutputFormatFragment.setter(config).withFormatType(FormatType.PARQUET);
         config.put("topics", testTopic0 + "," + testTopic1);
-        config.put("file.compression.type", compression);
-        config.put("format.output.type", "parquet");
         return config;
     }
 

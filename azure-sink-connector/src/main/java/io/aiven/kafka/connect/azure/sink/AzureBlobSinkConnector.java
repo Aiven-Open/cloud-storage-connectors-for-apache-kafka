@@ -34,7 +34,6 @@ public final class AzureBlobSinkConnector extends SinkConnector {
     private static final Logger LOG = LoggerFactory.getLogger(AzureBlobSinkConnector.class);
 
     private Map<String, String> configProps;
-    private AzureBlobSinkConfig config; // NOPMD field name same as in a method
 
     // required by Connect
     public AzureBlobSinkConnector() { // NOPMD
@@ -50,9 +49,7 @@ public final class AzureBlobSinkConnector extends SinkConnector {
     public void start(final Map<String, String> props) {
         Objects.requireNonNull(props, "props cannot be null");
         this.configProps = Collections.unmodifiableMap(props);
-        AzureBlobSinkConfig.configDef().validate(props);
-        this.config = new AzureBlobSinkConfig(props);
-        LOG.info("Starting connector {}", config.getConnectorName());
+        LOG.info("Start Azure Sink connector");
     }
 
     @Override
@@ -61,10 +58,11 @@ public final class AzureBlobSinkConnector extends SinkConnector {
     }
 
     @Override
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
         final List<Map<String, String>> configs = new ArrayList<>(maxTasks);
         for (int i = 0; i < maxTasks; i++) {
-            final Map<String, String> config = new HashMap<>(configProps); // NOPMD instantiation in a loop
+            final Map<String, String> config = new HashMap<>(configProps);
             configs.add(config);
         }
         return configs;
@@ -73,11 +71,11 @@ public final class AzureBlobSinkConnector extends SinkConnector {
     @Override
     public void stop() {
         // Nothing to do.
-        LOG.info("Stopping connector {}", config.getConnectorName());
+        LOG.info("Stopping Azure Sink connector");
     }
 
     @Override
     public ConfigDef config() {
-        return AzureBlobSinkConfig.configDef();
+        return new AzureBlobSinkConfigDef();
     }
 }
