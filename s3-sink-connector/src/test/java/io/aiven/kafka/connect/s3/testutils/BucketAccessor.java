@@ -32,56 +32,57 @@ import java.util.stream.Collectors;
 import io.aiven.kafka.connect.common.config.CompressionType;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.util.IOUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 public class BucketAccessor {
 
     private final String bucketName;
-    private final AmazonS3 s3Client;
+    private final S3Client s3Client;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BucketAccessor.class);
 
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable s3Client object")
-    public BucketAccessor(final AmazonS3 s3Client, final String bucketName) {
+    public BucketAccessor(final S3Client s3Client, final String bucketName) {
         this.bucketName = bucketName;
         this.s3Client = s3Client;
     }
 
     public final void createBucket() {
-        s3Client.createBucket(bucketName);
+        s3Client.createBucket(create -> create.bucket(bucketName).build());
     }
 
     public final void removeBucket() {
-        final var chunk = s3Client.listObjects(bucketName)
-                .getObjectSummaries()
+        final List<ObjectIdentifier> chunk = s3Client.listObjects(list -> list.bucket(bucketName))
+                .contents()
                 .stream()
-                .map(S3ObjectSummary::getKey)
-                .toArray(String[]::new);
+                .map(S3Object::key)
+                .map(key -> ObjectIdentifier.builder().key(key).build())
+                .collect(Collectors.toList());
 
-        final var deleteObjectsRequest = new DeleteObjectsRequest(bucketName).withKeys(chunk);
         try {
-            s3Client.deleteObjects(deleteObjectsRequest);
+            s3Client.deleteObjects(
+                    delete -> delete.bucket(bucketName).delete(withKeys -> withKeys.objects(chunk).build()).build());
         } catch (final MultiObjectDeleteException e) {
             for (final var err : e.getErrors()) {
                 LOGGER.warn(String.format("Couldn't delete object: %s. Reason: [%s] %s", err.getKey(), err.getCode(),
                         err.getMessage()));
             }
         } catch (final AmazonClientException e) {
-            LOGGER.error(
-                    "Couldn't delete objects: " + Arrays.stream(chunk).reduce(" ", String::concat) + e.getMessage());
+            LOGGER.error("Couldn't delete objects: "
+                    + chunk.stream().map(ObjectIdentifier::key).reduce(" ", String::concat) + e.getMessage());
         }
-        s3Client.deleteBucket(bucketName);
+        s3Client.deleteBucket(delete -> delete.bucket(bucketName).build());
     }
 
     public final Boolean doesObjectExist(final String objectName) {
-        return s3Client.doesObjectExist(bucketName, objectName);
+        return s3Client.headObject(head -> head.bucket(bucketName).key(objectName).build()).hasMetadata();
     }
 
     public final List<List<String>> readAndDecodeLines(final String blobName, final CompressionType compression,
@@ -102,7 +103,8 @@ public class BucketAccessor {
 
     public final byte[] readBytes(final String blobName, final CompressionType compression) throws IOException {
         Objects.requireNonNull(blobName, "blobName cannot be null");
-        final byte[] blobBytes = s3Client.getObject(bucketName, blobName).getObjectContent().readAllBytes();
+        final byte[] blobBytes = s3Client.getObject(object -> object.bucket(bucketName).key(blobName).build())
+                .readAllBytes();
         try (InputStream decompressedStream = compression.decompress(new ByteArrayInputStream(blobBytes));
                 ByteArrayOutputStream decompressedBytes = new ByteArrayOutputStream()) {
             IOUtils.copy(decompressedStream, decompressedBytes);
@@ -124,10 +126,10 @@ public class BucketAccessor {
     }
 
     public final List<String> listObjects() {
-        return s3Client.listObjects(bucketName)
-                .getObjectSummaries()
+        return s3Client.listObjects(list -> list.bucket(bucketName))
+                .contents()
                 .stream()
-                .map(S3ObjectSummary::getKey)
+                .map(S3Object::key)
                 .collect(Collectors.toList());
     }
 
