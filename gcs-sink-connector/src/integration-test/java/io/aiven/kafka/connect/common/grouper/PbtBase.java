@@ -23,16 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import io.aiven.kafka.connect.common.config.CommonConfigFragment;
-import io.aiven.kafka.connect.gcs.GcsSinkConnector;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.gcs.GcsSinkConfigDef;
+import io.aiven.kafka.connect.gcs.GcsSinkConnector;
 
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
