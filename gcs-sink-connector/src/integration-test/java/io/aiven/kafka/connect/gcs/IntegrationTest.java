@@ -76,7 +76,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
+    @EnumSource(CompressionType.class)
     void basicTest(final CompressionType compression) throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         OutputFormatFragment.setter(connectorConfig).withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
