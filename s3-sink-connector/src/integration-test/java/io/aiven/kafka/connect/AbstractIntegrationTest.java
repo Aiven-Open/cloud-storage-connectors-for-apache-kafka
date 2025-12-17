@@ -31,11 +31,6 @@ import io.aiven.commons.kafka.testkit.KafkaManager;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +39,10 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
 
 @Testcontainers
 @SuppressWarnings("PMD.MutableStaticState")
@@ -76,13 +75,12 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
                 .withServices(LocalStackContainer.Service.S3);
     }
 
-    static AmazonS3 createS3Client(final LocalStackContainer localStackContainer) {
-        return AmazonS3ClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
-                        localStackContainer.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
-                        localStackContainer.getRegion()))
-                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(
-                        localStackContainer.getAccessKey(), localStackContainer.getSecretKey())))
+    static S3Client createS3Client(final LocalStackContainer localStackContainer) {
+        return S3Client.builder()
+                .endpointOverride(localStackContainer.getEndpointOverride(LocalStackContainer.Service.S3))
+                .region(Region.of(localStackContainer.getRegion()))
+                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials
+                        .create(localStackContainer.getAccessKey(), localStackContainer.getSecretKey())))
                 .build();
     }
 
@@ -94,7 +92,7 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
     static void setUpAll() {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
-        final AmazonS3 s3Client = createS3Client(LOCALSTACK);
+        final S3Client s3Client = createS3Client(LOCALSTACK);
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
     }

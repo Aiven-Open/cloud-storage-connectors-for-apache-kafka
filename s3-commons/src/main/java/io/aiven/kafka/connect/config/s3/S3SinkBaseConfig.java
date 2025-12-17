@@ -29,7 +29,7 @@ import io.aiven.kafka.connect.iam.AwsStsRole;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.Region;
+import software.amazon.awssdk.regions.Region;
 @SuppressWarnings({ "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
 public class S3SinkBaseConfig extends SinkCommonConfig {
     private final S3ConfigFragment s3ConfigFragment;
@@ -105,7 +105,7 @@ public class S3SinkBaseConfig extends SinkCommonConfig {
     }
 
     public Region getAwsS3Region() {
-        return s3ConfigFragment.getAwsS3Region();
+        return s3ConfigFragment.getAwsS3RegionV2();
     }
 
     public String getAwsS3BucketName() {
