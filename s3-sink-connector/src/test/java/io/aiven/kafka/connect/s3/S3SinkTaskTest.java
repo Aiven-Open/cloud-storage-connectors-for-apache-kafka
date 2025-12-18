@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -74,8 +75,8 @@ import io.aiven.kafka.connect.common.config.BackoffPolicyFragmentFixture.Backoff
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
-import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
+import io.aiven.kafka.connect.s3.config.S3ClientFactory;
+import io.aiven.kafka.connect.s3.config.S3SinkConfig;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
 
 import com.github.luben.zstd.ZstdInputStream;
@@ -95,10 +96,11 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.xerial.snappy.SnappyInputStream;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.retries.LegacyRetryStrategy;
+import software.amazon.awssdk.retries.api.internal.backoff.ExponentialDelayWithJitter;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -243,10 +245,9 @@ final class S3SinkTaskTest {
                 .key("aiven--test-topic-0-00000000000000000200" + compressionType.extension())).hasMetadata()).isTrue();
     }
 
-    private static void assertKeyDoesNotExist(String key) {
-        assertThatThrownBy( () -> {
-            s3Client.headObject(head -> head.bucket(S3SinkTaskTest.TEST_BUCKET)
-                    .key(key));
+    private static void assertKeyDoesNotExist(final String key) {
+        assertThatThrownBy(() -> {
+            s3Client.headObject(head -> head.bucket(S3SinkTaskTest.TEST_BUCKET).key(key));
         }).isInstanceOf(NoSuchKeyException.class);
     }
 
@@ -330,20 +331,25 @@ final class S3SinkTaskTest {
                 AWS_S3_BUCKET_NAME_CONFIG, "aws-s3-bucket-name-config");
         task.start(props);
 
-        final S3Client s3Client = FieldSupport.EXTRACTION.fieldValue("s3Client", S3Client.class, task);
-        // final var s3RetryPolicy = s3Client.getClientConfiguration().getRetryPolicy();
-        //
-        // final var fullJitterBackoffStrategy = (PredefinedBackoffStrategies.FullJitterBackoffStrategy) s3RetryPolicy
-        // .getBackoffStrategy();
+        try (S3Client s3Client = FieldSupport.EXTRACTION.fieldValue("s3Client", S3Client.class, task)) {
+            final var s3RetryPolicy = s3Client.serviceClientConfiguration().overrideConfiguration();
+            final var retryStrategy = (LegacyRetryStrategy) s3RetryPolicy.retryStrategy().orElse(null);
 
-        // final var defaultDelay = FieldSupport.EXTRACTION.fieldValue("baseDelay", Integer.class,
-        // fullJitterBackoffStrategy);
-        // final var defaultMaxDelay = FieldSupport.EXTRACTION.fieldValue("maxBackoffTime", Integer.class,
-        // fullJitterBackoffStrategy);
+            assertThat(retryStrategy).isNotNull();
+            // TODO Backoff strategy has changed between 1.x and 2.x should we reconsider?
+            final var exponentialDelayWithJitter = FieldSupport.EXTRACTION.fieldValue("backoffStrategy",
+                    ExponentialDelayWithJitter.class, retryStrategy);
 
-        // assertThat(s3RetryPolicy.getMaxErrorRetry()).isEqualTo(S3SinkConfig.S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT);
-        // assertThat(defaultDelay).isEqualTo(S3SinkConfig.AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT);
-        // assertThat(defaultMaxDelay).isEqualTo(S3SinkConfig.AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT);
+            assertThat(exponentialDelayWithJitter).isNotNull();
+            final var defaultDelay = FieldSupport.EXTRACTION.fieldValue("baseDelay", Duration.class,
+                    exponentialDelayWithJitter);
+            final var defaultMaxDelay = FieldSupport.EXTRACTION.fieldValue("maxDelay", Duration.class,
+                    exponentialDelayWithJitter);
+            final var maxRetries = FieldSupport.EXTRACTION.fieldValue("maxAttempts", Integer.class, retryStrategy);
+            assertThat(maxRetries).isEqualTo(S3SinkConfig.S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT);
+            assertThat(defaultDelay.toMillis()).isEqualTo(S3SinkConfig.AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT);
+            assertThat(defaultMaxDelay.toMillis()).isEqualTo(S3SinkConfig.AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT);
+        }
     }
 
     @Test
@@ -357,20 +363,24 @@ final class S3SinkTaskTest {
                 "2", "aws.s3.backoff.max.retries", "3");
         task.start(props);
 
-        // final var s3Client = FieldSupport.EXTRACTION.fieldValue("s3Client", AmazonS3.class, task);
-        // final var s3RetryPolicy = ((AmazonS3Client) s3Client).getClientConfiguration().getRetryPolicy();
-        //
-        // final var fullJitterBackoffStrategy = (PredefinedBackoffStrategies.FullJitterBackoffStrategy) s3RetryPolicy
-        // .getBackoffStrategy();
-        //
-        // final var defaultDelay = FieldSupport.EXTRACTION.fieldValue("baseDelay", Integer.class,
-        // fullJitterBackoffStrategy);
-        // final var defaultMaxDelay = FieldSupport.EXTRACTION.fieldValue("maxBackoffTime", Integer.class,
-        // fullJitterBackoffStrategy);
-        //
-        // assertThat(defaultDelay).isOne();
-        // assertThat(defaultMaxDelay).isEqualTo(2);
-        // assertThat(s3RetryPolicy.getMaxErrorRetry()).isEqualTo(3);
+        try (S3Client s3Client = FieldSupport.EXTRACTION.fieldValue("s3Client", S3Client.class, task)) {
+            final var s3RetryPolicy = s3Client.serviceClientConfiguration().overrideConfiguration();
+            final var retryStrategy = (LegacyRetryStrategy) s3RetryPolicy.retryStrategy().orElse(null);
+            assertThat(retryStrategy).isNotNull();
+            final var exponentialDelayWithJitter = FieldSupport.EXTRACTION.fieldValue("backoffStrategy",
+                    ExponentialDelayWithJitter.class, retryStrategy);
+
+            assertThat(exponentialDelayWithJitter).isNotNull();
+            final var defaultDelay = FieldSupport.EXTRACTION.fieldValue("baseDelay", Duration.class,
+                    exponentialDelayWithJitter);
+            final var defaultMaxDelay = FieldSupport.EXTRACTION.fieldValue("maxDelay", Duration.class,
+                    exponentialDelayWithJitter);
+            final var maxRetries = FieldSupport.EXTRACTION.fieldValue("maxAttempts", Integer.class, retryStrategy);
+            assertThat(maxRetries).isEqualTo(3);
+
+            assertThat(defaultDelay.toMillis()).isOne();
+            assertThat(defaultMaxDelay.toMillis()).isEqualTo(2);
+        }
     }
 
     @ParameterizedTest
@@ -429,7 +439,7 @@ final class S3SinkTaskTest {
         final String expectedFileName = String.format(
                 "prefix-%s--test-topic-0-00000000000000000000" + compressionType.extension(),
                 LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE));
-        HeadObjectResponse headObject = s3Client
+        final HeadObjectResponse headObject = s3Client
                 .headObject(HeadObjectRequest.builder().bucket(TEST_BUCKET).key(expectedFileName).build());
         assertThat(headObject.hasMetadata()).isTrue();
 
@@ -696,18 +706,19 @@ final class S3SinkTaskTest {
     }
 
     @Test
-    void requestCredentialProviderFromFactoryOnStart() {
+    void createS3ClientFromFactoryOnStart() {
         final S3SinkTask task = new S3SinkTask();
 
-        final AwsCredentialProviderFactory mockedFactory = Mockito.mock(AwsCredentialProviderFactory.class);
-        final AwsCredentialsProvider provider = Mockito.mock(AwsCredentialsProvider.class);
+        final S3ClientFactory mockedFactory = Mockito.mock(S3ClientFactory.class);
+        try (S3Client s3ClientMock = Mockito.mock(S3Client.class)) {
 
-        task.credentialFactory = mockedFactory;
-        Mockito.when(mockedFactory.getAwsV2Provider(any(S3ConfigFragment.class))).thenReturn(provider);
+            task.s3ClientFactory = mockedFactory;
+            Mockito.when(mockedFactory.createAmazonS3Client(any(S3SinkConfig.class))).thenReturn(s3ClientMock);
 
-        task.start(properties);
+            task.start(properties);
 
-        verify(mockedFactory, Mockito.times(1)).getAwsV2Provider(any(S3ConfigFragment.class));
+            verify(mockedFactory, Mockito.times(1)).createAmazonS3Client(any(S3SinkConfig.class));
+        }
     }
 
     private SinkRecord createRecordWithStringValueSchema(final String topic, final int partition, final String key,

@@ -209,28 +209,6 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
         return TimestampSource.of(getTimezone(), TimestampSource.Type.of(getString(S3ConfigFragment.TIMESTAMP_SOURCE)));
     }
 
-    // TODO see can we delete as sdk is no longer supported
-    /**
-     * Deprecated please use S3ConfigFragment.AwsRegionValidator
-     */
-    // @Deprecated
-    // protected static class AwsRegionValidator implements ConfigDef.Validator {
-    // private static final String SUPPORTED_AWS_REGIONS = Arrays.stream(Regions.values())
-    // .map(Regions::getName)
-    // .collect(Collectors.joining(", "));
-    //
-    // @Override
-    // public void ensureValid(final String name, final Object value) {
-    // if (Objects.nonNull(value)) {
-    // final String valueStr = (String) value;
-    // final Region region = RegionUtils.getRegion(valueStr);
-    // if (!RegionUtils.getRegions().contains(region)) {
-    // throw new ConfigException(name, valueStr, "supported values are: " + SUPPORTED_AWS_REGIONS);
-    // }
-    // }
-    // }
-    // }
-
     public Boolean usesFileNameTemplate() {
         return Objects.isNull(getString(S3ConfigFragment.AWS_S3_PREFIX_CONFIG))
                 && Objects.isNull(getString(S3ConfigFragment.AWS_S3_PREFIX));

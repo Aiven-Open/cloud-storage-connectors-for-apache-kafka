@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect;
 
 import java.io.IOException;
+import java.net.URI;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
@@ -65,6 +66,8 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
 
     protected KafkaProducer<K, V> producer;
 
+    protected static S3Client s3Client;
+
     @Container
     public static final LocalStackContainer LOCALSTACK = createS3Container();
 
@@ -75,12 +78,12 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
                 .withServices(LocalStackContainer.Service.S3);
     }
 
-    static S3Client createS3Client(final LocalStackContainer localStackContainer) {
+    static S3Client createS3Client(final LocalStackContainer container) {
         return S3Client.builder()
-                .endpointOverride(localStackContainer.getEndpointOverride(LocalStackContainer.Service.S3))
-                .region(Region.of(localStackContainer.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials
-                        .create(localStackContainer.getAccessKey(), localStackContainer.getSecretKey())))
+                .endpointOverride(URI.create(container.getEndpointOverride(LocalStackContainer.Service.S3).toString()))
+                .region(Region.of(container.getRegion()))
+                .credentialsProvider(StaticCredentialsProvider
+                        .create(AwsBasicCredentials.create(container.getAccessKey(), container.getSecretKey())))
                 .build();
     }
 
@@ -92,9 +95,10 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
     static void setUpAll() {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
-        final S3Client s3Client = createS3Client(LOCALSTACK);
+        s3Client = createS3Client(LOCALSTACK);
         s3Endpoint = LOCALSTACK.getEndpoint().toString();
         testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
+
     }
 
     @BeforeEach
@@ -109,7 +113,9 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
 
     @AfterEach
     void tearDown() {
-        producer.close();
+        if (producer != null) {
+            producer.close();
+        }
         testBucketAccessor.removeBucket();
         CONNECTOR_NAMES.forEach(kafkaManager::deleteConnector);
         CONNECTOR_NAMES.clear();

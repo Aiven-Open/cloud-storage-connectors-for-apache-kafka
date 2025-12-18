@@ -30,7 +30,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 public class S3OutputStream extends OutputStream {
 
@@ -161,17 +167,23 @@ public class S3OutputStream extends OutputStream {
 
         public void complete() {
             // splitting builder and request makes stubbing simpler.
-            final var completeMultiPartUploadRequest = CompleteMultipartUploadRequest.builder().bucket(bucketName)
+            final var completeMultiPartUploadRequest = CompleteMultipartUploadRequest.builder()
+                    .bucket(bucketName)
                     .key(key)
                     .uploadId(uploadId)
-                    .multipartUpload(CompletedMultipartUpload.builder().parts(completedParts).build()).build();
+                    .multipartUpload(CompletedMultipartUpload.builder().parts(completedParts).build())
+                    .build();
 
             client.completeMultipartUpload(completeMultiPartUploadRequest);
         }
 
         public void abort() {
-// splitting builder and request makes stubbing simpler.
-            final var abort = AbortMultipartUploadRequest.builder().bucket(bucketName).key(key).uploadId(uploadId).build();
+            // splitting builder and request makes stubbing simpler.
+            final var abort = AbortMultipartUploadRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .uploadId(uploadId)
+                    .build();
 
             client.abortMultipartUpload(abort);
         }

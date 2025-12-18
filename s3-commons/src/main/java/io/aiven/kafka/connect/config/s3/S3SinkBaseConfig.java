@@ -26,9 +26,8 @@ import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 @SuppressWarnings({ "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
 public class S3SinkBaseConfig extends SinkCommonConfig {
@@ -92,12 +91,8 @@ public class S3SinkBaseConfig extends SinkCommonConfig {
         return s3ConfigFragment.getStsEndpointConfig();
     }
 
-    public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
-        return s3ConfigFragment.getAwsEndpointConfiguration();
-    }
-
-    public BasicAWSCredentials getAwsCredentials() {
-        return s3ConfigFragment.getAwsCredentials();
+    public AwsBasicCredentials getAwsCredentials() {
+        return s3ConfigFragment.getAwsCredentialsV2();
     }
 
     public String getAwsS3EndPoint() {
@@ -136,7 +131,7 @@ public class S3SinkBaseConfig extends SinkCommonConfig {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
     }
 
-    public AWSCredentialsProvider getCustomCredentialsProvider() {
-        return s3ConfigFragment.getCustomCredentialsProvider();
+    public AwsCredentialsProvider getCustomCredentialsProvider() {
+        return s3ConfigFragment.getCustomCredentialsProviderV2();
     }
 }

@@ -40,7 +40,6 @@ import io.aiven.kafka.connect.common.grouper.RecordGrouper;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
 import io.aiven.kafka.connect.common.output.OutputWriter;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
-import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.config.S3SinkConfig;
 
@@ -59,7 +58,7 @@ public final class S3SinkTask extends SinkTask {
 
     private S3Client s3Client;
 
-    AwsCredentialProviderFactory credentialFactory = new AwsCredentialProviderFactory();
+    S3ClientFactory s3ClientFactory = new S3ClientFactory();
 
     @SuppressWarnings("PMD.UnnecessaryConstructor") // required by Connect
     public S3SinkTask() {
@@ -70,7 +69,7 @@ public final class S3SinkTask extends SinkTask {
     public void start(final Map<String, String> props) {
         Objects.requireNonNull(props, "props hasn't been set");
         config = new S3SinkConfig(props);
-        s3Client = new S3ClientFactory().createAmazonS3Client(config);
+        s3Client = s3ClientFactory.createAmazonS3Client(config);
         try {
             recordGrouper = RecordGrouperFactory.newRecordGrouper(config);
         } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
