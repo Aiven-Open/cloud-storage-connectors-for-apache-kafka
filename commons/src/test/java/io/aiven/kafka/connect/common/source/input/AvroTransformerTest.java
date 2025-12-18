@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.Struct;
@@ -116,6 +117,30 @@ final class AvroTransformerTest {
                 new Context<>("storage-key"), sourceCommonConfig, 25);
 
         assertThat(records).isEmpty();
+    }
+
+    @Test
+    void testReadGzippedAvroRecords() throws Exception {
+        final ByteArrayOutputStream avroData = generateMockAvroData(15);
+
+        final ByteArrayOutputStream gzippedOutputStream = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzipOutputStream = new GZIPOutputStream(gzippedOutputStream)) {
+            gzipOutputStream.write(avroData.toByteArray());
+        }
+
+        final InputStream inputStream = new ByteArrayInputStream(gzippedOutputStream.toByteArray());
+
+        final List<String> expected = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            expected.add("Hello, Kafka Connect S3 Source! object " + i);
+        }
+
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, gzippedOutputStream.size(),
+                new Context<>("storage-key"), sourceCommonConfig, 0);
+
+        assertThat(records).extracting(SchemaAndValue::value)
+                .extracting(sv -> ((Struct) sv).getString("message"))
+                .containsExactlyElementsOf(expected);
     }
 
     static ByteArrayOutputStream generateMockAvroData(final int numRecs) throws IOException {

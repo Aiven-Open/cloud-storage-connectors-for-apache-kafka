@@ -16,10 +16,12 @@
 
 package io.aiven.kafka.connect.common.source.input;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
+import java.util.zip.GZIPInputStream;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -56,7 +58,21 @@ public class AvroTransformer extends Transformer {
 
             @Override
             protected void inputOpened(final InputStream input) throws IOException {
-                dataFileStream = new DataFileStream<>(input, datumReader);
+                InputStream decompressedInput = input;
+                if (!input.markSupported()) {
+                    decompressedInput = new BufferedInputStream(input);
+                }
+                decompressedInput.mark(2);
+                byte[] magic = new byte[2];
+                int bytesRead = decompressedInput.read(magic);
+                decompressedInput.reset();
+
+                // GZIP magic bytes: 0x1f 0x8b
+                if (bytesRead == 2 && magic[0] == (byte) 0x1f && magic[1] == (byte) 0x8b) {
+                    decompressedInput = new GZIPInputStream(decompressedInput);
+                }
+
+                dataFileStream = new DataFileStream<>(decompressedInput, datumReader);
             }
 
             @Override
