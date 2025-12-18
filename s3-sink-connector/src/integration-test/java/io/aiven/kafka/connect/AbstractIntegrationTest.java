@@ -92,9 +92,10 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
     static void setUpAll() {
         s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
 
-        final S3Client s3Client = createS3Client(LOCALSTACK);
-        s3Endpoint = LOCALSTACK.getEndpoint().toString();
-        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
+        try (S3Client s3Client = createS3Client(LOCALSTACK)) {
+            s3Endpoint = LOCALSTACK.getEndpoint().toString();
+            testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
+        }
     }
 
     @BeforeEach

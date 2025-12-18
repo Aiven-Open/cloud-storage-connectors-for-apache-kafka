@@ -65,11 +65,6 @@ dependencyResolutionManagement {
       library("sts", "software.amazon.awssdk:sts:$amazonAwsSdkV2Version")
     }
 
-    create("amazonoldawssdk") {
-      library("s3", "com.amazonaws:aws-java-sdk-s3:$amazonAwsSdkV1Version")
-      library("sts", "com.amazonaws:aws-java-sdk-sts:$amazonAwsSdkV1Version")
-    }
-
     create("azure") { library("storage-blob", "com.azure:azure-storage-blob:${azureVersion}") }
     create("compressionlibs") {
       library("snappy", "org.xerial.snappy:snappy-java:$snappyVersion")

@@ -31,12 +31,12 @@ import java.util.stream.Collectors;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.util.IOUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -69,12 +69,12 @@ public class BucketAccessor {
         try {
             s3Client.deleteObjects(
                     delete -> delete.bucket(bucketName).delete(withKeys -> withKeys.objects(chunk).build()).build());
-        } catch (final MultiObjectDeleteException e) {
-            for (final var err : e.getErrors()) {
-                LOGGER.warn(String.format("Couldn't delete object: %s. Reason: [%s] %s", err.getKey(), err.getCode(),
-                        err.getMessage()));
-            }
-        } catch (final AmazonClientException e) {
+        } catch (final AwsServiceException e) {
+
+            LOGGER.warn(String.format("Couldn't delete object: %s. Reason: [%s] %s", chunk,
+                    e.awsErrorDetails().errorCode(), e.awsErrorDetails().errorMessage()));
+
+        } catch (final SdkClientException e) {
             LOGGER.error("Couldn't delete objects: "
                     + chunk.stream().map(ObjectIdentifier::key).reduce(" ", String::concat) + e.getMessage());
         }
