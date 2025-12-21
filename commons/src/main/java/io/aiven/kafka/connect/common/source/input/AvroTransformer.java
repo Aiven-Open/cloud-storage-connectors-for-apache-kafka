@@ -44,6 +44,10 @@ public class AvroTransformer extends Transformer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroTransformer.class);
 
+    // GZIP file format magic number (RFC 1952)
+    private static final byte GZIP_MAGIC_BYTE_1 = (byte) 0x1f;
+    private static final byte GZIP_MAGIC_BYTE_2 = (byte) 0x8b;
+
     AvroTransformer(final AvroData avroData) {
         super();
         this.avroData = avroData;
@@ -58,21 +62,27 @@ public class AvroTransformer extends Transformer {
 
             @Override
             protected void inputOpened(final InputStream input) throws IOException {
-                InputStream decompressedInput = input;
-                if (!input.markSupported()) {
-                    decompressedInput = new BufferedInputStream(input);
-                }
-                decompressedInput.mark(2);
-                byte[] magic = new byte[2];
-                int bytesRead = decompressedInput.read(magic);
-                decompressedInput.reset();
+                final InputStream bufferedInput = new BufferedInputStream(input);
 
-                // GZIP magic bytes: 0x1f 0x8b
-                if (bytesRead == 2 && magic[0] == (byte) 0x1f && magic[1] == (byte) 0x8b) {
-                    decompressedInput = new GZIPInputStream(decompressedInput);
-                }
+                // Peek at the first 2 bytes to detect GZIP compression
+                bufferedInput.mark(2);
+                final byte[] magicBytes = new byte[2];
+                final int bytesRead = bufferedInput.read(magicBytes);
+                bufferedInput.reset();
 
-                dataFileStream = new DataFileStream<>(decompressedInput, datumReader);
+                final boolean isGzipCompressed = bytesRead == 2 && magicBytes[0] == GZIP_MAGIC_BYTE_1
+                        && magicBytes[1] == GZIP_MAGIC_BYTE_2;
+
+                try {
+                    final InputStream sourceStream = isGzipCompressed
+                            ? new GZIPInputStream(bufferedInput)
+                            : bufferedInput;
+                    dataFileStream = new DataFileStream<>(sourceStream, datumReader);
+                } catch (IOException e) {
+                    LOGGER.error("Error initializing Avro DataFileStream (GZIP compressed: {}): {}", isGzipCompressed,
+                            e.getMessage(), e);
+                    throw e;
+                }
             }
 
             @Override
