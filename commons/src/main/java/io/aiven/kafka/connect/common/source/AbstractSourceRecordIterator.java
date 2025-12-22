@@ -27,15 +27,20 @@ import java.util.stream.Stream;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
 import io.aiven.commons.collections.RingBuffer;
+import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.common.config.SourceConfigFragment;
+import io.aiven.kafka.connect.common.source.input.ParquetTransformer;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.utils.FilePatternUtils;
 import io.aiven.kafka.connect.common.source.task.Context;
 import io.aiven.kafka.connect.common.source.task.DistributionStrategy;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 
+import com.google.common.annotations.VisibleForTesting;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.io.function.IOSupplier;
+import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 
 /**
@@ -91,6 +96,8 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
      */
     private final RingBuffer<K> ringBuffer;
 
+    private final K nativeStartKey;
+
     /**
      * Constructor.
      *
@@ -116,6 +123,9 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
         this.transformer = transformer;
         this.taskId = sourceConfig.getTaskId() % maxTasks;
         this.taskAssignment = new TaskAssignment(distributionType.getDistributionStrategy(maxTasks));
+        this.nativeStartKey = sourceConfig.getNativeStartKey() != null
+                ? parseNativeKey(sourceConfig.getNativeStartKey())
+                : null;
         this.fileMatching = new FileMatching(new FilePatternUtils(sourceConfig.getSourceName()));
         this.inner = Collections.emptyIterator();
         this.outer = Collections.emptyIterator();
@@ -137,6 +147,14 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
      * @return A stream of natvie objects. May be empty but not {@code null}.
      */
     abstract protected Stream<N> getNativeItemStream(K offset);
+
+    /**
+     *
+     * @param nativeKeyText
+     *            The native identifier to begin consuming events from
+     * @return A transformed native Key into the correct type for processing the specific native key implementation
+     */
+    protected abstract K parseNativeKey(String nativeKeyText);
 
     /**
      * Gets an IOSupplier for the specific source record.
@@ -192,11 +210,11 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
             offsetManager.removeEntry(getOffsetManagerKey(lastSeenNativeKey));
         }
         if (!inner.hasNext() && !outer.hasNext()) {
-            inner = getNativeItemStream(ringBuffer.getNextEjected()).map(fileMatching)
-                    .filter(taskAssignment)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .iterator();
+            inner = getNativeItemStream(ObjectUtils.getIfNull(ringBuffer.getNextEjected(), () -> {
+                getLogger().info("{} set, no alternative present in buffer will begin consuming from {}",
+                        SourceConfigFragment.NATIVE_START_KEY, nativeStartKey);
+                return nativeStartKey;
+            })).map(fileMatching).filter(taskAssignment).filter(Optional::isPresent).map(Optional::get).iterator();
         }
         while (!outer.hasNext() && inner.hasNext()) {
             outer = convert(inner.next()).iterator();
@@ -221,17 +239,25 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
      *            the SourceRecord that drives the creation of source records with values.
      * @return a stream of T created from the input stream of the native item.
      */
-    private Stream<T> convert(final T sourceRecord) {
+    @VisibleForTesting
+    Stream<T> convert(final T sourceRecord) {
         sourceRecord
                 .setKeyData(transformer.getKeyData(sourceRecord.getNativeKey(), sourceRecord.getTopic(), sourceConfig));
 
         lastSeenNativeKey = sourceRecord.getNativeKey();
 
+        // parquet handles compression internally.
+        final CompressionType compressionType = transformer instanceof ParquetTransformer
+                ? CompressionType.NONE
+                : sourceConfig.getCompressionType();
+        // create an IOSupplier with the specified compression
+        final IOSupplier<InputStream> inputStream = transformer instanceof ParquetTransformer
+                ? getInputStream(sourceRecord)
+                : compressionType.decompress(getInputStream(sourceRecord));
         return transformer
-                .getRecords(getInputStream(sourceRecord), sourceRecord.getNativeItemSize(), sourceRecord.getContext(),
-                        sourceConfig, sourceRecord.getRecordCount())
+                .getRecords(inputStream, sourceRecord.getNativeItemSize(), sourceRecord.getContext(), sourceConfig,
+                        sourceRecord.getRecordCount())
                 .map(new Mapper<N, K, O, T>(sourceRecord));
-
     }
 
     /**

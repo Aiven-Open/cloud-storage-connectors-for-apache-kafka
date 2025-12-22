@@ -18,12 +18,9 @@ package io.aiven.kafka.connect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -33,103 +30,36 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
-import io.aiven.kafka.connect.s3.SchemaRegistryContainer;
-import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
 
-import com.amazonaws.services.s3.AmazonS3;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.io.TempDir;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-class AvroParquetIntegrationTest implements IntegrationBase {
-    private static final String S3_ACCESS_KEY_ID = "test-key-id0";
-    private static final String S3_SECRET_ACCESS_KEY = "test_secret_key0";
-    private static final String TEST_BUCKET_NAME = "test-bucket0";
-
-    private static final String CONNECTOR_NAME = "aiven-s3-sink-connector";
-    private static final String COMMON_PREFIX = "s3-connector-for-apache-kafka-test-";
-    private static final int OFFSET_FLUSH_INTERVAL_MS = 5000;
-
-    private static String s3Endpoint;
-    private static String s3Prefix;
-    private static BucketAccessor testBucketAccessor;
-    private static File pluginDir;
-
-    @Container
-    public static final LocalStackContainer LOCALSTACK = IntegrationBase.createS3Container();
-    @Container
-    private static final KafkaContainer KAFKA = IntegrationBase.createKafkaContainer();
-    @Container
-    private static final SchemaRegistryContainer SCHEMA_REGISTRY = new SchemaRegistryContainer(KAFKA);
-    private AdminClient adminClient;
-    private KafkaProducer<String, GenericRecord> producer;
-    private ConnectRunner connectRunner;
-
-    @BeforeAll
-    static void setUpAll() throws IOException, InterruptedException {
-        s3Prefix = COMMON_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "/";
-
-        final AmazonS3 s3Client = IntegrationBase.createS3Client(LOCALSTACK);
-        s3Endpoint = LOCALSTACK.getEndpoint().toString();
-        testBucketAccessor = new BucketAccessor(s3Client, TEST_BUCKET_NAME);
-        testBucketAccessor.createBucket();
-
-        pluginDir = IntegrationBase.getPluginDir();
-        IntegrationBase.extractConnectorPlugin(pluginDir);
-
-        IntegrationBase.waitForRunningContainer(KAFKA);
-    }
-
-    @BeforeEach
-    void setUp(final TestInfo testInfo) throws ExecutionException, InterruptedException {
-        adminClient = newAdminClient(KAFKA);
-        producer = newProducer();
-
-        final var topicName = IntegrationBase.topicName(testInfo);
-        IntegrationBase.createTopics(adminClient, List.of(topicName));
-
-        connectRunner = newConnectRunner(KAFKA, pluginDir, OFFSET_FLUSH_INTERVAL_MS);
-        connectRunner.start();
-    }
-
-    @AfterEach
-    final void tearDown() {
-        connectRunner.stop();
-        adminClient.close();
-        producer.close();
-
-        connectRunner.awaitStop();
-    }
+class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, GenericRecord> {
 
     @Test
     final void allOutputFields(@TempDir final Path tmpDir, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = topicName(testInfo);
         final String compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", "key,value,offset,timestamp,headers");
         connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectRunner.createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -170,7 +100,7 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
             assertThat(testBucketAccessor.doesObjectExist(blobName)).isTrue();
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.put(blobName, records);
         }
@@ -199,12 +129,12 @@ class AvroParquetIntegrationTest implements IntegrationBase {
     @Test
     final void valueComplexType(@TempDir final Path tmpDir, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = topicName(testInfo);
         final String compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectRunner.createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -244,7 +174,7 @@ class AvroParquetIntegrationTest implements IntegrationBase {
                 getBlobName(topicName, 3, 0, compression));
         final Map<String, List<GenericRecord>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.put(blobName, records);
         }
@@ -268,12 +198,12 @@ class AvroParquetIntegrationTest implements IntegrationBase {
     @Test
     final void schemaChanged(@TempDir final Path tmpDir, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
-        final var topicName = IntegrationBase.topicName(testInfo);
+        final var topicName = topicName(testInfo);
         final String compression = "none";
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectRunner.createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
                 .fields()
@@ -341,7 +271,7 @@ class AvroParquetIntegrationTest implements IntegrationBase {
                 getBlobName(topicName, 3, 5, compression));
         final var blobContents = new ArrayList<String>();
         for (final String blobName : expectedBlobs) {
-            final var records = ParquetUtils.readRecords(tmpDir.resolve(Paths.get(blobName)),
+            final var records = ParquetTestDataFixture.readRecords(tmpDir.resolve(Paths.get(blobName)),
                     testBucketAccessor.readBytes(blobName));
             blobContents.addAll(records.stream().map(r -> r.get("value").toString()).collect(Collectors.toList()));
         }
@@ -349,14 +279,15 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         assertThat(blobContents).containsExactlyInAnyOrderElementsOf(expectedRecords);
     }
 
-    private KafkaProducer<String, GenericRecord> newProducer() {
+    @Override
+    protected KafkaProducer<String, GenericRecord> newProducer() {
         final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaManager.bootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        producerProps.put("schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        producerProps.put("schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         return new KafkaProducer<>(producerProps);
     }
 
@@ -370,9 +301,9 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         final Map<String, String> config = new HashMap<>();
         config.put("name", CONNECTOR_NAME);
         config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("key.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
-        config.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("tasks.max", "1");
         config.put("file.compression.type", compression);
         config.put("format.output.type", "parquet");
@@ -387,8 +318,8 @@ class AvroParquetIntegrationTest implements IntegrationBase {
         config.put("aws.s3.bucket.name", TEST_BUCKET_NAME);
         config.put("aws.s3.prefix", s3Prefix);
         config.put("topics", topicName);
-        config.put("key.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
-        config.put("value.converter.schema.registry.url", SCHEMA_REGISTRY.getSchemaRegistryUrl());
+        config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
+        config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("tasks.max", "1");
         return config;
     }

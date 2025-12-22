@@ -73,7 +73,7 @@ final class S3SourceRecordIteratorTest
     protected SourceCommonConfig createMockedConfig() {
         // create a mocked config with the values required by the S3CSourceConfig
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
-        when(s3SourceConfig.getS3FetchBufferSize()).thenReturn(1);
+        when(s3SourceConfig.getRingBufferSize()).thenReturn(1);
         when(s3SourceConfig.getAwsS3BucketName()).thenReturn("testBucket");
         when(s3SourceConfig.getFetchPageSize()).thenReturn(10);
         return s3SourceConfig;

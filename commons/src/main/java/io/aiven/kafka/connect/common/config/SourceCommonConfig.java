@@ -82,4 +82,12 @@ public class SourceCommonConfig extends CommonConfig {
     public String getSourceName() {
         return fileNameFragment.getSourceName();
     }
+
+    public String getNativeStartKey() {
+        return sourceConfigFragment.getNativeStartKey();
+    }
+
+    public CompressionType getCompressionType() {
+        return fileNameFragment.getCompressionType();
+    }
 }

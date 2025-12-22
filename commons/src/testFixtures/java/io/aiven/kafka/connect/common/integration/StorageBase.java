@@ -55,7 +55,7 @@ public interface StorageBase<K extends Comparable<K>, N> {
      *
      * @return the list of {@link NativeInfo} implementations, one for each item in native storage.
      */
-    List<? extends NativeInfo<N, K>> getNativeStorage();
+    List<? extends NativeInfo<K, N>> getNativeStorage();
 
     /**
      * Gets an IOSupplier for an InputStream for the specified nativeKey.

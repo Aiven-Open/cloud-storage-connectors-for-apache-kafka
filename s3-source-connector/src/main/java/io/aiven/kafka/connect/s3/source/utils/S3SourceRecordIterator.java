@@ -56,7 +56,7 @@ public final class S3SourceRecordIterator
             final OffsetManager<S3OffsetManagerEntry> offsetManager, final Transformer transformer,
             final AWSV2SourceClient sourceClient) {
 
-        super(s3SourceConfig, offsetManager, transformer, s3SourceConfig.getS3FetchBufferSize());
+        super(s3SourceConfig, offsetManager, transformer, s3SourceConfig.getRingBufferSize());
         this.bucket = s3SourceConfig.getAwsS3BucketName();
         this.sourceClient = sourceClient;
     }
@@ -79,6 +79,11 @@ public final class S3SourceRecordIterator
     @Override
     protected String getNativeKey(final S3Object nativeObject) {
         return nativeObject.key();
+    }
+
+    @Override
+    protected String parseNativeKey(final String nativeKeyText) {
+        return nativeKeyText;
     }
 
     @Override
