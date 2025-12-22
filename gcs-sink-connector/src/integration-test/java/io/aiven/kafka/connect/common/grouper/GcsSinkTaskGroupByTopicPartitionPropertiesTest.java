@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.grouper;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ import com.google.common.collect.Lists;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.constraints.IntRange;
+import org.apache.kafka.connect.sink.SinkTaskContext;
 import org.junit.jupiter.api.Disabled;
 
 /**
@@ -72,7 +74,9 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
         if (maxRecordsPerFile != null) {
             taskProps.put(GcsSinkConfig.FILE_MAX_RECORDS, Integer.toString(maxRecordsPerFile));
         }
+        final var mockedContext = mock(SinkTaskContext.class);
         final GcsSinkTask task = new GcsSinkTask(taskProps, storage);
+        task.initialize(mockedContext);
 
         for (final List<SinkRecord> recordBatch : recordBatches) {
             task.put(recordBatch);

@@ -50,6 +50,10 @@ public final class GcsSinkTask extends SinkTask {
 
     private Storage storage;
 
+    private long lastCommitTime;
+
+    private long commitInterval;
+
     // required by Connect
     public GcsSinkTask() {
         super();
@@ -88,6 +92,8 @@ public final class GcsSinkTask extends SinkTask {
         if (Objects.nonNull(config.getKafkaRetryBackoffMs())) {
             context.timeout(config.getKafkaRetryBackoffMs());
         }
+        this.lastCommitTime = System.currentTimeMillis();
+        this.commitInterval = config.getGcsRequestCommitIntervalMs();
     }
 
     private void initRest() {
@@ -105,6 +111,15 @@ public final class GcsSinkTask extends SinkTask {
         LOG.debug("Processing {} records", records.size());
         for (final SinkRecord record : records) {
             recordGrouper.put(record);
+        }
+
+        if (commitInterval >= 0) {
+            // Check if it's time to commit
+            long now = System.currentTimeMillis();
+            if (now - lastCommitTime > commitInterval) {
+                this.context.requestCommit();
+                lastCommitTime = now;
+            }
         }
     }
 
