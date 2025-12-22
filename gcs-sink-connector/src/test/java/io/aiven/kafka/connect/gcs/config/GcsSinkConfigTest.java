@@ -777,11 +777,7 @@ final class GcsSinkConfigTest {
     void wrongRequestCommitIntervalConfig() {
         final Map<String, String> properties = Map.of("gcs.bucket.name", "test-bucket",
             "gcs.request.commit.interval.ms", "test-value");
-
         final var expectedErrorMessage = "Invalid value test-value for configuration gcs.request.commit.interval.ms: Not a number of type LONG";
-
-        final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
-            "gcs.request.commit.interval.ms", expectedErrorMessage);
 
         assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
             .hasMessage(expectedErrorMessage);
