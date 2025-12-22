@@ -21,11 +21,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 
+import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.task.Context;
 
@@ -44,10 +44,6 @@ public class AvroTransformer extends Transformer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AvroTransformer.class);
 
-    // GZIP file format magic number (RFC 1952)
-    private static final byte GZIP_MAGIC_BYTE_1 = (byte) 0x1f;
-    private static final byte GZIP_MAGIC_BYTE_2 = (byte) 0x8b;
-
     AvroTransformer(final AvroData avroData) {
         super();
         this.avroData = avroData;
@@ -64,23 +60,16 @@ public class AvroTransformer extends Transformer {
             protected void inputOpened(final InputStream input) throws IOException {
                 final InputStream bufferedInput = new BufferedInputStream(input);
 
-                // Peek at the first 2 bytes to detect GZIP compression
-                bufferedInput.mark(2);
-                final byte[] magicBytes = new byte[2];
-                final int bytesRead = bufferedInput.read(magicBytes);
-                bufferedInput.reset();
-
-                final boolean isGzipCompressed = bytesRead == 2 && magicBytes[0] == GZIP_MAGIC_BYTE_1
-                        && magicBytes[1] == GZIP_MAGIC_BYTE_2;
+                final CompressionType compressionType = sourceConfig.getCompressionType() != null
+                        ? sourceConfig.getCompressionType()
+                        : CompressionType.NONE;
 
                 try {
-                    final InputStream sourceStream = isGzipCompressed
-                            ? new GZIPInputStream(bufferedInput)
-                            : bufferedInput;
+                    final InputStream sourceStream = compressionType.decompress(bufferedInput);
                     dataFileStream = new DataFileStream<>(sourceStream, datumReader);
                 } catch (IOException e) {
-                    LOGGER.error("Error initializing Avro DataFileStream (GZIP compressed: {}): {}", isGzipCompressed,
-                            e.getMessage(), e);
+                    LOGGER.error("Error initializing Avro DataFileStream (compression type: {}): {}",
+                            compressionType.name, e.getMessage(), e);
                     throw e;
                 }
             }

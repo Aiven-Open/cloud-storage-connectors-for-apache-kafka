@@ -18,11 +18,13 @@ package io.aiven.kafka.connect.common.source.input;
 
 import static io.aiven.kafka.connect.common.source.input.Transformer.UNKNOWN_STREAM_LENGTH;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,7 @@ import java.util.zip.GZIPOutputStream;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.Struct;
 
+import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 import io.aiven.kafka.connect.common.source.task.Context;
 
@@ -121,6 +124,8 @@ final class AvroTransformerTest {
 
     @Test
     void testReadGzippedAvroRecords() throws Exception {
+        when(sourceCommonConfig.getCompressionType()).thenReturn(CompressionType.GZIP);
+
         final ByteArrayOutputStream avroData = generateMockAvroData(15);
 
         final ByteArrayOutputStream gzippedOutputStream = new ByteArrayOutputStream();
@@ -136,6 +141,58 @@ final class AvroTransformerTest {
         }
 
         final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, gzippedOutputStream.size(),
+                new Context<>("storage-key"), sourceCommonConfig, 0);
+
+        assertThat(records).extracting(SchemaAndValue::value)
+                .extracting(sv -> ((Struct) sv).getString("message"))
+                .containsExactlyElementsOf(expected);
+    }
+
+    @Test
+    void testReadSnappyAvroRecords() throws Exception {
+        when(sourceCommonConfig.getCompressionType()).thenReturn(CompressionType.SNAPPY);
+
+        final ByteArrayOutputStream avroData = generateMockAvroData(15);
+
+        final ByteArrayOutputStream compressedOutputStream = new ByteArrayOutputStream();
+        try (OutputStream outputStream = CompressionType.SNAPPY.compress(compressedOutputStream)) {
+            outputStream.write(avroData.toByteArray());
+        }
+
+        final InputStream inputStream = new ByteArrayInputStream(compressedOutputStream.toByteArray());
+
+        final List<String> expected = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            expected.add("Hello, Kafka Connect S3 Source! object " + i);
+        }
+
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, compressedOutputStream.size(),
+                new Context<>("storage-key"), sourceCommonConfig, 0);
+
+        assertThat(records).extracting(SchemaAndValue::value)
+                .extracting(sv -> ((Struct) sv).getString("message"))
+                .containsExactlyElementsOf(expected);
+    }
+
+    @Test
+    void testReadZstdAvroRecords() throws Exception {
+        when(sourceCommonConfig.getCompressionType()).thenReturn(CompressionType.ZSTD);
+
+        final ByteArrayOutputStream avroData = generateMockAvroData(15);
+
+        final ByteArrayOutputStream compressedOutputStream = new ByteArrayOutputStream();
+        try (OutputStream outputStream = CompressionType.ZSTD.compress(compressedOutputStream)) {
+            outputStream.write(avroData.toByteArray());
+        }
+
+        final InputStream inputStream = new ByteArrayInputStream(compressedOutputStream.toByteArray());
+
+        final List<String> expected = new ArrayList<>();
+        for (int i = 0; i < 15; i++) {
+            expected.add("Hello, Kafka Connect S3 Source! object " + i);
+        }
+
+        final Stream<SchemaAndValue> records = avroTransformer.getRecords(() -> inputStream, compressedOutputStream.size(),
                 new Context<>("storage-key"), sourceCommonConfig, 0);
 
         assertThat(records).extracting(SchemaAndValue::value)
