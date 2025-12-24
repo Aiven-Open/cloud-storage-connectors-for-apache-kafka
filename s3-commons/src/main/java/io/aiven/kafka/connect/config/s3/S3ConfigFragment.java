@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.config.s3;
 
 import java.net.URI;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -44,9 +43,6 @@ import io.aiven.kafka.connect.iam.AwsStsRole;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -152,6 +148,7 @@ public final class S3ConfigFragment extends ConfigFragment {
     // issues during delay calculation.
     // in other words we can't use values greater than 30
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
+
     /**
      * Constructor.
      *
@@ -447,8 +444,9 @@ public final class S3ConfigFragment extends ConfigFragment {
 
     // Custom Validators
     protected static class AwsRegionValidator implements ConfigDef.Validator {
-        private static final String SUPPORTED_AWS_REGIONS = Arrays.stream(Regions.values())
-                .map(Regions::getName)
+        private static final String SUPPORTED_AWS_REGIONS = Region.regions()
+                .stream()
+                .map(Region::id)
                 .collect(Collectors.joining(", "));
 
         @Override
@@ -505,16 +503,6 @@ public final class S3ConfigFragment extends ConfigFragment {
     }
 
     /**
-     * @deprecated getAwsEndpointConfiguration uses the AWS SDK 1.X which is deprecated and out of maintenance in
-     *             December 2025 After upgrading to use SDK 2.X this no longer is required.
-     */
-    @Deprecated
-    public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
-        final AwsStsEndpointConfig config = getStsEndpointConfig();
-        return new AwsClientBuilder.EndpointConfiguration(config.getServiceEndpoint(), config.getSigningRegion());
-    }
-
-    /**
      * @deprecated Use {@link #getAwsCredentialsV2} instead getAwsCredentials uses the AWS SDK 1.X which is deprecated
      *             and out of maintenance in December 2025
      */
@@ -544,6 +532,7 @@ public final class S3ConfigFragment extends ConfigFragment {
                 && Objects.nonNull(cfg.getPassword(AWS_SECRET_ACCESS_KEY))) {
             LOGGER.warn("Config options {} and {} are not supported for this Connector", AWS_ACCESS_KEY_ID,
                     AWS_SECRET_ACCESS_KEY);
+
         }
         return null;
     }
@@ -554,23 +543,6 @@ public final class S3ConfigFragment extends ConfigFragment {
                 : cfg.getString(AWS_S3_ENDPOINT);
     }
 
-    /**
-     * @deprecated Use {@link #getAwsS3RegionV2} instead getAwsS3Region uses the AWS SDK 1.X which is deprecated and out
-     *             of maintenance in December 2025
-     */
-    @Deprecated
-    public com.amazonaws.regions.Region getAwsS3Region() {
-        // we have priority of properties if old one not set or both old and new one set
-        // the new property value will be selected
-        if (Objects.nonNull(cfg.getString(AWS_S3_REGION_CONFIG))) {
-            return RegionUtils.getRegion(cfg.getString(AWS_S3_REGION_CONFIG));
-        } else if (Objects.nonNull(cfg.getString(AWS_S3_REGION))) {
-            return RegionUtils.getRegion(cfg.getString(AWS_S3_REGION));
-        } else {
-            return RegionUtils.getRegion(Regions.US_EAST_1.getName());
-        }
-    }
-
     public Region getAwsS3RegionV2() {
         // we have priority of properties if old one not set or both old and new one set
         // the new property value will be selected
@@ -579,7 +551,7 @@ public final class S3ConfigFragment extends ConfigFragment {
         } else if (Objects.nonNull(cfg.getString(AWS_S3_REGION))) {
             return Region.of(cfg.getString(AWS_S3_REGION));
         } else {
-            return Region.of(Regions.US_EAST_1.getName());
+            return Region.of(Region.US_EAST_1.id());
         }
     }
 

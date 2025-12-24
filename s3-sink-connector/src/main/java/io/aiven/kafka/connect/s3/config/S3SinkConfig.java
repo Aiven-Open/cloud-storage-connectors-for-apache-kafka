@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.s3.config;
 
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,13 +40,12 @@ import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.config.s3.S3CommonConfig;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.config.s3.S3SinkBaseConfig;
+import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.s3.S3OutputStream;
 
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.regions.Regions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 @SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
 final public class S3SinkConfig extends S3SinkBaseConfig {
@@ -66,9 +64,12 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
     // issues during delay calculation.
     // in other words we can't use values greater than 30
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
-
+    private final AwsCredentialProviderFactory awsCredentialsProviderFactory;
+    private final S3ConfigFragment s3ConfigFragment;
     public S3SinkConfig(final Map<String, String> properties) {
         super(configDef(), preprocessProperties(properties));
+        awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
+        s3ConfigFragment = new S3ConfigFragment(this);
     }
 
     static Map<String, String> preprocessProperties(final Map<String, String> properties) {
@@ -115,6 +116,10 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
                         + " (2GB) and default is " + S3OutputStream.DEFAULT_PART_SIZE + " (5MB)",
                 GROUP_AWS, 0, ConfigDef.Width.NONE, S3ConfigFragment.AWS_S3_PART_SIZE);
 
+    }
+
+    public AwsCredentialsProvider getAwsV2Provider() {
+        return awsCredentialsProviderFactory.getAwsV2Provider(s3ConfigFragment);
     }
 
     private static void addDeprecatedTimestampConfig(final ConfigDef configDef) {
@@ -202,27 +207,6 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
 
     public TimestampSource getTimestampSource() {
         return TimestampSource.of(getTimezone(), TimestampSource.Type.of(getString(S3ConfigFragment.TIMESTAMP_SOURCE)));
-    }
-
-    /**
-     * Deprecated please use S3ConfigFragment.AwsRegionValidator
-     */
-    @Deprecated
-    protected static class AwsRegionValidator implements ConfigDef.Validator {
-        private static final String SUPPORTED_AWS_REGIONS = Arrays.stream(Regions.values())
-                .map(Regions::getName)
-                .collect(Collectors.joining(", "));
-
-        @Override
-        public void ensureValid(final String name, final Object value) {
-            if (Objects.nonNull(value)) {
-                final String valueStr = (String) value;
-                final Region region = RegionUtils.getRegion(valueStr);
-                if (!RegionUtils.getRegions().contains(region)) {
-                    throw new ConfigException(name, valueStr, "supported values are: " + SUPPORTED_AWS_REGIONS);
-                }
-            }
-        }
     }
 
     public Boolean usesFileNameTemplate() {

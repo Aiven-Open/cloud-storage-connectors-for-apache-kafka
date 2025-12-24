@@ -39,13 +39,12 @@ import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.S3OutputStream;
 
-import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.regions.Regions;
 import com.google.common.collect.Maps;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import software.amazon.awssdk.regions.Region;
 
 @SuppressWarnings("deprecation")
 final class S3SinkConfigTest {
@@ -59,7 +58,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
         props.put(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG, "AWS_S3_ENDPOINT");
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
 
         FileNameFragment.setter(props).fileCompression(CompressionType.GZIP);
         props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(),
@@ -72,12 +71,12 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.accessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.secretAccessKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3Prefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
-        assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion("us-east-1"));
+        assertThat(conf.getAwsS3Region()).isEqualTo(Region.of("us-east-1"));
         assertThat(conf.getCompressionType()).isEqualTo(CompressionType.GZIP);
         assertThat(conf.getOutputFieldEncodingType()).isEqualTo(OutputFieldEncodingType.NONE);
         assertThat(conf.getOutputFields()).containsExactly(
@@ -99,12 +98,14 @@ final class S3SinkConfigTest {
     void correctFullConfigForOldStyleConfigParameters() {
         final var props = new HashMap<String, String>();
 
-        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "AWS_ACCESS_KEY_ID");
-        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "AWS_SECRET_ACCESS_KEY");
+        // AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY now both permenantly removed as options for setting credentials
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "AWS_ACCESS_KEY_ID");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "AWS_SECRET_ACCESS_KEY");
+
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "the-bucket");
         props.put(S3ConfigFragment.AWS_S3_ENDPOINT, "AWS_S3_ENDPOINT");
         props.put(S3ConfigFragment.AWS_S3_PREFIX, "AWS_S3_PREFIX");
-        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION, Region.US_EAST_1.id());
 
         props.put(S3ConfigFragment.OUTPUT_COMPRESSION, CompressionType.GZIP.name);
         props.put(S3ConfigFragment.OUTPUT_FIELDS,
@@ -116,12 +117,12 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.accessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.secretAccessKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3Prefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
-        assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion("us-east-1"));
+        assertThat(conf.getAwsS3Region()).isEqualTo(Region.of("us-east-1"));
         assertThat(conf.getCompressionType()).isEqualTo(CompressionType.GZIP);
         assertThat(conf.getOutputFieldEncodingType()).isEqualTo(OutputFieldEncodingType.BASE64);
         assertThat(conf.getOutputFields()).containsExactlyInAnyOrderElementsOf(
@@ -141,7 +142,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
         props.put(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG, "AWS_S3_ENDPOINT");
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "AWS_S3_PREFIX");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
 
         FileNameFragment.setter(props).fileCompression(CompressionType.GZIP);
         props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(),
@@ -156,7 +157,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "the-bucket1");
         props.put(S3ConfigFragment.AWS_S3_ENDPOINT, "AWS_S3_ENDPOINT_#1");
         props.put(S3ConfigFragment.AWS_S3_PREFIX, "AWS_S3_PREFIX_#1");
-        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION, Region.US_WEST_1.id());
 
         props.put(S3ConfigFragment.OUTPUT_COMPRESSION, CompressionType.NONE.name);
         props.put(S3ConfigFragment.OUTPUT_FIELDS, "key, value");
@@ -164,12 +165,12 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.accessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.secretAccessKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getAwsS3Prefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
-        assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion("us-east-1"));
+        assertThat(conf.getAwsS3Region()).isEqualTo(Region.of("us-east-1"));
         assertThat(conf.getCompressionType()).isEqualTo(CompressionType.GZIP);
         assertThat(conf.getOutputFieldEncodingType()).isEqualTo(OutputFieldEncodingType.NONE);
         assertThat(conf.getOutputFields()).containsExactlyInAnyOrderElementsOf(
@@ -242,7 +243,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_REGION, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws_s3_region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                        + Region.regions().stream().map(Region::id).collect(Collectors.joining(", ")));
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
@@ -250,7 +251,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws.s3.region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                        + Region.regions().stream().map(Region::id).collect(Collectors.joining(", ")));
     }
 
     @Test
@@ -262,7 +263,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_REGION, "unknown");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value unknown for configuration aws_s3_region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                        + Region.regions().stream().map(Region::id).collect(Collectors.joining(", ")));
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
@@ -270,7 +271,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws.s3.region: " + "Supported values are: "
-                        + Arrays.stream(Regions.values()).map(Regions::getName).collect(Collectors.joining(", ")));
+                        + Region.regions().stream().map(Region::id).collect(Collectors.joining(", ")));
     }
 
     @Test
@@ -279,8 +280,8 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_EAST_1.getName());
-        assertThat(new S3SinkConfig(props).getAwsS3Region()).isEqualTo(RegionUtils.getRegion("us-east-1"));
+        props.put(S3ConfigFragment.AWS_S3_REGION, Region.US_EAST_1.id());
+        assertThat(new S3SinkConfig(props).getAwsS3Region()).isEqualTo(Region.of("us-east-1"));
     }
 
     @Test
@@ -289,7 +290,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION, Region.US_WEST_1.id());
         props.put(S3ConfigFragment.AWS_S3_PREFIX, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws_s3_prefix: String must be non-empty");
@@ -297,7 +298,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_WEST_1.id());
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws.s3.prefix: String must be non-empty");
@@ -309,7 +310,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION, Region.US_EAST_1.id());
         props.put(S3ConfigFragment.AWS_S3_PREFIX, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_ENDPOINT, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
@@ -331,7 +332,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION, Region.US_EAST_1.id());
         props.put(S3ConfigFragment.AWS_S3_PREFIX, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_ENDPOINT, "ffff://asdsadas");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
@@ -353,7 +354,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_WEST_1.id());
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.OUTPUT_FIELDS, "");
 
@@ -373,7 +374,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_WEST_1.id());
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
 
         props.put(S3ConfigFragment.OUTPUT_FIELDS, "key,value,offset,timestamp");
@@ -391,7 +392,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_WEST_1.id());
         props.put(S3ConfigFragment.OUTPUT_FIELDS, "key,value,offset,timestamp,unsupported");
 
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
@@ -463,7 +464,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_WEST_1.id());
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
         if (!Objects.isNull(compression)) {
             props.put(S3ConfigFragment.OUTPUT_COMPRESSION, compression);
@@ -487,7 +488,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_WEST_1.id());
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.OUTPUT_COMPRESSION, CompressionType.GZIP.name);
         FileNameFragment.setter(props).fileCompression(CompressionType.NONE);
@@ -517,7 +518,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_WEST_1.id());
         props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp");
         props.put(S3ConfigFragment.OUTPUT_COMPRESSION, "unsupported");
 
@@ -547,7 +548,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_WEST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_WEST_1.id());
         props.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "key,value,offset,timestamp,headers");
         props.put(S3ConfigFragment.TIMESTAMP_TIMEZONE, "Europe/Berlin");
         props.put(S3ConfigFragment.TIMESTAMP_SOURCE, "wallclock");
@@ -606,14 +607,14 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_STS_ROLE_EXTERNAL_ID, "EXTERNAL_ID");
         props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
 
         final var conf = new S3SinkConfig(props);
 
         assertThat(conf.getStsRole().getArn()).isEqualTo("arn:aws:iam::12345678910:role/S3SinkTask");
         assertThat(conf.getStsRole().getExternalId()).isEqualTo("EXTERNAL_ID");
         assertThat(conf.getStsRole().getSessionName()).isEqualTo("SESSION_NAME");
-        assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion("us-east-1"));
+        assertThat(conf.getAwsS3Region()).isEqualTo(Region.of("us-east-1"));
     }
 
     @Test
@@ -623,7 +624,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
         props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
 
         props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_DURATION, "30");
 
@@ -645,7 +646,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_STS_ROLE_ARN, "arn:aws:iam::12345678910:role/S3SinkTask");
         props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_NAME, "SESSION_NAME");
         props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "the-bucket");
-        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Regions.US_EAST_1.getName());
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, Region.US_EAST_1.id());
 
         props.put(S3ConfigFragment.AWS_STS_ROLE_SESSION_DURATION, "900");
 
