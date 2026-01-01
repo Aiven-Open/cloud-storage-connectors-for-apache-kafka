@@ -18,7 +18,7 @@ import com.github.spotbugs.snom.SpotBugsTask
 
 plugins {
   id("aiven-apache-kafka-connectors-all.java-conventions")
-  id("com.bmuschko.docker-remote-api") version "9.4.0"
+  id("com.bmuschko.docker-remote-api") version "10.0.0"
   id("aiven-apache-kafka-connectors-all.docs")
 }
 
