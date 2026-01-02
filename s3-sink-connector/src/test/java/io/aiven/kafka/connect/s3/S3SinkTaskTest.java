@@ -55,7 +55,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -79,7 +78,6 @@ import io.aiven.kafka.connect.s3.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.config.S3SinkConfig;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
 
-import com.github.luben.zstd.ZstdInputStream;
 import com.google.common.collect.Lists;
 import io.findify.s3mock.S3Mock;
 import org.assertj.core.util.introspection.FieldSupport;
@@ -94,7 +92,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.xerial.snappy.SnappyInputStream;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -209,8 +206,7 @@ final class S3SinkTaskTest {
         try (ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(get -> get.bucket(TEST_BUCKET)
                 .key("aiven--test-topic-0-00000000000000000000" + compressionType.extension()));
 
-                InputStream inputStream = getCompressedInputStream(new ByteArrayInputStream(s3Object.readAllBytes()),
-                        compressionType);
+                InputStream inputStream = compressionType.decompress(new ByteArrayInputStream(s3Object.readAllBytes()));
                 BufferedReader bufferedReader = new BufferedReader(
                         new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             for (String line; (line = bufferedReader.readLine()) != null;) { // NOPMD AssignmentInOperand
@@ -249,22 +245,6 @@ final class S3SinkTaskTest {
         assertThatThrownBy(() -> {
             s3Client.headObject(head -> head.bucket(S3SinkTaskTest.TEST_BUCKET).key(key));
         }).isInstanceOf(NoSuchKeyException.class);
-    }
-
-    private InputStream getCompressedInputStream(final InputStream inputStream, final CompressionType compressionType)
-            throws IOException {
-        Objects.requireNonNull(inputStream, "inputStream cannot be null");
-
-        switch (compressionType) {
-            case ZSTD :
-                return new ZstdInputStream(inputStream);
-            case GZIP :
-                return new GZIPInputStream(inputStream);
-            case SNAPPY :
-                return new SnappyInputStream(inputStream);
-            default :
-                return inputStream;
-        }
     }
 
     @ParameterizedTest
