@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.apache.kafka.connect.sink.SinkTaskContext;
 
 import io.aiven.kafka.connect.gcs.GcsSinkConfig;
 import io.aiven.kafka.connect.gcs.GcsSinkTask;
@@ -36,7 +37,6 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
-import org.apache.kafka.connect.sink.SinkTaskContext;
 
 /**
  * This is a property-based test for {@link GcsSinkTask} (grouping records by the key) using
