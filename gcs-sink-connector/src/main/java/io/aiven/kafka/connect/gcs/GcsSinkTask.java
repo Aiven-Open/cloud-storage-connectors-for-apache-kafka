@@ -115,7 +115,7 @@ public final class GcsSinkTask extends SinkTask {
 
         if (commitInterval >= 0) {
             // Check if it's time to commit
-            long now = System.currentTimeMillis();
+            final long now = System.currentTimeMillis();
             if (now - lastCommitTime > commitInterval) {
                 this.context.requestCommit();
                 lastCommitTime = now;

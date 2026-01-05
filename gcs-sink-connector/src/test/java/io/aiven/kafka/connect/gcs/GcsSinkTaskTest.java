@@ -693,7 +693,6 @@ final class GcsSinkTaskTest {
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
         task.initialize(mockedContext);
 
-
         final List<SinkRecord> records = Arrays.asList(
                 createRecordWithStructValueSchema("topic0", 0, "key0", "name0", 10, 1000),
                 createRecordWithStructValueSchema("topic0", 1, "key1", "name1", 20, 1001),

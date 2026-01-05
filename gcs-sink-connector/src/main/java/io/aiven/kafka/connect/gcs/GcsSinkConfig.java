@@ -305,27 +305,23 @@ public final class GcsSinkConfig extends AivenCommonConfig {
     }
 
     private static void addSinkTaskConfig(final ConfigDef configDef) {
-        configDef.define(
-            GCS_REQUEST_COMMIT_INTERVAL_MS_CONFIG,
-            ConfigDef.Type.LONG,
-            GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT,
-            new ConfigDef.Validator() {
-                @Override
-                public void ensureValid(final String name, final Object value) {
-                    if (Objects.isNull(value)) {
-                        return;
+        configDef.define(GCS_REQUEST_COMMIT_INTERVAL_MS_CONFIG, ConfigDef.Type.LONG,
+                GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT, new ConfigDef.Validator() {
+                    @Override
+                    public void ensureValid(final String name, final Object value) {
+                        if (Objects.isNull(value)) {
+                            return;
+                        }
+                        if (!(value instanceof Long)) {
+                            throw new ConfigException(name, value, "must be a long number");
+                        }
                     }
-                    if (!(value instanceof Long)) {
-                        throw new ConfigException(name, value, "must be a long number");
-                    }
-                }
-            },
-            ConfigDef.Importance.LOW,
-            "The interval in milliseconds at which the sink task will request commit."
-                + " The default value is " + GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT
-                + ", which means this setting is disabled, and will utilize the connect worker's"
-                + " offset flush interval. This feature is operational only if the assigned value"
-                + " is non-negative and is less than the connect worker's offset flush interval.");
+                }, ConfigDef.Importance.LOW,
+                "The interval in milliseconds at which the sink task will request commit." + " The default value is "
+                        + GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT
+                        + ", which means this setting is disabled, and will utilize the connect worker's"
+                        + " offset flush interval. This feature is operational only if the assigned value"
+                        + " is non-negative and is less than the connect worker's offset flush interval.");
     }
 
     public GcsSinkConfig(final Map<String, String> properties) {
