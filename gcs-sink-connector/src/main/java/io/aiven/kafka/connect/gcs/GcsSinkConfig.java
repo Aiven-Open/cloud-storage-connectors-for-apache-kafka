@@ -96,7 +96,7 @@ public final class GcsSinkConfig extends AivenCommonConfig {
 
     public static final int GCS_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT = 6;
 
-    public static final long GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT = -1L; // disabled by default
+    public static final int GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT = -1; // disabled by default
 
     public static final String NAME_CONFIG = "name";
 
@@ -305,18 +305,8 @@ public final class GcsSinkConfig extends AivenCommonConfig {
     }
 
     private static void addSinkTaskConfig(final ConfigDef configDef) {
-        configDef.define(GCS_REQUEST_COMMIT_INTERVAL_MS_CONFIG, ConfigDef.Type.LONG,
-                GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT, new ConfigDef.Validator() {
-                    @Override
-                    public void ensureValid(final String name, final Object value) {
-                        if (Objects.isNull(value)) {
-                            return;
-                        }
-                        if (!(value instanceof Long)) {
-                            throw new ConfigException(name, value, "must be a long number");
-                        }
-                    }
-                }, ConfigDef.Importance.LOW,
+        configDef.define(GCS_REQUEST_COMMIT_INTERVAL_MS_CONFIG, ConfigDef.Type.INT,
+                GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT, ConfigDef.Range.atLeast(-1), ConfigDef.Importance.LOW,
                 "The interval in milliseconds at which the sink task will request commit." + " The default value is "
                         + GCS_REQUEST_COMMIT_INTERVAL_MS_DEFAULT
                         + ", which means this setting is disabled, and will utilize the connect worker's"
@@ -465,6 +455,8 @@ public final class GcsSinkConfig extends AivenCommonConfig {
     }
 
     public long getGcsRequestCommitIntervalMs() {
-        return getLong(GCS_REQUEST_COMMIT_INTERVAL_MS_CONFIG);
+        // Retrieves the integer value from config (max ~24 days) and returns it as a long
+        // to be compatible with time-based calculations.
+        return (long) getInt(GCS_REQUEST_COMMIT_INTERVAL_MS_CONFIG);
     }
 }
