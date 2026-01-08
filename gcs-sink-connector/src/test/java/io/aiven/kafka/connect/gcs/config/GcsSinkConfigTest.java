@@ -786,11 +786,11 @@ final class GcsSinkConfigTest {
     @Test
     void invalidRequestCommitIntervalValue() {
         final Map<String, String> properties = Map.of("gcs.bucket.name", "test-bucket",
-            "gcs.request.commit.interval.ms", "-1000");
+                "gcs.request.commit.interval.ms", "-1000");
         final var expectedErrorMessage = "Invalid value -1000 for configuration gcs.request.commit.interval.ms: Value must be at least -1";
 
         assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
-            .hasMessage(expectedErrorMessage);
+                .hasMessage(expectedErrorMessage);
     }
 
     private void assertConfigDefValidationPasses(final Map<String, String> properties) {
