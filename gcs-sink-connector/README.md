@@ -592,6 +592,17 @@ gcs.credentials.default=true
 # Optional, the default is null.
 gcs.object.content.encoding=gzip
 
+# The interval in milliseconds at which the sink task will request a commit.
+# This setting does not override the worker's global `offset.flush.interval.ms`.
+# Instead, it schedules extra flush operations at the connector level to ensure 
+# buffers are cleared more frequently.
+#
+# This can be used to tune performance and memory usage:
+# - Set this to a value lower than the worker's `offset.flush.interval.ms` to force more frequent commits.
+# - Useful for high-volume topics to prevent OOM errors by clearing buffers more often.
+# Optional. The default is -1 (disabled), meaning it uses the worker's global flush interval.
+gcs.request.commit.interval.ms=2000
+
 # The set of the fields that are to be output, comma separated.
 # Supported values are: `key`, `value`, `offset`, `timestamp`, and `headers`.
 # Optional, the default is `value`.
