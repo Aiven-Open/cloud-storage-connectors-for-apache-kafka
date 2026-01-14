@@ -43,18 +43,18 @@ import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
-import com.amazonaws.regions.RegionUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import software.amazon.awssdk.regions.Region;
 
 @SuppressWarnings("deprecation")
 final class S3SinkConfigTest {
 
-    private static final String EAST = "us-east-1";
-    private static final String WEST = "us-west-1";
+    private static final String EAST = Region.US_EAST_1.id();
+    private static final String WEST = Region.US_WEST_1.id();
 
     static Map<String, String> defaultProperties() {
         final Map<String, String> properties = new HashMap<>();
@@ -87,12 +87,12 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.accessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.secretAccessKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getPrefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
-        assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion(EAST));
+        assertThat(conf.getAwsS3Region()).isEqualTo(Region.of(EAST));
         assertThat(conf.getCompressionType()).isEqualTo(CompressionType.GZIP);
         assertThat(conf.getOutputFieldEncodingType()).isEqualTo(OutputFieldEncodingType.NONE);
         assertThat(conf.getOutputFields()).containsExactly(
@@ -113,6 +113,7 @@ final class S3SinkConfigTest {
     @Test
     void correctFullConfigForOldStyleConfigParameters() {
         final var props = defaultProperties();
+        // AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY now both permenantly removed as options for setting credentials
         props.remove(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG);
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID, "AWS_ACCESS_KEY_ID");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "AWS_SECRET_ACCESS_KEY");
@@ -130,12 +131,12 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.accessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.secretAccessKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getPrefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
-        assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion(EAST));
+        assertThat(conf.getAwsS3Region()).isEqualTo(Region.of(EAST));
         assertThat(conf.getCompressionType()).isEqualTo(CompressionType.GZIP);
         assertThat(conf.getOutputFieldEncodingType()).isEqualTo(OutputFieldEncodingType.BASE64);
         assertThat(conf.getOutputFields()).containsExactlyInAnyOrderElementsOf(
@@ -175,12 +176,12 @@ final class S3SinkConfigTest {
         final var conf = new S3SinkConfig(props);
         final var awsCredentials = conf.getAwsCredentials();
 
-        assertThat(awsCredentials.getAWSAccessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
-        assertThat(awsCredentials.getAWSSecretKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
+        assertThat(awsCredentials.accessKeyId()).isEqualTo("AWS_ACCESS_KEY_ID");
+        assertThat(awsCredentials.secretAccessKey()).isEqualTo("AWS_SECRET_ACCESS_KEY");
         assertThat(conf.getAwsS3BucketName()).isEqualTo("the-bucket");
         assertThat(conf.getPrefix()).isEqualTo("AWS_S3_PREFIX");
         assertThat(conf.getAwsS3EndPoint()).isEqualTo("AWS_S3_ENDPOINT");
-        assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion(EAST));
+        assertThat(conf.getAwsS3Region()).isEqualTo(Region.of(EAST));
         assertThat(conf.getCompressionType()).isEqualTo(CompressionType.SNAPPY);
         assertThat(conf.getOutputFieldEncodingType()).isEqualTo(OutputFieldEncodingType.NONE);
         assertThat(conf.getOutputFields()).containsExactlyInAnyOrderElementsOf(
@@ -303,7 +304,7 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_BUCKET, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION, EAST);
-        assertThat(new S3SinkConfig(props).getAwsS3Region()).isEqualTo(RegionUtils.getRegion(EAST));
+        assertThat(new S3SinkConfig(props).getAwsS3Region()).isEqualTo(Region.of(EAST));
     }
 
     @Test
@@ -324,6 +325,7 @@ final class S3SinkConfigTest {
         final Map<String, String> props = defaultProperties();
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "blah-blah-blah");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "blah-blah-blah");
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, WEST);
         props.put(S3ConfigFragment.AWS_S3_PREFIX_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
@@ -520,7 +522,6 @@ final class S3SinkConfigTest {
         }
 
         var config = new S3SinkConfig(props);
-
         assertThat(config.getCompressionType()).isEqualTo(expected);
 
         props.remove(S3ConfigFragment.OUTPUT_COMPRESSION);
@@ -649,7 +650,7 @@ final class S3SinkConfigTest {
         assertThat(conf.getStsRole().getArn()).isEqualTo("arn:aws:iam::12345678910:role/S3SinkTask");
         assertThat(conf.getStsRole().getExternalId()).isEqualTo("EXTERNAL_ID");
         assertThat(conf.getStsRole().getSessionName()).isEqualTo("SESSION_NAME");
-        assertThat(conf.getAwsS3Region()).isEqualTo(RegionUtils.getRegion(EAST));
+        assertThat(conf.getAwsS3Region()).isEqualTo(Region.of(EAST));
     }
 
     @Test

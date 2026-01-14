@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.config.s3;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -27,7 +28,6 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
-import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.commons.collections.Scale;
 import io.aiven.kafka.connect.common.config.AbstractFragmentSetter;
@@ -48,12 +48,6 @@ import io.aiven.kafka.connect.common.config.validators.UsageLoggingValidator;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.internal.BucketNameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,12 +55,16 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.internal.BucketUtils;
 
 /**
  * The configuration fragment that defines the S3 specific characteristics.
  */
 @SuppressWarnings({ "PMD.ExcessivePublicCount", "PMD.TooManyMethods", "PMD.ExcessiveImports", "PMD.GodClass" })
 public final class S3ConfigFragment extends ConfigFragment {
+    public enum DelayType {
+        STANDARD, EXPONENTIAL
+    }
 
     public static final int DEFAULT_PART_SIZE = (int) Scale.MiB.asBytes(5);
     private static final Logger LOGGER = LoggerFactory.getLogger(S3ConfigFragment.class);
@@ -102,7 +100,10 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_S3_REGION = "aws_s3_region";
     @Deprecated
     public static final String AWS_S3_PREFIX = "aws_s3_prefix";
-
+    // FIXME since we support so far both old style and new style of property names
+    // Importance was set to medium,
+    // as soon we will migrate to new values it must be set to HIGH
+    // same for default value
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     public static final String AWS_CREDENTIALS_PROVIDER_CONFIG = "aws.credentials.provider";
@@ -126,6 +127,7 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_STS_ROLE_SESSION_DURATION = "aws.sts.role.session.duration";
     public static final String AWS_STS_CONFIG_ENDPOINT = "aws.sts.config.endpoint";
 
+    public static final String AWS_S3_RETRY_BACKOFF_TYPE_CONFIG = "aws.s3.backoff.type";
     public static final String AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG = "aws.s3.backoff.delay.ms";
     public static final String AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG = "aws.s3.backoff.max.delay.ms";
     public static final String AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG = "aws.s3.backoff.max.retries";
@@ -150,6 +152,7 @@ public final class S3ConfigFragment extends ConfigFragment {
     // issues during delay calculation.
     // in other words we can't use values greater than 30
     public static final int S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT = 3;
+
     /**
      * Constructor.
      *
@@ -198,16 +201,26 @@ public final class S3ConfigFragment extends ConfigFragment {
      */
     static void addS3RetryPolicies(final ConfigDef configDef) {
         var retryPolicyGroupCounter = 0;
+        configDef.define(AWS_S3_RETRY_BACKOFF_TYPE_CONFIG, ConfigDef.Type.STRING, DelayType.EXPONENTIAL.name(),
+                ConfigDef.CaseInsensitiveValidString
+                        .in(Arrays.stream(DelayType.values()).map(Object::toString).toArray(String[]::new)),
+                ConfigDef.Importance.MEDIUM, "Back off type. Default is " + DelayType.EXPONENTIAL.name() + ".",
+                GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, ConfigDef.Width.NONE,
+                AWS_S3_RETRY_BACKOFF_TYPE_CONFIG);
+
         configDef.define(AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
                 AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT, TimeScaleValidator.atLeast(1), ConfigDef.Importance.MEDIUM,
-                "S3 default base sleep time for non-throttled exceptions in milliseconds. " + "Default is "
-                        + AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT + ".",
+                String.format(
+                        "S3 default base sleep time for non-throttled exceptions in milliseconds. Applies only if %s is %s. Default is %s.",
+                        AWS_S3_RETRY_BACKOFF_TYPE_CONFIG, DelayType.EXPONENTIAL, AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT),
                 GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, ConfigDef.Width.NONE,
                 AWS_S3_RETRY_BACKOFF_DELAY_MS_CONFIG);
         configDef.define(AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG, ConfigDef.Type.LONG,
                 AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT, TimeScaleValidator.atLeast(1), ConfigDef.Importance.MEDIUM,
-                "S3 maximum back-off time before retrying a request in milliseconds. " + "Default is "
-                        + AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT + ".",
+                String.format(
+                        "S3 maximum back-off time before retrying a request in milliseconds. Applies only if %s is %s. Default is %s.",
+                        AWS_S3_RETRY_BACKOFF_TYPE_CONFIG, DelayType.EXPONENTIAL,
+                        AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT),
                 GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, ConfigDef.Width.NONE,
                 AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG);
         // Comment in AWS SDK for max retries:
@@ -218,9 +231,10 @@ public final class S3ConfigFragment extends ConfigFragment {
         // in other words we can't use values greater than 30
         configDef.define(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG, ConfigDef.Type.INT,
                 S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT, ConfigDef.Range.between(1L, 30), ConfigDef.Importance.MEDIUM,
-                "Maximum retry limit " + "(if the value is greater than 30, "
-                        + "there can be integer overflow issues during delay calculation). " + "Default is "
-                        + S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT + ".",
+                String.format("Maximum retry limit "
+                        + "(if the value is greater than 30, there can be integer overflow issues during delay calculation). "
+                        + " Applies only if %s is %s. Default is %s.", AWS_S3_RETRY_BACKOFF_TYPE_CONFIG,
+                        DelayType.EXPONENTIAL, S3_RETRY_BACKOFF_MAX_RETRIES_DEFAULT),
                 GROUP_S3_RETRY_BACKOFF_POLICY, ++retryPolicyGroupCounter, ConfigDef.Width.NONE,
                 AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
     }
@@ -406,9 +420,8 @@ public final class S3ConfigFragment extends ConfigFragment {
                 }
             }
         } else {
-            final BasicAWSCredentials awsCredentials = getAwsCredentials();
             final AwsBasicCredentials awsCredentialsV2 = getAwsCredentialsV2();
-            if (awsCredentials == null && awsCredentialsV2 == null) {
+            if (awsCredentialsV2 == null) {
                 LOGGER.info(
                         "Connector uses {} as credential Provider, "
                                 + "when configuration for {{}, {}} OR {{}, {}} are absent",
@@ -427,8 +440,9 @@ public final class S3ConfigFragment extends ConfigFragment {
 
     // Custom Validators
     protected static class AwsRegionValidator implements ConfigDef.Validator {
-        private static final String SUPPORTED_AWS_REGIONS = Arrays.stream(Regions.values())
-                .map(Regions::getName)
+        private static final String SUPPORTED_AWS_REGIONS = Region.regions()
+                .stream()
+                .map(Region::id)
                 .collect(Collectors.joining(", "));
 
         @Override
@@ -453,7 +467,7 @@ public final class S3ConfigFragment extends ConfigFragment {
         public void ensureValid(final String name, final Object value) {
             try {
                 if (value != null) {
-                    BucketNameUtils.validateBucketName((String) value);
+                    BucketUtils.isValidDnsBucketName((String) value, true);
                 }
             } catch (final IllegalArgumentException e) {
                 throw new ConfigException("Illegal bucket name: " + e.getMessage());
@@ -484,36 +498,6 @@ public final class S3ConfigFragment extends ConfigFragment {
         return new AwsStsEndpointConfig(getString(AWS_STS_CONFIG_ENDPOINT), getString(AWS_S3_REGION_CONFIG));
     }
 
-    /**
-     * @deprecated getAwsEndpointConfiguration uses the AWS SDK 1.X which is deprecated and out of maintenance in
-     *             December 2025 After upgrading to use SDK 2.X this no longer is required.
-     */
-    @Deprecated
-    public AwsClientBuilder.EndpointConfiguration getAwsEndpointConfiguration() {
-        final AwsStsEndpointConfig config = getStsEndpointConfig();
-        return new AwsClientBuilder.EndpointConfiguration(config.getServiceEndpoint(), config.getSigningRegion());
-    }
-
-    /**
-     * @deprecated Use {@link #getAwsCredentialsV2} instead getAwsCredentials uses the AWS SDK 1.X which is deprecated
-     *             and out of maintenance in December 2025
-     */
-    @Deprecated
-    public BasicAWSCredentials getAwsCredentials() {
-        if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID_CONFIG))
-                && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
-
-            return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
-                    getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value());
-        } else if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID))
-                && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY))) {
-            LOGGER.warn("Config options {} and {} are deprecated", AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY);
-            return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(),
-                    getPassword(AWS_SECRET_ACCESS_KEY).value());
-        }
-        return null;
-    }
-
     public AwsBasicCredentials getAwsCredentialsV2() {
         if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID_CONFIG))
                 && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
@@ -534,23 +518,11 @@ public final class S3ConfigFragment extends ConfigFragment {
                 : getString(AWS_S3_ENDPOINT);
     }
 
-    /**
-     * @deprecated Use {@link #getAwsS3RegionV2} instead getAwsS3Region uses the AWS SDK 1.X which is deprecated and out
-     *             of maintenance in December 2025
-     */
-    @Deprecated
-    public com.amazonaws.regions.Region getAwsS3Region() {
-        if (Objects.nonNull(getString(AWS_S3_REGION_CONFIG))) {
-            return RegionUtils.getRegion(getString(AWS_S3_REGION_CONFIG));
-        }
-        return RegionUtils.getRegion(Regions.US_EAST_1.getName());
-    }
-
     public Region getAwsS3RegionV2() {
         if (Objects.nonNull(getString(AWS_S3_REGION_CONFIG))) {
             return Region.of(getString(AWS_S3_REGION_CONFIG));
         }
-        return Region.of(Regions.US_EAST_1.getName());
+        return Region.of(Region.US_EAST_1.id());
     }
 
     public String getAwsS3BucketName() {
@@ -577,15 +549,8 @@ public final class S3ConfigFragment extends ConfigFragment {
         return getInt(AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
     }
 
-    /**
-     * @return a V1 credentials provider
-     * @deprecated use {@link #getAwsCredentialsV2()}
-     */
-    @Deprecated
-    public AWSCredentialsProvider getCustomCredentialsProvider() {
-        final AWSCredentialsProvider result = getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CONFIG,
-                AWSCredentialsProvider.class);
-        return result != null ? result : Utils.newInstance(com.amazonaws.auth.DefaultAWSCredentialsProviderChain.class);
+    public DelayType getDelayType() {
+        return DelayType.valueOf(getString(AWS_S3_RETRY_BACKOFF_TYPE_CONFIG).toUpperCase(Locale.ROOT));
     }
 
     /**

@@ -81,8 +81,8 @@ dependencies {
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
-  implementation(amazonoldawssdk.s3)
-  implementation(amazonoldawssdk.sts)
+  implementation(amazonawssdk.s3)
+  implementation(amazonawssdk.sts)
 
   testImplementation(apache.commons.io)
   testImplementation(testFixtures(project(":commons")))

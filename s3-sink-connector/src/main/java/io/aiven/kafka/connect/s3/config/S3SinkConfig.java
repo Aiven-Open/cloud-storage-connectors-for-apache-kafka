@@ -25,54 +25,93 @@ import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import io.aiven.kafka.connect.common.templating.Template;
+import io.aiven.kafka.connect.config.s3.S3CommonConfig;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
+import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.regions.Region;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 
 @SuppressWarnings({ "PMD.TooManyMethods", "PMD.GodClass", "PMD.ExcessiveImports", "PMD.TooManyStaticImports" })
-public final class S3SinkConfig extends SinkCommonConfig {
+public final class S3SinkConfig extends SinkCommonConfig implements S3CommonConfig {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(S3SinkConfig.class);
 
     private final S3ConfigFragment s3ConfigFragment;
+    private final AwsCredentialProviderFactory awsCredentialsProviderFactory;
 
     public S3SinkConfig(final Map<String, String> properties) {
         super(new S3SinkConfigDef(), preprocessProperties(properties));
         s3ConfigFragment = new S3ConfigFragment(dataAccess);
+        awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
     }
 
-    public S3ConfigFragment getS3ConfigFragment() {
-        return s3ConfigFragment;
+    @Override
+    public S3ConfigFragment.DelayType getDelayType() {
+        return s3ConfigFragment.getDelayType();
+    }
+
+    public AwsStsRole getStsRole() {
+        return s3ConfigFragment.getStsRole();
+    }
+
+    public boolean hasAwsStsRole() {
+        return s3ConfigFragment.hasAwsStsRole();
+    }
+
+    public boolean hasStsEndpointConfig() {
+        return s3ConfigFragment.hasStsEndpointConfig();
+    }
+
+    public AwsStsEndpointConfig getStsEndpointConfig() {
+        return s3ConfigFragment.getStsEndpointConfig();
+    }
+
+    public AwsBasicCredentials getAwsCredentials() {
+        return s3ConfigFragment.getAwsCredentialsV2();
+    }
+
+    @Override
+    public String getAwsS3EndPoint() {
+        return s3ConfigFragment.getAwsS3EndPoint();
+    }
+
+    @Override
+    public Region getAwsS3Region() {
+        return s3ConfigFragment.getAwsS3RegionV2();
+    }
+
+    public String getAwsS3BucketName() {
+        return s3ConfigFragment.getAwsS3BucketName();
+    }
+
+    @Override
+    public AwsCredentialsProvider getAwsV2Provider() {
+        return awsCredentialsProviderFactory.getAwsV2Provider(s3ConfigFragment);
     }
 
     static Map<String, String> preprocessProperties(final Map<String, String> properties) {
         return S3ConfigFragment.handleDeprecatedOptions(properties, S3SinkConfigDef.DEFAULT_COMPRESSION);
     }
 
+    @Override
     public long getS3RetryBackoffDelayMs() {
         return s3ConfigFragment.getS3RetryBackoffDelayMs();
     }
 
+    @Override
     public long getS3RetryBackoffMaxDelayMs() {
         return s3ConfigFragment.getS3RetryBackoffMaxDelayMs();
     }
 
+    @Override
     public int getS3RetryBackoffMaxRetries() {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
-    }
-
-    @Deprecated
-    public Region getAwsS3Region() {
-        return s3ConfigFragment.getAwsS3Region();
-    }
-
-    public String getAwsS3BucketName() {
-        return s3ConfigFragment.getAwsS3BucketName();
     }
 
     public int getAwsS3PartSize() {
@@ -81,24 +120,6 @@ public final class S3SinkConfig extends SinkCommonConfig {
 
     public String getServerSideEncryptionAlgorithmName() {
         return s3ConfigFragment.getServerSideEncryptionAlgorithmName();
-    }
-
-    public String getAwsS3EndPoint() {
-        return s3ConfigFragment.getAwsS3EndPoint();
-    }
-
-    @Deprecated
-    public BasicAWSCredentials getAwsCredentials() {
-        return s3ConfigFragment.getAwsCredentials();
-    }
-
-    @Deprecated
-    public AWSCredentialsProvider getCustomCredentialsProvider() {
-        return s3ConfigFragment.getCustomCredentialsProvider();
-    }
-
-    public AwsStsRole getStsRole() {
-        return s3ConfigFragment.getStsRole();
     }
 
     /**

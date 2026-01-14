@@ -22,7 +22,7 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
+import io.aiven.kafka.connect.config.s3.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.commons.io.function.IOSupplier;
