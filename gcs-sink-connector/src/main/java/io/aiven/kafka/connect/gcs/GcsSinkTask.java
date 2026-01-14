@@ -71,7 +71,7 @@ public final class GcsSinkTask extends SinkTask {
         Objects.requireNonNull(props, "props cannot be null");
 
         this.config = new GcsSinkConfig(props);
-        this.storage = StorageOptions.newBuilder()
+        StorageOptions.Builder builder = StorageOptions.newBuilder()
                 .setHost(config.getGcsEndpoint())
                 .setCredentials(config.getCredentials())
                 .setHeaderProvider(FixedHeaderProvider.create(USER_AGENT_HEADER_KEY, config.getUserAgent()))
@@ -81,8 +81,11 @@ public final class GcsSinkTask extends SinkTask {
                         .setRetryDelayMultiplier(config.getGcsRetryBackoffDelayMultiplier())
                         .setTotalTimeoutDuration(config.getGcsRetryBackoffTotalTimeout())
                         .setMaxAttempts(config.getGcsRetryBackoffMaxAttempts())
-                        .build())
-                .build()
+                        .build());
+        if (config.getApiTracerFactory() != null) {
+            builder.setApiTracerFactory(config.getApiTracerFactory());
+        }
+        this.storage = builder.build()
                 .getService();
         initRest();
         if (Objects.nonNull(config.getKafkaRetryBackoffMs())) {
