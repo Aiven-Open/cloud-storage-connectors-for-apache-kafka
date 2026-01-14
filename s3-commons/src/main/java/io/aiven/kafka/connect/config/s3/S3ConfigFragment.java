@@ -239,6 +239,11 @@ public final class S3ConfigFragment extends ConfigFragment {
                 AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG);
     }
 
+    /**
+     * Adds the AWS specific configurations.
+     * @param configDef The configuration def to update.
+     * @param isSink {@code true} if this is a sink.
+     */
     static void addAwsConfigGroup(final ConfigDef configDef, final boolean isSink) {
         int awsGroupCounter = 0;
 
@@ -294,11 +299,33 @@ public final class S3ConfigFragment extends ConfigFragment {
 
     }
 
+    /**
+     * Creates the deprecated key description.  The definition is the definition from the valid key prefixed with a
+     * deprecation notice.
+     * @param deprecatedKey the deprecated key.
+     * @param validKey the valid key that replaces it.
+     * @return the description.
+     */
     private static String deprecatedDescription(final String deprecatedKey, final ConfigDef.ConfigKey validKey) {
         return String.format("%s property is deprecated, use %s. %s", deprecatedKey, validKey.name,
                 validKey.documentation);
     }
 
+    /**
+     * Adds a configuration to the definition returning an incremented counter.
+     * This method:
+     * <ul>
+     *     <li>Uses the valid key definition to define the deprecated config. {@link #deprecatedDescription(String, ConfigDef.ConfigKey)}</li>
+     *     <li>Removes the default value</li>
+     *     <li>Causes usage of the deprecated option to be logged as a warning. {@link #logDeprecated(Logger, String, String)}</li>
+     * </ul>
+     *
+     * @param counter the counter to increment.
+     * @param configDef the configuration def.
+     * @param deprecatedKey the deprecated key.
+     * @param validKey the key that replaces the deprecated key.
+     * @return the incremented counter
+     */
     private static int deprecation(final int counter, final ConfigDef configDef, final String deprecatedKey,
             final String validKey) {
         final int result = counter + 1;
@@ -310,6 +337,13 @@ public final class S3ConfigFragment extends ConfigFragment {
         return result;
     }
 
+    /**
+     * Add the deprecated options to the config def.
+     * This method adds the deprecated keys to the configuration.
+     * @param configDef the config def to update.
+     * @param awsGroupCounter the aws group counter
+     * @param isSink {@code true} if this is a sink configuration.
+     */
     static void addDeprecatedConfiguration(final ConfigDef configDef, final int awsGroupCounter, final boolean isSink) {
         int counter = awsGroupCounter;
         if (isSink) {
@@ -600,7 +634,10 @@ public final class S3ConfigFragment extends ConfigFragment {
     }
 
     /**
-     * Handle moving deprecated values.
+     * Configures the valid configuraiton options.This method is called during the construction of the source and sink configuration,
+     * If a deprecated option is used and the valid version of that option is not populated the value is moved from the
+     * deprecated version to the non-deprecated version.
+     *
      *
      * @param properties
      *            the properties to update.

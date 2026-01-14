@@ -255,6 +255,7 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
 
         S3ConfigFragment.setter(config)
                 .accessKeyId(S3_ACCESS_KEY_ID)
+                .accessKeySecret(S3_SECRET_ACCESS_KEY)
                 .endpoint(s3Endpoint)
                 .bucketName(TEST_BUCKET_NAME)
                 .prefix(s3Prefix);
