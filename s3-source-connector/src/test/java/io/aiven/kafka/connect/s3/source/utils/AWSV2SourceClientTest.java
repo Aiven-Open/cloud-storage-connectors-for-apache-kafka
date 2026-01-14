@@ -30,10 +30,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.kafka.connect.connector.Connector;
+
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -53,6 +57,7 @@ class AWSV2SourceClientTest {
 
     private static Map<String, String> getConfigMap() {
         final Map<String, String> configMap = new HashMap<>();
+        CommonConfigFragment.setter(configMap).name("AWSV2Test").connector(Connector.class);
         FileNameFragment.setter(configMap).template("any-old-file");
         S3ConfigFragment.setter(configMap).bucketName("test-bucket");
         FileNameFragment.setter(configMap).template(".*");
@@ -136,7 +141,7 @@ class AWSV2SourceClientTest {
         final List<ListObjectsV2Request> allRequests = requestCaptor.getAllValues();
         assertThat(summaries).isExhausted();
 
-        assertThat(allRequests.get(0).prefix()).isEqualTo(s3SourceConfig.getAwsS3Prefix());
+        assertThat(allRequests.get(0).prefix()).isEqualTo(StringUtils.defaultIfBlank(s3SourceConfig.getPrefix(), null));
         // Not required with continuation token
         assertThat(allRequests.get(1).prefix()).isNull();
         assertThat(allRequests.get(1).continuationToken()).isEqualTo("nextToken");

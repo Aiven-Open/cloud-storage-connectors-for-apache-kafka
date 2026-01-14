@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.sink.SinkRecord;
 
+import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.gcs.GcsSinkTask;
 import io.aiven.kafka.connect.gcs.testutils.BucketAccessor;
@@ -119,7 +120,8 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
     private void checkFileSizes(final BucketAccessor bucketAccessor, final Integer maxRecordsPerFile) {
         final int effectiveMax = effectiveMaxRecordsPerFile(maxRecordsPerFile);
         for (final String filename : bucketAccessor.getBlobNames()) {
-            assertThat(bucketAccessor.readLines(filename, "none")).isNotEmpty().hasSizeLessThan(effectiveMax);
+            assertThat(bucketAccessor.readLines(filename, CompressionType.NONE)).isNotEmpty()
+                    .hasSizeLessThan(effectiveMax);
         }
     }
 
@@ -134,7 +136,7 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
             final BucketAccessor bucketAccessor) {
         final Set<String> seenRecords = new HashSet<>();
         for (final String filename : bucketAccessor.getBlobNames()) {
-            for (final String line : bucketAccessor.readLines(filename, "none")) {
+            for (final String line : bucketAccessor.readLines(filename, CompressionType.NONE)) {
                 // Ensure no multiple writes.
                 assertThat(seenRecords).doesNotContain(line);
                 seenRecords.add(line);
@@ -150,8 +152,8 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
         for (final String filename : bucketAccessor.getBlobNames()) {
             final String filenameWithoutOffset = cutOffsetPart(filename);
 
-            final List<List<String>> lines = bucketAccessor.readAndDecodeLines(filename, "none", FIELD_KEY,
-                    FIELD_VALUE);
+            final List<List<String>> lines = bucketAccessor.readAndDecodeLines(filename, CompressionType.NONE,
+                    FIELD_KEY, FIELD_VALUE);
             final String firstLineTopicAndPartition = lines.get(0).get(FIELD_VALUE);
             final String firstLineOffset = lines.get(0).get(FIELD_OFFSET);
             assertThat(filename).isEqualTo(PREFIX + firstLineTopicAndPartition + "-" + firstLineOffset);
@@ -175,8 +177,8 @@ final class GcsSinkTaskGroupByTopicPartitionPropertiesTest extends PbtBase {
      */
     private void checkOffsetOrderInFiles(final BucketAccessor bucketAccessor) {
         for (final String filename : bucketAccessor.getBlobNames()) {
-            final List<List<String>> lines = bucketAccessor.readAndDecodeLines(filename, "none", FIELD_KEY,
-                    FIELD_VALUE);
+            final List<List<String>> lines = bucketAccessor.readAndDecodeLines(filename, CompressionType.NONE,
+                    FIELD_KEY, FIELD_VALUE);
             final List<Integer> offsets = lines.stream()
                     .map(line -> Integer.parseInt(line.get(FIELD_OFFSET)))
                     .collect(Collectors.toList());

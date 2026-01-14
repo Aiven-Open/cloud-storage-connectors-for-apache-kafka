@@ -17,7 +17,8 @@
 package io.aiven.kafka.connect.common.config.validators;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Objects;
 
 import org.apache.kafka.common.config.ConfigDef;
@@ -39,8 +40,8 @@ public class UrlValidator implements ConfigDef.Validator {
             }
 
             try {
-                new URL(valueStr);
-            } catch (final MalformedURLException e) {
+                new URI(valueStr).toURL();
+            } catch (URISyntaxException | MalformedURLException e) {
                 throw new ConfigException(name, value, "should be valid URL");
             }
         }

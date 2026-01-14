@@ -81,8 +81,8 @@ dependencies {
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
-  implementation(amazonoldawssdk.s3)
-  implementation(amazonoldawssdk.sts)
+  implementation(amazonawssdk.s3)
+  implementation(amazonawssdk.sts)
 
   testImplementation(apache.commons.io)
   testImplementation(testFixtures(project(":commons")))
@@ -96,10 +96,10 @@ dependencies {
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
   testImplementation("io.findify:s3mock_2.13:$s3mockVersion")
-
   testImplementation(testinglibs.mockito.core)
   testImplementation(testinglibs.mockito.junit.jupiter)
 
+  testImplementation(amazonawssdk.s3)
   testRuntimeOnly(testinglibs.junit.jupiter.engine)
   testRuntimeOnly(logginglibs.logback.classic)
 

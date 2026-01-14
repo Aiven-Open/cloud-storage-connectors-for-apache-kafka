@@ -25,22 +25,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.UploadPartRequest;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 public class S3OutputStream extends OutputStream {
 
     private final Logger logger = LoggerFactory.getLogger(S3OutputStream.class);
 
-    private final AmazonS3 client;
+    private final S3Client client;
 
     private final ByteBuffer byteBuffer;
 
@@ -57,12 +59,12 @@ public class S3OutputStream extends OutputStream {
     private boolean closed;
 
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "AmazonS3 client is mutable")
-    public S3OutputStream(final String bucketName, final String key, final int partSize, final AmazonS3 client) {
+    public S3OutputStream(final String bucketName, final String key, final int partSize, final S3Client client) {
         this(bucketName, key, partSize, client, null);
     }
 
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "AmazonS3 client is mutable")
-    public S3OutputStream(final String bucketName, final String key, final int partSize, final AmazonS3 client,
+    public S3OutputStream(final String bucketName, final String key, final int partSize, final S3Client client,
             final String serverSideEncryptionAlgorithm) {
         super();
         this.bucketName = bucketName;
@@ -100,21 +102,14 @@ public class S3OutputStream extends OutputStream {
 
     private MultipartUpload newMultipartUpload() throws IOException {
         logger.debug("Create new multipart upload request");
-        final var initialRequest = new InitiateMultipartUploadRequest(bucketName, key);
-        initialRequest.setObjectMetadata(this.buildObjectMetadata());
-        final var initiateResult = client.initiateMultipartUpload(initialRequest);
-        logger.debug("Upload ID: {}", initiateResult.getUploadId());
-        return new MultipartUpload(initiateResult.getUploadId());
-    }
 
-    private ObjectMetadata buildObjectMetadata() {
-        final ObjectMetadata metadata = new ObjectMetadata();
-
-        if (this.serverSideEncryptionAlgorithm != null) {
-            metadata.setSSEAlgorithm(this.serverSideEncryptionAlgorithm);
-        }
-
-        return metadata;
+        final var initialRequest = client.createMultipartUpload(CreateMultipartUploadRequest.builder()
+                .bucket(bucketName)
+                .sseCustomerAlgorithm(this.serverSideEncryptionAlgorithm)
+                .key(key)
+                .build());
+        logger.debug("Upload ID: {}", initialRequest.uploadId());
+        return new MultipartUpload(initialRequest.uploadId());
     }
 
     @Override
@@ -148,30 +143,47 @@ public class S3OutputStream extends OutputStream {
 
         private final String uploadId;
 
-        private final List<PartETag> partETags = new ArrayList<>();
+        private final List<CompletedPart> completedParts = new ArrayList<>();
 
         public MultipartUpload(final String uploadId) {
             this.uploadId = uploadId;
         }
 
         public void uploadPart(final InputStream inputStream, final int partSize) throws IOException {
-            final var partNumber = partETags.size() + 1;
-            final var uploadPartRequest = new UploadPartRequest().withBucketName(bucketName)
-                    .withKey(key)
-                    .withUploadId(uploadId)
-                    .withPartSize(partSize)
-                    .withPartNumber(partNumber)
-                    .withInputStream(inputStream);
-            final var uploadResult = client.uploadPart(uploadPartRequest);
-            partETags.add(uploadResult.getPartETag());
+            final var partNumber = completedParts.size() + 1;
+            final var uploadPartRequest = UploadPartRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .uploadId(uploadId)
+                    .partNumber(partNumber)
+                    .build();
+            final UploadPartResponse uploadResult = client.uploadPart(uploadPartRequest,
+                    RequestBody.fromByteBuffer(ByteBuffer.wrap(inputStream.readAllBytes())));
+            final CompletedPart part = CompletedPart.builder().partNumber(partNumber).eTag(uploadResult.eTag()).build();
+            completedParts.add(part);
         }
 
         public void complete() {
-            client.completeMultipartUpload(new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags));
+            // splitting builder and request makes stubbing simpler.
+            final var completeMultiPartUploadRequest = CompleteMultipartUploadRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .uploadId(uploadId)
+                    .multipartUpload(CompletedMultipartUpload.builder().parts(completedParts).build())
+                    .build();
+
+            client.completeMultipartUpload(completeMultiPartUploadRequest);
         }
 
         public void abort() {
-            client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+            // splitting builder and request makes stubbing simpler.
+            final var abort = AbortMultipartUploadRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .uploadId(uploadId)
+                    .build();
+
+            client.abortMultipartUpload(abort);
         }
 
     }

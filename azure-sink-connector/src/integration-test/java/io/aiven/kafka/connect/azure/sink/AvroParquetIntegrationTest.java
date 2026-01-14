@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FormatType;
@@ -41,6 +42,7 @@ import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 
+import io.confluent.connect.avro.AvroConverter;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
@@ -70,7 +72,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     @Test
     void allOutputFields(@TempDir final Path tmpDir) throws ExecutionException, InterruptedException, IOException {
-        final var compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET,
@@ -124,7 +126,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
             for (int partition = 0; partition < 4; partition++) {
                 final var name = "user-" + cnt;
                 final var value = "value-" + cnt;
-                final String blobName = getBlobName(partition, 0, "none");
+                final String blobName = getBlobName(partition, 0, compression);
                 final GenericRecord record = blobContents.get(blobName).get(i);
                 final var expectedKey = "key-" + cnt;
                 final var expectedValue = "{\"name\": \"" + name + "\", \"value\": \"" + value + "\"}";
@@ -140,7 +142,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     @Test
     void valueComplexType(@TempDir final Path tmpDir) throws ExecutionException, InterruptedException, IOException {
-        final String compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.VALUE)
@@ -193,7 +195,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
             for (int partition = 0; partition < 4; partition++) {
                 final var name = "user-" + cnt;
                 final var value = "value-" + cnt;
-                final String blobName = getBlobName(partition, 0, "none");
+                final String blobName = getBlobName(partition, 0, compression);
                 final GenericRecord record = blobContents.get(blobName).get(i);
                 final var recordValue = (GenericRecord) record.get("value");
                 assertThat(recordValue.get("name")).hasToString(name);
@@ -205,7 +207,7 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
 
     @Test
     void schemaChanged(@TempDir final Path tmpDir) throws ExecutionException, InterruptedException, IOException {
-        final String compression = "none";
+        final CompressionType compression = CompressionType.NONE;
         final Map<String, String> connectorConfig = basicConnectorConfig(compression);
         OutputFormatFragment.setter(connectorConfig)
                 .withOutputFields(OutputFieldType.VALUE)
@@ -283,26 +285,25 @@ final class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, G
         assertThat(blobContents).containsExactlyInAnyOrderElementsOf(expectedRecords);
     }
 
-    private Map<String, String> basicConnectorConfig(final String compression) {
+    private Map<String, String> basicConnectorConfig(final CompressionType compression) {
         final Map<String, String> config = new HashMap<>();
-        config.put(AzureBlobSinkConfig.NAME_CONFIG, CONNECTOR_NAME);
-        config.put("connector.class", AzureBlobSinkConnector.class.getName());
-        config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
+        CommonConfigFragment.setter(config)
+                .name(CONNECTOR_NAME)
+                .connector(AzureBlobSinkConnector.class)
+                .keyConverter(AvroConverter.class)
+                .valueConverter(AvroConverter.class)
+                .maxTasks(1);
+        FileNameFragment.setter(config).prefix(azurePrefix).fileCompression(compression);
+        OutputFormatFragment.setter(config).withFormatType(FormatType.PARQUET);
         config.put("key.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         config.put("value.converter.schema.registry.url", getKafkaManager().getSchemaRegistryUrl());
-        config.put("tasks.max", "1");
         if (useFakeAzure()) {
             config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONNECTION_STRING_CONFIG, azureEndpoint);
         } else {
             config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONNECTION_STRING_CONFIG, azureConnectionString);
         }
         config.put(AzureBlobSinkConfig.AZURE_STORAGE_CONTAINER_NAME_CONFIG, testContainerName);
-        config.put(AzureBlobSinkConfig.FILE_NAME_PREFIX_CONFIG, azurePrefix);
         config.put("topics", testTopic0 + "," + testTopic1);
-
-        FileNameFragment.setter(config).fileCompression(CompressionType.forName(compression));
-        OutputFormatFragment.setter(config).withFormatType(FormatType.PARQUET);
         return config;
     }
 }

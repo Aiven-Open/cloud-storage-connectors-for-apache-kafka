@@ -19,7 +19,6 @@ package io.aiven.kafka.connect.iam;
 import java.util.Map;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
-import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
@@ -28,7 +27,7 @@ public class AwsCredentialTestingConfig extends SinkCommonConfig {
 
     public AwsCredentialTestingConfig(final Map<String, String> properties) {
         super(new CredTestingDef(), properties);
-        s3ConfigFragment = new S3ConfigFragment(FragmentDataAccess.from(this));
+        s3ConfigFragment = new S3ConfigFragment(dataAccess);
     }
 
     public static CredTestingDef configDef() { // NOPMD UnusedAssignment

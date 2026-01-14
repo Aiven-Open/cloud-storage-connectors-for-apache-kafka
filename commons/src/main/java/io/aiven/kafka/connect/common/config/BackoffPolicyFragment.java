@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.kafka.common.config.ConfigDef;
@@ -36,6 +37,9 @@ public final class BackoffPolicyFragment extends ConfigFragment {
         super(dataAccess);
     }
 
+    public static Setter setter(final Map<String, String> properties) {
+        return new Setter(properties);
+    }
     /**
      * Adds configuration options to the configuration definition.
      *
@@ -64,4 +68,16 @@ public final class BackoffPolicyFragment extends ConfigFragment {
     public Long getKafkaRetryBackoffMs() {
         return getLong(KAFKA_RETRY_BACKOFF_MS_CONFIG);
     }
+
+    public static final class Setter extends AbstractFragmentSetter<Setter> {
+        Setter(final Map<String, String> properties) {
+            super(properties);
+        }
+
+        public Setter retryBackoffMs(final long retryBackoffMs) {
+            setValue(KAFKA_RETRY_BACKOFF_MS_CONFIG, retryBackoffMs);
+            return this;
+        }
+    }
+
 }

@@ -118,7 +118,7 @@ public final class AzureBlobAccessor {
         }
     }
 
-    public String readStringContent(final String blobName, final String compression) {
+    public String readStringContent(final String blobName, final CompressionType compression) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         if (cache) {
             return stringContentCache.computeIfAbsent(blobName, k -> readStringContent0(blobName, compression));
@@ -127,11 +127,10 @@ public final class AzureBlobAccessor {
         }
     }
 
-    private String readStringContent0(final String blobName, final String compression) {
+    private String readStringContent0(final String blobName, final CompressionType compression) {
         final BlobClient blobClient = containerClient.getBlobClient(blobName);
-        final CompressionType compressionType = CompressionType.forName(compression);
         final byte[] blobBytes = blobClient.downloadContent().toBytes();
-        try (InputStream decompressedStream = compressionType.decompress(new ByteArrayInputStream(blobBytes));
+        try (InputStream decompressedStream = compression.decompress(new ByteArrayInputStream(blobBytes));
                 InputStreamReader reader = new InputStreamReader(decompressedStream, StandardCharsets.UTF_8);
                 BufferedReader bufferedReader = new BufferedReader(reader)) {
             return bufferedReader.readLine();
@@ -140,7 +139,7 @@ public final class AzureBlobAccessor {
         }
     }
 
-    public List<String> readLines(final String blobName, final String compression) {
+    public List<String> readLines(final String blobName, final CompressionType compression) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         if (cache) {
             return linesCache.computeIfAbsent(blobName, k -> readLines0(blobName, compression));
@@ -154,11 +153,10 @@ public final class AzureBlobAccessor {
         return blobClient.downloadContent().toBytes();
     }
 
-    private List<String> readLines0(final String blobName, final String compression) {
+    private List<String> readLines0(final String blobName, final CompressionType compression) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
-        final CompressionType compressionType = CompressionType.forName(compression);
         final byte[] blobBytes = readBytes(blobName);
-        try (InputStream decompressedStream = compressionType.decompress(new ByteArrayInputStream(blobBytes));
+        try (InputStream decompressedStream = compression.decompress(new ByteArrayInputStream(blobBytes));
                 InputStreamReader reader = new InputStreamReader(decompressedStream, StandardCharsets.UTF_8);
                 BufferedReader bufferedReader = new BufferedReader(reader)) {
 
@@ -168,7 +166,7 @@ public final class AzureBlobAccessor {
         }
     }
 
-    public List<List<String>> readAndDecodeLines(final String blobName, final String compression,
+    public List<List<String>> readAndDecodeLines(final String blobName, final CompressionType compression,
             final int... fieldsToDecode) {
         Objects.requireNonNull(blobName, "blobName cannot be null");
         Objects.requireNonNull(fieldsToDecode, "fieldsToDecode cannot be null");
@@ -181,7 +179,7 @@ public final class AzureBlobAccessor {
         }
     }
 
-    private List<List<String>> readAndDecodeLines0(final String blobName, final String compression,
+    private List<List<String>> readAndDecodeLines0(final String blobName, final CompressionType compression,
             final int[] fieldsToDecode) {
         return readLines(blobName, compression).stream()
                 .map(l -> l.split(","))
@@ -200,7 +198,7 @@ public final class AzureBlobAccessor {
         return result;
     }
 
-    public List<Record> decodeToRecords(final String blobName, final String compression) {
+    public List<Record> decodeToRecords(final String blobName, final CompressionType compression) {
         return readLines(blobName, compression).stream()
                 .map(l -> l.split(","))
                 .map(this::decodeRequiredFieldsToRecord)

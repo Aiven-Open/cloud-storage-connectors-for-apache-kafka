@@ -35,12 +35,17 @@ import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.ConfigValue;
 
 import io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig;
+import io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfigDef;
+import io.aiven.kafka.connect.azure.sink.AzureBlobSinkConnector;
+import io.aiven.kafka.connect.common.config.BackoffPolicyFragment;
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.FormatType;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
@@ -48,6 +53,7 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -59,16 +65,21 @@ final class AzureSinkConfigTest {
     static final String TEMPLATE_VARIABLES = "topic,partition,start_offset,timestamp; "
             + "topic,partition,key,start_offset,timestamp; key; key,topic,partition";
 
+    private Map<String, String> defaultProperties() {
+        final Map<String, String> properties = new HashMap<>();
+        properties.put("azure.storage.container.name", "some-container");
+        properties.put("azure.storage.connection.string", "somestring");
+        CommonConfigFragment.setter(properties).name("testing-name").connector(AzureBlobSinkConnector.class);
+        return properties;
+    }
     @ParameterizedTest
     @ValueSource(strings = { "", "{{topic}}", "{{partition}}", "{{start_offset}}", "{{topic}}-{{partition}}",
             "{{topic}}-{{start_offset}}", "{{partition}}-{{start_offset}}",
             "{{topic}}-{{partition}}-{{start_offset}}-{{unknown}}" })
     void incorrectFilenameTemplates(final String template) {
-        final Map<String, String> properties = Map.of("file.name.template", template, "azure.storage.container.name",
-                "some-container", "azure.storage.connection.string", "somestring");
-
-        final ConfigValue configValue = AzureBlobSinkConfig.configDef()
-                .validate(properties)
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template(template);
+        final ConfigValue configValue = new AzureBlobSinkConfigDef().validate(properties)
                 .stream()
                 .filter(x -> FileNameFragment.FILE_NAME_TEMPLATE_CONFIG.equals(x.name()))
                 .findFirst()
@@ -81,10 +92,10 @@ final class AzureSinkConfigTest {
 
     @Test
     void acceptMultipleParametersWithTheSameName() {
-        final Map<String, String> properties = Map.of("file.name.template",
-                "{{topic}}-{{timestamp:unit=yyyy}}-" + "{{timestamp:unit=MM}}-{{timestamp:unit=dd}}"
-                        + "-{{partition:padding=true}}-{{start_offset:padding=true}}.gz",
-                "azure.storage.container.name", "asdasd", "azure.storage.connection.string", "test");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties)
+                .template("{{topic}}-{{timestamp:unit=yyyy}}-" + "{{timestamp:unit=MM}}-{{timestamp:unit=dd}}"
+                        + "-{{partition:padding=true}}-{{start_offset:padding=true}}.gz");
 
         assertConfigDefValidationPasses(properties);
 
@@ -103,6 +114,8 @@ final class AzureSinkConfigTest {
         final Map<String, String> properties = Map.of();
 
         final String[] expectedErrorMessage = {
+                "Missing required configuration \"connector.class\" which has no default value.",
+                "Missing required configuration \"name\" which has no default value.",
                 "Missing required configuration \"azure.storage.container.name\" which has no default value.",
                 "Missing required configuration \"azure.storage.connection.string\" which has no default value.",
                 "Invalid value null for configuration azure.storage.container.name: names must be from 3 through 63 characters long." };
@@ -110,13 +123,14 @@ final class AzureSinkConfigTest {
         assertValidationContainsMessage(properties, "azure.storage.container.name", expectedErrorMessage);
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
-                .hasMessageContaining(
-                        "Missing required configuration \"azure.storage.connection.string\" which has no default value.");
+                .hasMessageContainingAll("Missing required configuration \"name\" which has no default value.");
     }
 
     @Test
     void emptyAzureContainerName() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "");
+        final Map<String, String> properties = defaultProperties();
+        properties.remove("azure.storage.connection.string");
+        properties.put("azure.storage.container.name", "");
 
         final var expectedErrorMessage = "Missing required configuration \"azure.storage.connection.string\" which has no default value.";
         final var expectedErrorMessage2 = "Invalid value  for configuration azure.storage.container.name: names must be from 3 through 63 characters long.";
@@ -130,13 +144,12 @@ final class AzureSinkConfigTest {
 
     @Test
     void correctMinimalConfig() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test");
+        final Map<String, String> properties = defaultProperties();
 
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
-        assertThat(config.getContainerName()).isEqualTo("test-container");
+        assertThat(config.getContainerName()).isEqualTo("some-container");
         assertThat(config.getCompressionType()).isEqualTo(CompressionType.NONE);
         assertThat(config.getPrefix()).isEmpty();
         assertThat(config.getFilenameTemplate()
@@ -158,10 +171,12 @@ final class AzureSinkConfigTest {
 
     @Test
     void customRetryPolicySettings() {
-        final var properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "kafka.retry.backoff.ms", "1000",
-                "azure.retry.backoff.initial.delay.ms", "2000", "azure.retry.backoff.max.delay.ms", "3000",
-                "azure.retry.backoff.max.attempts", "100");
+        final Map<String, String> properties = defaultProperties();
+        BackoffPolicyFragment.setter(properties).retryBackoffMs(1000);
+        properties.put("azure.storage.connection.string", "test");
+        properties.put("azure.retry.backoff.initial.delay.ms", "2000");
+        properties.put("azure.retry.backoff.max.delay.ms", "3000");
+        properties.put("azure.retry.backoff.max.attempts", "100");
         final var config = new AzureBlobSinkConfig(properties);
         assertThat(config.getKafkaRetryBackoffMs()).isEqualTo(1000);
         assertThat(config.getAzureRetryBackoffInitialDelay()).isEqualTo(Duration.ofMillis(2000));
@@ -170,24 +185,25 @@ final class AzureSinkConfigTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void correctFullConfig(final String compression) {
-        final Map<String, String> properties = new HashMap<>();
-        properties.put("azure.storage.connection.string", "test-connection");
-        properties.put("azure.storage.container.name", "test-container");
-        properties.put("file.compression.type", compression);
-        properties.put("file.name.prefix", "test-prefix");
-        properties.put("file.name.template", "{{topic}}-{{partition}}-{{start_offset}}-{{timestamp:unit=yyyy}}.gz");
-        properties.put("file.max.records", "42");
-        properties.put("format.output.fields", "key,value,offset,timestamp");
-        properties.put("format.output.fields.value.encoding", "base64");
+    @EnumSource(CompressionType.class)
+    void correctFullConfig(final CompressionType compression) {
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties)
+                .fileCompression(compression)
+                .prefix("test-prefix")
+                .template("{{topic}}-{{partition}}-{{start_offset}}-{{timestamp:unit=yyyy}}.gz")
+                .maxRecordsPerFile(42);
+        OutputFormatFragment.setter(properties)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE, OutputFieldType.OFFSET,
+                        OutputFieldType.TIMESTAMP)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.BASE64);
 
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
         assertThatNoException().isThrownBy(config::getConnectionString);
-        assertThat(config.getContainerName()).isEqualTo("test-container");
-        assertThat(config.getCompressionType()).isEqualTo(CompressionType.forName(compression));
+        assertThat(config.getContainerName()).isEqualTo("some-container");
+        assertThat(config.getCompressionType()).isEqualTo(compression);
         assertThat(config.getMaxRecordsPerFile()).isEqualTo(42);
         assertThat(config.getPrefix()).isEqualTo("test-prefix");
         assertThat(config.getFilenameTemplate()
@@ -210,34 +226,27 @@ final class AzureSinkConfigTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void supportedCompression(final String compression) {
-        final Map<String, String> properties = new HashMap<>();
-        properties.put("azure.storage.container.name", "test-container");
-        properties.put("azure.storage.connection.string", "test");
-
-        if (compression != null) {
-            properties.put("file.compression.type", compression);
-        }
+    @EnumSource(CompressionType.class)
+    void supportedCompression(final CompressionType compression) {
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).fileCompression(compression);
 
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
-        final CompressionType expectedCompressionType = compression == null
-                ? CompressionType.NONE
-                : CompressionType.forName(compression);
+        final CompressionType expectedCompressionType = compression == null ? CompressionType.NONE : compression;
         assertThat(config.getCompressionType()).isEqualTo(expectedCompressionType);
     }
 
     @Test
     void unsupportedCompressionType() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.compression.type", "unsupported");
+        final Map<String, String> properties = defaultProperties();
+        properties.put("file.compression.type", "unsupported");
 
         final var expectedErrorMessage = "Invalid value unsupported for configuration file.compression.type: "
                 + "String must be one of (case insensitive): ZSTD, GZIP, NONE, SNAPPY";
 
-        final var configValue = AzureBlobSinkConfig.configDef().validateAll(properties).get("file.compression.type");
+        final var configValue = new AzureBlobSinkConfigDef().validateAll(properties).get("file.compression.type");
         assertThat(configValue.recommendedValues()).containsExactly("none", "gzip", "snappy", "zstd");
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
@@ -246,8 +255,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void emptyOutputField() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "format.output.fields", "");
+        final Map<String, String> properties = defaultProperties();
+        properties.put("format.output.fields", "");
 
         final var expectedErrorMessage = "Invalid value [] for configuration format.output.fields: cannot be empty";
 
@@ -261,9 +270,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void unsupportedOutputField() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "format.output.fields",
-                "key,value,offset,timestamp,headers,unsupported");
+        final Map<String, String> properties = defaultProperties();
+        properties.put("format.output.fields", "key,value,offset,timestamp,headers,unsupported");
 
         final var expectedErrorMessage = "Invalid value [key, value, offset, timestamp, headers, unsupported] "
                 + "for configuration format.output.fields: "
@@ -279,9 +287,10 @@ final class AzureSinkConfigTest {
 
     @Test
     void connectorName() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "name", "test-connector");
-
+        final Map<String, String> properties = new HashMap<>();
+        properties.put("azure.storage.container.name", "test-container");
+        properties.put("azure.storage.connection.string", "test");
+        CommonConfigFragment.setter(properties).connector(AzureBlobSinkConnector.class).name("test-connector");
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
@@ -307,8 +316,7 @@ final class AzureSinkConfigTest {
 
     @Test
     void maxRecordsPerFileNotSet() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test");
+        final Map<String, String> properties = defaultProperties();
 
         assertConfigDefValidationPasses(properties);
 
@@ -318,8 +326,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void maxRecordsPerFileSetCorrect() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.max.records", "42");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).maxRecordsPerFile(42);
 
         assertConfigDefValidationPasses(properties);
 
@@ -329,8 +337,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void maxRecordsPerFileSetIncorrect() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "file.max.records", "-42", AzureBlobSinkConfig.AZURE_STORAGE_CONNECTION_STRING_CONFIG, "test");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).maxRecordsPerFile(-42);
 
         final var expectedErrorMessage = "Invalid value -42 for configuration file.max.records: Value must be at least 0";
 
@@ -342,20 +350,14 @@ final class AzureSinkConfigTest {
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
-    void filenameTemplateNotSet(final String compression) {
-        final Map<String, String> properties = new HashMap<>();
-        properties.put("azure.storage.container.name", "test-container");
-        properties.put("azure.storage.connection.string", "test");
-        if (compression != null) {
-            properties.put("file.compression.type", compression);
-        }
+    @EnumSource(CompressionType.class)
+    void filenameTemplateNotSet(final CompressionType compression) {
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).fileCompression(compression);
 
         assertConfigDefValidationPasses(properties);
 
-        final CompressionType compressionType = compression == null
-                ? CompressionType.NONE
-                : CompressionType.forName(compression);
+        final CompressionType compressionType = compression == null ? CompressionType.NONE : compression;
         final String expected = "a-b-c" + compressionType.extension();
 
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
@@ -370,9 +372,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void topicPartitionOffsetFilenameTemplateVariablesOrder1() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{topic}}-{{partition}}-{{start_offset}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{topic}}-{{partition}}-{{start_offset}}");
 
         assertConfigDefValidationPasses(properties);
 
@@ -388,9 +389,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void topicPartitionOffsetFilenameTemplateVariablesOrder2() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{start_offset}}-{{partition}}-{{topic}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{start_offset}}-{{partition}}-{{topic}}");
 
         assertConfigDefValidationPasses(properties);
 
@@ -406,9 +406,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void acceptFilenameTemplateVariablesParameters() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{start_offset:padding=true}}-{{partition}}-{{topic}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{start_offset:padding=true}}-{{partition}}-{{topic}}");
 
         assertConfigDefValidationPasses(properties);
         final AzureBlobSinkConfig config = new AzureBlobSinkConfig(properties);
@@ -427,8 +426,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void keyFilenameTemplateVariable() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template", "{{key}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{key}}");
 
         assertConfigDefValidationPasses(properties);
 
@@ -439,8 +438,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void emptyFilenameTemplate() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template", "");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("");
 
         final var expectedErrorMessage = "Invalid value  for configuration file.name.template: RecordGrouper requires that the template [] has variables defined. Supported variables are: "
                 + TEMPLATE_VARIABLES + ".";
@@ -451,9 +450,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void filenameTemplateUnknownVariable() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{ aaa }}{{ topic }}{{ partition }}{{ start_offset }}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{ aaa }}{{ topic }}{{ partition }}{{ start_offset }}");
 
         final String errorPfx = "Invalid value {{ aaa }}{{ topic }}{{ partition }}{{ start_offset }} "
                 + "for configuration file.name.template: ";
@@ -472,8 +470,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void filenameTemplateNoTopic() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template", "{{ partition }}{{ start_offset }}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{ partition }}{{ start_offset }}");
 
         final var expectedErrorMessage = "Invalid value {{ partition }}{{ start_offset }} for configuration file.name.template: "
                 + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES + ".";
@@ -483,9 +481,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void wrongVariableParameterValue() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{start_offset:padding=FALSE}}-{{partition}}-{{topic}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{start_offset:padding=FALSE}}-{{partition}}-{{topic}}");
 
         final var expectedErrorMessage = "Invalid value {{start_offset:padding=FALSE}}-{{partition}}-{{topic}} "
                 + "for configuration file.name.template: FALSE is not a valid value for parameter padding, supported values are: true|false.";
@@ -498,9 +495,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void variableWithoutRequiredParameterValue() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{start_offset}}-{{partition}}-{{topic}}-{{timestamp}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{start_offset}}-{{partition}}-{{topic}}-{{timestamp}}");
 
         final var expectedErrorMessage = "Invalid value {{start_offset}}-{{partition}}-{{topic}}-{{timestamp}} "
                 + "for configuration file.name.template: parameter unit is required for the the variable timestamp, "
@@ -514,9 +510,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void wrongVariableWithoutParameter() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{start_offset:}}-{{partition}}-{{topic}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{start_offset:}}-{{partition}}-{{topic}}");
 
         final var expectedErrorMessage = "Invalid value {{start_offset:}}-{{partition}}-{{topic}} "
                 + "for configuration file.name.template: Wrong variable with parameter definition";
@@ -529,9 +524,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void noVariableWithParameter() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{:padding=true}}-{{partition}}-{{topic}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{:padding=true}}-{{partition}}-{{topic}}");
 
         final var expectedErrorMessage = "Invalid value {{:padding=true}}-{{partition}}-{{topic}} "
                 + "for configuration file.name.template: Variable name hasn't been set for template: {{:padding=true}}-{{partition}}-{{topic}}";
@@ -544,9 +538,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void wrongVariableWithoutParameterValue() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{start_offset:padding=}}-{{partition}}-{{topic}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{start_offset:padding=}}-{{partition}}-{{topic}}");
 
         final var expectedErrorMessage = "Invalid value {{start_offset:padding=}}-{{partition}}-{{topic}} "
                 + "for configuration file.name.template: Parameter value for variable `start_offset` and parameter `padding` has not been set";
@@ -559,9 +552,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void wrongVariableWithoutParameterName() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template",
-                "{{start_offset:=true}}-{{partition}}-{{topic}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{start_offset:=true}}-{{partition}}-{{topic}}");
 
         final var expectedErrorMessage = "Invalid value {{start_offset:=true}}-{{partition}}-{{topic}} "
                 + "for configuration file.name.template: Parameter name for variable `start_offset` has not been set";
@@ -572,8 +564,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void filenameTemplateNoPartition() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template", "{{ topic }}{{ start_offset }}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{ topic }}{{ start_offset }}");
 
         final var expectedErrorMessage = "Invalid value {{ topic }}{{ start_offset }} for configuration file.name.template: "
                 + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES + ".";
@@ -586,8 +578,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void filenameTemplateNoStartOffset() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template", "{{ topic }}{{ partition }}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{ topic }}{{ partition }}");
 
         final var expectedErrorMessage = "Invalid value {{ topic }}{{ partition }} for configuration file.name.template: "
                 + "unsupported set of template variables, supported sets are: " + TEMPLATE_VARIABLES + ".";
@@ -600,8 +592,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void keyFilenameTemplateAndLimitedRecordsPerFileNotSet() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template", "{{key}}");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{key}}");
 
         assertConfigDefValidationPasses(properties);
         assertThatNoException().isThrownBy(() -> new AzureBlobSinkConfig(properties));
@@ -609,8 +601,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void keyFilenameTemplateAndLimitedRecordsPerFile1() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template", "{{key}}", "file.max.records", "1");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{key}}").maxRecordsPerFile(1);
 
         assertConfigDefValidationPasses(properties);
         assertThatNoException().isThrownBy(() -> new AzureBlobSinkConfig(properties));
@@ -618,8 +610,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void keyFilenameTemplateAndLimitedRecordsPerFileMoreThan1() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.template", "{{key}}", "file.max.records", "42");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).template("{{key}}").maxRecordsPerFile(42);
 
         final String expectedErrorMessage = "Invalid value 42 for configuration file.max.records: When file.name.template is {{key}}, file.max.records must be either 1 or not set.";
 
@@ -628,8 +620,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void correctShortFilenameTimezone() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.timestamp.timezone", "CET");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).timestampTimeZone(ZoneId.of("CET"));
 
         assertConfigDefValidationPasses(properties);
 
@@ -639,8 +631,8 @@ final class AzureSinkConfigTest {
 
     @Test
     void correctLongFilenameTimezone() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.timestamp.timezone", "Europe/Berlin");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).timestampTimeZone(ZoneId.of("Europe/Berlin"));
 
         assertConfigDefValidationPasses(properties);
 
@@ -650,9 +642,9 @@ final class AzureSinkConfigTest {
 
     @Test
     void wrongFilenameTimestampSource() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.timestamp.timezone", "Europe/Berlin",
-                "file.name.timestamp.source", "UNKNOWN_TIMESTAMP_SOURCE");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties).timestampTimeZone(ZoneId.of("Europe/Berlin"));
+        properties.put("file.name.timestamp.source", "UNKNOWN_TIMESTAMP_SOURCE");
 
         final var expectedErrorMessage = "Invalid value UNKNOWN_TIMESTAMP_SOURCE for configuration "
                 + "file.name.timestamp.source: String must be one of (case insensitive): EVENT, WALLCLOCK";
@@ -663,9 +655,10 @@ final class AzureSinkConfigTest {
 
     @Test
     void correctFilenameTimestampSource() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "file.name.timestamp.timezone", "Europe/Berlin",
-                "file.name.timestamp.source", "wallclock");
+        final Map<String, String> properties = defaultProperties();
+        FileNameFragment.setter(properties)
+                .timestampTimeZone(ZoneId.of("Europe/Berlin"))
+                .timestampSource(TimestampSource.Type.WALLCLOCK);
 
         assertConfigDefValidationPasses(properties);
 
@@ -675,23 +668,23 @@ final class AzureSinkConfigTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "jsonl", "json", "csv" })
-    void supportedFormatTypeConfig(final String formatType) {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "format.output.type", formatType);
+    // @ValueSource(strings = { "jsonl", "json", "csv" })
+    @EnumSource(FormatType.class)
+    void supportedFormatTypeConfig(final FormatType formatType) {
+        final Map<String, String> properties = defaultProperties();
+        OutputFormatFragment.setter(properties).withFormatType(formatType);
 
         assertConfigDefValidationPasses(properties);
 
         final AzureBlobSinkConfig sinkConfig = new AzureBlobSinkConfig(properties);
-        final FormatType expectedFormatType = FormatType.forName(formatType);
 
-        assertThat(sinkConfig.getFormatType()).isEqualTo(expectedFormatType);
+        assertThat(sinkConfig.getFormatType()).isEqualTo(formatType);
     }
 
     @Test
     void wrongFormatTypeConfig() {
-        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
-                "azure.storage.connection.string", "test", "format.output.type", "unknown");
+        final Map<String, String> properties = defaultProperties();
+        properties.put("format.output.type", "unknown");
 
         final var expectedErrorMessage = "Invalid value unknown for configuration format.output.type: "
                 + "String must be one of (case insensitive): PARQUET, CSV, JSON, AVRO, JSONL";
@@ -707,10 +700,8 @@ final class AzureSinkConfigTest {
     @ParameterizedTest
     @ValueSource(strings = { "{{key}}", "{{topic}}/{{partition}}/{{key}}" })
     void notSupportedFileMaxRecords(final String fileNameTemplate) {
-        final Map<String, String> properties = new HashMap<>();
+        final Map<String, String> properties = defaultProperties();
         FileNameFragment.setter(properties).template(fileNameTemplate).maxRecordsPerFile(2);
-        properties.put(AzureBlobSinkConfig.AZURE_STORAGE_CONTAINER_NAME_CONFIG, "any-container");
-        properties.put(AzureBlobSinkConfig.AZURE_STORAGE_CONNECTION_STRING_CONFIG, "test");
 
         final String expectedErrorMessage = String.format(
                 "Invalid value 2 for configuration file.max.records: When file.name.template is %s, file.max.records must be either 1 or not set.",
@@ -720,7 +711,7 @@ final class AzureSinkConfigTest {
     }
 
     private void assertConfigDefValidationPasses(final Map<String, String> properties) {
-        for (final ConfigValue configValue : AzureBlobSinkConfig.configDef().validate(properties)) {
+        for (final ConfigValue configValue : new AzureBlobSinkConfigDef().validate(properties)) {
             assertThat(configValue.errorMessages()).isEmpty();
         }
     }
@@ -729,7 +720,7 @@ final class AzureSinkConfigTest {
             final String configuration, final String... expectedErrorMessages) {
 
         final List<String> errorMsgs = new ArrayList<>();
-        final List<ConfigValue> configValues = AzureBlobSinkConfig.configDef().validate(properties);
+        final List<ConfigValue> configValues = new AzureBlobSinkConfigDef().validate(properties);
         configValues.stream().map(ConfigValue::errorMessages).forEach(errorMsgs::addAll);
         assertThat(errorMsgs).containsExactlyInAnyOrder(expectedErrorMessages);
 

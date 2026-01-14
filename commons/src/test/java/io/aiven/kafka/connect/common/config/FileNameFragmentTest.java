@@ -125,8 +125,9 @@ class FileNameFragmentTest {
         final Map<String, String> props = new HashMap<>();
         FileNameFragment.setter(props).template(sourceName).maxRecordsPerFile(maxRecords);
 
-        final AbstractConfig cfg = new AbstractConfig(configDef, props);
-        final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
+        // final AbstractConfig cfg = new AbstractConfig(configDef, props);
+        final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)),
+                true);
 
         final Map<String, ConfigValue> dataMap = configDef.validateAll(props);
         underTest.validate(dataMap);
@@ -156,8 +157,8 @@ class FileNameFragmentTest {
         final ConfigDef configDef = new ConfigDef();
         FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         OutputFormatFragment.update(configDef, null);
-        final AbstractConfig cfg = new AbstractConfig(configDef, props);
-        final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
+        final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)),
+                true);
         assertThat(expected).isEqualTo(underTest.getFilename());
     }
 
@@ -198,8 +199,8 @@ class FileNameFragmentTest {
         final ConfigDef configDef = new ConfigDef();
         FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         OutputFormatFragment.update(configDef, null);
-        final AbstractConfig cfg = new AbstractConfig(configDef, props);
-        final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
+        final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)),
+                true);
         // template does not implement equality
         assertThat(expected).isEqualTo(underTest.getFilenameTemplate().originalTemplate());
     }
@@ -210,13 +211,11 @@ class FileNameFragmentTest {
         FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         final Map<String, String> props = new HashMap<>();
         props.put(FileNameFragment.FILE_NAME_TIMESTAMP_TIMEZONE, "Europe/Dublin");
-        AbstractConfig cfg = new AbstractConfig(configDef, props);
-        FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
+        FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)), true);
         assertThat("Europe/Dublin").isEqualTo(underTest.getFilenameTimezone().toString());
 
         props.clear();
-        cfg = new AbstractConfig(configDef, props);
-        underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
+        underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)), true);
         assertThat("Z").isEqualTo(underTest.getFilenameTimezone().toString());
 
         props.clear();
@@ -231,14 +230,12 @@ class FileNameFragmentTest {
         final ConfigDef configDef = new ConfigDef();
         FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         final Map<String, String> props = new HashMap<>();
-        AbstractConfig cfg = new AbstractConfig(configDef, props);
-        FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
+        FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)), true);
         TimestampSource src = underTest.getFilenameTimestampSource();
         assertThat(TimestampSource.Type.WALLCLOCK).isEqualTo(src.type());
 
         props.put(FileNameFragment.FILE_NAME_TIMESTAMP_SOURCE, TimestampSource.Type.EVENT.name());
-        cfg = new AbstractConfig(configDef, props);
-        underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
+        underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)), true);
         src = underTest.getFilenameTimestampSource();
         assertThat(TimestampSource.Type.EVENT).isEqualTo(src.type());
 
@@ -253,14 +250,12 @@ class FileNameFragmentTest {
         final ConfigDef configDef = new ConfigDef();
         FileNameFragment.update(configDef, CompressionType.NONE, FileNameFragment.PrefixTemplateSupport.FALSE);
         final Map<String, String> props = new HashMap<>();
-        AbstractConfig cfg = new AbstractConfig(configDef, props);
-        FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
+        FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)), true);
         int count = underTest.getMaxRecordsPerFile();
         assertThat(0).isEqualTo(count);
 
         props.put(FileNameFragment.FILE_MAX_RECORDS, "200");
-        cfg = new AbstractConfig(configDef, props);
-        underTest = new FileNameFragment(FragmentDataAccess.from(cfg), true);
+        underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)), true);
         count = underTest.getMaxRecordsPerFile();
         assertThat(200).isEqualTo(count);
 
@@ -293,8 +288,8 @@ class FileNameFragmentTest {
         final Map<String, String> props = new HashMap<>();
         FileNameFragment.setter(props).template(sourceName);
         SourceConfigFragment.setter(props).distributionType(DistributionType.forName(distributionType));
-        final AbstractConfig cfg = new AbstractConfig(configDef, props);
-        final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(cfg), isSink);
+        final FileNameFragment underTest = new FileNameFragment(FragmentDataAccess.from(configDef.validateAll(props)),
+                isSink);
 
         final Map<String, ConfigValue> dataMap = configDef.validateAll(props);
         underTest.validate(dataMap);

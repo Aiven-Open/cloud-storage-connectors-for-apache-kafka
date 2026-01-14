@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.nio.channels.Channels;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,11 +50,13 @@ import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("PMD.ExcessiveImports")
 public final class AzureBlobSinkTask extends SinkTask {
     private static final Logger LOG = LoggerFactory.getLogger(AzureBlobSinkConnector.class);
 
     private RecordGrouper recordGrouper;
     private AzureBlobSinkConfig config;
+    private Map<String, String> props;
     private BlobContainerClient containerClient;
     private final Map<String, BlockBlobClient> blobClientMap = new ConcurrentHashMap<>();
 
@@ -63,11 +66,11 @@ public final class AzureBlobSinkTask extends SinkTask {
     }
 
     // for testing
-    public AzureBlobSinkTask(final Map<String, String> props, final BlobServiceClient blobServiceClient) {
+    AzureBlobSinkTask(final Map<String, String> props, final BlobServiceClient blobServiceClient) {
         super();
         Objects.requireNonNull(props, "props cannot be null");
         Objects.requireNonNull(blobServiceClient, "blobServiceClient cannot be null");
-
+        this.props = new HashMap<>(props);
         this.config = new AzureBlobSinkConfig(props);
         this.containerClient = blobServiceClient.getBlobContainerClient(config.getContainerName());
         initRecordGrouper();
@@ -146,7 +149,7 @@ public final class AzureBlobSinkTask extends SinkTask {
                 OutputStream out = Channels.newOutputStream(channel);
                 var outputWriter = OutputWriter.builder()
                         .withCompressionType(config.getCompressionType())
-                        .withExternalProperties(config.originalsStrings())
+                        .withExternalProperties(props)
                         .withOutputFields(config.getOutputFields())
                         .withEnvelopeEnabled(config.envelopeEnabled())
                         .build(out, config.getFormatType())) {

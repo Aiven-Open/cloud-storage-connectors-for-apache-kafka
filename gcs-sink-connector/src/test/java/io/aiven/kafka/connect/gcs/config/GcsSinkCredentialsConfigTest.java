@@ -24,7 +24,6 @@ import static org.mockito.Mockito.mockStatic;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -58,7 +57,8 @@ final class GcsSinkCredentialsConfigTest {
             "{{topic}}-{{start_offset}}", "{{partition}}-{{start_offset}}",
             "{{topic}}-{{partition}}-{{start_offset}}-{{unknown}}" })
     void incorrectFilenameTemplates(final String template) {
-        final Map<String, String> properties = Map.of("file.name.template", template, "gcs.bucket.name", "some-bucket");
+        final Map<String, String> properties = GcsSinkConfigDefaults.defaultProperties();
+        FileNameFragment.setter(properties).template(template);
 
         final ConfigValue configValue = new GcsSinkConfigDef().validate(properties)
                 .stream()
@@ -73,8 +73,9 @@ final class GcsSinkCredentialsConfigTest {
 
     @Test
     void gcsCredentialsPath() {
-        final Map<String, String> properties = Map.of("gcs.bucket.name", "test-bucket", "gcs.credentials.path",
-                Thread.currentThread().getContextClassLoader().getResource("test_gcs_credentials.json").getPath());
+        final Map<String, String> properties = GcsSinkConfigDefaults.defaultProperties(Map.of(
+                GcsSinkConfigDef.GCS_CREDENTIALS_PATH_CONFIG,
+                Thread.currentThread().getContextClassLoader().getResource("test_gcs_credentials.json").getPath()));
 
         assertConfigDefValidationPasses(properties);
 
@@ -86,13 +87,12 @@ final class GcsSinkCredentialsConfigTest {
 
     @Test
     void gcsCredentialsJson() throws IOException {
-        final Map<String, String> properties = new HashMap<>();
-        properties.put("gcs.bucket.name", "test-bucket");
 
         final String credentialsJson = Resources.toString(
                 Thread.currentThread().getContextClassLoader().getResource("test_gcs_credentials.json"),
                 StandardCharsets.UTF_8);
-        properties.put("gcs.credentials.json", credentialsJson);
+        final Map<String, String> properties = GcsSinkConfigDefaults
+                .defaultProperties(Map.of(GcsSinkConfigDef.GCS_CREDENTIALS_JSON_CONFIG, credentialsJson));
 
         assertConfigDefValidationPasses(properties);
 
@@ -108,8 +108,8 @@ final class GcsSinkCredentialsConfigTest {
      */
     @Test
     void gcsCredentialsNoCredentialsWhenDefaultCredentialsFalse() {
-        final Map<String, String> properties = Map.of(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, "test-bucket",
-                GcsSinkConfigDef.GCS_CREDENTIALS_DEFAULT_CONFIG, String.valueOf(false));
+        final Map<String, String> properties = GcsSinkConfigDefaults
+                .defaultProperties(Map.of(GcsSinkConfigDef.GCS_CREDENTIALS_DEFAULT_CONFIG, "false"));
 
         assertConfigDefValidationPasses(properties);
 
@@ -122,7 +122,7 @@ final class GcsSinkCredentialsConfigTest {
     /** Verifies that NoCredentials are used when no credential configurations is supplied. */
     @Test
     void gcsCredentialsNoCredentialsWhenNoCredentialsSupplied() {
-        final Map<String, String> properties = Map.of(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, "test-bucket");
+        final Map<String, String> properties = GcsSinkConfigDefaults.defaultProperties();
 
         assertConfigDefValidationPasses(properties);
 
@@ -134,8 +134,8 @@ final class GcsSinkCredentialsConfigTest {
 
     @Test
     void gcsCredentialsDefault() {
-        final Map<String, String> properties = Map.of(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, "test-bucket",
-                GcsSinkConfigDef.GCS_CREDENTIALS_DEFAULT_CONFIG, String.valueOf(true));
+        final Map<String, String> properties = GcsSinkConfigDefaults
+                .defaultProperties(Map.of(GcsSinkConfigDef.GCS_CREDENTIALS_DEFAULT_CONFIG, "true"));
 
         assertConfigDefValidationPasses(properties);
 
@@ -157,12 +157,12 @@ final class GcsSinkCredentialsConfigTest {
     @MethodSource("provideMoreThanOneNonNull")
     void gcsCredentialsExclusivity(final Boolean defaultCredentials, final String credentialsJson,
             final String credentialsPath) {
-        final Map<String, String> properties = new HashMap<>();
-        properties.put(GcsSinkConfigDef.GCS_BUCKET_NAME_CONFIG, "test-bucket");
-        properties.put(GcsSinkConfigDef.GCS_CREDENTIALS_DEFAULT_CONFIG,
-                defaultCredentials == null ? null : String.valueOf(defaultCredentials));
+        // can not put null value in Map.of()
+        final Map<String, String> properties = GcsSinkConfigDefaults.defaultProperties();
         properties.put(GcsSinkConfigDef.GCS_CREDENTIALS_JSON_CONFIG, credentialsJson);
         properties.put(GcsSinkConfigDef.GCS_CREDENTIALS_PATH_CONFIG, credentialsPath);
+        properties.put(GcsSinkConfigDef.GCS_CREDENTIALS_DEFAULT_CONFIG,
+                defaultCredentials == null ? null : defaultCredentials.toString());
 
         final List<String> errMsgs = new ArrayList<>();
 
