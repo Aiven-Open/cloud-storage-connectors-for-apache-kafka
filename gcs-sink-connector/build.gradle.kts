@@ -83,6 +83,8 @@ dependencies {
   implementation("com.google.cloud:google-cloud-storage:2.58.0")
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
+  implementation("io.aiven.commons:google-utils:1.0.0")
+  implementation("io.aiven.commons:system:1.0.0")
 
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.hamcrest)

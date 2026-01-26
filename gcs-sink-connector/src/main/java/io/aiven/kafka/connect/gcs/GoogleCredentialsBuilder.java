@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import io.aiven.commons.google.auth.GCPValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,17 +79,21 @@ public final class GoogleCredentialsBuilder {
     }
 
     private static GoogleCredentials getCredentialsFromPath(final String credentialsPath) throws IOException {
-        try (InputStream stream = Files
-                .newInputStream(Paths.get(URI.create(String.format("file://%s", credentialsPath))))) {
-            return GoogleCredentials.fromStream(stream);
+        try {
+            final byte[] credentialsBytes = Files
+                    .readAllBytes(Paths.get(URI.create(String.format("file://%s", credentialsPath))));
+            GCPValidator.validateCredentialJson(credentialsBytes);
+            return GoogleCredentials.fromStream(new ByteArrayInputStream(credentialsBytes));
         } catch (final IOException e) {
             throw new IOException("Failed to read GCS credentials from " + credentialsPath, e);
         }
     }
 
     private static GoogleCredentials getCredentialsFromJson(final String credentialsJson) throws IOException {
-        try (InputStream stream = new ByteArrayInputStream(credentialsJson.getBytes(StandardCharsets.UTF_8))) {
-            return GoogleCredentials.fromStream(stream);
+        try {
+            final byte[] credentialsBytes = credentialsJson.getBytes(StandardCharsets.UTF_8);
+            GCPValidator.validateCredentialJson(credentialsBytes);
+            return GoogleCredentials.fromStream(new ByteArrayInputStream(credentialsBytes));
         } catch (final IOException e) {
             throw new IOException("Failed to read credentials from JSON string", e);
         }
