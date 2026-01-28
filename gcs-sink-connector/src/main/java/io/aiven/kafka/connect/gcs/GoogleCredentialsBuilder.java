@@ -23,8 +23,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import com.google.auth.oauth2.GoogleCredentials;
 import io.aiven.commons.google.auth.GCPValidator;
+
+import com.google.auth.oauth2.GoogleCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
