@@ -22,7 +22,7 @@ published into the corresponding Kafka topic.
 
 ### Requirements
 
-The connector requires Java 11 or Java 17 for development and production.  These are the same versions supported for Kafka Connect development and production.
+The connector requires Java 17 for development and production.  This is the same version supported for Kafka Connect development and production.
 
 #### Authorization
 
