@@ -17,7 +17,7 @@ The connector subscribes to the specified Kafka topics and collects messages com
 
 ### Requirements
 
-The connector requires Java 11 or newer for development and production.
+The connector requires Java 17 or newer for development and production.
 
 #### Authorization
 
