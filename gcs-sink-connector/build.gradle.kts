@@ -80,7 +80,7 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
-  implementation("com.google.cloud:google-cloud-storage:2.58.0")
+  implementation("com.google.cloud:google-cloud-storage:2.62.1")
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
   implementation("io.aiven.commons:google-utils:1.1.0")
