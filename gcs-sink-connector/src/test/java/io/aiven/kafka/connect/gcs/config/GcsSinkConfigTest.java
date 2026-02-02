@@ -232,6 +232,7 @@ final class GcsSinkConfigTest {
         properties.put("file.max.records", "42");
         properties.put("format.output.fields", "key,value,offset,timestamp");
         properties.put("format.output.fields.value.encoding", "base64");
+        properties.put("gcs.request.commit.interval.ms", "2000");
 
         assertConfigDefValidationPasses(properties);
 
@@ -256,7 +257,7 @@ final class GcsSinkConfigTest {
 
         assertThat(config.getFilenameTimezone()).isEqualTo(ZoneOffset.UTC);
         assertThat(config.getFilenameTimestampSource()).isInstanceOf(TimestampSource.WallclockTimestampSource.class);
-
+        assertThat(config.getGcsRequestCommitIntervalMs()).isEqualTo(2000);
     }
 
     @ParameterizedTest
@@ -770,6 +771,26 @@ final class GcsSinkConfigTest {
                         String.format("When file.name.template is %s, file.max.records must be either 1 or not set",
                                 fileNameTemplate))
                 .isInstanceOf(ConfigException.class);
+    }
+
+    @Test
+    void invalidRequestCommitIntervalType() {
+        final Map<String, String> properties = Map.of("gcs.bucket.name", "test-bucket",
+                "gcs.request.commit.interval.ms", "test-value");
+        final var expectedErrorMessage = "Invalid value test-value for configuration gcs.request.commit.interval.ms: Not a number of type INT";
+
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
+    }
+
+    @Test
+    void invalidRequestCommitIntervalValue() {
+        final Map<String, String> properties = Map.of("gcs.bucket.name", "test-bucket",
+                "gcs.request.commit.interval.ms", "-1000");
+        final var expectedErrorMessage = "Invalid value -1000 for configuration gcs.request.commit.interval.ms: Value must be at least -1";
+
+        assertThatThrownBy(() -> new GcsSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
     }
 
     private void assertConfigDefValidationPasses(final Map<String, String> properties) {
