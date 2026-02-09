@@ -27,8 +27,10 @@ import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 
 public class S3SinkConfigDef extends SinkCommonConfig.SinkCommonConfigDef {
 
+    public static final CompressionType DEFAULT_COMPRESSION = CompressionType.GZIP;
+
     public S3SinkConfigDef() {
-        super(null, CompressionType.GZIP);
+        super(null, DEFAULT_COMPRESSION);
         S3ConfigFragment.update(this, true);
     }
 

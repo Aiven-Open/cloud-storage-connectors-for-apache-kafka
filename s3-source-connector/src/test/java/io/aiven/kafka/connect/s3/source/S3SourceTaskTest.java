@@ -40,7 +40,6 @@ import org.apache.kafka.connect.storage.OffsetStorageReader;
 import io.aiven.commons.strings.CasedString;
 import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
-import io.aiven.kafka.connect.common.config.KafkaFragment;
 import io.aiven.kafka.connect.common.config.SourceConfigFragment;
 import io.aiven.kafka.connect.common.config.TransformerFragment;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
@@ -153,11 +152,12 @@ final class S3SourceTaskTest {
                 .toLowerCase(Locale.ROOT) + "-" + UUID.randomUUID();
 
         TransformerFragment.setter(props).inputFormat(InputFormat.BYTES);
-        KafkaFragment.setter(props)
+        CommonConfigFragment.setter(props)
                 .keyConverter(ByteArrayConverter.class)
                 .valueConverter(ByteArrayConverter.class)
-                .tasksMax(1)
-                .name(name);
+                .maxTasks(1)
+                .name(name)
+                .connector(S3SourceConnector.class);
         CommonConfigFragment.setter(props).taskId(0);
         SourceConfigFragment.setter(props).targetTopic(getTopic()).maxPollRecords(50);
         FileNameFragment.setter(props).template("any-old-file");

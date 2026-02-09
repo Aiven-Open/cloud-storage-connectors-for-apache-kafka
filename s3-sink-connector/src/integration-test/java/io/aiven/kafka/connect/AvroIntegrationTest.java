@@ -33,10 +33,19 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.connect.connector.Connector;
 
+import io.aiven.kafka.connect.common.config.CommonConfigFragment;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.common.config.FormatType;
+import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
+import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.OutputFormatFragment;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.AivenKafkaConnectS3SinkConnector;
 
+import io.confluent.connect.avro.AvroConverter;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableByteArrayInput;
@@ -74,10 +83,11 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     void avroOutput(final String avroCodec, final CompressionType compression, final TestInfo testInfo)
             throws ExecutionException, InterruptedException, IOException {
         final var topicName = topicName(testInfo);
-        final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
-        connectorConfig.put("file.compression.type", compression.name());
-        connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("format.output.type", "avro");
+        final Map<String, String> connectorConfig = awsSpecificConfig(topicName);
+        FileNameFragment.setter(connectorConfig).fileCompression(compression);
+        OutputFormatFragment.setter(connectorConfig)
+                .withFormatType(FormatType.AVRO)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE);
         connectorConfig.put("avro.codec", avroCodec);
         createConnector(connectorConfig);
 
@@ -135,16 +145,17 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
     @Test
     void jsonlAvroOutputTest(final TestInfo testInfo) throws ExecutionException, InterruptedException, IOException {
         final var topicName = topicName(testInfo);
-        final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(CONNECTOR_NAME), topicName);
+        final Map<String, String> connectorConfig = awsSpecificConfig(topicName);
         final CompressionType compression = CompressionType.NONE;
-        final String contentType = "jsonl";
-        connectorConfig.put("format.output.fields", "key,value");
-        connectorConfig.put("format.output.fields.value.encoding", "none");
-        connectorConfig.put("key.converter", "io.confluent.connect.avro.AvroConverter");
-        connectorConfig.put("value.converter", "io.confluent.connect.avro.AvroConverter");
+        FileNameFragment.setter(connectorConfig).fileCompression(compression);
+        OutputFormatFragment.setter(connectorConfig)
+                .withOutputFields(OutputFieldType.KEY, OutputFieldType.VALUE)
+                .withOutputFieldEncodingType(OutputFieldEncodingType.NONE)
+                .withFormatType(FormatType.JSONL);
+        CommonConfigFragment.setter(connectorConfig)
+                .keyConverter(AvroConverter.class)
+                .valueConverter(AvroConverter.class);
         connectorConfig.put("value.converter.schemas.enable", "false");
-        connectorConfig.put("file.compression.type", compression.name());
-        connectorConfig.put("format.output.type", contentType);
         createConnector(connectorConfig);
 
         final int recordCountPerPartition = 10;
@@ -227,26 +238,31 @@ final class AvroIntegrationTest extends AbstractIntegrationTest<String, GenericR
 
     private Map<String, String> basicConnectorConfig(final String connectorName) {
         final Map<String, String> config = new HashMap<>();
-        config.put("name", connectorName);
-        config.put("key.converter", "io.confluent.connect.avro.AvroConverter");
+        CommonConfigFragment.setter(config)
+                .name(connectorName)
+                .connector(Connector.class)
+                .keyConverter(AvroConverter.class)
+                .valueConverter(AvroConverter.class)
+                .maxTasks(1);
         config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
-        config.put("value.converter", "io.confluent.connect.avro.AvroConverter");
         config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
-        config.put("tasks.max", "1");
         return config;
     }
 
-    private Map<String, String> awsSpecificConfig(final Map<String, String> config, final String topicName) {
-        config.put("connector.class", AivenKafkaConnectS3SinkConnector.class.getName());
-        config.put("aws.access.key.id", S3_ACCESS_KEY_ID);
-        config.put("aws.secret.access.key", S3_SECRET_ACCESS_KEY);
-        config.put("aws.s3.endpoint", s3Endpoint);
-        config.put("aws.s3.bucket.name", TEST_BUCKET_NAME);
-        config.put("aws.s3.prefix", s3Prefix);
+    private Map<String, String> awsSpecificConfig(final String topicName) {
+        final Map<String, String> config = basicConnectorConfig(CONNECTOR_NAME);
+        CommonConfigFragment.setter(config).connector(AivenKafkaConnectS3SinkConnector.class).maxTasks(1);
+
+        S3ConfigFragment.setter(config)
+                .accessKeyId(S3_ACCESS_KEY_ID)
+                .accessKeySecret(S3_SECRET_ACCESS_KEY)
+                .endpoint(s3Endpoint)
+                .bucketName(TEST_BUCKET_NAME)
+                .prefix(s3Prefix);
+
         config.put("topics", topicName);
         config.put("key.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
         config.put("value.converter.schema.registry.url", kafkaManager.getSchemaRegistryUrl());
-        config.put("tasks.max", "1");
         return config;
     }
 

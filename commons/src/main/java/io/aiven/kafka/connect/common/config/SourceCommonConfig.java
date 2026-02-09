@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.common.config;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigValue;
+import org.apache.kafka.connect.runtime.ConnectorConfig;
 
 import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
@@ -51,9 +52,8 @@ public class SourceCommonConfig extends CommonConfig {
      * @param originals
      *            the initial configuration data.
      */
-    public SourceCommonConfig(final SourceCommonConfigDef definition, final Map<?, ?> originals) {
+    public SourceCommonConfig(final SourceCommonConfigDef definition, final Map<String, String> originals) {
         super(definition, originals);
-        final FragmentDataAccess dataAccess = FragmentDataAccess.from(this);
         transformerFragment = new TransformerFragment(dataAccess);
         sourceConfigFragment = new SourceConfigFragment(dataAccess);
         fileNameFragment = new FileNameFragment(dataAccess, false);
@@ -99,7 +99,9 @@ public class SourceCommonConfig extends CommonConfig {
      * Gets the tolerance for errors.
      *
      * @return the tolerance for errors.
+     * @deprecated use {@link ConnectorConfig#errorToleranceType}.
      */
+    @Deprecated
     public ErrorsTolerance getErrorsTolerance() {
         return sourceConfigFragment.getErrorsTolerance();
     }
@@ -147,6 +149,15 @@ public class SourceCommonConfig extends CommonConfig {
      */
     public String getSourceName() {
         return fileNameFragment.getSourceName();
+    }
+
+    /**
+     * Gets the file name prefix or an empty string.
+     *
+     * @return the prefix.
+     */
+    public String getPrefix() {
+        return fileNameFragment.getPrefix();
     }
 
     /**

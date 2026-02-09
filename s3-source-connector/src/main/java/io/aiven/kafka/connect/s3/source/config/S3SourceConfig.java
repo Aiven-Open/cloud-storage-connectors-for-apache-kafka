@@ -18,26 +18,25 @@ package io.aiven.kafka.connect.s3.source.config;
 
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
+import io.aiven.kafka.connect.config.s3.S3CommonConfig;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.iam.AwsCredentialProviderFactory;
 import io.aiven.kafka.connect.iam.AwsStsEndpointConfig;
 import io.aiven.kafka.connect.iam.AwsStsRole;
 
-import org.apache.commons.lang3.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 
-final public class S3SourceConfig extends SourceCommonConfig {
+final public class S3SourceConfig extends SourceCommonConfig implements S3CommonConfig {
 
     private final S3ConfigFragment s3ConfigFragment;
     private final AwsCredentialProviderFactory awsCredentialsProviderFactory;
 
     public S3SourceConfig(final Map<String, String> properties) {
         super(new S3SourceConfigDef(), properties);
-        s3ConfigFragment = new S3ConfigFragment(FragmentDataAccess.from(this));
+        s3ConfigFragment = new S3ConfigFragment(dataAccess);
         awsCredentialsProviderFactory = new AwsCredentialProviderFactory();
     }
 
@@ -61,10 +60,17 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getAwsCredentialsV2();
     }
 
+    @Override
     public String getAwsS3EndPoint() {
         return s3ConfigFragment.getAwsS3EndPoint();
     }
 
+    @Override
+    public S3ConfigFragment.DelayType getDelayType() {
+        return s3ConfigFragment.getDelayType();
+    }
+
+    @Override
     public Region getAwsS3Region() {
         return s3ConfigFragment.getAwsS3RegionV2();
     }
@@ -77,22 +83,21 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getServerSideEncryptionAlgorithmName();
     }
 
-    public String getAwsS3Prefix() {
-        return StringUtils.defaultIfBlank(s3ConfigFragment.getAwsS3Prefix(), null);
-    }
-
     public int getAwsS3PartSize() {
         return s3ConfigFragment.getAwsS3PartSize();
     }
 
+    @Override
     public long getS3RetryBackoffDelayMs() {
         return s3ConfigFragment.getS3RetryBackoffDelayMs();
     }
 
+    @Override
     public long getS3RetryBackoffMaxDelayMs() {
         return s3ConfigFragment.getS3RetryBackoffMaxDelayMs();
     }
 
+    @Override
     public int getS3RetryBackoffMaxRetries() {
         return s3ConfigFragment.getS3RetryBackoffMaxRetries();
     }
@@ -101,6 +106,7 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getFetchPageSize();
     }
 
+    @Override
     public AwsCredentialsProvider getAwsV2Provider() {
         return awsCredentialsProviderFactory.getAwsV2Provider(s3ConfigFragment);
     }

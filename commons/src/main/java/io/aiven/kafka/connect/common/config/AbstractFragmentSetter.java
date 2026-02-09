@@ -59,6 +59,18 @@ public class AbstractFragmentSetter<T extends AbstractFragmentSetter<T>> {
     }
 
     /**
+     * Removes the value from the map if it exists.
+     *
+     * @param key
+     *            the key for the value to remove.
+     * @return this
+     */
+    final protected T removeValue(final String key) {
+        dataMap.remove(key);
+        return self;
+    }
+
+    /**
      * Sets the value.
      *
      * @param key

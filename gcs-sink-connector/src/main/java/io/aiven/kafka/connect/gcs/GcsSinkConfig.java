@@ -39,8 +39,6 @@ import org.slf4j.LoggerFactory;
 public final class GcsSinkConfig extends SinkCommonConfig {
     private static final Logger LOG = LoggerFactory.getLogger(GcsSinkConfig.class);
 
-    public static final String NAME_CONFIG = "name";
-
     public GcsSinkConfig(final Map<String, String> properties) {
         super(new GcsSinkConfigDef(), properties);
     }
@@ -95,14 +93,6 @@ public final class GcsSinkConfig extends SinkCommonConfig {
             result.add(new OutputField(fieldType, encodingType));
         }
         return result;
-    }
-
-    public String getPrefix() {
-        return fileNameFragment.getPrefix();
-    }
-
-    public String getConnectorName() {
-        return originalsStrings().get(NAME_CONFIG);
     }
 
     public int getGcsRetryBackoffMaxAttempts() {

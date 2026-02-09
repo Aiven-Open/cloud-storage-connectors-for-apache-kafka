@@ -21,9 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.config.ConfigDef;
-
-import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
@@ -33,26 +30,14 @@ public final class AzureBlobSinkConfig extends SinkCommonConfig {
     public static final String AZURE_STORAGE_CONNECTION_STRING_CONFIG = "azure.storage.connection.string";
     public static final String AZURE_STORAGE_CONTAINER_NAME_CONFIG = "azure.storage.container.name";
 
-    /**
-     * TODO move this to FileNameFragment and handle it in the grouper code.
-     */
-    public static final String FILE_NAME_PREFIX_CONFIG = "file.name.prefix";
-
     public static final long AZURE_RETRY_BACKOFF_INITIAL_DELAY_MS_DEFAULT = 1_000L;
     public static final long AZURE_RETRY_BACKOFF_MAX_DELAY_MS_DEFAULT = 32_000L;
     public static final int AZURE_RETRY_BACKOFF_MAX_ATTEMPTS_DEFAULT = 6;
 
-    public static final String NAME_CONFIG = "name";
-
     private final AzureBlobConfigFragment azureFragment;
-
-    public static ConfigDef configDef() {
-        return new AzureBlobSinkConfigDef();
-    }
 
     public AzureBlobSinkConfig(final Map<String, String> properties) {
         super(new AzureBlobSinkConfigDef(), properties);
-        final FragmentDataAccess dataAccess = FragmentDataAccess.from(this);
         azureFragment = new AzureBlobConfigFragment(dataAccess);
     }
 
@@ -61,7 +46,7 @@ public final class AzureBlobSinkConfig extends SinkCommonConfig {
     }
 
     public String getContainerName() {
-        return getString(AZURE_STORAGE_CONTAINER_NAME_CONFIG);
+        return azureFragment.getContainerName();
     }
 
     @Override
@@ -72,14 +57,6 @@ public final class AzureBlobSinkConfig extends SinkCommonConfig {
                         ? new OutputField(fieldType, outputFormatFragment.getOutputFieldEncodingType())
                         : new OutputField(fieldType, OutputFieldEncodingType.NONE))
                 .collect(Collectors.toList());
-    }
-
-    public String getPrefix() {
-        return getString(FILE_NAME_PREFIX_CONFIG);
-    }
-
-    public String getConnectorName() {
-        return originalsStrings().get(NAME_CONFIG);
     }
 
     public int getAzureRetryBackoffMaxAttempts() {

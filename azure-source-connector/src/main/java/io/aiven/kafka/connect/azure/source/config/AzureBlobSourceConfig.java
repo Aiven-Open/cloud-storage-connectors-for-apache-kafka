@@ -18,26 +18,26 @@ package io.aiven.kafka.connect.azure.source.config;
 
 import java.util.Map;
 
-import io.aiven.kafka.connect.common.config.FragmentDataAccess;
 import io.aiven.kafka.connect.common.config.SourceCommonConfig;
 
 import com.azure.storage.blob.BlobServiceAsyncClient;
 
-public class AzureBlobSourceConfig extends SourceCommonConfig {
+public final class AzureBlobSourceConfig extends SourceCommonConfig {
 
     // TODO AzureBlobFragment needs to be extracted from Azure Sink.
     private final AzureBlobConfigFragment azureBlobConfigFragment;
-    public AzureBlobSourceConfig(final Map<?, ?> properties) {
-        super(new AzureBlobSourceConfigDef(), properties);
-        azureBlobConfigFragment = new AzureBlobConfigFragment(FragmentDataAccess.from(this));
+    public AzureBlobSourceConfig(final Map<String, String> properties) {
+        super(new AzureBlobSourceConfigDef(), AzureBlobConfigFragment.handleDeprecatedOptions(properties));
+        azureBlobConfigFragment = new AzureBlobConfigFragment(dataAccess);
     }
 
     public int getAzureFetchPageSize() {
         return azureBlobConfigFragment.getAzureFetchPageSize();
     }
 
+    @Deprecated
     public String getAzurePrefix() {
-        return azureBlobConfigFragment.getAzurePrefix();
+        return getPrefix();
     }
 
     public BlobServiceAsyncClient getAzureServiceAsyncClient() {

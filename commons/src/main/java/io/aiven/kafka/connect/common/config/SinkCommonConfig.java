@@ -45,13 +45,12 @@ public class SinkCommonConfig extends CommonConfig {
      * @param definition
      *            the definition for this SinkCommonConfig.
      * @param originals
-     *            the original data for the configuraiton.
+     *            the original data for the configuration.
      */
     public SinkCommonConfig(final SinkCommonConfigDef definition, final Map<String, String> originals) {
         super(definition, FileNameFragment.handleDeprecatedYyyyUppercase(originals));
-        final FragmentDataAccess fragmentDataAccess = FragmentDataAccess.from(this);
-        fileNameFragment = new FileNameFragment(fragmentDataAccess, false);
-        outputFormatFragment = new OutputFormatFragment(fragmentDataAccess);
+        fileNameFragment = new FileNameFragment(dataAccess, true);
+        outputFormatFragment = new OutputFormatFragment(dataAccess);
     }
 
     /**
@@ -122,6 +121,10 @@ public class SinkCommonConfig extends CommonConfig {
      */
     public final String getFilename() {
         return fileNameFragment.getFilename();
+    }
+
+    public final String getPrefix() {
+        return fileNameFragment.getPrefix();
     }
 
     /**

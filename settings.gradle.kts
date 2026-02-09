@@ -26,7 +26,7 @@ val slf4jVersion by extra("1.7.36")
 val snappyVersion by extra("1.1.10.5")
 val spotbugsAnnotationsVersion by extra("4.8.1")
 val stax2ApiVersion by extra("4.2.2")
-val testcontainersVersion by extra("1.20.6")
+val testcontainersVersion by extra("2.0.2")
 val zstdVersion by extra("1.5.6-3")
 val wireMockVersion by extra("2.35.0")
 val azureVersion by extra("12.30.0")
@@ -63,11 +63,6 @@ dependencyResolutionManagement {
       library("authentication", "software.amazon.awssdk:auth:$amazonAwsSdkV2Version")
       library("s3", "software.amazon.awssdk:s3:$amazonAwsSdkV2Version")
       library("sts", "software.amazon.awssdk:sts:$amazonAwsSdkV2Version")
-    }
-
-    create("amazonoldawssdk") {
-      library("s3", "com.amazonaws:aws-java-sdk-s3:$amazonAwsSdkV1Version")
-      library("sts", "com.amazonaws:aws-java-sdk-sts:$amazonAwsSdkV1Version")
     }
 
     create("azure") { library("storage-blob", "com.azure:azure-storage-blob:${azureVersion}") }
@@ -113,11 +108,14 @@ dependencyResolutionManagement {
       library("woodstox-stax2-api", "org.codehaus.woodstox:stax2-api:$stax2ApiVersion")
     }
     create("testcontainers") {
-      library("junit-jupiter", "org.testcontainers:junit-jupiter:$testcontainersVersion")
       library(
-          "kafka", "org.testcontainers:kafka:$testcontainersVersion") // this is not Kafka version
-      library("localstack", "org.testcontainers:localstack:$testcontainersVersion")
-      library("azure", "org.testcontainers:azure:$testcontainersVersion")
+          "junit-jupiter", "org.testcontainers:testcontainers-junit-jupiter:$testcontainersVersion")
+      library(
+          "kafka",
+          "org.testcontainers:testcontainers-kafka:$testcontainersVersion") // this is not Kafka
+      // version
+      library("localstack", "org.testcontainers:testcontainers-localstack:$testcontainersVersion")
+      library("azure", "org.testcontainers:testcontainers-azure:$testcontainersVersion")
     }
   }
 }
