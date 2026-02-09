@@ -318,6 +318,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
                 .keyConverter(StringConverter.class)
                 .valueConverter(JsonConverter.class);
         FileNameFragment.setter(connectorConfig).fileCompression(compression);
+        connectorConfig.put("value.converter.schemas.enable", "false");
         createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
