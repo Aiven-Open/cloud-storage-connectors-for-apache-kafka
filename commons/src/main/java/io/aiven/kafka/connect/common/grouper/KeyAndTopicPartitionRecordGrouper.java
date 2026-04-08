@@ -61,7 +61,7 @@ public final class KeyAndTopicPartitionRecordGrouper implements RecordGrouper {
     }
 
     @Override
-    public void put(final SinkRecord record) {
+    public String put(final SinkRecord record) {
         Objects.requireNonNull(record, "records cannot be null");
 
         final String recordKey = generateRecordKey(record);
@@ -70,6 +70,8 @@ public final class KeyAndTopicPartitionRecordGrouper implements RecordGrouper {
         // one record per file
         records.clear();
         records.add(record);
+
+        return recordKey;
     }
 
     private String generateRecordKey(final SinkRecord record) {
