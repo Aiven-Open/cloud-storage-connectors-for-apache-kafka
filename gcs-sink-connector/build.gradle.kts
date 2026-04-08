@@ -21,6 +21,10 @@ plugins {
   id("aiven-apache-kafka-connectors-all.docs")
 }
 
+tasks.withType<Test> {
+  maxHeapSize = "2g" // Increases memory for both 'test' and 'integrationTest'
+}
+
 val integrationTest: SourceSet =
     sourceSets.create("integrationTest") {
       java { srcDir("src/integration-test/java") }

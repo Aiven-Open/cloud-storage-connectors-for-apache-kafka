@@ -43,7 +43,7 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
  * <p>
  * The class supports limited and unlimited number of records in files.
  */
-class TopicPartitionRecordGrouper implements RecordGrouper {
+public class TopicPartitionRecordGrouper implements RecordGrouper {
 
     private final Template filenameTemplate;
 
@@ -84,10 +84,12 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
     }
 
     @Override
-    public void put(final SinkRecord record) {
+    public String put(final SinkRecord record) {
         Objects.requireNonNull(record, "record cannot be null");
         final String recordKey = resolveRecordKeyFor(record);
         fileBuffers.computeIfAbsent(recordKey, ignored -> new ArrayList<>()).add(record);
+
+        return recordKey;
     }
 
     protected String resolveRecordKeyFor(final SinkRecord record) {
@@ -128,6 +130,12 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
     public void clear() {
         currentHeadRecords.clear();
         fileBuffers.clear();
+    }
+
+    // Clears only the buffered records, keeping the head records for consistent filenames.
+    public void clearFileBuffers(final String filename) {
+        Objects.requireNonNull(filename, "filename cannot be null");
+        fileBuffers.remove(filename);
     }
 
     @Override

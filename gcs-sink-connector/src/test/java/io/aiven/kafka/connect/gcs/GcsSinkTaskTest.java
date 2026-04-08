@@ -25,7 +25,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -310,6 +313,214 @@ final class GcsSinkTaskTest {
                         Arrays.asList("key8", "value8", "1008", "41"));
     }
 
+    @Test
+    void noWriteWhenUnderThresholds() {
+        // Buffered size < GCS_WRITE_BUFFER_SIZE_BYTES_PER_TASK AND Time < GCS_WRITE_INTERVAL_MS -> No Write
+        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, "none");
+        final var mockedContext = mock(SinkTaskContext.class);
+        final GcsSinkTask task = new GcsSinkTask(properties, storage);
+        task.initialize(mockedContext);
+
+        task.put(List.of(createRecord("topic0", 0, "key0", "value0", 0, 1000)));
+
+        assertThat(testBucketAccessor.getBlobNames()).isEmpty();
+
+        task.flush(null);
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-0");
+    }
+
+    @Test
+    void writeWhenSizeThresholdExceeded() {
+        // Buffered size > GCS_WRITE_BUFFER_SIZE_BYTES_PER_TASK -> Trigger Write
+        final String compression = "none";
+        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,timestamp,offset");
+        final var mockedContext = mock(SinkTaskContext.class);
+        final GcsSinkTask task = new GcsSinkTask(properties, storage);
+        task.initialize(mockedContext);
+        final CompressionType compressionType = CompressionType.forName(compression);
+
+        final int size = 30 * 1024 * 1024;
+        byte[] chars = new byte[size];
+        for (int i = 0; i < size; i++) {
+            chars[i] = (byte) ('a' + (i % 26));
+        }
+        final String value = new String(chars, StandardCharsets.UTF_8);
+        List<SinkRecord> largeRecords = Arrays.asList(createRecord("topic0", 0, "key0", "value0", 10, 1000),
+                createRecord("topic0", 1, "key1", value, 20, 1001),
+                createRecord("topic0", 2, "key2", "value2", 30, 1002));
+
+        // The size of this batch is less than GCS_WRITE_BUFFER_SIZE_BYTES_PER_TASK
+        task.put(largeRecords);
+        assertThat(testBucketAccessor.getBlobNames()).isEmpty();
+        // Trigger a write immediately.
+        largeRecords = Arrays.asList(createRecord("topic0", 3, "key3", "value3", 40, 1003),
+                createRecord("topic0", 4, "key4", value, 50, 1004),
+                createRecord("topic0", 0, "key0", "value5", 10, 1005));
+        task.put(largeRecords);
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10" + compressionType.extension(),
+                "topic0-1-20" + compressionType.extension(), "topic0-2-30" + compressionType.extension(),
+                "topic0-3-40" + compressionType.extension(), "topic0-4-50" + compressionType.extension());
+        task.flush(null);
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-10" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key0", "value0", "1000", "10"),
+                        Arrays.asList("key0", "value5", "1005", "10"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-1-20" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key1", value, "1001", "20"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-2-30" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key2", "value2", "1002", "30"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-3-40" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key3", "value3", "1003", "40"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-4-50" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key4", value, "1004", "50"));
+    }
+
+    @Test
+    void writeWhenTimeThresholdExceeded() {
+        // Time Interval > GCS_WRITE_INTERVAL_MS -> Trigger Write
+        final String compression = "none";
+        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,timestamp,offset");
+        final var mockedContext = mock(SinkTaskContext.class);
+        final Instant startTime = Instant.now();
+        final MutableClock testClock = new MutableClock(startTime);
+        final GcsSinkTask task = new GcsSinkTask(properties, storage, testClock);
+        task.initialize(mockedContext);
+        final CompressionType compressionType = CompressionType.forName(compression);
+
+        task.put(List.of(createRecord("topic0", 0, "key0", "value0", 0, 1000)));
+        assertThat(testBucketAccessor.getBlobNames()).isEmpty(); // Buffered, not written
+
+        testClock.advance(Duration.ofSeconds(11));
+
+        task.put(List.of(createRecord("topic0", 0, "key1", "value1", 1, 1001)));
+
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-0" + compressionType.extension());
+
+        task.flush(null);
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-0" + compressionType.extension(), compression, 0, 1))
+                .containsExactly(Arrays.asList("key0", "value0", "1000", "0"),
+                        Arrays.asList("key1", "value1", "1001", "1"));
+    }
+
+    @Test
+    void oneRecordPerFileDefersToFlushWhenSizeThresholdExceeded() {
+        // isOneRecordPerFile = true -> Wait for flush()
+        // Setting a filename template that uses record keys (e.g., {{key}})
+        // forces the task into 'isOneRecordPerFile' mode (see GcsSinkTask.initRest)
+        properties.put("file.name.template", "{{key}}");
+        final String compression = "none";
+        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,timestamp,offset");
+        final var mockedContext = mock(SinkTaskContext.class);
+        final GcsSinkTask task = new GcsSinkTask(properties, storage);
+        task.initialize(mockedContext);
+        final CompressionType compressionType = CompressionType.forName(compression);
+
+        final int size = 100 * 1024 * 1024;
+        byte[] chars = new byte[size];
+        for (int i = 0; i < size; i++) {
+            chars[i] = (byte) ('a' + (i % 26));
+        }
+        final String value = new String(chars, StandardCharsets.UTF_8);
+
+        task.put(List.of(createRecordStringKey("topic0", 0, "key0", "value0", 0, 1000)));
+        assertThat(testBucketAccessor.getBlobNames()).isEmpty(); // Buffered, not written
+
+        task.put(List.of(createRecordStringKey("topic0", 0, "key0", value, 1, 1001)));
+        assertThat(testBucketAccessor.getBlobNames()).isEmpty(); // Buffered, not written
+
+        task.flush(null);
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("key0" + compressionType.extension());
+    }
+
+    @Test
+    void oneRecordPerFileDefersToFlushWhenTimeThresholdExceeded() {
+        // isOneRecordPerFile = true -> Wait for flush()
+        // Setting a filename template that uses record keys (e.g., {{key}})
+        // forces the task into 'isOneRecordPerFile' mode (see GcsSinkTask.initRest)
+        properties.put("file.name.template", "{{key}}");
+        final String compression = "none";
+        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
+        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value,timestamp,offset");
+        final var mockedContext = mock(SinkTaskContext.class);
+        final Instant startTime = Instant.now();
+        final MutableClock testClock = new MutableClock(startTime);
+        final GcsSinkTask task = new GcsSinkTask(properties, storage, testClock);
+        task.initialize(mockedContext);
+        final CompressionType compressionType = CompressionType.forName(compression);
+
+        task.put(List.of(createRecordStringKey("topic0", 0, "key0", "value0", 0, 1000)));
+        assertThat(testBucketAccessor.getBlobNames()).isEmpty(); // Buffered, not written
+
+        testClock.advance(Duration.ofSeconds(11));
+
+        task.put(List.of(createRecordStringKey("topic0", 0, "key0", "value1", 1, 1001)));
+        assertThat(testBucketAccessor.getBlobNames()).isEmpty(); // Buffered, not written
+
+        task.flush(null);
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("key0" + compressionType.extension());
+    }
+
+    @Test
+    void shouldRequestCommitWhenMaxRecordsPerFileExceeded() {
+        properties.put(GcsSinkConfig.FILE_MAX_RECORDS, "2");
+
+        final SinkTaskContext mockedContext = mock(SinkTaskContext.class);
+        final GcsSinkTask task = new GcsSinkTask(properties, storage);
+        task.initialize(mockedContext);
+
+        task.put(List.of(createRecord("topic0", 0, "key0", "val0", 10, 1000)));
+        verify(mockedContext, never()).requestCommit();
+
+        task.put(List.of(createRecord("topic0", 0, "key1", "val1", 11, 1001)));
+
+        // Verify the signal was sent to the Worker
+        verify(mockedContext).requestCommit();
+    }
+
+    @Test
+    void shouldRequestCommitWhenMaxBytesPerFileExceeded() {
+        properties.put(GcsSinkConfig.FILE_MAX_BYTES, "100");
+
+        final SinkTaskContext mockedContext = mock(SinkTaskContext.class);
+        final GcsSinkTask task = new GcsSinkTask(properties, storage);
+        task.initialize(mockedContext);
+
+        final byte[] largeValue = new byte[40];
+        final SinkRecord record = new SinkRecord("topic0", 0, Schema.STRING_SCHEMA, "key", Schema.BYTES_SCHEMA,
+                largeValue, 10, 1000L, TimestampType.CREATE_TIME);
+
+        task.put(List.of(record));
+        verify(mockedContext, never()).requestCommit();
+
+        task.put(List.of(record));
+
+        // Verify the threshold check triggered the request
+        verify(mockedContext).requestCommit();
+    }
+
+    @Test
+    void shouldNotRequestCommitWhenOneRecordPerFileIsActive() {
+        properties.put("file.name.template", "{{key}}");
+        properties.put(GcsSinkConfig.FILE_MAX_RECORDS, "1");
+        properties.put(GcsSinkConfig.FILE_MAX_BYTES, "100");
+
+        final SinkTaskContext mockedContext = mock(SinkTaskContext.class);
+        final GcsSinkTask task = new GcsSinkTask(properties, storage);
+        task.initialize(mockedContext);
+
+        final byte[] largeValue = new byte[40];
+        final SinkRecord record = new SinkRecord("topic0", 0, Schema.STRING_SCHEMA, "key", Schema.BYTES_SCHEMA,
+                largeValue, 10, 1000L, TimestampType.CREATE_TIME);
+
+        task.put(List.of(record));
+        verify(mockedContext, never()).requestCommit();
+
+        task.put(List.of(record));
+        verify(mockedContext, never()).requestCommit();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
     void nullKeyValueAndTimestamp(final String compression) {
@@ -360,7 +571,9 @@ final class GcsSinkTaskTest {
     void maxRecordPerFile(final String compression) {
         properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
         properties.put(GcsSinkConfig.FILE_MAX_RECORDS, "1");
+        final SinkTaskContext mockedContext = mock(SinkTaskContext.class);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
+        task.initialize(mockedContext);
 
         final int recordNum = 100;
 
@@ -519,8 +732,7 @@ final class GcsSinkTaskTest {
         task.put(records);
 
         assertThatThrownBy(() -> task.flush(null)).isInstanceOf(ConnectException.class)
-                .hasMessage(
-                        "org.apache.kafka.connect.errors.DataException: Record value schema type must be BYTES, STRING given");
+                .hasMessage("Record value schema type must be BYTES, STRING given");
     }
 
     @Test
@@ -570,8 +782,7 @@ final class GcsSinkTaskTest {
         task.put(records);
 
         assertThatThrownBy(() -> task.flush(null)).isInstanceOf(ConnectException.class)
-                .hasMessage(
-                        "org.apache.kafka.connect.errors.DataException: Record value schema type must be BYTES, STRUCT given");
+                .hasMessage("Record value schema type must be BYTES, STRUCT given");
     }
 
     @Test
@@ -782,5 +993,35 @@ final class GcsSinkTaskTest {
 
     private Collection<List<String>> toCollectionOfLists(final List<String> values) {
         return values.stream().map(Collections::singletonList).collect(Collectors.toList());
+    }
+
+    static class MutableClock extends Clock {
+        private Instant clock;
+        private final ZoneId zone;
+
+        public MutableClock(final Instant start) {
+            super();
+            this.clock = start;
+            this.zone = ZoneId.of("UTC");
+        }
+
+        public void advance(final Duration duration) {
+            this.clock = this.clock.plus(duration);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return zone;
+        }
+
+        @Override
+        public Clock withZone(final ZoneId zone) {
+            return new MutableClock(clock);
+        }
+
+        @Override
+        public Instant instant() {
+            return clock;
+        }
     }
 }

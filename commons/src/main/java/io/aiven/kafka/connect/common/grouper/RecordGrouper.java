@@ -30,8 +30,10 @@ public interface RecordGrouper {
      *
      * @param record
      *            - record to group
+     *
+     * @return the file name associated with the record
      */
-    void put(SinkRecord record);
+    String put(SinkRecord record);
 
     /**
      * Clear all records.
