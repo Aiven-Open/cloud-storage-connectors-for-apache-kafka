@@ -114,9 +114,18 @@ class TopicPartitionRecordGrouper implements RecordGrouper {
         try {
             final String value = sinkRecord.value().toString();
             final Event event = new Event(value);
-            return new StringBuilder().append("date=")
-                    .append(event.getEvent().get("created_at").substring(0, 10))
-                    .append('/').append(event.getEvent().get("oem")).append('/').toString();
+            
+            // Extract full timestamp: "2024-01-15T10:30:00Z" 
+            final String createdAt = event.getEvent().get("created_at");
+            final String datePart = createdAt.substring(0, 10);  // "2024-01-15"
+            final String hourPart = createdAt.substring(11, 13); // "10"
+            final String oem = event.getEvent().get("oem");
+            
+            return new StringBuilder()
+                    .append("date=").append(datePart)
+                    .append('/').append(hourPart)
+                    .append('/').append(oem)
+                    .append('/').toString();
         } catch (final Exception e) {
             return "";
         }
