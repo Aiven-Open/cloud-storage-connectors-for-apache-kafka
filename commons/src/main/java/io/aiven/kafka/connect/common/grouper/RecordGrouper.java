@@ -31,7 +31,7 @@ public interface RecordGrouper {
      * @param record
      *            - record to group
      *
-     * @return the file name associated with the record
+     * @return the record key associated with the record
      */
     String put(SinkRecord record);
 

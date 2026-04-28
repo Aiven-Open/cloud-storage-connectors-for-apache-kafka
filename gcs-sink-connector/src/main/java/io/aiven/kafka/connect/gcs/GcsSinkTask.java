@@ -74,14 +74,7 @@ public final class GcsSinkTask extends SinkTask {
 
     // for testing
     public GcsSinkTask(final Map<String, String> props, final Storage storage) {
-        super();
-        Objects.requireNonNull(props, "props cannot be null");
-        Objects.requireNonNull(storage, "storage cannot be null");
-
-        this.config = new GcsSinkConfig(props);
-        this.storage = storage;
-        this.clock = Clock.systemUTC();
-        initRest();
+        this(props, storage, Clock.systemUTC());
     }
 
     // for testing
@@ -89,6 +82,7 @@ public final class GcsSinkTask extends SinkTask {
         super();
         Objects.requireNonNull(props, "props cannot be null");
         Objects.requireNonNull(storage, "storage cannot be null");
+        Objects.requireNonNull(clock, "clock cannot be null");
 
         this.config = new GcsSinkConfig(props);
         this.storage = storage;
@@ -193,10 +187,10 @@ public final class GcsSinkTask extends SinkTask {
         // Close all active GcsBlobWriters, which finalizes the resumable uploads in GCS.
         for (final Map.Entry<String, GcsBlobWriter> entry : activeBlobWriters.entrySet()) {
             final String fullPath = entry.getKey();
-            try {
-                final GcsBlobWriter blobWriter = entry.getValue();
+            final GcsBlobWriter blobWriter = entry.getValue();
+
+            try (blobWriter) {
                 LOG.debug("Closing GcsBlobWriter for: gs://{}/{}", config.getBucketName(), fullPath);
-                blobWriter.close(); // This finalizes the GCS object.
             } catch (final Exception e) { // NOPMD broad exception caught
                 LOG.error("Error closing GCS file gs://{}/{}: {}", config.getBucketName(), fullPath, e.getMessage());
                 if (firstException == null) {
@@ -250,17 +244,17 @@ public final class GcsSinkTask extends SinkTask {
         }
 
         ConnectException firstException = null;
-        final List<String> filenames = new ArrayList<>(recordsToWrite.keySet());
-        for (final String filename : filenames) {
+        final List<String> recordKeys = new ArrayList<>(recordsToWrite.keySet());
+        for (final String recordKey : recordKeys) {
             try {
-                processSingleFileWrite(filename, recordsToWrite.get(filename));
+                processSingleFileWrite(recordKey, recordsToWrite.get(recordKey));
                 if (recordGrouper instanceof TopicPartitionRecordGrouper) {
-                    ((TopicPartitionRecordGrouper) recordGrouper).clearFileBuffers(filename);
+                    ((TopicPartitionRecordGrouper) recordGrouper).clearFileBuffers(recordKey);
                 } else if (recordGrouper instanceof TopicPartitionKeyRecordGrouper) {
-                    ((TopicPartitionKeyRecordGrouper) recordGrouper).clearFileBuffers(filename);
+                    ((TopicPartitionKeyRecordGrouper) recordGrouper).clearFileBuffers(recordKey);
                 }
             } catch (final ConnectException e) {
-                LOG.error("Failed to write records for file {}: {}", filename, e.getMessage());
+                LOG.error("Failed to write records for record key {}: {}", recordKey, e.getMessage());
                 if (firstException == null) {
                     firstException = e;
                 }
