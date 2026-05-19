@@ -288,6 +288,7 @@ class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, Generic
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 "io.confluent.kafka.serializers.KafkaAvroSerializer");
         producerProps.put("schema.registry.url", kafkaManager.getSchemaRegistryUrl());
+        producerProps.put("linger.ms", 1000);
         return new KafkaProducer<>(producerProps);
     }
 
