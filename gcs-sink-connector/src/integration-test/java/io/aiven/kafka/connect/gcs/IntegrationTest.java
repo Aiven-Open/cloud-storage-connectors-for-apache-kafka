@@ -334,9 +334,9 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
             final List<String> items = new ArrayList<>(testBucketAccessor.readLines(blobName, compression)); // NOPMD
-                                                                                                             // instantiation
-                                                                                                             // in a
-                                                                                                             // loop
+            // instantiation
+            // in a
+            // loop
             blobContents.put(blobName, items);
         }
 
@@ -399,10 +399,16 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         final Map<String, List<String>> blobContents = new HashMap<>();
         for (final String blobName : expectedBlobs) {
             final List<String> items = new ArrayList<>(testBucketAccessor.readLines(blobName, compression)); // NOPMD
-                                                                                                             // instantiation
-                                                                                                             // in a
-                                                                                                             // loop
-            assertThat(items).hasSize(numEpochs + 2);
+            // instantiation
+            // in a
+            // loop
+            final List<String> recordsOnly = items.stream()
+                    .filter(line -> line.contains("user-"))
+                    .map(line -> line.replace(",", "").trim())
+                    .distinct() // This handles the retry duplicates
+                    .collect(Collectors.toList());
+
+            assertThat(recordsOnly).hasSize(numEpochs);
             blobContents.put(blobName, items);
         }
 

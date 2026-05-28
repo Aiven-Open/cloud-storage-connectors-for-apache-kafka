@@ -58,7 +58,7 @@ public final class KeyRecordGrouper implements RecordGrouper {
     }
 
     @Override
-    public void put(final SinkRecord record) {
+    public String put(final SinkRecord record) {
         Objects.requireNonNull(record, "records cannot be null");
 
         final String recordKey = generateRecordKey(record);
@@ -69,6 +69,8 @@ public final class KeyRecordGrouper implements RecordGrouper {
         final List<SinkRecord> records = fileBuffers.get(recordKey);
         records.clear();
         records.add(record);
+
+        return recordKey;
     }
 
     private String generateRecordKey(final SinkRecord record) {
