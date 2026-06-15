@@ -250,7 +250,6 @@ signing {
   signatureTypes = ASCSignatureProvider()
 }
 
-
 /** ******************************* */
 /* Documentation building section */
 /** ******************************* */
@@ -262,33 +261,33 @@ tasks.register("buildDocs") {
 tasks.register<JavaExec>("buildConfigMd") {
   mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
   classpath =
-    sourceSets.main
-      .get()
-      .compileClasspath
-      .plus(files(tasks.jar))
-      .plus(sourceSets.main.get().runtimeClasspath)
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
   args =
-    listOf(
-      "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig",
-      "configDef",
-      "src/templates/configData.md.vm",
-      "build/site/markdown/azure-sink-connector/AzureBlobSinkConfig.md")
+      listOf(
+          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig",
+          "configDef",
+          "src/templates/configData.md.vm",
+          "build/site/markdown/azure-sink-connector/AzureBlobSinkConfig.md")
 }
 
 tasks.register<JavaExec>("buildConfigYml") {
   mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
   classpath =
-    sourceSets.main
-      .get()
-      .compileClasspath
-      .plus(files(tasks.jar))
-      .plus(sourceSets.main.get().runtimeClasspath)
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
   args =
-    listOf(
-      "io.aiven.kafka.connect.azure.sing.AzureBlobSinkConfig",
-      "configDef",
-      "src/templates/configData.yml.vm",
-      "build/site/azure-source-connector/AzureBlobSourceConfig.yml")
+      listOf(
+          "io.aiven.kafka.connect.azure.sing.AzureBlobSinkConfig",
+          "configDef",
+          "src/templates/configData.yml.vm",
+          "build/site/azure-source-connector/AzureBlobSourceConfig.yml")
 }
 
 /** ****************************** */
