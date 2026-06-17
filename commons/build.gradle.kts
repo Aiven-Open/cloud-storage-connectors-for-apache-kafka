@@ -29,6 +29,7 @@ dependencies {
   implementation("jakarta.validation:jakarta.validation-api:3.1.1")
   implementation(tools.spotbugs.annotations)
 
+  // ignore confluent produced org.apache.kafka:kafka-clients
   implementation(confluent.kafka.connect.avro.data) {
     exclude(group = "org.apache.kafka", module = "kafka-clients")
   }
