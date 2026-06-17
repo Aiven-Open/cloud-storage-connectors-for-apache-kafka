@@ -71,6 +71,9 @@ idea {
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
+  compileOnly(project(":site"))
+  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
+  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
   implementation(project(":commons"))
 
@@ -88,6 +91,9 @@ dependencies {
   // is provided by "jqwik", but need this in testImplementation scope
   testImplementation(testinglibs.jqwik.engine)
 
+  testImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
@@ -140,6 +146,9 @@ dependencies {
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
   integrationTestImplementation(testcontainers.azure)
   integrationTestImplementation(testinglibs.awaitility)
+  integrationTestImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
 
   integrationTestImplementation(apache.kafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
@@ -284,10 +293,10 @@ tasks.register<JavaExec>("buildConfigYml") {
           .plus(sourceSets.main.get().runtimeClasspath)
   args =
       listOf(
-          "io.aiven.kafka.connect.azure.sing.AzureBlobSinkConfig",
+          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig",
           "configDef",
           "src/templates/configData.yml.vm",
-          "build/site/azure-source-connector/AzureBlobSourceConfig.yml")
+          "build/site/azure-sink-connector/AzureBlobSinkConfig.yml")
 }
 
 /** ****************************** */

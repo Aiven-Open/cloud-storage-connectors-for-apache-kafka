@@ -63,7 +63,7 @@ dependencies {
   implementation(apache.commons.lang3)
   implementation(project(":commons"))
   implementation(apache.commons.collection4)
-  implementation("com.azure:azure-storage-blob:12.31.3")
+  implementation(azure.storage.blob)
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
