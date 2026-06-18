@@ -262,7 +262,6 @@ signing {
   signatureTypes = ASCSignatureProvider()
 }
 
-
 /** ******************************* */
 /* Documentation building section */
 /** ******************************* */
@@ -274,33 +273,33 @@ tasks.register("buildDocs") {
 tasks.register<JavaExec>("buildConfigMd") {
   mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
   classpath =
-    sourceSets.main
-      .get()
-      .compileClasspath
-      .plus(files(tasks.jar))
-      .plus(sourceSets.main.get().runtimeClasspath)
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
   args =
-    listOf(
-      "io.aiven.kafka.connect.gcs.GcsSinkConfig",
-      "configDef",
-      "src/templates/configData.md.vm",
-      "build/site/markdown/gcs-sink-connector/GcsSinkConfig.md")
+      listOf(
+          "io.aiven.kafka.connect.gcs.GcsSinkConfig",
+          "configDef",
+          "src/templates/configData.md.vm",
+          "build/site/markdown/gcs-sink-connector/GcsSinkConfig.md")
 }
 
 tasks.register<JavaExec>("buildConfigYml") {
   mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
   classpath =
-    sourceSets.main
-      .get()
-      .compileClasspath
-      .plus(files(tasks.jar))
-      .plus(sourceSets.main.get().runtimeClasspath)
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
   args =
-    listOf(
-      "io.aiven.kafka.connect.gcs.GcsSinkConfig",
-      "configDef",
-      "src/templates/configData.yml.vm",
-      "build/site/gcs-sink-connector/GcsSinkConfig.yml")
+      listOf(
+          "io.aiven.kafka.connect.gcs.GcsSinkConfig",
+          "configDef",
+          "src/templates/configData.yml.vm",
+          "build/site/gcs-sink-connector/GcsSinkConfig.yml")
 }
 
 /** ****************************** */
