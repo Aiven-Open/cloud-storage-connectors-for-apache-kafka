@@ -80,6 +80,9 @@ idea {
 }
 
 dependencies {
+  compileOnly(project(":site"))
+  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
+  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
   compileOnly(apache.kafka.connect.api)
   compileOnly(apache.kafka.connect.runtime)
 
@@ -258,3 +261,48 @@ signing {
   }
   signatureTypes = ASCSignatureProvider()
 }
+
+
+/** ******************************* */
+/* Documentation building section */
+/** ******************************* */
+tasks.register("buildDocs") {
+  dependsOn("buildConfigMd")
+  dependsOn("buildConfigYml")
+}
+
+tasks.register<JavaExec>("buildConfigMd") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+    sourceSets.main
+      .get()
+      .compileClasspath
+      .plus(files(tasks.jar))
+      .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+    listOf(
+      "io.aiven.kafka.connect.gcs.GcsSinkConfig",
+      "configDef",
+      "src/templates/configData.md.vm",
+      "build/site/markdown/gcs-sink-connector/GcsSinkConfig.md")
+}
+
+tasks.register<JavaExec>("buildConfigYml") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+    sourceSets.main
+      .get()
+      .compileClasspath
+      .plus(files(tasks.jar))
+      .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+    listOf(
+      "io.aiven.kafka.connect.gcs.GcsSinkConfig",
+      "configDef",
+      "src/templates/configData.yml.vm",
+      "build/site/gcs-sink-connector/GcsSinkConfig.yml")
+}
+
+/** ****************************** */
+/*  End of documentation section */
+/** ****************************** */

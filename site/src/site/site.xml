@@ -70,6 +70,7 @@ under the License.
             <item name="GCS - Google Cloud Storage">
                 <item name="Sink">
                     <item name="Introduction" href="gcs-sink-connector/index.html"/>
+                    <item name="Configuration" href="gcs-sink-connector/GcsSinkConfig.html"/>
                     <item name="Javadoc" href="gcs-sink-connector/javadoc/index.html"/>
                 </item>
             </item>
