@@ -36,7 +36,7 @@ jobs:
         run: ./gradlew populateSite
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v7.0.1
         with:
           path: ./site/target/site
 
