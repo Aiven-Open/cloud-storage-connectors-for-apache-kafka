@@ -1,4 +1,4 @@
-Gcs SinkConfigDef:
+GcsSinkConfigDef:
 #foreach ($section in $sections)
 -
   name: ${section.displayName}
