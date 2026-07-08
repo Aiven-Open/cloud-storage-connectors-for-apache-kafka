@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -41,7 +40,6 @@ import com.azure.core.http.policy.HttpLogDetailLevel;
 import com.azure.core.http.policy.HttpLogOptions;
 import com.azure.core.http.policy.RetryOptions;
 import com.azure.core.http.policy.UserAgentPolicy;
-import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -55,7 +53,6 @@ public final class AzureBlobSinkTask extends SinkTask {
     private RecordGrouper recordGrouper;
     private AzureBlobSinkConfig config;
     private BlobContainerClient containerClient;
-    private final Map<String, BlockBlobClient> blobClientMap = new ConcurrentHashMap<>();
 
     // required by Connect
     public AzureBlobSinkTask() {
@@ -73,13 +70,6 @@ public final class AzureBlobSinkTask extends SinkTask {
         initRecordGrouper();
     }
 
-    private BlockBlobClient getBlockBlobClient(final String blobName) {
-        return blobClientMap.computeIfAbsent(blobName, name -> {
-            final BlobClient blobClient = containerClient.getBlobClient(name);
-            return blobClient.getBlockBlobClient();
-        });
-    }
-
     @Override
     public void start(final Map<String, String> props) {
         Objects.requireNonNull(props, "props cannot be null");
@@ -94,7 +84,9 @@ public final class AzureBlobSinkTask extends SinkTask {
                         .setMaxDelay(Duration.ofMillis(config.getAzureRetryBackoffMaxDelay().toMillis())));
 
         blobServiceClient = new BlobServiceClientBuilder().connectionString(config.getConnectionString())
-                .httpLogOptions(new HttpLogOptions().setLogLevel(HttpLogDetailLevel.BODY_AND_HEADERS))
+                // Do NOT use BODY_AND_HEADERS: it buffers/logs the full request body (whole blob,
+                // ~1 MB+ each) whenever Azure SDK logging is enabled -> heavy heap + CPU pressure.
+                .httpLogOptions(new HttpLogOptions().setLogLevel(HttpLogDetailLevel.NONE))
                 .addPolicy(userAgentPolicy)
                 .retryOptions(retryOptions)
                 .buildClient();
@@ -140,7 +132,9 @@ public final class AzureBlobSinkTask extends SinkTask {
         }
 
         final String blobName = config.getPrefix() + filename;
-        final BlockBlobClient blockBlobClient = getBlockBlobClient(blobName);
+        // Blob names are unique per file (start_offset in the template), so caching clients by name
+        // never yielded a hit and leaked one client per file. Create on demand instead.
+        final BlockBlobClient blockBlobClient = containerClient.getBlobClient(blobName).getBlockBlobClient();
 
         try (var channel = new BlobWritableByteChannel(blockBlobClient.getBlobOutputStream(true));
                 OutputStream out = Channels.newOutputStream(channel);
