@@ -25,6 +25,8 @@ import com.azure.storage.blob.specialized.BlobOutputStream;
 
 public class BlobWritableByteChannel implements WritableByteChannel {
     private final BlobOutputStream blobOutputStream;
+    // Reused only for the (rare) non-array-backed buffer path, to avoid a per-write allocation.
+    private byte[] transferBuffer = new byte[0];
     private boolean isStreamOpen = true;
 
     public BlobWritableByteChannel(final BlobOutputStream blobOutputStream) {
@@ -33,11 +35,24 @@ public class BlobWritableByteChannel implements WritableByteChannel {
 
     @Override
     public int write(final ByteBuffer src) throws IOException {
-        final int bytesWritten = src.remaining();
-        final byte[] buffer = new byte[bytesWritten];
-        src.get(buffer);
-        blobOutputStream.write(buffer);
-        return bytesWritten;
+        final int length = src.remaining();
+        if (src.hasArray()) {
+            // Common case (heap buffer, e.g. via Channels.newOutputStream): write straight from the
+            // backing array. No per-call allocation and no copy - avoids heavy GC churn at high
+            // throughput where the previous `new byte[remaining]` per write dominated allocations.
+            final int offset = src.arrayOffset() + src.position();
+            blobOutputStream.write(src.array(), offset, length);
+            src.position(src.position() + length);
+        } else {
+            // Direct or read-only buffer: copy through a scratch buffer that is reused (and only
+            // grown when needed) across writes, instead of allocating a fresh array every time.
+            if (transferBuffer.length < length) {
+                transferBuffer = new byte[length];
+            }
+            src.get(transferBuffer, 0, length);
+            blobOutputStream.write(transferBuffer, 0, length);
+        }
+        return length;
     }
 
     @Override

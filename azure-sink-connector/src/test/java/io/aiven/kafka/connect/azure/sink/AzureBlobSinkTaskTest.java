@@ -19,13 +19,21 @@ package io.aiven.kafka.connect.azure.sink;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -35,8 +43,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.apache.kafka.connect.sink.SinkTaskContext;
 
 import io.aiven.kafka.connect.azure.sink.testutils.AzureBlobAccessor;
 import io.aiven.kafka.connect.common.config.CompressionType;
@@ -72,17 +82,20 @@ final class AzureBlobSinkTaskTest {
     private BlobOutputStream blobOutputStream;
     @Mock
     private PagedIterable<BlobItem> pagedIterable;
+    @Mock
+    private SinkTaskContext taskContext;
     private AzureBlobSinkTask task;
     private Map<String, String> properties;
     private AzureBlobAccessor testBlobAccessor;
 
     @BeforeEach
     void setUp() {
-        // Configure the mocks
-        when(blobServiceClient.getBlobContainerClient(anyString())).thenReturn(blobContainerClient);
-        when(blobContainerClient.getBlobClient(anyString())).thenReturn(blobClient);
-        when(blobClient.getBlockBlobClient()).thenReturn(blockBlobClient);
-        when(blockBlobClient.getBlobOutputStream(anyBoolean())).thenReturn(blobOutputStream);
+        // Configure the mocks (lenient: not every test triggers a write, so some stubs stay unused).
+        lenient().when(blobServiceClient.getBlobContainerClient(anyString())).thenReturn(blobContainerClient);
+        lenient().when(blobContainerClient.getBlobClient(anyString())).thenReturn(blobClient);
+        lenient().when(blobClient.getBlockBlobClient()).thenReturn(blockBlobClient);
+        lenient().when(blockBlobClient.getBlobOutputStream(anyBoolean())).thenReturn(blobOutputStream);
+        lenient().when(taskContext.assignment()).thenReturn(Collections.emptySet());
 
         // Initialize properties
         properties = new HashMap<>();
@@ -93,6 +106,7 @@ final class AzureBlobSinkTaskTest {
 
         // Initialize the task with the mocked dependencies
         task = new AzureBlobSinkTask(properties, blobServiceClient);
+        task.initialize(taskContext);
 
         // Initialize the AzureBlobAccessor
         testBlobAccessor = new AzureBlobAccessor(blobContainerClient, false);
@@ -108,8 +122,91 @@ final class AzureBlobSinkTaskTest {
         task.flush(null);
 
         // Verify interactions
-        verify(blobOutputStream, times(1)).write(any(byte[].class));
+        verify(blobOutputStream, times(1)).write(any(byte[].class), anyInt(), anyInt());
         verify(blobOutputStream, times(1)).close();
+    }
+
+    @Test
+    void noWriteWhenUnderThresholds() {
+        // Buffered size < AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK AND time < AZURE_WRITE_INTERVAL_MS -> no write.
+        task.put(Collections.singletonList(createRecord("topic0", 0, "key0", "value0", 0, 1000)));
+        verify(blockBlobClient, never()).getBlobOutputStream(anyBoolean());
+
+        // The remaining buffered records are only written out on flush().
+        task.flush(null);
+        verify(blockBlobClient, times(1)).getBlobOutputStream(anyBoolean());
+    }
+
+    @Test
+    void writeWhenTimeThresholdExceeded() throws IOException {
+        // Time interval > AZURE_WRITE_INTERVAL_MS -> trigger write during put().
+        final MutableClock testClock = new MutableClock(Instant.now());
+        task = new AzureBlobSinkTask(properties, blobServiceClient, testClock);
+        task.initialize(taskContext);
+
+        task.put(Collections.singletonList(createRecord("topic0", 0, "key0", "value0", 0, 1000)));
+        verify(blockBlobClient, never()).getBlobOutputStream(anyBoolean()); // buffered, not written
+
+        testClock.advance(Duration.ofSeconds(11));
+
+        task.put(Collections.singletonList(createRecord("topic0", 0, "key1", "value1", 1, 1001)));
+        verify(blockBlobClient, times(1)).getBlobOutputStream(anyBoolean()); // written during put()
+
+        task.flush(null);
+        verify(blobOutputStream, times(1)).close();
+    }
+
+    @Test
+    void shouldRequestCommitWhenMaxRecordsPerFileExceeded() {
+        properties.put(AzureBlobSinkConfig.FILE_MAX_RECORDS, "2");
+        task = new AzureBlobSinkTask(properties, blobServiceClient);
+        task.initialize(taskContext);
+
+        task.put(Collections.singletonList(createRecord("topic0", 0, "key0", "val0", 10, 1000)));
+        verify(taskContext, never()).requestCommit();
+
+        task.put(Collections.singletonList(createRecord("topic0", 0, "key1", "val1", 11, 1001)));
+
+        // Verify the signal was sent to the Worker.
+        verify(taskContext).requestCommit();
+    }
+
+    @Test
+    void shouldRequestCommitWhenMaxBytesPerFileExceeded() {
+        properties.put(AzureBlobSinkConfig.FILE_MAX_BYTES, "100");
+        task = new AzureBlobSinkTask(properties, blobServiceClient);
+        task.initialize(taskContext);
+
+        final byte[] largeValue = new byte[40];
+        final SinkRecord record = new SinkRecord("topic0", 0, Schema.STRING_SCHEMA, "key", Schema.BYTES_SCHEMA,
+                largeValue, 10, 1000L, TimestampType.CREATE_TIME);
+
+        task.put(Collections.singletonList(record));
+        verify(taskContext, never()).requestCommit();
+
+        task.put(Collections.singletonList(record));
+
+        // Verify the threshold check triggered the request.
+        verify(taskContext).requestCommit();
+    }
+
+    @Test
+    void shouldNotRequestCommitWhenOneRecordPerFileIsActive() {
+        properties.put("file.name.template", "{{key}}");
+        properties.put(AzureBlobSinkConfig.FILE_MAX_RECORDS, "1");
+        properties.put(AzureBlobSinkConfig.FILE_MAX_BYTES, "100");
+        task = new AzureBlobSinkTask(properties, blobServiceClient);
+        task.initialize(taskContext);
+
+        final byte[] largeValue = new byte[40];
+        final SinkRecord record = new SinkRecord("topic0", 0, Schema.STRING_SCHEMA, "key", Schema.BYTES_SCHEMA,
+                largeValue, 10, 1000L, TimestampType.CREATE_TIME);
+
+        task.put(Collections.singletonList(record));
+        verify(taskContext, never()).requestCommit();
+
+        task.put(Collections.singletonList(record));
+        verify(taskContext, never()).requestCommit();
     }
 
     @ParameterizedTest
@@ -120,6 +217,7 @@ final class AzureBlobSinkTaskTest {
         when(blobContainerClient.listBlobs()).thenReturn(pagedIterable);
         properties.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
         task = new AzureBlobSinkTask(properties, blobServiceClient);
+        task.initialize(taskContext);
 
         final List<SinkRecord> records = createBasicRecords();
         task.put(records);
@@ -193,5 +291,35 @@ final class AzureBlobSinkTaskTest {
 
     private Collection<List<String>> toCollectionOfLists(final String... values) {
         return Arrays.stream(values).map(Collections::singletonList).collect(Collectors.toList());
+    }
+
+    static class MutableClock extends Clock {
+        private Instant clock;
+        private final ZoneId zone;
+
+        MutableClock(final Instant start) {
+            super();
+            this.clock = start;
+            this.zone = ZoneId.of("UTC");
+        }
+
+        void advance(final Duration duration) {
+            this.clock = this.clock.plus(duration);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return zone;
+        }
+
+        @Override
+        public Clock withZone(final ZoneId zone) {
+            return new MutableClock(clock);
+        }
+
+        @Override
+        public Instant instant() {
+            return clock;
+        }
     }
 }

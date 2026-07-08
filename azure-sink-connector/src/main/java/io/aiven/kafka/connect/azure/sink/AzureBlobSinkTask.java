@@ -17,13 +17,16 @@
 package io.aiven.kafka.connect.azure.sink;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.channels.Channels;
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -33,7 +36,8 @@ import org.apache.kafka.connect.sink.SinkTask;
 
 import io.aiven.kafka.connect.common.grouper.RecordGrouper;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
-import io.aiven.kafka.connect.common.output.OutputWriter;
+import io.aiven.kafka.connect.common.grouper.TopicPartitionKeyRecordGrouper;
+import io.aiven.kafka.connect.common.grouper.TopicPartitionRecordGrouper;
 
 import com.azure.core.http.policy.ExponentialBackoffOptions;
 import com.azure.core.http.policy.HttpLogDetailLevel;
@@ -43,31 +47,53 @@ import com.azure.core.http.policy.UserAgentPolicy;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("PMD.ExcessiveImports") // Azure client setup pulls in more imports than the GCS sink
 public final class AzureBlobSinkTask extends SinkTask {
     private static final Logger LOG = LoggerFactory.getLogger(AzureBlobSinkConnector.class);
 
     private RecordGrouper recordGrouper;
+
     private AzureBlobSinkConfig config;
+
     private BlobContainerClient containerClient;
+
+    private TopicPartitionManager topicPartitionManager;
+    private BufferTracker bufferTracker;
+    private final Map<String, AzureBlobWriter> activeBlobWriters = new HashMap<>();
+    private static final long AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK = 60 * 1024 * 1024L; // 60 MiB
+    private static final long AZURE_WRITE_INTERVAL_MS = 10_000L; // 10 seconds
+
+    private long currentBufferedBytes;
+    final Clock clock;
+    private long lastWriteMs;
+    private boolean isOneRecordPerFile;
 
     // required by Connect
     public AzureBlobSinkTask() {
         super();
+        this.clock = Clock.systemUTC();
     }
 
     // for testing
     public AzureBlobSinkTask(final Map<String, String> props, final BlobServiceClient blobServiceClient) {
+        this(props, blobServiceClient, Clock.systemUTC());
+    }
+
+    // for testing
+    public AzureBlobSinkTask(final Map<String, String> props, final BlobServiceClient blobServiceClient,
+            final Clock clock) {
         super();
         Objects.requireNonNull(props, "props cannot be null");
         Objects.requireNonNull(blobServiceClient, "blobServiceClient cannot be null");
+        Objects.requireNonNull(clock, "clock cannot be null");
 
         this.config = new AzureBlobSinkConfig(props);
         this.containerClient = blobServiceClient.getBlobContainerClient(config.getContainerName());
-        initRecordGrouper();
+        this.clock = clock;
+        initRest();
     }
 
     @Override
@@ -91,17 +117,25 @@ public final class AzureBlobSinkTask extends SinkTask {
                 .retryOptions(retryOptions)
                 .buildClient();
         this.containerClient = blobServiceClient.getBlobContainerClient(config.getContainerName());
-        initRecordGrouper();
+        initRest();
 
         if (Objects.nonNull(config.getKafkaRetryBackoffMs())) {
             context.timeout(config.getKafkaRetryBackoffMs());
         }
     }
 
-    private void initRecordGrouper() {
+    private void initRest() {
         try {
+            this.topicPartitionManager = new TopicPartitionManager();
             this.recordGrouper = RecordGrouperFactory.newRecordGrouper(config);
-        } catch (final Exception e) { // NOPMD broad exception catched
+            final String grType = RecordGrouperFactory.resolveRecordGrouperType(config.getFilenameTemplate());
+            if (RecordGrouperFactory.KEY_RECORD.equals(grType)
+                    || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(grType)) {
+                this.isOneRecordPerFile = true;
+            }
+            this.lastWriteMs = clock.millis();
+            this.bufferTracker = new BufferTracker(config);
+        } catch (final Exception e) { // NOPMD broad exception caught
             throw new ConnectException("Unsupported file name template " + config.getFilename(), e);
         }
     }
@@ -109,58 +143,104 @@ public final class AzureBlobSinkTask extends SinkTask {
     @Override
     public void put(final Collection<SinkRecord> records) {
         Objects.requireNonNull(records, "records cannot be null");
-
-        LOG.debug("Processing {} records", records.size());
+        LOG.debug("Buffering {} records. Current buffer size: {} bytes", records.size(), currentBufferedBytes);
+        boolean shouldRequestCommit = false;
         for (final SinkRecord record : records) {
-            recordGrouper.put(record);
+            final String recordKey = recordGrouper.put(record);
+            if (!isOneRecordPerFile) {
+                final long recordSize = bufferTracker.addRecord(recordKey, record);
+                currentBufferedBytes += recordSize;
+                if (bufferTracker.isThresholdReached(recordKey)) {
+                    shouldRequestCommit = true;
+                }
+            }
         }
-    }
 
-    @Override
-    public void flush(final Map<TopicPartition, OffsetAndMetadata> currentOffsets) {
-        try {
-            recordGrouper.records().forEach(this::flushFile);
-        } finally {
-            recordGrouper.clear();
-        }
-    }
-
-    private void flushFile(final String filename, final List<SinkRecord> records) {
-        Objects.requireNonNull(records, "records cannot be null");
-        if (records.isEmpty()) {
+        if (isOneRecordPerFile) {
             return;
         }
 
-        final String blobName = config.getPrefix() + filename;
-        // Blob names are unique per file (start_offset in the template), so caching clients by name
-        // never yielded a hit and leaked one client per file. Create on demand instead.
-        final BlockBlobClient blockBlobClient = containerClient.getBlobClient(blobName).getBlockBlobClient();
+        // check if we should pause topics
+        checkRecordSize();
+        // Trigger write to Azure if the buffer size threshold is reached or the time interval has passed.
+        if (currentBufferedBytes >= AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK
+                || clock.millis() - lastWriteMs >= AZURE_WRITE_INTERVAL_MS) {
+            if (currentBufferedBytes >= AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK) {
+                LOG.debug("Azure write buffer size of {} bytes reached. Writing buffered records to Azure.",
+                        currentBufferedBytes);
+            } else {
+                LOG.debug("Azure write interval of {} ms reached. Writing buffered records to Azure.",
+                        AZURE_WRITE_INTERVAL_MS);
+            }
+            writeBufferedRecordsToAzure();
+        }
+        // check if we should resume topics
+        checkRecordSize();
 
-        try (var channel = new BlobWritableByteChannel(blockBlobClient.getBlobOutputStream(true));
-                OutputStream out = Channels.newOutputStream(channel);
-                var outputWriter = OutputWriter.builder()
-                        .withCompressionType(config.getCompressionType())
-                        .withExternalProperties(config.originalsStrings())
-                        .withOutputFields(config.getOutputFields())
-                        .withEnvelopeEnabled(config.envelopeEnabled())
-                        .build(out, config.getFormatType())) {
-
-            LOG.debug("Opened BlobOutputStream for blob {}", blobName);
-
-            outputWriter.writeRecords(records);
-            LOG.debug("Successfully wrote records to blob {}", blobName);
-        } catch (IOException e) {
-            LOG.error("IOException when writing to the blob {}: {}", blobName, e.getMessage());
-            throw new ConnectException(e);
-        } catch (Exception e) { // NOPMD broad exception catched
-            LOG.error("Exception when writing to the blob {}: {}", blobName, e.getMessage());
-            throw new ConnectException("Failed to write records to Azure Blob", e);
+        if (shouldRequestCommit) {
+            topicPartitionManager.requestCommit();
         }
     }
 
     @Override
+    @SuppressWarnings({ "PMD.CloseResource", "PMD.AvoidInstantiatingObjectsInLoops" })
+    public void flush(final Map<TopicPartition, OffsetAndMetadata> currentOffsets) {
+        LOG.debug("Flush triggered. Writing any remaining buffered records and closing Azure files.");
+
+        // Write any records still in the buffer that didn't meet thresholds.
+        if (currentBufferedBytes > 0 || isOneRecordPerFile) {
+            LOG.debug("Writing remaining {} buffered bytes during flush.", currentBufferedBytes);
+            writeBufferedRecordsToAzure();
+        }
+
+        ConnectException firstException = null;
+        // Close all active AzureBlobWriters, which finalizes the block-staged uploads in Azure.
+        for (final Map.Entry<String, AzureBlobWriter> entry : activeBlobWriters.entrySet()) {
+            final String fullPath = entry.getKey();
+            final AzureBlobWriter blobWriter = entry.getValue();
+
+            try (blobWriter) {
+                LOG.debug("Closing AzureBlobWriter for: container {} blob {}", config.getContainerName(), fullPath);
+            } catch (final Exception e) { // NOPMD broad exception caught
+                LOG.error("Error closing Azure file container {} blob {}: {}", config.getContainerName(), fullPath,
+                        e.getMessage());
+                if (firstException == null) {
+                    firstException = new ConnectException("Failed to close Azure file " + fullPath, e);
+                } else {
+                    firstException.addSuppressed(e);
+                }
+            }
+        }
+
+        activeBlobWriters.clear();
+        recordGrouper.clear();
+        bufferTracker.clearAll();
+
+        if (firstException != null) {
+            // If any file failed to close, throw an exception to prevent offset commit.
+            throw firstException;
+        }
+        LOG.debug("Successfully flushed and closed all Azure files.");
+
+        topicPartitionManager.resumeAll();
+    }
+
+    @Override
+    @SuppressWarnings("PMD.CloseResource")
     public void stop() {
-        // Nothing to do.
+        LOG.info("Stopping AzureBlobSinkTask. Attempting to close any remaining active AzureBlobWriters.");
+        for (final AzureBlobWriter blobWriter : activeBlobWriters.values()) {
+            try {
+                blobWriter.close();
+            } catch (IOException e) {
+                LOG.warn("Error closing AzureBlobWriter during stop: {}", e.getMessage());
+            }
+        }
+        activeBlobWriters.clear();
+        recordGrouper.clear();
+        bufferTracker.clearAll();
+        currentBufferedBytes = 0;
+        lastWriteMs = clock.millis();
     }
 
     @Override
@@ -168,4 +248,183 @@ public final class AzureBlobSinkTask extends SinkTask {
         return Version.VERSION;
     }
 
+    private void writeBufferedRecordsToAzure() {
+        final Map<String, List<SinkRecord>> recordsToWrite = recordGrouper.records();
+        if (recordsToWrite.isEmpty()) {
+            return;
+        }
+
+        ConnectException firstException = null;
+        final List<String> recordKeys = new ArrayList<>(recordsToWrite.keySet());
+        for (final String recordKey : recordKeys) {
+            try {
+                processSingleFileWrite(recordKey, recordsToWrite.get(recordKey));
+                if (recordGrouper instanceof TopicPartitionRecordGrouper) {
+                    ((TopicPartitionRecordGrouper) recordGrouper).clearFileBuffers(recordKey);
+                } else if (recordGrouper instanceof TopicPartitionKeyRecordGrouper) {
+                    ((TopicPartitionKeyRecordGrouper) recordGrouper).clearFileBuffers(recordKey);
+                }
+            } catch (final ConnectException e) {
+                LOG.error("Failed to write records for record key {}: {}", recordKey, e.getMessage());
+                if (firstException == null) {
+                    firstException = e;
+                }
+            }
+        }
+
+        this.currentBufferedBytes = recordGrouper.records().isEmpty()
+                ? 0
+                : recordGrouper.records()
+                        .values()
+                        .stream()
+                        .flatMap(List::stream)
+                        .mapToLong(bufferTracker::estimateRecordSize)
+                        .sum();
+        this.lastWriteMs = clock.millis();
+
+        if (firstException != null) {
+            throw firstException;
+        }
+
+        if (!(recordGrouper instanceof TopicPartitionRecordGrouper
+                || recordGrouper instanceof TopicPartitionKeyRecordGrouper)) {
+            recordGrouper.clear();
+        }
+    }
+
+    @SuppressWarnings("PMD.CloseResource")
+    private void processSingleFileWrite(final String filename, final List<SinkRecord> records) {
+        try {
+            final AzureBlobWriter blobWriter = activeBlobWriters.computeIfAbsent(filename, k -> {
+                try {
+                    return new AzureBlobWriter(containerClient, config, k);
+                } catch (final IOException e) {
+                    throw new ConnectException("Failed to initialize AzureBlobWriter", e);
+                }
+            });
+            blobWriter.writeRecords(records);
+        } catch (final IOException e) {
+            throw new ConnectException("Failed to write records to Azure for " + filename, e);
+        }
+    }
+
+    // Important: this method is only safe to call during put(), flush(), or preCommit(); otherwise,
+    // a ConcurrentModificationException may be triggered if the Connect framework is in the middle of
+    // a method invocation on the consumer for this task. This becomes especially likely if all topics
+    // have been paused as the framework will most likely be in the middle of a poll for that consumer
+    // which, because all of its topics have been paused, will not return until it's time for the next
+    // offset commit. Invoking context.requestCommit() won't wake up the consumer in that case, so we
+    // really have no choice but to wait for the framework to call a method on this task that implies
+    // that it's safe to pause or resume partitions on the consumer.
+    private void checkRecordSize() {
+        LOG.debug("Record soft limit: {} bytes, current record size: {} bytes", AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK,
+                currentBufferedBytes);
+        if (currentBufferedBytes > AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK) {
+            topicPartitionManager.pauseAll();
+        } else if (currentBufferedBytes <= AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK / 2) {
+            // resume only if there is a reasonable chance we won't immediately have to pause again.
+            topicPartitionManager.resumeAll();
+        }
+    }
+
+    private final static class BufferTracker {
+        private final Map<String, Long> fileBufferBytes = new HashMap<>();
+        private final Map<String, Integer> fileRecordCounts = new HashMap<>();
+        private final AzureBlobSinkConfig config;
+
+        BufferTracker(final AzureBlobSinkConfig config) {
+            this.config = config;
+        }
+
+        // Add a record to the tracking maps.
+        long addRecord(final String recordKey, final SinkRecord record) {
+            final long recordSize = estimateRecordSize(record);
+            fileBufferBytes.put(recordKey, fileBufferBytes.getOrDefault(recordKey, 0L) + recordSize);
+            fileRecordCounts.put(recordKey, fileRecordCounts.getOrDefault(recordKey, 0) + 1);
+            return recordSize;
+        }
+
+        boolean isThresholdReached(final String recordKey) {
+            if (config.isMaxBytesPerFileLimited()) {
+                final Long currentBytes = fileBufferBytes.get(recordKey);
+                if (currentBytes != null && currentBytes >= config.getMaxBytesPerFile()) {
+                    return true;
+                }
+            }
+            return config.getMaxRecordsPerFile() > 0
+                    && fileRecordCounts.getOrDefault(recordKey, 0) >= config.getMaxRecordsPerFile();
+        }
+
+        void clearAll() {
+            fileBufferBytes.clear();
+            fileRecordCounts.clear();
+        }
+
+        // Estimates the size of a SinkRecord in bytes. This is a rough approximation based on the byte
+        // length of the key and value's String representation.
+        long estimateRecordSize(final SinkRecord record) {
+            long size = 20; // Constant overhead
+            if (record.key() != null) {
+                size += getObjectSize(record.key());
+            }
+            if (record.value() != null) {
+                size += getObjectSize(record.value());
+            }
+            return size;
+        }
+
+        private long getObjectSize(final Object data) {
+            if (data instanceof byte[]) {
+                return ((byte[]) data).length;
+            } else if (data instanceof String) {
+                return ((String) data).getBytes(StandardCharsets.UTF_8).length;
+            } else {
+                return String.valueOf(data).getBytes(StandardCharsets.UTF_8).length;
+            }
+        }
+    }
+
+    private class TopicPartitionManager {
+
+        private Long lastChangeMs;
+        private Long lastCommitMs;
+        private boolean isPaused;
+
+        public TopicPartitionManager() {
+            this.lastChangeMs = clock.millis();
+            this.lastCommitMs = clock.millis();
+            this.isPaused = false;
+        }
+
+        private void pauseAll() {
+            if (!isPaused) {
+                final long now = clock.millis();
+                LOG.debug("Paused all partitions after {}ms", now - lastChangeMs);
+                isPaused = true;
+                lastChangeMs = now;
+            }
+            final Set<TopicPartition> assignment = context.assignment();
+            final TopicPartition[] topicPartitions = new TopicPartition[assignment.size()];
+            context.pause(assignment.toArray(topicPartitions));
+        }
+
+        private void resumeAll() {
+            if (isPaused) {
+                final long now = clock.millis();
+                LOG.debug("Resumed all partitions after {}ms", now - lastChangeMs);
+                isPaused = false;
+                lastChangeMs = now;
+                final Set<TopicPartition> assignment = context.assignment();
+                final TopicPartition[] topicPartitions = new TopicPartition[assignment.size()];
+                context.resume(assignment.toArray(topicPartitions));
+            }
+        }
+
+        private void requestCommit() {
+            final long now = clock.millis();
+            LOG.debug("Requesting commit for all partitions after {}ms", now - lastCommitMs);
+            lastCommitMs = now;
+            context.requestCommit();
+        }
+    }
 }
