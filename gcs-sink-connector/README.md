@@ -632,6 +632,14 @@ file.name.timestamp.source=wallclock
 # Optional, the default is `{{topic}}-{{partition:padding=false}}-{{start_offset:padding=false}}` or
 # `{{topic}}-{{partition:padding=false}}-{{start_offset:padding=false}}.gz` if the compression is enabled.
 file.name.template={{topic}}-{{partition:padding=true}}-{{start_offset:padding=true}}.gz
+
+# The maximum number of bytes to put in a single file. Must be a non-negative
+# integer number. The default is 0, which means unlimited.
+file.max.bytes=0
+
+# The maximum number of records to put in a single file. Must be a non-negative
+# integer number. The default is 0, which means unlimited.
+file.max.records=0
 ```
 
 ## Getting releases
