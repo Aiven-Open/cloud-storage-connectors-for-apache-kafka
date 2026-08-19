@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.connect.runtime.rest.entities.ConnectorStateInfo;
 
 import io.aiven.commons.kafka.testkit.KafkaIntegrationTestBase;
 import io.aiven.commons.kafka.testkit.KafkaManager;
@@ -78,6 +79,11 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
                 .withServices(LocalStackContainer.Service.S3);
     }
 
+    protected void restartContainer(final Map<String, String> config) {
+        kafkaManager.restartConnector(config.get("name"));
+
+    }
+
     static S3Client createS3Client(final LocalStackContainer container) {
         return S3Client.builder()
                 .endpointOverride(URI.create(container.getEndpointOverride(LocalStackContainer.Service.S3).toString()))
@@ -124,5 +130,30 @@ abstract class AbstractIntegrationTest<K, V> extends KafkaIntegrationTestBase {
     protected void createConnector(final Map<String, String> connectorConfig) {
         CONNECTOR_NAMES.add(connectorConfig.get("name"));
         kafkaManager.configureConnector(connectorConfig.get("name"), connectorConfig);
+    }
+
+    protected void restartConnector(final String connectorName) {
+        kafkaManager.restartConnector(connectorName);
+    }
+
+    /**
+     * Get the current status of all tasks associated with a Connector
+     *
+     * @param connectorName
+     *            The Name of the connector
+     * @return The ConnectorStateInfo which contains the details of all tasks states
+     * @throws IOException
+     *             If the connectCluster is not intialized or has already been closed this error is thrown
+     */
+    protected ConnectorStateInfo getConnectorStatus(final String connectorName) throws IOException {
+        return kafkaManager.getConnectorStatusInfo(connectorName);
+    }
+
+    protected void removeBucket() {
+        testBucketAccessor.removeBucket();
+    }
+
+    protected void createBucket() {
+        testBucketAccessor.createBucket();
     }
 }
