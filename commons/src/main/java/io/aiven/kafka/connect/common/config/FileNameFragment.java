@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.common.config;
 
+import static io.aiven.kafka.connect.common.config.SinkCommonConfig.FILE_MAX_BYTES;
+
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Map;
@@ -150,6 +152,12 @@ public final class FileNameFragment extends ConfigFragment {
                 "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.",
                 GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
+
+        configDef.define(FILE_MAX_BYTES, ConfigDef.Type.LONG, 0L, ConfigDef.Range.atLeast(0L),
+                ConfigDef.Importance.MEDIUM,
+                "The maximum number of bytes to put in a single file. " + "Must be a non-negative integer number. "
+                        + "0 is interpreted as \"unlimited\", which is the default.",
+                GROUP_FILE, ++fileGroupCounter, ConfigDef.Width.SHORT, FILE_MAX_BYTES);
 
         configDef.define(FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(),
                 new TimeZoneValidator(), ConfigDef.Importance.LOW,

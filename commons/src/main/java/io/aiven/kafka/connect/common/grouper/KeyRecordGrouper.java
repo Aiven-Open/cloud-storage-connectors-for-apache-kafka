@@ -97,10 +97,4 @@ public final class KeyRecordGrouper implements RecordGrouper {
         return Collections.unmodifiableMap(fileBuffers);
     }
 
-    @Override
-    public void clearProcessedRecords(final String identifier, final List<SinkRecord> records) {
-        // One record per file, so remove the entry to reduce memory
-        fileBuffers.remove(identifier);
-    }
-
 }

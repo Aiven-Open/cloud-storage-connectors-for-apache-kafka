@@ -41,14 +41,6 @@ public interface RecordGrouper {
     void clear();
 
     /**
-     * Clear processed records from memory
-     *
-     * @param records
-     *            all records already processed to Sink
-     */
-    void clearProcessedRecords(String identifier, List<SinkRecord> records);
-
-    /**
      * Get all records associated with files, grouped by the file name.
      *
      * @return map of records associated with files

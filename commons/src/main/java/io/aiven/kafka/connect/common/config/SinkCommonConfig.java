@@ -28,7 +28,14 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 public class SinkCommonConfig extends CommonConfig {
 
+    public static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
+    public static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
+    public static final String FORMAT_OUTPUT_TYPE_CONFIG = "format.output.type";
+    public static final String FORMAT_OUTPUT_ENVELOPE_CONFIG = "format.output.envelope";
+    public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
+
+    public static final String FILE_MAX_BYTES = "file.max.bytes";
     /**
      * FileNameFragment to handle FileName based configuration queries.
      */
@@ -92,6 +99,14 @@ public class SinkCommonConfig extends CommonConfig {
 
     public final int getMaxRecordsPerFile() {
         return getInt(FILE_MAX_RECORDS);
+    }
+
+    public long getMaxBytesPerFile() {
+        return getLong(FILE_MAX_BYTES);
+    }
+
+    public boolean isMaxBytesPerFileLimited() {
+        return getMaxBytesPerFile() > 0;
     }
 
     public List<OutputField> getOutputFields() {

@@ -446,11 +446,4 @@ public final class GcsSinkConfig extends AivenCommonConfig {
         return getString(GCS_USER_AGENT);
     }
 
-    public boolean isMaxBytesPerFileLimited() {
-        return getMaxBytesPerFile() > 0;
-    }
-
-    public long getMaxBytesPerFile() {
-        return getLong(FILE_MAX_BYTES);
-    }
 }

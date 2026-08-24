@@ -51,6 +51,7 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTaskContext;
 
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.SinkCommonConfig;
 import io.aiven.kafka.connect.gcs.testutils.BucketAccessor;
 import io.aiven.kafka.connect.gcs.testutils.Record;
 import io.aiven.kafka.connect.gcs.testutils.Utils;
@@ -464,7 +465,7 @@ final class GcsSinkTaskTest {
 
     @Test
     void shouldRequestCommitWhenMaxRecordsPerFileExceeded() {
-        properties.put(GcsSinkConfig.FILE_MAX_RECORDS, "2");
+        properties.put(SinkCommonConfig.FILE_MAX_RECORDS, "2");
 
         final SinkTaskContext mockedContext = mock(SinkTaskContext.class);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
@@ -503,7 +504,7 @@ final class GcsSinkTaskTest {
     @Test
     void shouldNotRequestCommitWhenOneRecordPerFileIsActive() {
         properties.put("file.name.template", "{{key}}");
-        properties.put(GcsSinkConfig.FILE_MAX_RECORDS, "1");
+        properties.put(SinkCommonConfig.FILE_MAX_RECORDS, "1");
         properties.put(GcsSinkConfig.FILE_MAX_BYTES, "100");
 
         final SinkTaskContext mockedContext = mock(SinkTaskContext.class);
@@ -570,7 +571,7 @@ final class GcsSinkTaskTest {
     @ValueSource(strings = { "none", "gzip", "snappy", "zstd" })
     void maxRecordPerFile(final String compression) {
         properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        properties.put(GcsSinkConfig.FILE_MAX_RECORDS, "1");
+        properties.put(SinkCommonConfig.FILE_MAX_RECORDS, "1");
         final SinkTaskContext mockedContext = mock(SinkTaskContext.class);
         final GcsSinkTask task = new GcsSinkTask(properties, storage);
         task.initialize(mockedContext);
