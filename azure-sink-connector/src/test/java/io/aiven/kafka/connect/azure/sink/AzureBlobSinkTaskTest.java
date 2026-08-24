@@ -19,8 +19,8 @@ package io.aiven.kafka.connect.azure.sink;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -122,7 +122,7 @@ final class AzureBlobSinkTaskTest {
         task.flush(null);
 
         // Verify interactions
-        verify(blobOutputStream, times(1)).write(any(byte[].class), anyInt(), anyInt());
+        verify(blobOutputStream, times(1)).write(any(byte[].class), eq(0), eq(8));
         verify(blobOutputStream, times(1)).close();
     }
 
