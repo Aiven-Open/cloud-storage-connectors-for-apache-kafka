@@ -109,10 +109,19 @@ public final class AzureBlobSinkTask extends SinkTask {
                         .setBaseDelay(Duration.ofMillis(config.getAzureRetryBackoffInitialDelay().toMillis()))
                         .setMaxDelay(Duration.ofMillis(config.getAzureRetryBackoffMaxDelay().toMillis())));
 
+        final HttpLogDetailLevel httpLogDetailLevel = config.getHttpLogDetailLevel();
+        if (httpLogDetailLevel.shouldLogBody()) {
+            // BODY / BODY_AND_HEADERS make the SDK buffer and log request bodies, i.e. the record data
+            // being uploaded: extra heap + CPU pressure, and record payloads end up in the Connect logs.
+            LOG.warn(
+                    "{} is set to {}: Azure SDK HTTP logging will buffer and log request/response bodies, "
+                            + "which writes record data to the logs and adds memory and CPU overhead. "
+                            + "Use this for temporary debugging only.",
+                    AzureBlobSinkConfig.AZURE_HTTP_LOG_DETAIL_LEVEL_CONFIG, httpLogDetailLevel);
+        }
+
         blobServiceClient = new BlobServiceClientBuilder().connectionString(config.getConnectionString())
-                // Do NOT use BODY_AND_HEADERS: it buffers/logs the full request body (whole blob,
-                // ~1 MB+ each) whenever Azure SDK logging is enabled -> heavy heap + CPU pressure.
-                .httpLogOptions(new HttpLogOptions().setLogLevel(HttpLogDetailLevel.NONE))
+                .httpLogOptions(new HttpLogOptions().setLogLevel(httpLogDetailLevel))
                 .addPolicy(userAgentPolicy)
                 .retryOptions(retryOptions)
                 .buildClient();
