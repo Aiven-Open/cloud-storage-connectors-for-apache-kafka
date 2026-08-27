@@ -20,6 +20,7 @@ import static io.aiven.kafka.connect.common.source.task.DistributionType.OBJECT_
 import static org.apache.kafka.connect.runtime.ConnectorConfig.ERRORS_TOLERANCE_CONFIG;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,7 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.runtime.errors.ToleranceType;
 
+import io.aiven.commons.kafka.config.validator.EnumValidator;
 import io.aiven.kafka.connect.common.source.task.DistributionType;
 
 import org.apache.commons.lang3.StringUtils;
@@ -75,7 +77,7 @@ public final class SourceConfigFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM, "Max poll records");
         // KIP-298 Error Handling in Connect
         configDef.define(ERRORS_TOLERANCE, ConfigDef.Type.STRING, ToleranceType.NONE.name(),
-                new ErrorsToleranceValidator(), ConfigDef.Importance.MEDIUM,
+                EnumValidator.caseInsensitive(ToleranceType.class), ConfigDef.Importance.MEDIUM,
                 "Indicates to the connector what level of exceptions are allowed before the connector stops.");
 
         // Offset Storage config group includes target topics
@@ -117,7 +119,7 @@ public final class SourceConfigFragment extends ConfigFragment {
      * @return the errors tolerance.
      */
     public ToleranceType getErrorsTolerance() {
-        return ToleranceType.valueOf(cfg.getString(ERRORS_TOLERANCE_CONFIG));
+        return ToleranceType.valueOf(cfg.getString(ERRORS_TOLERANCE_CONFIG).toUpperCase(Locale.ROOT));
     }
 
     /**
@@ -145,26 +147,6 @@ public final class SourceConfigFragment extends ConfigFragment {
      */
     public String getNativeStartKey() {
         return cfg.getString(NATIVE_START_KEY);
-    }
-
-    /**
-     * The errors tolerance validator.
-     */
-    private static class ErrorsToleranceValidator implements ConfigDef.Validator {
-        @Override
-        public void ensureValid(final String name, final Object value) {
-            final String errorsTolerance = (String) value;
-            if (StringUtils.isNotBlank(errorsTolerance)) {
-                // This will throw an Exception if not a valid value.
-                ToleranceType.valueOf(errorsTolerance);
-            }
-        }
-
-        @Override
-        public String toString() {
-            return Arrays.stream(ToleranceType.values()).map(ToleranceType::toString).collect(Collectors.joining(", "));
-        }
-
     }
 
     /**
