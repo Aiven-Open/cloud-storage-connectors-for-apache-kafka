@@ -248,7 +248,7 @@ final class MultiPartUploadIntegrationTest extends AbstractIntegrationTest<Strin
 
     private String getBlobName(final String topicName, final int partition, final int startOffset,
             final CompressionType compression) {
-        final String result = String.format("%s%s-%d-%020d", s3Prefix, topicName, partition, startOffset);
-        return result + compression.extension();
+        return String.format("%s%s-%d-%020d%s", s3Prefix, topicName, partition, startOffset, compression.extension());
+
     }
 }

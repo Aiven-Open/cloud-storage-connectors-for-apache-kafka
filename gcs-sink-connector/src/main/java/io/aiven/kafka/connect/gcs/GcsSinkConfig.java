@@ -38,6 +38,7 @@ import io.aiven.kafka.connect.common.config.FixedSetRecommender;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.SinkConfigFragment;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
 
@@ -108,6 +109,7 @@ public final class GcsSinkConfig extends AivenCommonConfig {
         addKafkaBackoffPolicy(configDef);
         addGcsRetryPolicies(configDef);
         addUserAgentConfig(configDef);
+        SinkConfigFragment.update(configDef);
         return configDef;
     }
 
@@ -284,12 +286,6 @@ public final class GcsSinkConfig extends AivenCommonConfig {
                 "Specifies the timezone in which the dates and time for the timestamp variable will be treated. "
                         + "Use standard shot and long names. Default is UTC",
                 GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_NAME_TIMESTAMP_TIMEZONE);
-
-        configDef.define(FILE_MAX_BYTES, ConfigDef.Type.LONG, 0L, ConfigDef.Range.atLeast(0L),
-                ConfigDef.Importance.MEDIUM,
-                "The maximum number of bytes to put in a single file. " + "Must be a non-negative integer number. "
-                        + "0 is interpreted as \"unlimited\", which is the default.",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_BYTES);
 
         configDef.define(FILE_NAME_TIMESTAMP_SOURCE, ConfigDef.Type.STRING, TimestampSource.Type.WALLCLOCK.name(),
                 new ConfigDef.Validator() {

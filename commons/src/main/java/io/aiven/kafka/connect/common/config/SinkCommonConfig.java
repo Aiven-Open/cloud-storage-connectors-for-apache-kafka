@@ -45,12 +45,15 @@ public class SinkCommonConfig extends CommonConfig {
      */
     protected final OutputFormatFragment outputFormatFragment;
 
+    protected final SinkConfigFragment sinkConfigFragment;
+
     @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
     public SinkCommonConfig(ConfigDef definition, Map<?, ?> originals) { // NOPMD
         super(definition, originals);
         // Construct FileNameFragment
         fileNameFragment = new FileNameFragment(this);
         outputFormatFragment = new OutputFormatFragment(this);
+        sinkConfigFragment = new SinkConfigFragment(this);
         // TODO: calls getOutputFields, can be overridden in subclasses.
         validate(); // NOPMD ConstructorCallsOverridableMethod
     }
@@ -102,7 +105,7 @@ public class SinkCommonConfig extends CommonConfig {
     }
 
     public long getMaxBytesPerFile() {
-        return getLong(FILE_MAX_BYTES);
+        return sinkConfigFragment.getMaxBytesPerFile();
     }
 
     public boolean isMaxBytesPerFileLimited() {
