@@ -32,6 +32,7 @@ val wireMockVersion by extra("2.35.0")
 val azureVersion by extra("12.31.3")
 val velocityCoreVersion by extra("2.4.1")
 val velocityToolsVersion by extra("3.1")
+val kafkaConfigVersion by extra("0.2.0")
 
 dependencyResolutionManagement {
   versionCatalogs {
@@ -58,6 +59,9 @@ dependencyResolutionManagement {
       library(
           "velocity-tools",
           "org.apache.velocity.tools:velocity-tools-generic:${velocityToolsVersion}")
+    }
+    create("aiven") {
+      library("kafka-config", "io.aiven.commons:kafka-config:${kafkaConfigVersion}")
     }
     create("amazonawssdk") {
       library("authentication", "software.amazon.awssdk:auth:$amazonAwsSdkV2Version")

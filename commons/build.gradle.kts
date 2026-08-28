@@ -43,6 +43,8 @@ dependencies {
   implementation(apache.commons.text)
   implementation(apache.commons.collection4)
 
+  implementation(aiven.kafka.config)
+
   implementation(apache.parquet.avro) {
     exclude(group = "org.xerial.snappy", module = "snappy-java")
     exclude(group = "org.slf4j", module = "slf4j-api")

@@ -25,9 +25,9 @@ import static org.mockito.Mockito.when;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.runtime.errors.ToleranceType;
 import org.apache.kafka.connect.source.SourceRecord;
 
-import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.junit.jupiter.api.Test;
@@ -93,7 +93,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
 
         final OffsetManager<O> offsetManager = (OffsetManager<O>) mock(OffsetManager.class);
 
-        final SourceRecord result = sourceRecord.getSourceRecord(ErrorsTolerance.NONE, offsetManager);
+        final SourceRecord result = sourceRecord.getSourceRecord(ToleranceType.NONE, offsetManager);
         assertThat(result).isNotNull();
         assertThat(result.topic()).isNotNull();
         assertThat(result.topic()).isEqualTo(TEST_TOPIC);
@@ -114,8 +114,8 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         sourceRecord.setContext(context);
 
         assertThatExceptionOfType(ConnectException.class).as("Errors tolerance: NONE")
-                .isThrownBy(() -> sourceRecord.getSourceRecord(ErrorsTolerance.NONE, offsetManager));
-        final SourceRecord result = sourceRecord.getSourceRecord(ErrorsTolerance.ALL, offsetManager);
+                .isThrownBy(() -> sourceRecord.getSourceRecord(ToleranceType.NONE, offsetManager));
+        final SourceRecord result = sourceRecord.getSourceRecord(ToleranceType.ALL, offsetManager);
         assertThat(result).isNull();
     }
 
@@ -137,7 +137,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         // alter context, it should have no impact on the source record.
         context.setPartition(14);
         context.setTopic("a-diff-topic");
-        SourceRecord result = sourceRecord.getSourceRecord(ErrorsTolerance.NONE, offsetManager);
+        SourceRecord result = sourceRecord.getSourceRecord(ToleranceType.NONE, offsetManager);
         assertThat(result).isNotNull();
         assertThat(result.topic()).isEqualTo(TEST_TOPIC);
         assertThat(result.kafkaPartition()).isEqualTo(5);
@@ -146,7 +146,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         context = sourceRecord.getContext();
         context.setPartition(99);
         context.setTopic("another-diff-topic");
-        result = sourceRecord.getSourceRecord(ErrorsTolerance.NONE, offsetManager);
+        result = sourceRecord.getSourceRecord(ToleranceType.NONE, offsetManager);
         assertThat(result).isNotNull();
         assertThat(result.topic()).isEqualTo(TEST_TOPIC);
         assertThat(result.kafkaPartition()).isEqualTo(5);
