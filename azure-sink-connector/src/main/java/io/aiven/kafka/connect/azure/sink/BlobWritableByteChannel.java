@@ -33,11 +33,11 @@ public class BlobWritableByteChannel implements WritableByteChannel {
 
     @Override
     public int write(final ByteBuffer src) throws IOException {
-        final int bytesWritten = src.remaining();
-        final byte[] buffer = new byte[bytesWritten];
-        src.get(buffer);
-        blobOutputStream.write(buffer);
-        return bytesWritten;
+        final int length = src.remaining();
+        final int offset = src.arrayOffset() + src.position();
+        blobOutputStream.write(src.array(), offset, length);
+        src.position(src.position() + length);
+        return length;
     }
 
     @Override

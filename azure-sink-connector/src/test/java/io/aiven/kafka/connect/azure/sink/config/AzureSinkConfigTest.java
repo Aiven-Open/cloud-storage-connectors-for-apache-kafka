@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,6 +42,7 @@ import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.templating.Template;
 import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
 
+import com.azure.core.http.policy.HttpLogDetailLevel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
@@ -231,6 +233,57 @@ final class AzureSinkConfigTest {
         final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
                 "file.compression.type", expectedErrorMessage);
         assertThat(configValue.recommendedValues()).containsExactly("none", "gzip", "snappy", "zstd");
+
+        assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
+                .hasMessage(expectedErrorMessage);
+    }
+
+    @Test
+    void httpLogDetailLevelDefaultsToNone() {
+        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
+                "azure.storage.connection.string", "test");
+
+        assertConfigDefValidationPasses(properties);
+
+        assertThat(new AzureBlobSinkConfig(properties).getHttpLogDetailLevel()).isEqualTo(HttpLogDetailLevel.NONE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "NONE", "BASIC", "HEADERS", "BODY", "BODY_AND_HEADERS" })
+    void supportedHttpLogDetailLevel(final String level) {
+        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
+                "azure.storage.connection.string", "test", "azure.http.log.detail.level", level);
+
+        assertConfigDefValidationPasses(properties);
+
+        assertThat(new AzureBlobSinkConfig(properties).getHttpLogDetailLevel())
+                .isEqualTo(HttpLogDetailLevel.valueOf(level));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "headers", "Body_And_Headers", " none " })
+    void httpLogDetailLevelIsCaseAndWhitespaceInsensitive(final String level) {
+        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
+                "azure.storage.connection.string", "test", "azure.http.log.detail.level", level);
+
+        assertConfigDefValidationPasses(properties);
+
+        assertThat(new AzureBlobSinkConfig(properties).getHttpLogDetailLevel())
+                .isEqualTo(HttpLogDetailLevel.valueOf(level.trim().toUpperCase(Locale.ROOT)));
+    }
+
+    @Test
+    void unsupportedHttpLogDetailLevel() {
+        final Map<String, String> properties = Map.of("azure.storage.container.name", "test-container",
+                "azure.storage.connection.string", "test", "azure.http.log.detail.level", "verbose");
+
+        final var expectedErrorMessage = "Invalid value verbose for configuration azure.http.log.detail.level: "
+                + "supported values are: NONE, BASIC, HEADERS, BODY, BODY_AND_HEADERS";
+
+        final var configValue = expectErrorMessageForConfigurationInConfigDefValidation(properties,
+                "azure.http.log.detail.level", expectedErrorMessage);
+        assertThat(configValue.recommendedValues()).containsExactly("NONE", "BASIC", "HEADERS", "BODY",
+                "BODY_AND_HEADERS");
 
         assertThatThrownBy(() -> new AzureBlobSinkConfig(properties)).isInstanceOf(ConfigException.class)
                 .hasMessage(expectedErrorMessage);

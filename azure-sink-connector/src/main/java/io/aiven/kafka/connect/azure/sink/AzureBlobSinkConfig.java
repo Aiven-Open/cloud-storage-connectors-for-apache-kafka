@@ -22,9 +22,11 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -38,6 +40,7 @@ import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
 
+import com.azure.core.http.policy.HttpLogDetailLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,11 +52,14 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
     public static final String AZURE_STORAGE_CONNECTION_STRING_CONFIG = "azure.storage.connection.string";
     public static final String AZURE_STORAGE_CONTAINER_NAME_CONFIG = "azure.storage.container.name";
     public static final String AZURE_USER_AGENT = "azure.user.agent";
+    public static final String AZURE_HTTP_LOG_DETAIL_LEVEL_CONFIG = "azure.http.log.detail.level";
+    public static final HttpLogDetailLevel AZURE_HTTP_LOG_DETAIL_LEVEL_DEFAULT = HttpLogDetailLevel.NONE;
     private static final String GROUP_FILE = "File";
     public static final String FILE_NAME_PREFIX_CONFIG = "file.name.prefix";
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
+    public static final String FILE_MAX_BYTES = "file.max.bytes";
     public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
 
@@ -96,8 +102,54 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
 
         configDef.define(AZURE_STORAGE_CONTAINER_NAME_CONFIG, ConfigDef.Type.STRING, ConfigDef.NO_DEFAULT_VALUE,
                 new ConfigDef.NonEmptyString(), ConfigDef.Importance.HIGH,
-                "The Azure Blob container name to store output files in.", GROUP_AZURE, azureGroupCounter++, // NOPMD
+                "The Azure Blob container name to store output files in.", GROUP_AZURE, azureGroupCounter++,
                 ConfigDef.Width.NONE, AZURE_STORAGE_CONTAINER_NAME_CONFIG);
+
+        final String supportedHttpLogDetailLevels = httpLogDetailLevelNames().stream()
+                .map(l -> "'" + l + "'")
+                .collect(Collectors.joining(", "));
+        configDef.define(AZURE_HTTP_LOG_DETAIL_LEVEL_CONFIG, ConfigDef.Type.STRING,
+                AZURE_HTTP_LOG_DETAIL_LEVEL_DEFAULT.name(), new HttpLogDetailLevelValidator(), ConfigDef.Importance.LOW,
+                "The level of detail the Azure SDK logs for each HTTP call to Azure Blob Storage. "
+                        + "The supported values are: " + supportedHttpLogDetailLevels
+                        + ". Note that these logs are only emitted when the "
+                        + "'com.azure' logger is also enabled at INFO level (or lower) in the Connect worker. "
+                        + "WARNING: '" + HttpLogDetailLevel.BODY.name() + "' and " + "'"
+                        + HttpLogDetailLevel.BODY_AND_HEADERS.name() + "' make the Azure SDK buffer and log "
+                        + "request and response bodies, i.e. the record data being uploaded. Only use them for "
+                        + "temporary debugging on non-production data: they add CPU and heap pressure and write "
+                        + "record payloads to the Connect logs.",
+                GROUP_AZURE, azureGroupCounter++, ConfigDef.Width.NONE, // NOPMD azureGroupCounter updated value never
+                                                                        // used
+                AZURE_HTTP_LOG_DETAIL_LEVEL_CONFIG, FixedSetRecommender.ofSupportedValues(httpLogDetailLevelNames()));
+    }
+
+    private static List<String> httpLogDetailLevelNames() {
+        return Stream.of(HttpLogDetailLevel.values()).map(Enum::name).collect(Collectors.toList());
+    }
+
+    /**
+     * Accepts any {@link HttpLogDetailLevel} name, case-insensitively.
+     */
+    private static class HttpLogDetailLevelValidator implements ConfigDef.Validator {
+        @Override
+        public void ensureValid(final String name, final Object value) {
+            try {
+                parseHttpLogDetailLevel(String.valueOf(value));
+            } catch (final IllegalArgumentException e) {
+                throw new ConfigException(name, value,
+                        "supported values are: " + String.join(", ", httpLogDetailLevelNames()));
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "[" + String.join(", ", httpLogDetailLevelNames()) + "]";
+        }
+    }
+
+    private static HttpLogDetailLevel parseHttpLogDetailLevel(final String value) {
+        return HttpLogDetailLevel.valueOf(value.trim().toUpperCase(Locale.ROOT));
     }
 
     private static void addAzureRetryPolicies(final ConfigDef configDef) {
@@ -182,6 +234,12 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
                 "The maximum number of records to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.",
                 GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
+
+        configDef.define(FILE_MAX_BYTES, ConfigDef.Type.LONG, 0L, ConfigDef.Range.atLeast(0L),
+                ConfigDef.Importance.MEDIUM,
+                "The maximum number of bytes to put in a single file. " + "Must be a non-negative integer number. "
+                        + "0 is interpreted as \"unlimited\", which is the default.",
+                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_BYTES);
 
         configDef.define(FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(),
                 new ConfigDef.Validator() {
@@ -303,5 +361,22 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
 
     public String getUserAgent() {
         return getString(AZURE_USER_AGENT);
+    }
+
+    /**
+     * The detail level the Azure SDK HTTP logging policy is configured with.
+     *
+     * @return the configured {@link HttpLogDetailLevel}, {@link HttpLogDetailLevel#NONE} by default.
+     */
+    public HttpLogDetailLevel getHttpLogDetailLevel() {
+        return parseHttpLogDetailLevel(getString(AZURE_HTTP_LOG_DETAIL_LEVEL_CONFIG));
+    }
+
+    public boolean isMaxBytesPerFileLimited() {
+        return getMaxBytesPerFile() > 0;
+    }
+
+    public long getMaxBytesPerFile() {
+        return getLong(FILE_MAX_BYTES);
     }
 }
