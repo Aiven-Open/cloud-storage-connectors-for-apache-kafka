@@ -33,6 +33,7 @@ public class SinkCommonConfig extends CommonConfig {
     public static final String FORMAT_OUTPUT_TYPE_CONFIG = "format.output.type";
     public static final String FORMAT_OUTPUT_ENVELOPE_CONFIG = "format.output.envelope";
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
+    public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     public static final String FILE_MAX_RECORDS = "file.max.records";
 
     public static final String FILE_MAX_BYTES = "file.max.bytes";
