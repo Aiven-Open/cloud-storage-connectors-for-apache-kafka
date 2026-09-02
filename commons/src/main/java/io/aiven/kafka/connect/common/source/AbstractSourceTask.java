@@ -57,10 +57,10 @@ public abstract class AbstractSourceTask extends SourceTask {
     public static final List<SourceRecord> NULL_RESULT = null;
 
     /**
-     * The maximum time to spend polling. This is set to 5 seconds as that is the time that is allotted to a system for
-     * shutdown.
+     * The maximum time to spend polling. This is set to 4 seconds as 5 seconds is the kafka limit that is allotted to a
+     * system for shutdown, and this allows the polling and iterator to smoothly shutdown accounting for latentcy.
      */
-    public static final Duration MAX_POLL_TIME = Duration.ofSeconds(5);
+    public static final Duration MAX_POLL_TIME = Duration.ofSeconds(4);
     /**
      * The boolean that indicates the connector is stopped.
      */
@@ -89,7 +89,9 @@ public abstract class AbstractSourceTask extends SourceTask {
     /**
      * The Backoff implementation that executes the delay in the poll loop.
      */
-    private final Backoff backoff;
+    private final Backoff iteratorBackoff;
+
+    private final Backoff pollBackoff;
 
     private final BackoffConfig backoffConfig;
 
@@ -122,15 +124,16 @@ public abstract class AbstractSourceTask extends SourceTask {
                 return false;
             }
         };
-        backoff = new Backoff(backoffConfig);
+        iteratorBackoff = new Backoff(backoffConfig);
+        pollBackoff = new Backoff(backoffConfig);
         implemtationPollingThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
                     while (stillPolling()) {
                         if (!tryAdd()) {
-                            logger.debug("Attempting {}", backoff);
-                            backoff.cleanDelay();
+                            logger.debug("Attempting {}", iteratorBackoff);
+                            iteratorBackoff.cleanDelay();
                         }
                     }
                 } catch (InterruptedException e) {
@@ -138,6 +141,7 @@ public abstract class AbstractSourceTask extends SourceTask {
                 } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
                     logger.error("{} failed -- EXITING", this.toString(), e);
                 }
+                logger.info("{} finished", this.toString());
 
             }
         }, this.getClass().getName() + " polling thread");
@@ -185,7 +189,7 @@ public abstract class AbstractSourceTask extends SourceTask {
     private boolean tryAdd() throws InterruptedException {
         if (queue.remainingCapacity() > 0) {
             if (sourceRecordIterator.hasNext()) {
-                backoff.reset();
+                iteratorBackoff.reset();
                 final SourceRecord sourceRecord = sourceRecordIterator.next();
                 if (logger.isDebugEnabled()) {
                     logger.debug("tryAdd() : read record {}", sourceRecord.sourceOffset());
@@ -217,17 +221,30 @@ public abstract class AbstractSourceTask extends SourceTask {
         if (stillPolling()) {
             List<SourceRecord> results = new ArrayList<>(maxPollRecords);
             results = 0 == queue.drainTo(results, maxPollRecords) ? NULL_RESULT : results;
-            if (logger.isDebugEnabled()) {
-                logger.debug("Poll() returning {} SourceRecords.", results == null ? null : results.size());
-            }
+
             if (results == null && !implemtationPollingThread.isAlive()) {
                 throw new ConnectException(implemtationPollingThread.getName() + " has died");
             }
+
+            updatePollBackOff(results);
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("Poll() returning {} SourceRecords.", results == null ? null : results.size());
+            }
+
             return results;
         } else {
             logger.info("Stopping");
             closeResources();
             return NULL_RESULT;
+        }
+    }
+
+    private void updatePollBackOff(final List<SourceRecord> results) {
+        if (results == NULL_RESULT) {
+            pollBackoff.cleanDelay();
+        } else {
+            pollBackoff.reset();
         }
     }
 
@@ -254,7 +271,7 @@ public abstract class AbstractSourceTask extends SourceTask {
     /**
      * Calculates elapsed time and flags when expired.
      */
-    protected static class Timer extends StopWatch {
+    public static class Timer extends StopWatch {
         /**
          * The length of time that the timer should run.
          */
@@ -271,7 +288,7 @@ public abstract class AbstractSourceTask extends SourceTask {
          * @param duration
          *            the length of time the timer should run.
          */
-        Timer(final Duration duration) {
+        public Timer(final Duration duration) {
             super();
             this.duration = duration.toMillis();
         }

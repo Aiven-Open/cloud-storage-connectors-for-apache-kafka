@@ -51,7 +51,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
     void setUp() throws ExecutionException, InterruptedException {
         testBlobAccessor.clear(azurePrefix);
         final Map<String, Object> producerProps = new HashMap<>();
-        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers());
+        producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, getKafkaManager().bootstrapServers());
         producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
                 "org.apache.kafka.common.serialization.ByteArraySerializer");
         producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
@@ -65,7 +65,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         final Map<String, String> connectorConfig = basicConnectorConfig();
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
         connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         int cnt = 0;
@@ -122,7 +122,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
         connectorConfig.put(AzureBlobSinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}-"
                 + "{{timestamp:unit=yyyy}}-{{timestamp:unit=MM}}-{{timestamp:unit=dd}}");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         sendFutures.add(sendMessageAsync(testTopic0, 0, "key-0".getBytes(StandardCharsets.UTF_8),
@@ -180,7 +180,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG, "none");
         connectorConfig.put(AzureBlobSinkConfig.FILE_MAX_RECORDS, "1");
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
 
@@ -229,7 +229,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
         connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
         connectorConfig.put(AzureBlobSinkConfig.FILE_NAME_TEMPLATE_CONFIG, "{{key}}" + compressionType.extension());
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final Map<TopicPartition, List<String>> keysPerTopicPartition = new HashMap<>();
         keysPerTopicPartition.put(new TopicPartition(testTopic0, 0), Arrays.asList("key-0", "key-1", "key-2", "key-3"));
@@ -300,7 +300,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         connectorConfig.put("value.converter.schemas.enable", "false");
         connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, contentType);
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final List<Future<RecordMetadata>> sendFutures = new ArrayList<>();
         int cnt = 0;
@@ -363,7 +363,7 @@ final class IntegrationTest extends AbstractIntegrationTest<byte[], byte[]> {
         connectorConfig.put("value.converter.schemas.enable", "false");
         connectorConfig.put(AzureBlobSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, compression);
         connectorConfig.put(AzureBlobSinkConfig.FORMAT_OUTPUT_TYPE_CONFIG, contentType);
-        getConnectRunner().createConnector(connectorConfig);
+        createConnector(connectorConfig);
 
         final int numEpochs = 10;
 

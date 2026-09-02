@@ -47,7 +47,7 @@ public class S3ClientFactory {
                     .credentialsProvider(config.getAwsV2Provider())
                     .build();
         } else {
-            // TODO This is definitely used for testing but not sure if customers use it.
+            // TODO This is definitely used for testing but not sure if customers use it. customers use it!
             return S3Client.builder()
                     .overrideConfiguration(clientOverrideConfiguration)
                     .region(config.getAwsS3Region())

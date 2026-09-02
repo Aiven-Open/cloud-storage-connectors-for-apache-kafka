@@ -25,7 +25,10 @@ import io.aiven.kafka.connect.common.config.validators.FileCompressionTypeValida
 
 /**
  * The configuration fragment that defines the compression characteristics.
+ *
+ * @deprecated Use {@link FileNameFragment}
  */
+@Deprecated(forRemoval = true)
 public final class CompressionFragment extends ConfigFragment {
 
     static final String GROUP_COMPRESSION = "File Compression";

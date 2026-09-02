@@ -16,8 +16,10 @@
 
 package io.aiven.kafka.connect.common.integration.source;
 
+import java.util.Map;
+import java.util.function.BiFunction;
+
 import io.aiven.kafka.connect.common.integration.StorageBase;
-import io.aiven.kafka.connect.common.source.AbstractSourceRecord;
 import io.aiven.kafka.connect.common.source.OffsetManager;
 
 /**
@@ -29,37 +31,60 @@ import io.aiven.kafka.connect.common.source.OffsetManager;
  *            The native object type.
  * @param <O>
  *            The OffsetManagerEntry type.
- * @param <T>
- *            The concrete implementation of the {@link AbstractSourceRecord} .
  */
-public interface SourceStorage<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>, T extends SourceStorage<K, N, O, T>>
+public interface SourceStorage<K extends Comparable<K>, N, O extends OffsetManager.OffsetManagerEntry<O>>
         extends
             StorageBase<K, N> {
 
-    /**
-     * Convert a string into the key value for the native object. In most cases the underlying system uses a string so
-     * returning the {@code key} argument is appropriate. However, this method provides an opportunity to convert the
-     * key into something that the native system would produce.
-     *
-     * @param key
-     *            the key value as a string.
-     * @return the native key equivalent of the {@code key} parameter.
-     */
-    K createKFrom(String key);
+    K createKey(String prefix, String topic, int partition);
+
+    WriteResult<K> writeWithKey(K nativeKey, byte[] testDataBytes);
+
+    Map<String, String> createConnectorConfig(String localPrefix);
+
+    BiFunction<Map<String, Object>, Map<String, Object>, O> offsetManagerEntryFactory();
 
     /**
-     * Create an offset manager entry from the string key value,
+     * The result of a successful write.
      *
-     * @param key
-     *            the key value as a string.
-     * @return an OffsetManager entry.
+     * @param <K>
+     *            the native key type.
      */
-    O createOffsetManagerEntry(String key);
+    final class WriteResult<K extends Comparable<K>> {
+        /** the OffsetManagerKey for the result */
+        private final OffsetManager.OffsetManagerKey offsetKey;
+        /** The native Key for the result */
+        private final K nativeKey;
 
-    /**
-     * Creates the source record under test.
-     *
-     * @return the source record under test.
-     */
-    T createSourceRecord();
+        /**
+         * Constructor.
+         *
+         * @param offsetKey
+         *            the OffsetManagerKey for the result.
+         * @param nativeKey
+         *            the native key for the result.
+         */
+        public WriteResult(final OffsetManager.OffsetManagerKey offsetKey, final K nativeKey) {
+            this.offsetKey = offsetKey;
+            this.nativeKey = nativeKey;
+        }
+
+        /**
+         * Gets the OffsetManagerKey.
+         *
+         * @return the OffsetManagerKey
+         */
+        public OffsetManager.OffsetManagerKey getOffsetManagerKey() {
+            return offsetKey;
+        }
+
+        /**
+         * Gets the native key.
+         *
+         * @return the native key.
+         */
+        K getNativeKey() {
+            return nativeKey;
+        }
+    }
 }

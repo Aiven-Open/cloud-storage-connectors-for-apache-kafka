@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import com.diffplug.spotless.LineEnding
 import java.net.URI
 
 group = "io.aiven"
@@ -45,6 +44,8 @@ plugins {
     id("pmd")
 
     id("com.github.spotbugs")
+
+    id("java-test-fixtures")
 }
 
 java {
@@ -80,7 +81,6 @@ jacoco {
 }
 
 repositories {
-    mavenLocal()
     mavenCentral()
     maven("https://packages.confluent.io/maven")
 }
@@ -109,6 +109,10 @@ pmd {
         ruleSets = ArrayList() // Clear the default rulesets
     }
     tasks.pmdTest {
+        ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
+        ruleSets = ArrayList() // Clear the default rulesets
+    }
+    tasks.pmdTestFixtures {
         ruleSetFiles = files("${project.rootDir}/gradle-config/aiven-pmd-test-ruleset.xml")
         ruleSets = ArrayList() // Clear the default rulesets
     }

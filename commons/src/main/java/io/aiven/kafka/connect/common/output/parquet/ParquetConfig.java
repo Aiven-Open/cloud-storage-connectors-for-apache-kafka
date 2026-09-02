@@ -21,13 +21,13 @@ import java.util.Map;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.connect.common.config.AivenCommonConfig;
 import io.aiven.kafka.connect.common.config.CompressionType;
+import io.aiven.kafka.connect.common.config.FileNameFragment;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 
-final class ParquetConfig extends AbstractConfig {
+public final class ParquetConfig extends AbstractConfig {
 
     public ParquetConfig(final Map<?, ?> originals) {
         super(new ConfigDef(), originals);
@@ -50,10 +50,13 @@ final class ParquetConfig extends AbstractConfig {
     }
 
     public CompressionCodecName compressionCodecName() {
-        final var connectorCompressionType = CompressionType.forName(
-                originals().getOrDefault(AivenCommonConfig.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name)
-                        .toString());
-        switch (connectorCompressionType) {
+        return compressionCodecName(CompressionType.forName(
+                originals().getOrDefault(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, CompressionType.NONE.name)
+                        .toString()));
+    }
+
+    public static CompressionCodecName compressionCodecName(final CompressionType compressionType) {
+        switch (compressionType) {
             case GZIP :
                 return CompressionCodecName.GZIP;
             case SNAPPY :
@@ -64,5 +67,4 @@ final class ParquetConfig extends AbstractConfig {
                 return CompressionCodecName.UNCOMPRESSED;
         }
     }
-
 }

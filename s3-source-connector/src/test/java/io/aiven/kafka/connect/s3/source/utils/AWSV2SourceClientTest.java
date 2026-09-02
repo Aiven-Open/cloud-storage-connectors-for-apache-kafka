@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.connect.s3.source.utils;
 
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG;
-import static io.aiven.kafka.connect.config.s3.S3ConfigFragment.AWS_S3_PREFIX_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -33,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.connect.common.config.FileNameFragment;
+import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.junit.jupiter.api.Test;
@@ -54,8 +53,8 @@ class AWSV2SourceClientTest {
 
     private static Map<String, String> getConfigMap() {
         final Map<String, String> configMap = new HashMap<>();
-
-        configMap.put(AWS_S3_BUCKET_NAME_CONFIG, "test-bucket");
+        FileNameFragment.setter(configMap).template("any-old-file");
+        S3ConfigFragment.setter(configMap).bucketName("test-bucket");
         FileNameFragment.setter(configMap).template(".*");
         return configMap;
     }
@@ -114,7 +113,7 @@ class AWSV2SourceClientTest {
     @Test
     void testFetchObjectWithPrefix() {
         final Map<String, String> configMap = getConfigMap();
-        configMap.put(AWS_S3_PREFIX_CONFIG, "test/");
+        S3ConfigFragment.setter(configMap).prefix("test/");
         final S3SourceConfig s3SourceConfig = new S3SourceConfig(configMap);
         s3Client = mock(S3Client.class);
         awsv2SourceClient = new AWSV2SourceClient(s3Client, s3SourceConfig);

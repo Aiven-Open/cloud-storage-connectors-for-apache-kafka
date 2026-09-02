@@ -17,7 +17,7 @@ The connector subscribes to the specified Kafka topics and collects messages com
 
 ### Requirements
 
-The connector requires Java 11 or newer for development and production.
+The connector requires Java 17 or newer for development and production.
 
 #### Authorization
 
@@ -505,6 +505,8 @@ List of new configuration parameters:
 - `format.output.fields.value.encoding` - Controls encoding of `value` field. Possible values are: `base64` and `none`. Defaults: `base64`
 - `timestamp.timezone` - The time zone in which timestamps are represented. Accepts short and long standard names like: `UTC`, `PST`, `ECT`, `Europe/Berlin`, `Europe/Helsinki`, or `America/New_York`. For more information please refer to https://docs.oracle.com/javase/tutorial/datetime/iso/timezones.html. The default is `UTC`.
 - `timestamp.source` -  The source of timestamps. Supports only `wallclock` which is the default value.
+
+The `file.compression.type` defaults to `gzip`, when being used with the s3-source connector, ensure that the source connector is set to the same compression type as by default. The source connector defaults to `none`.
 
 ## Configuration
 

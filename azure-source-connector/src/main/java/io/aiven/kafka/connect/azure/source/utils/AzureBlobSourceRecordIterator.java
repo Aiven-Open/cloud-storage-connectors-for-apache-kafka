@@ -77,6 +77,11 @@ public final class AzureBlobSourceRecordIterator
     }
 
     @Override
+    protected String parseNativeKey(final String nativeKeyText) {
+        return nativeKeyText;
+    }
+
+    @Override
     protected AzureBlobSourceRecord createSourceRecord(final BlobItem nativeObject) {
         return new AzureBlobSourceRecord(nativeObject);
     }

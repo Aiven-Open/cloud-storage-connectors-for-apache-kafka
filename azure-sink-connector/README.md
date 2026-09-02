@@ -5,7 +5,7 @@ This is a sink
 connector that stores Kafka messages in an
 [Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/blobs/) container.
 
-The connector requires Java 11 or newer for development and production.
+The connector requires Java 17 or newer for development and production.
 
 ## How It Works
 

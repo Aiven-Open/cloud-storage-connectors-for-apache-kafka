@@ -19,8 +19,8 @@ package io.aiven.kafka.connect.common.config;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.connect.runtime.errors.ToleranceType;
 
-import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.input.InputFormat;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 import io.aiven.kafka.connect.common.source.input.TransformerFactory;
@@ -59,7 +59,7 @@ public class SourceCommonConfig extends CommonConfig {
         return sourceConfigFragment.getTargetTopic();
     }
 
-    public ErrorsTolerance getErrorsTolerance() {
+    public ToleranceType getErrorsTolerance() {
         return sourceConfigFragment.getErrorsTolerance();
     }
 
@@ -81,5 +81,13 @@ public class SourceCommonConfig extends CommonConfig {
 
     public String getSourceName() {
         return fileNameFragment.getSourceName();
+    }
+
+    public String getNativeStartKey() {
+        return sourceConfigFragment.getNativeStartKey();
+    }
+
+    public CompressionType getCompressionType() {
+        return fileNameFragment.getCompressionType();
     }
 }

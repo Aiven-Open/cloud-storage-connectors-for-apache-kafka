@@ -25,9 +25,9 @@ import static org.mockito.Mockito.when;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.runtime.errors.ToleranceType;
 import org.apache.kafka.connect.source.SourceRecord;
 
-import io.aiven.kafka.connect.common.config.enums.ErrorsTolerance;
 import io.aiven.kafka.connect.common.source.task.Context;
 
 import org.junit.jupiter.api.Test;
@@ -60,7 +60,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
      *            the key value as a string.
      * @return the native key equivalent of the {@code key} parameter.
      */
-    abstract protected K createKFrom(final String key);
+    abstract protected K createKFrom(String key);
 
     /**
      * Create an offset manager entry from the string key value,
@@ -69,7 +69,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
      *            the key value as a string.
      * @return an OffsetManager entry.
      */
-    abstract protected O createOffsetManagerEntry(final String key);
+    abstract protected O createOffsetManagerEntry(String key);
 
     /**
      * Creates the source record under test.
@@ -93,7 +93,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
 
         final OffsetManager<O> offsetManager = (OffsetManager<O>) mock(OffsetManager.class);
 
-        final SourceRecord result = sourceRecord.getSourceRecord(ErrorsTolerance.NONE, offsetManager);
+        final SourceRecord result = sourceRecord.getSourceRecord(ToleranceType.NONE, offsetManager);
         assertThat(result).isNotNull();
         assertThat(result.topic()).isNotNull();
         assertThat(result.topic()).isEqualTo(TEST_TOPIC);
@@ -114,8 +114,8 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         sourceRecord.setContext(context);
 
         assertThatExceptionOfType(ConnectException.class).as("Errors tolerance: NONE")
-                .isThrownBy(() -> sourceRecord.getSourceRecord(ErrorsTolerance.NONE, offsetManager));
-        final SourceRecord result = sourceRecord.getSourceRecord(ErrorsTolerance.ALL, offsetManager);
+                .isThrownBy(() -> sourceRecord.getSourceRecord(ToleranceType.NONE, offsetManager));
+        final SourceRecord result = sourceRecord.getSourceRecord(ToleranceType.ALL, offsetManager);
         assertThat(result).isNull();
     }
 
@@ -137,7 +137,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         // alter context, it should have no impact on the source record.
         context.setPartition(14);
         context.setTopic("a-diff-topic");
-        SourceRecord result = sourceRecord.getSourceRecord(ErrorsTolerance.NONE, offsetManager);
+        SourceRecord result = sourceRecord.getSourceRecord(ToleranceType.NONE, offsetManager);
         assertThat(result).isNotNull();
         assertThat(result.topic()).isEqualTo(TEST_TOPIC);
         assertThat(result.kafkaPartition()).isEqualTo(5);
@@ -146,7 +146,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
         context = sourceRecord.getContext();
         context.setPartition(99);
         context.setTopic("another-diff-topic");
-        result = sourceRecord.getSourceRecord(ErrorsTolerance.NONE, offsetManager);
+        result = sourceRecord.getSourceRecord(ToleranceType.NONE, offsetManager);
         assertThat(result).isNotNull();
         assertThat(result.topic()).isEqualTo(TEST_TOPIC);
         assertThat(result.kafkaPartition()).isEqualTo(5);
@@ -156,7 +156,7 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
     @Test
     void testModifyingInitialOffsetManagerEntryDoesNotAlterTheSourceRecordsOffsetManagerEntry() {
         O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
-        Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
+        final Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
         context.setPartition(3);
         context.setTopic(TEST_TOPIC);
 
@@ -179,9 +179,9 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
 
     @Test
     void testDuplicateMethod() {
-        O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
+        final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
         offsetManagerEntry.incrementRecordCount();
-        Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
+        final Context<K> context = new Context<>(createKFrom(TEST_OBJECT_KEY_TXT));
         context.setPartition(3);
         context.setTopic(TEST_TOPIC);
 
@@ -213,15 +213,15 @@ public abstract class AbstractSourceRecordTest<N, K extends Comparable<K>, O ext
 
     @Test
     void offsetManagerEntryTest() {
-        O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
+        final O offsetManagerEntry = createOffsetManagerEntry(TEST_OBJECT_KEY_TXT);
         assertThat(offsetManagerEntry.getRecordCount()).isEqualTo(0);
-        OffsetManager.OffsetManagerKey key = offsetManagerEntry.getManagerKey();
+        final OffsetManager.OffsetManagerKey key = offsetManagerEntry.getManagerKey();
 
         offsetManagerEntry.incrementRecordCount();
         assertThat(offsetManagerEntry.getRecordCount()).isEqualTo(1);
         assertThat(offsetManagerEntry.getManagerKey().getPartitionMap()).isEqualTo(key.getPartitionMap());
 
-        O offsetManagerEntry2 = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
+        final O offsetManagerEntry2 = offsetManagerEntry.fromProperties(offsetManagerEntry.getProperties());
         assertThat(offsetManagerEntry2.getRecordCount()).isEqualTo(1);
         assertThat(offsetManagerEntry2.getManagerKey().getPartitionMap()).isEqualTo(key.getPartitionMap());
 

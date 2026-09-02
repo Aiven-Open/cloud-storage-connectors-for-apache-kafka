@@ -68,7 +68,7 @@ tasks.register<Exec>("createSite") {
   dependsOn("copySiteAssets")
   println("Executing ${project.projectDir}/mvnw")
   executable("${project.projectDir}/mvnw")
-  args("clean", "versions:set", "site:site", "-DnewVersion=${version}")
+  args("-ntp", "clean", "versions:set", "site:site", "-DnewVersion=${version}")
 }
 
 tasks.register<Copy>("populateSite") {

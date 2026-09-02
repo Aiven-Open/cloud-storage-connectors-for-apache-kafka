@@ -29,8 +29,8 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
 
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 
 @SuppressWarnings("deprecation")
 final class S3SinkCredentialsConfigTest {
@@ -72,6 +72,6 @@ final class S3SinkCredentialsConfigTest {
         final Map<String, String> props = Map.of(AWS_S3_BUCKET_NAME_CONFIG, "test-bucket");
         final S3SinkConfig config = new S3SinkConfig(props);
         assertThat(config.getAwsCredentials()).isNull();
-        assertThat(config.getCustomCredentialsProvider()).isInstanceOf(DefaultAWSCredentialsProviderChain.class);
+        assertThat(config.getCustomCredentialsProvider()).isInstanceOf(DefaultCredentialsProvider.class);
     }
 }

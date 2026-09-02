@@ -71,10 +71,13 @@ idea {
 
 dependencies {
   compileOnly(apache.kafka.connect.api)
+  compileOnly(project(":site"))
+  compileOnly("org.apache.velocity:velocity-engine-core:2.4.1")
+  compileOnly("org.apache.velocity.tools:velocity-tools-generic:3.1")
 
   implementation(project(":commons"))
 
-  implementation("com.azure:azure-storage-blob:12.30.0")
+  implementation(azure.storage.blob)
 
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
@@ -88,10 +91,13 @@ dependencies {
   // is provided by "jqwik", but need this in testImplementation scope
   testImplementation(testinglibs.jqwik.engine)
 
+  testImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
-
+  testImplementation(apache.commons.io)
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(apache.hadoop.mapreduce.client.core) {
@@ -134,10 +140,15 @@ dependencies {
 
   testRuntimeOnly(logginglibs.slf4j.log4j12)
 
+  integrationTestImplementation(tools.spotbugs.annotations)
   integrationTestImplementation(testinglibs.wiremock)
   integrationTestImplementation(testcontainers.junit.jupiter)
   integrationTestImplementation(testcontainers.kafka) // this is not Kafka version
+  integrationTestImplementation(testcontainers.azure)
   integrationTestImplementation(testinglibs.awaitility)
+  integrationTestImplementation(testinglibs.localstack) {
+    exclude(group = "io.netty", module = "netty-transport-native-epoll")
+  }
 
   integrationTestImplementation(apache.kafka.connect.transforms)
   // TODO: add avro-converter to ConnectRunner via plugin.path instead of on worker classpath
@@ -147,6 +158,8 @@ dependencies {
 
   // Make test utils from "test" available in "integration-test"
   integrationTestImplementation(sourceSets["test"].output)
+  // integrationTestImplementation(testFixtures(project(":azure-commons")))
+  integrationTestImplementation(testFixtures(project(":commons")))
 }
 
 tasks.named<Pmd>("pmdIntegrationTest") {
@@ -245,3 +258,47 @@ signing {
   }
   signatureTypes = ASCSignatureProvider()
 }
+
+/** ******************************* */
+/* Documentation building section */
+/** ******************************* */
+tasks.register("buildDocs") {
+  dependsOn("buildConfigMd")
+  dependsOn("buildConfigYml")
+}
+
+tasks.register<JavaExec>("buildConfigMd") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig",
+          "configDef",
+          "src/templates/configData.md.vm",
+          "build/site/markdown/azure-sink-connector/AzureBlobSinkConfig.md")
+}
+
+tasks.register<JavaExec>("buildConfigYml") {
+  mainClass = "io.aiven.kafka.connect.tools.ConfigDoc"
+  classpath =
+      sourceSets.main
+          .get()
+          .compileClasspath
+          .plus(files(tasks.jar))
+          .plus(sourceSets.main.get().runtimeClasspath)
+  args =
+      listOf(
+          "io.aiven.kafka.connect.azure.sink.AzureBlobSinkConfig",
+          "configDef",
+          "src/templates/configData.yml.vm",
+          "build/site/azure-sink-connector/AzureBlobSinkConfig.yml")
+}
+
+/** ****************************** */
+/*  End of documentation section */
+/** ****************************** */

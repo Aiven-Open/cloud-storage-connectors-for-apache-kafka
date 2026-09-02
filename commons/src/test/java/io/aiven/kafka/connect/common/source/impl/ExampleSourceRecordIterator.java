@@ -80,4 +80,9 @@ final public class ExampleSourceRecordIterator
     protected OffsetManager.OffsetManagerKey getOffsetManagerKey(final String nativeKey) {
         return new ExampleOffsetManagerEntry(nativeKey, "three").getManagerKey();
     }
+
+    @Override
+    protected String parseNativeKey(final String nativeKeyText) {
+        return nativeKeyText;
+    }
 }
