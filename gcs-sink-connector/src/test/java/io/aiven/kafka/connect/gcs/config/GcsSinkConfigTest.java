@@ -541,7 +541,7 @@ final class GcsSinkConfigTest {
         final var expectedErrorMessage = "Invalid value {{start_offset:padding=FALSE}}-{{partition}}-{{topic}} "
                 + "for configuration file.name.template: " + "unsupported set of template variables parameters, "
                 + "supported sets are: "
-                + "partition:padding=true|false,start_offset:padding=true|false,timestamp:unit=yyyy|MM|dd|HH";
+                + "partition:padding=true|false,start_offset:padding=true|false,timestamp:unit=yyyy|MM|dd|HH|M|d|H";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 
@@ -556,7 +556,8 @@ final class GcsSinkConfigTest {
 
         final var expectedErrorMessage = "Invalid value {{start_offset}}-{{partition}}-{{topic}}-{{timestamp}} "
                 + "for configuration file.name.template: "
-                + "parameter unit is required for the the variable timestamp, " + "supported values are: yyyy|MM|dd|HH";
+                + "parameter unit is required for the the variable timestamp, "
+                + "supported values are: yyyy|MM|dd|HH|M|d|H";
 
         expectErrorMessageForConfigurationInConfigDefValidation(properties, "file.name.template", expectedErrorMessage);
 

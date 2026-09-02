@@ -27,7 +27,9 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart;
 public class StableTimeFormatter {
     private static final Map<String, DateTimeFormatter> TIMESTAMP_FORMATTERS = Map.of("yyyy",
             DateTimeFormatter.ofPattern("yyyy"), "MM", DateTimeFormatter.ofPattern("MM"), "dd",
-            DateTimeFormatter.ofPattern("dd"), "HH", DateTimeFormatter.ofPattern("HH"));
+            DateTimeFormatter.ofPattern("dd"), "HH", DateTimeFormatter.ofPattern("HH"), "M",
+            DateTimeFormatter.ofPattern("M"), "d", DateTimeFormatter.ofPattern("d"), "H",
+            DateTimeFormatter.ofPattern("H"));
 
     private final Function<SinkRecord, Function<VariableTemplatePart.Parameter, String>> formatter;
 

@@ -27,7 +27,7 @@ public enum FilenameTemplateVariable {
                             "start_offset",
                             new ParameterDescriptor("padding", false,
                                     List.of(Boolean.TRUE.toString(), Boolean.FALSE.toString()))), TIMESTAMP("timestamp",
-                                            new ParameterDescriptor("unit", true, List.of("yyyy", "MM", "dd", "HH")));
+                                            new ParameterDescriptor("unit", true, List.of("yyyy", "MM", "dd", "HH", "M", "d", "H"))),;
 
     public final String name;
 
