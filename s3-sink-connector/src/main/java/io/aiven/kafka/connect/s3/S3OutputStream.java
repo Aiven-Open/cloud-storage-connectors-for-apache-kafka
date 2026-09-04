@@ -124,7 +124,9 @@ public class S3OutputStream extends OutputStream {
         }
         if (Objects.nonNull(multipartUpload)) {
             multipartUpload.complete();
+            logger.debug("Completed and closed upload of multipart {}", multipartUpload.uploadId);
             multipartUpload = null; // NOPMD NullAssignment
+
         }
         closed = true;
         super.close();
@@ -137,6 +139,7 @@ public class S3OutputStream extends OutputStream {
         } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
             multipartUpload.abort();
             multipartUpload = null; // NOPMD NullAssignment
+            logger.debug("Multipartupload failed with exception {}", e.getMessage());
             throw new IOException(e);
         }
     }
@@ -184,7 +187,7 @@ public class S3OutputStream extends OutputStream {
                     .key(key)
                     .uploadId(uploadId)
                     .build();
-
+            logger.debug("Abort uploadId: {}", uploadId);
             client.abortMultipartUpload(abort);
         }
 

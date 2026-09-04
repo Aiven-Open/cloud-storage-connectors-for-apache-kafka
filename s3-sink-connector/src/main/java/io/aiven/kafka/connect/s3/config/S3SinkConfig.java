@@ -33,6 +33,7 @@ import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.SinkConfigFragment;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.config.validators.TimeZoneValidator;
 import io.aiven.kafka.connect.common.config.validators.TimestampSourceValidator;
@@ -84,7 +85,7 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
         FileNameFragment.update(configDef);
         addOutputFieldsFormatConfigGroup(configDef, null);
         addDeprecatedTimestampConfig(configDef);
-
+        SinkConfigFragment.update(configDef);
         return configDef;
     }
 

@@ -27,12 +27,35 @@ import io.aiven.kafka.connect.common.config.validators.OutputTypeValidator;
  */
 @Deprecated
 public class AivenCommonConfig extends SinkCommonConfig {
+    /**
+     * @deprecated FORMAT_OUTPUT_FIELDS_CONFIG will be removed in our next major release. please use
+     *             {@link io.aiven.kafka.connect.common.config.SinkCommonConfig#FORMAT_OUTPUT_FIELDS_CONFIG}
+     */
     public static final String FORMAT_OUTPUT_FIELDS_CONFIG = "format.output.fields";
+    /**
+     * @deprecated FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG will be removed in our next major release. please use
+     *             {@link io.aiven.kafka.connect.common.config.SinkCommonConfig#FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG}
+     */
     public static final String FORMAT_OUTPUT_FIELDS_VALUE_ENCODING_CONFIG = "format.output.fields.value.encoding";
+    /**
+     * @deprecated FORMAT_OUTPUT_TYPE_CONFIG will be removed in our next major release. please use
+     *             {@link io.aiven.kafka.connect.common.config.SinkCommonConfig#FORMAT_OUTPUT_TYPE_CONFIG}
+     */
     public static final String FORMAT_OUTPUT_TYPE_CONFIG = "format.output.type";
+    /**
+     * @deprecated FORMAT_OUTPUT_ENVELOPE_CONFIG will be removed in our next major release. please use
+     *             {@link io.aiven.kafka.connect.common.config.SinkCommonConfig#FORMAT_OUTPUT_ENVELOPE_CONFIG}
+     */
     public static final String FORMAT_OUTPUT_ENVELOPE_CONFIG = "format.output.envelope";
+    /**
+     * @deprecated FILE_COMPRESSION_TYPE_CONFIG will be removed in our next major release. please use
+     *             {@link io.aiven.kafka.connect.common.config.SinkCommonConfig#FILE_COMPRESSION_TYPE_CONFIG}
+     */
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
-    public static final String FILE_MAX_RECORDS = "file.max.records";
+    /**
+     * @deprecated FILE_NAME_TEMPLATE_CONFIG will be removed in our next major release. please use
+     *             {@link io.aiven.kafka.connect.common.config.SinkCommonConfig#FILE_NAME_TEMPLATE_CONFIG}
+     */
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
 
     protected AivenCommonConfig(final ConfigDef definition, final Map<?, ?> originals) {

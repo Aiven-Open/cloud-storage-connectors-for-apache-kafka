@@ -26,10 +26,12 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.connect.connector.Connector;
 import org.apache.kafka.connect.converters.ByteArrayConverter;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
 import org.apache.kafka.connect.runtime.WorkerConfig;
+import org.apache.kafka.connect.runtime.rest.entities.ConnectorStateInfo;
 import org.apache.kafka.connect.util.clusters.EmbeddedConnectCluster;
 import org.apache.kafka.connect.util.clusters.WorkerHandle;
 
@@ -138,6 +140,14 @@ public final class KafkaConnectRunner {
         return "connect-integration-test-" + clusterName;
     }
 
+    /**
+     * Get a Kafka Admin Client
+     *
+     * @return Kafka Admin Client
+     */
+    public Admin getAdminClient() {
+        return connectCluster.kafka().createAdminClient();
+    }
     /**
      * Starts a connect cluster.
      *
@@ -271,8 +281,23 @@ public final class KafkaConnectRunner {
             LOGGER.info("Restarting connector {}", connectorName);
             connectCluster.restartConnector(connectorName);
             LOGGER.info("Connector {} restarted", connectorName);
-
         }
+    }
+
+    /**
+     * Get the current status of all tasks associated with a Connector
+     *
+     * @param connectorName
+     *            The Name of the connector
+     * @return The ConnectorStateInfo which contains the details of all tasks states
+     * @throws IOException
+     *             If the connectCluster is not intialized or has already been closed this error is thrown
+     */
+    public ConnectorStateInfo getConnectorStatus(final String connectorName) throws IOException {
+        if (connectCluster != null) {
+            return connectCluster.connectorStatus(connectorName);
+        }
+        throw new IOException("Connect Cluster has not been initialized correctly. Or has already been destroyed");
     }
 
     /**

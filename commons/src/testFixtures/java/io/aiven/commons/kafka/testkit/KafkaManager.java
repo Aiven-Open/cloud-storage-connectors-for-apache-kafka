@@ -25,9 +25,11 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
+import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.connect.connector.Connector;
+import org.apache.kafka.connect.runtime.rest.entities.ConnectorStateInfo;
 import org.apache.kafka.connect.util.TopicAdmin;
 import org.apache.kafka.connect.util.clusters.WorkerHandle;
 
@@ -99,6 +101,9 @@ public final class KafkaManager {
         return connectRunner.getOffsetTopic();
     }
 
+    public Admin getAdminClient() {
+        return connectRunner.getAdminClient();
+    }
     /**
      * Gets the configuration topic name.
      *
@@ -257,4 +262,16 @@ public final class KafkaManager {
         connectRunner.restartConnector(connectorName);
     }
 
+    /**
+     * Get the current status of all tasks associated with a Connector
+     *
+     * @param connectorName
+     *            The Name of the connector
+     * @return The ConnectorStateInfo which contains the details of all tasks states
+     * @throws IOException
+     *             If the connectCluster is not intialized or has already been closed this error is thrown
+     */
+    public ConnectorStateInfo getConnectorStatusInfo(final String connectorName) throws IOException {
+        return connectRunner.getConnectorStatus(connectorName);
+    }
 }

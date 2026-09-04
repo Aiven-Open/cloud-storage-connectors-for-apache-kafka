@@ -37,6 +37,7 @@ import io.aiven.kafka.connect.common.config.FixedSetRecommender;
 import io.aiven.kafka.connect.common.config.OutputField;
 import io.aiven.kafka.connect.common.config.OutputFieldEncodingType;
 import io.aiven.kafka.connect.common.config.OutputFieldType;
+import io.aiven.kafka.connect.common.config.SinkConfigFragment;
 import io.aiven.kafka.connect.common.config.TimestampSource;
 import io.aiven.kafka.connect.common.config.validators.FilenameTemplateValidator;
 
@@ -59,7 +60,6 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
     public static final String FILE_NAME_TEMPLATE_CONFIG = "file.name.template";
     public static final String FILE_COMPRESSION_TYPE_CONFIG = "file.compression.type";
     public static final String FILE_MAX_RECORDS = "file.max.records";
-    public static final String FILE_MAX_BYTES = "file.max.bytes";
     public static final String FILE_NAME_TIMESTAMP_TIMEZONE = "file.name.timestamp.timezone";
     public static final String FILE_NAME_TIMESTAMP_SOURCE = "file.name.timestamp.source";
 
@@ -86,6 +86,7 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
         addKafkaBackoffPolicy(configDef);
         addAzureRetryPolicies(configDef);
         addUserAgentConfig(configDef);
+        SinkConfigFragment.update(configDef);
         return configDef;
     }
 
@@ -235,12 +236,6 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
                         + "0 is interpreted as \"unlimited\", which is the default.",
                 GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_RECORDS);
 
-        configDef.define(FILE_MAX_BYTES, ConfigDef.Type.LONG, 0L, ConfigDef.Range.atLeast(0L),
-                ConfigDef.Importance.MEDIUM,
-                "The maximum number of bytes to put in a single file. " + "Must be a non-negative integer number. "
-                        + "0 is interpreted as \"unlimited\", which is the default.",
-                GROUP_FILE, fileGroupCounter++, ConfigDef.Width.SHORT, FILE_MAX_BYTES);
-
         configDef.define(FILE_NAME_TIMESTAMP_TIMEZONE, ConfigDef.Type.STRING, ZoneOffset.UTC.toString(),
                 new ConfigDef.Validator() {
                     @Override
@@ -372,11 +367,4 @@ public final class AzureBlobSinkConfig extends AivenCommonConfig {
         return parseHttpLogDetailLevel(getString(AZURE_HTTP_LOG_DETAIL_LEVEL_CONFIG));
     }
 
-    public boolean isMaxBytesPerFileLimited() {
-        return getMaxBytesPerFile() > 0;
-    }
-
-    public long getMaxBytesPerFile() {
-        return getLong(FILE_MAX_BYTES);
-    }
 }
