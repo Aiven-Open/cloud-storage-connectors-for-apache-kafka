@@ -66,7 +66,10 @@ public class S3ObjectWriter implements AutoCloseable {
         LOG.debug("Closing OutputWriter and OutputStream for s3://{}/{}", bucketName, fullKey);
 
         try (OutputStream ignored1 = stream; OutputWriter ignored = outputWriter) {
-            // Explicitly empty
+            // As per https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html
+            // if we were to call stream.close() and outputWriter.close()
+            // if stream.close() were to throw an exception outputwriter would leak
+            // using try-resource ensures close() is calle don both resources even if one throws.
         }
     }
 }
