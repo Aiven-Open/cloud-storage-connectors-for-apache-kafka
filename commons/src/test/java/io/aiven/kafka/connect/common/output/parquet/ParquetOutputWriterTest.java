@@ -180,6 +180,27 @@ class ParquetOutputWriterTest {
         assertThat(readRecords(parquetFile)).containsExactly(expectedString);
     }
 
+    @Test
+    void testWriteRecordsCalledMoreThanOnceBeforeClose(@TempDir final Path tmpDir) throws IOException {
+        final var parquetFile = tmpDir.resolve("parquet.file");
+        try (var outputStream = Files.newOutputStream(parquetFile.toAbsolutePath());
+                var parquetWriter = new ParquetOutputWriter(
+                        List.of(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.NONE)), outputStream,
+                        Collections.emptyMap(), true)) {
+            parquetWriter.writeRecords(List.of(createStringRecord("a", 100L), createStringRecord("b", 101L)));
+            parquetWriter.writeRecords(List.of(createStringRecord("c", 102L)));
+            parquetWriter.writeRecord(createStringRecord("d", 103L));
+        }
+
+        assertThat(readRecords(parquetFile)).containsExactly("{\"value\": \"a\"}", "{\"value\": \"b\"}",
+                "{\"value\": \"c\"}", "{\"value\": \"d\"}");
+    }
+
+    private SinkRecord createStringRecord(final String value, final long offset) {
+        return new SinkRecord("some-topic", 1, Schema.STRING_SCHEMA, "some-key", Schema.STRING_SCHEMA, value, offset,
+                1000L, TimestampType.CREATE_TIME);
+    }
+
     private <T> void writeRecords(final Path parquetFile, final Collection<OutputField> fields,
             final Schema recordSchema, final List<T> records, final boolean withHeaders, final boolean withEnvelope)
             throws IOException {
