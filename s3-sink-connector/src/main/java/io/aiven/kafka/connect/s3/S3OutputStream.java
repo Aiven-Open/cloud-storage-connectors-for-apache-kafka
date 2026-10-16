@@ -84,6 +84,10 @@ public class S3OutputStream extends OutputStream {
 
     @Override
     public void write(final byte[] bytes, final int off, final int len) throws IOException {
+        if (closed) {
+            // a write after close() would start a new multipart upload that is never completed
+            throw new IOException("Stream is closed for s3://" + bucketName + "/" + key);
+        }
         if (Objects.isNull(bytes) || bytes.length == 0) {
             return;
         }

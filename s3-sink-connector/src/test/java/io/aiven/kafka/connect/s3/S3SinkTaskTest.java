@@ -43,6 +43,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -80,6 +81,7 @@ import io.aiven.kafka.connect.common.config.BackoffPolicyFragmentFixture.Backoff
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
+import io.aiven.kafka.connect.common.format.ParquetTestDataFixture;
 import io.aiven.kafka.connect.s3.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.config.S3SinkConfig;
 import io.aiven.kafka.connect.s3.testutils.BucketAccessor;
@@ -94,6 +96,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
@@ -921,6 +924,30 @@ final class S3SinkTaskTest {
 
         task.flush(null);
         verify(s3Client, times(1)).completeMultipartUpload(any(CompleteMultipartUploadRequest.class)); // written during
+    }
+
+    @Test
+    void parquetFileKeepsAllRecordsWhenWrittenMoreThanOnceBeforeFlush(@TempDir final Path tmpDir) throws IOException {
+        properties.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, "none");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_FIELDS_CONFIG.key(), "value,offset");
+        properties.put(OutputFormatArgs.FORMAT_OUTPUT_TYPE_CONFIG.key(), "parquet");
+        properties.put(AWS_S3_PREFIX_CONFIG, "prefix-");
+        properties.put(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
+        final S3SinkTask task = new S3SinkTask(properties, s3Client, testClock);
+        task.initialize(mockedSinkTaskContext);
+
+        task.put(List.of(createRecord("topic0", 0, "key0", "value0", 10, 1000)));
+        testClock.advance(Duration.ofSeconds(11));
+        // the write interval has passed, so the file is first written during put()
+        task.put(List.of(createRecord("topic0", 0, "key1", "value1", 11, 1001)));
+        testClock.advance(Duration.ofSeconds(11));
+        // and written again before the flush
+        task.put(List.of(createRecord("topic0", 0, "key2", "value2", 12, 1002)));
+        task.flush(null);
+
+        final byte[] parquetBytes = testBucketAccessor.readBytes("prefix-topic0-0-00000000000000000010");
+        assertThat(ParquetTestDataFixture.readRecords(tmpDir, parquetBytes)).extracting(record -> record.get("offset"))
+                .containsExactly(10L, 11L, 12L);
     }
 
     @Test
