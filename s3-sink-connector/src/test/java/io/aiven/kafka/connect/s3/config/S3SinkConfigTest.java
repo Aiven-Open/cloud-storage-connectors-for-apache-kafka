@@ -45,6 +45,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
 
 @SuppressWarnings("deprecation")
 final class S3SinkConfigTest {
@@ -273,6 +274,30 @@ final class S3SinkConfigTest {
         props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "");
         assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value  for configuration aws.s3.region: " + "Supported values are: "
+                        + Region.regions().stream().map(Region::id).collect(Collectors.joining(", ")));
+    }
+
+    @Test
+    void customAwsS3RegionWithEndPoint() {
+        final Map<String, String> props = new HashMap<>();
+        props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "key-id");
+        props.put(S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "secret-key");
+        props.put(S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "bucket");
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "ru-central-1");
+        assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
+                .hasMessage("Invalid value ru-central-1 for configuration aws.s3.region: " + "Supported values are: "
+                        + Region.regions().stream().map(Region::id).collect(Collectors.joining(", ")));
+
+        props.put(S3ConfigFragment.AWS_S3_ENDPOINT_CONFIG, "https://s3.example.com");
+        final S3SinkConfig config = new S3SinkConfig(props);
+        assertThat(config.getAwsS3Region()).isEqualTo(Region.of("ru-central-1"));
+        try (S3Client client = new S3ClientFactory().createAmazonS3Client(config)) {
+            assertThat(client.serviceClientConfiguration().region()).isEqualTo(Region.of("ru-central-1"));
+        }
+
+        props.put(S3ConfigFragment.AWS_S3_REGION_CONFIG, "ru central 1");
+        assertThatThrownBy(() -> new S3SinkConfig(props)).isInstanceOf(ConfigException.class)
+                .hasMessage("Invalid value ru central 1 for configuration aws.s3.region: " + "Supported values are: "
                         + Region.regions().stream().map(Region::id).collect(Collectors.joining(", ")));
     }
 
