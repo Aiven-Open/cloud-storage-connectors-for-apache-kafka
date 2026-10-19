@@ -596,8 +596,8 @@ timestamp.source=wallclock
 To configure S3 multi-part uploads buffer size change:
 - `aws.s3.part.size.bytes` - The Part Size in
   S3 Multi-part Uploads in bytes.
-  Maximum is `2GB` and default is `5MB`.
-- Multipart uploads begins as soon as the first batch of records are received from Kafka, the upload is completed when it meets the number of allowed records in a single file.
+  Maximum is `2GB` the minimum is `5MB` and default is `60MB`.
+- Multipart uploads begins as soon as a part size of data is available for upload from the records that are received from Kafka, the upload is completed when it meets the number of allowed records in a single file, or a flush is called by the connector.
 - AWS has best practices around multipart uploads using [lifecycle configuration](https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu-lifecycle-config.html) to ensure that you minimise your storage costs.
 
 ### Retry strategy configuration
