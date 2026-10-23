@@ -17,21 +17,31 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import io.aiven.commons.collections.RingBuffer;
 import io.aiven.kafka.connect.s3.source.config.S3ClientFactory;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
 
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
@@ -40,11 +50,18 @@ import software.amazon.awssdk.services.s3.model.S3Object;
  */
 public class AWSV2SourceClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AWSV2SourceClient.class);
     private final S3SourceConfig s3SourceConfig;
     private final S3Client s3Client;
     private final String bucketName;
+    /**
+     * Adding a thread executor for use with s3 listObjectsV2 api that will look ahead And already be retrieving new
+     * data before we come back for more data.
+     */
+    public final ExecutorService lookAheadExecutorPool = Executors.newSingleThreadExecutor();
 
     private Predicate<S3Object> filterPredicate = s3Object -> s3Object.size() > 0;
+    private Future<ListObjectsV2Response> singleFuture;
 
     /**
      * @param s3SourceConfig
@@ -75,7 +92,7 @@ public class AWSV2SourceClient {
      *            the beginning key, or {@code null} to start at the beginning.
      * @return a Stream of S3Objects for the current state of the S3 storage.
      */
-    public Stream<S3Object> getS3ObjectStream(final String startToken) {
+    public Stream<S3Object> getS3ObjectStream(final String startToken, final RingBuffer<String> ringbuffer) {
         final ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .maxKeys(s3SourceConfig.getFetchPageSize())
@@ -85,17 +102,60 @@ public class AWSV2SourceClient {
 
         return Stream.iterate(s3Client.listObjectsV2(request), Objects::nonNull, response -> {
             // This is called every time next() is called on the iterator.
-            if (response.isTruncated()) {
-                return s3Client.listObjectsV2(ListObjectsV2Request.builder()
-                        .bucket(bucketName)
-                        .maxKeys(s3SourceConfig.getFetchPageSize())
-                        .continuationToken(response.nextContinuationToken())
-                        .build());
-            } else {
-                return null;
-            }
+            if (response.isTruncated() && singleFuture == null) {
+                final ListObjectsV2Response resp1 = getListObjectsV2Response(response, bucketName,
+                        s3SourceConfig.getFetchPageSize());
+                return getResponse(response, resp1);
+            } else if (singleFuture != null) {
+                awaitFutureCompletion();
+                if (singleFuture.isCancelled()) {
+                    LOGGER.warn("The greedy look ahead was cancelled");
+                    return null;
+                }
 
-        }).flatMap(response -> response.contents().stream().filter(filterPredicate));
+                try {
+                    final ListObjectsV2Response futureResponse = singleFuture.get();
+                    return getResponse(response, futureResponse);
+                } catch (InterruptedException | ExecutionException e) {
+                    LOGGER.error("Exception returned when using greedy look ahead", e);
+                    return null;
+                }
+            }
+            return null;
+
+        })
+                .flatMap(response -> response.contents()
+                        .stream()
+                        .filter(filterPredicate)
+                        .filter(s3Object -> !ringbuffer.contains(s3Object.key())));
+    }
+
+    private void awaitFutureCompletion() {
+        while (!singleFuture.isDone() && !singleFuture.isCancelled()) {
+            try {
+                Thread.sleep(Duration.ofMillis(100));
+            } catch (InterruptedException e) {
+                // Do nothing
+            }
+        }
+    }
+
+    private @NonNull ListObjectsV2Response getResponse(final ListObjectsV2Response response,
+            final ListObjectsV2Response futureResponse) {
+        if (futureResponse.isTruncated()) {
+            singleFuture = lookAheadExecutorPool
+                    .submit(() -> getListObjectsV2Response(response, bucketName, s3SourceConfig.getFetchPageSize()));
+        }
+        return futureResponse;
+    }
+
+    private ListObjectsV2Response getListObjectsV2Response(final ListObjectsV2Response response,
+            final String bucketName, final int pageSize) {
+        return s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                .bucket(bucketName)
+                .maxKeys(pageSize)
+                .continuationToken(response.nextContinuationToken())
+                .build());
     }
 
     /**
@@ -105,8 +165,8 @@ public class AWSV2SourceClient {
      *            the beginning key, or {@code null} to start at the beginning.
      * @return an Iterator on the keys of the current S3Objects.
      */
-    public Iterator<String> getListOfObjectKeys(final String startToken) {
-        return getS3ObjectStream(startToken).map(S3Object::key).iterator();
+    public Iterator<String> getListOfObjectKeys(final String startToken, final RingBuffer<String> ringBuffer) {
+        return getS3ObjectStream(startToken, ringBuffer).map(S3Object::key).iterator();
     }
 
     public IOSupplier<InputStream> getObject(final String objectKey) {
@@ -117,6 +177,7 @@ public class AWSV2SourceClient {
 
     public void shutdown() {
         s3Client.close();
+        lookAheadExecutorPool.shutdownNow();
     }
 
     public void addPredicate(final Predicate<S3Object> objectPredicate) {

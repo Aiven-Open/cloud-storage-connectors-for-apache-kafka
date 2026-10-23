@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import io.aiven.commons.collections.RingBuffer;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
 import io.aiven.kafka.connect.s3.source.config.S3SourceConfig;
@@ -65,7 +66,7 @@ class AWSV2SourceClientTest {
         final ListObjectsV2Response listObjectsV2Response = createListObjectsV2Response(Collections.emptyList(), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Response);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null, new RingBuffer<>(100));
         assertThat(summaries).isExhausted();
     }
 
@@ -84,7 +85,7 @@ class AWSV2SourceClientTest {
         final ListObjectsV2Response listObjectsV2Response = getListObjectsV2Response();
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Response);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null, new RingBuffer<>(100));
 
         assertThat(summaries.next()).isNotBlank();
         assertThat(summaries.next()).isNotBlank();
@@ -104,7 +105,7 @@ class AWSV2SourceClientTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null, new RingBuffer<>(100));
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
         assertThat(summaries.next()).isNotNull();
         assertThat(summaries.next()).isNotNull();
@@ -126,7 +127,7 @@ class AWSV2SourceClientTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null);
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(null, new RingBuffer<>(100));
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
 
         assertThat(summaries.next()).isNotNull();
@@ -158,7 +159,7 @@ class AWSV2SourceClientTest {
 
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(firstResult).thenReturn(secondResult);
 
-        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(startAfter);
+        final Iterator<String> summaries = awsv2SourceClient.getListOfObjectKeys(startAfter, new RingBuffer<>(100));
         verify(s3Client, times(1)).listObjectsV2(any(ListObjectsV2Request.class));
 
         assertThat(summaries.next()).isNotNull();
@@ -196,7 +197,7 @@ class AWSV2SourceClientTest {
                 Collections.singletonList(objectSummary), null);
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listObjectsV2Result);
 
-        return awsv2SourceClient.getListOfObjectKeys(null);
+        return awsv2SourceClient.getListOfObjectKeys(null, new RingBuffer<>(100));
     }
 
     private void initializeWithTaskConfigs() {

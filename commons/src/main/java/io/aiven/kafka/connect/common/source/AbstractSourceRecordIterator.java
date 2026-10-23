@@ -379,4 +379,14 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
             }
         }
     }
+
+    /**
+     * Returns a defensive Copy of the ring buffer
+     *
+     * @return a defensive copy of the ring buffer
+     */
+    protected RingBuffer<K> getRingBuffer() {
+        // TODO not defensive copy change this
+        return ringBuffer;
+    }
 }

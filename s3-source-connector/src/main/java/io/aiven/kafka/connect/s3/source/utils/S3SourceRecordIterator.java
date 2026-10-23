@@ -68,7 +68,7 @@ public final class S3SourceRecordIterator
 
     @Override
     protected Stream<S3Object> getNativeItemStream(final String offset) {
-        return sourceClient.getS3ObjectStream(offset);
+        return sourceClient.getS3ObjectStream(offset, getRingBuffer());
     }
 
     @Override
