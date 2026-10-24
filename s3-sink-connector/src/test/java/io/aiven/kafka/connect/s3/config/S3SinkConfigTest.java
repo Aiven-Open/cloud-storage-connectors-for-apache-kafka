@@ -197,7 +197,7 @@ final class S3SinkConfigTest {
                 "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMinPartSizeProps)).isInstanceOf(ConfigException.class)
                 .hasMessage(
-                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Part size must be at least 5242880 5(MB)");
+                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Part size must be greater than 0");
     }
 
     @Test

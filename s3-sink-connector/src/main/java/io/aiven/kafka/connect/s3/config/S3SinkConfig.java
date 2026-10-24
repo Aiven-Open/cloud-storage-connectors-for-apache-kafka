@@ -104,9 +104,8 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
                             throw new ConfigException(name, null, "Part size must be non-null");
                         }
                         final var number = (Number) value;
-                        if (number.longValue() < S3OutputStream.DEFAULT_PART_SIZE) {
-                            throw new ConfigException(name, value,
-                                    "Part size must be at least " + S3OutputStream.DEFAULT_PART_SIZE + " 5(MB)");
+                        if (number.longValue() <= 0) {
+                            throw new ConfigException(name, value, "Part size must be greater than 0");
                         }
                         if (number.longValue() > MAX_BUFFER_SIZE) {
                             throw new ConfigException(name, value,

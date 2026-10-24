@@ -75,7 +75,7 @@ public final class S3SinkTask extends SinkTask {
     private long lastWriteMs;
     private boolean isOneRecordPerFile;
 
-    private long s3WriteBufferSizeBytesPerTask; // 5 MiB by default
+    private static final long S3_WRITE_BUFFER_SIZE_BYTES_PER_TASK = 60 * 1024 * 1024L; // 60 MiB
     private static final long S3_WRITE_INTERVAL_MS = 10_000L; // 10 seconds
 
     S3ClientFactory s3ClientFactory = new S3ClientFactory();
@@ -100,7 +100,6 @@ public final class S3SinkTask extends SinkTask {
     public void start(final Map<String, String> props) {
         Objects.requireNonNull(props, "props hasn't been set");
         config = new S3SinkConfig(props);
-        s3WriteBufferSizeBytesPerTask = config.getAwsS3PartSize();
         this.topicPartitionManager = new TopicPartitionManager();
         this.recordGrouper = RecordGrouperFactory.newRecordGrouper(config);
         s3Client = s3ClientFactory.createAmazonS3Client(config);
@@ -141,9 +140,9 @@ public final class S3SinkTask extends SinkTask {
         // check if we should pause topics
         checkRecordSize();
         // Trigger write to S3 if the buffer size threshold is reached or the time interval has passed.
-        if (currentBufferedBytes >= s3WriteBufferSizeBytesPerTask
+        if (currentBufferedBytes >= S3_WRITE_BUFFER_SIZE_BYTES_PER_TASK
                 || clock.millis() - lastWriteMs >= S3_WRITE_INTERVAL_MS) {
-            if (currentBufferedBytes >= s3WriteBufferSizeBytesPerTask) {
+            if (currentBufferedBytes >= S3_WRITE_BUFFER_SIZE_BYTES_PER_TASK) {
                 LOGGER.debug("S3 write buffer size of {} bytes reached. Writing buffered records to S3.",
                         currentBufferedBytes);
             } else {
@@ -317,11 +316,11 @@ public final class S3SinkTask extends SinkTask {
     // really have no choice but to wait for the framework to call a method on this task that implies
     // that it's safe to pause or resume partitions on the consumer.
     private void checkRecordSize() {
-        LOGGER.debug("Record soft limit: {} bytes, current record size: {} bytes", s3WriteBufferSizeBytesPerTask,
+        LOGGER.debug("Record soft limit: {} bytes, current record size: {} bytes", S3_WRITE_BUFFER_SIZE_BYTES_PER_TASK,
                 currentBufferedBytes);
-        if (currentBufferedBytes > s3WriteBufferSizeBytesPerTask) {
+        if (currentBufferedBytes > S3_WRITE_BUFFER_SIZE_BYTES_PER_TASK) {
             topicPartitionManager.pauseAll();
-        } else if (currentBufferedBytes <= s3WriteBufferSizeBytesPerTask / 2) {
+        } else if (currentBufferedBytes <= S3_WRITE_BUFFER_SIZE_BYTES_PER_TASK / 2) {
             // resume only if there is a reasonable chance we won't immediately have to pause again.
             topicPartitionManager.resumeAll();
         }
