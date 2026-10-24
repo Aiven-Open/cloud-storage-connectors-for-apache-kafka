@@ -17,7 +17,6 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import java.io.InputStream;
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
@@ -133,7 +132,7 @@ public class AWSV2SourceClient {
     private void awaitFutureCompletion() {
         while (!singleFuture.isDone() && !singleFuture.isCancelled()) {
             try {
-                Thread.sleep(Duration.ofMillis(100));
+                Thread.sleep(100L);
             } catch (InterruptedException e) {
                 // Do nothing
             }
