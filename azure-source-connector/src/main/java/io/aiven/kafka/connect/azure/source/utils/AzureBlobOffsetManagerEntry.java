@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.azure.source.utils;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,7 +90,12 @@ public final class AzureBlobOffsetManagerEntry
      * @return a new instance of OffsetManagerKey
      */
     public static OffsetManager.OffsetManagerKey asKey(final String bucket, final String blobName) {
-        return () -> Map.of(CONTAINER, bucket, BLOB_NAME, blobName);
+        return () -> {
+            final Map<String, Object> map = new LinkedHashMap<>();
+            map.put(CONTAINER, bucket);
+            map.put(BLOB_NAME, blobName);
+            return map;
+        };
     }
 
     /**
@@ -198,7 +204,12 @@ public final class AzureBlobOffsetManagerEntry
      */
     @Override
     public OffsetManager.OffsetManagerKey getManagerKey() {
-        return () -> Map.of(CONTAINER, container, BLOB_NAME, blobName);
+        return () -> {
+            final Map<String, Object> map = new LinkedHashMap<>();
+            map.put(CONTAINER, container);
+            map.put(BLOB_NAME, blobName);
+            return map;
+        };
     }
 
     @Override
