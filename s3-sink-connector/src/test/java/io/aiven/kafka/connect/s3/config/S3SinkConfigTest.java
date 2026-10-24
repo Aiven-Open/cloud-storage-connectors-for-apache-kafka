@@ -37,6 +37,7 @@ import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
 import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
+import io.aiven.kafka.connect.s3.S3OutputStream;
 
 import com.google.common.collect.Maps;
 import org.junit.jupiter.api.Test;
@@ -87,7 +88,7 @@ final class S3SinkConfigTest {
                 new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE),
                 new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE));
         assertThat(conf.getFormatType()).isEqualTo(FormatType.forName("csv"));
-        assertThat(conf.getAwsS3PartSize()).isEqualTo(S3SinkConfig.DEFAULT_PART_SIZE);
+        assertThat(conf.getAwsS3PartSize()).isEqualTo(S3OutputStream.DEFAULT_PART_SIZE);
         assertThat(conf.getKafkaRetryBackoffMs()).isNull();
         assertThat(conf.getS3RetryBackoffDelayMs()).isEqualTo(S3SinkConfig.AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT);
         assertThat(conf.getS3RetryBackoffMaxDelayMs())
