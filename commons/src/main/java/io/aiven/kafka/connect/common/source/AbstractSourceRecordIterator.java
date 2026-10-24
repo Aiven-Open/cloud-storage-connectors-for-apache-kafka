@@ -355,7 +355,11 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
                 offsetManagerEntry = offsetManager
                         .getEntry(offsetManagerEntry.getManagerKey(), offsetManagerEntry::fromProperties)
                         .orElse(offsetManagerEntry);
+                if (!outer.hasNext()) {
+                    offsetManagerEntry.setComplete();
+                }
                 sourceRecord.setOffsetManagerEntry(offsetManagerEntry);
+
                 return Optional.of(sourceRecord);
             }
             return Optional.empty();
@@ -388,5 +392,9 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
     protected RingBuffer<K> getRingBuffer() {
         // TODO not defensive copy change this
         return ringBuffer;
+    }
+
+    protected boolean isNativeKeyProcessed(final K nativeKey) {
+        return ringBuffer.contains(nativeKey);
     }
 }
