@@ -203,6 +203,7 @@ class AvroParquetIntegrationTest extends AbstractIntegrationTest<String, Generic
         final Map<String, String> connectorConfig = awsSpecificConfig(basicConnectorConfig(compression), topicName);
         connectorConfig.put("format.output.fields", "value");
         connectorConfig.put("format.output.fields.value.encoding", "none");
+        connectorConfig.put("aws.s3.part.size.bytes", "5242880");
         createConnector(connectorConfig);
 
         final Schema valueSchema = SchemaBuilder.record("value")
