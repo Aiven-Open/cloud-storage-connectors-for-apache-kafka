@@ -223,7 +223,15 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
 
     @Override
     final public T next() {
-        return outer.next();
+        // retrieve the next transformed record.
+        final T result = outer.next();
+        // if it was the last record then set the entry as complete.
+        if (!outer.hasNext()) {
+            final O ome = result.getOffsetManagerEntry();
+            ome.setComplete();
+            result.setOffsetManagerEntry(ome);
+        }
+        return result;
     }
 
     @Override
@@ -365,9 +373,6 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
                             offsetManagerEntry.isComplete());
                     return Optional.empty();
                 }
-                if (!outer.hasNext()) {
-                    offsetManagerEntry.setComplete();
-                }
                 sourceRecord.setOffsetManagerEntry(offsetManagerEntry);
 
                 return Optional.of(sourceRecord);
@@ -395,13 +400,10 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
     }
 
     /**
-     * Returns a defensive Copy of the ring buffer
-     *
-     * @return a defensive copy of the ring buffer
+     * Checks if an Object K has already been processed and added to the ringBuffer
      */
-    protected RingBuffer<K> getRingBuffer() {
-        // TODO not defensive copy change this
-        return ringBuffer;
+    protected Predicate<K> isAlreadyProcessed() {
+        return ringBuffer::contains;
     }
 
     /**
