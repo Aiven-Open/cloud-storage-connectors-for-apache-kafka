@@ -31,8 +31,11 @@ import io.aiven.kafka.connect.common.output.SinkRecordConverter;
 
 import io.confluent.connect.avro.AvroData;
 import io.confluent.connect.avro.AvroDataConfig;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.hadoop.ParquetFileWriter;
+import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.io.OutputFile;
 import org.apache.parquet.io.PositionOutputStream;
 import org.slf4j.Logger;
@@ -46,6 +49,10 @@ public final class ParquetOutputWriter extends OutputWriter {
 
     private final ParquetSchemaBuilder parquetSchemaBuilder;
 
+    private Schema parquetSchema;
+
+    private ParquetWriter<GenericRecord> parquetWriter;
+
     public ParquetOutputWriter(final Collection<OutputField> fields, final OutputStream out,
             final Map<String, String> externalConfig, final boolean envelopeEnabled) {
         super(new ParquetPositionOutputStream(out), new OutputStreamWriterStub(), externalConfig);
@@ -56,25 +63,39 @@ public final class ParquetOutputWriter extends OutputWriter {
 
     @Override
     public void writeRecords(final Collection<SinkRecord> sinkRecords) throws IOException {
-        final var parquetConfig = new ParquetConfig(externalConfiguration);
-        final var parquetSchema = parquetSchemaBuilder.buildSchema(sinkRecords.iterator().next());
-        LOGGER.debug("Record schema is: {}", parquetSchema);
-        try (var parquetWriter = AvroParquetWriter.builder(new ParquetOutputFile())
-                .withSchema(parquetSchema)
-                .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
-                .withDictionaryEncoding(true)
-                .withConf(parquetConfig.parquetConfiguration())
-                .withCompressionCodec(parquetConfig.compressionCodecName())
-                .build()) {
-            for (final var record : sinkRecords) {
-                parquetWriter.write(sinkRecordConverter.convert(record, parquetSchema));
-            }
+        if (parquetWriter == null) {
+            // One Parquet file per output stream: the writer stays open across calls and writes the footer on close.
+            // Parquet and Avro record groupers start a new file on a schema change, so one schema fits the file.
+            final var parquetConfig = new ParquetConfig(externalConfiguration);
+            parquetSchema = parquetSchemaBuilder.buildSchema(sinkRecords.iterator().next());
+            LOGGER.debug("Record schema is: {}", parquetSchema);
+            parquetWriter = AvroParquetWriter.<GenericRecord>builder(new ParquetOutputFile())
+                    .withSchema(parquetSchema)
+                    .withWriteMode(ParquetFileWriter.Mode.OVERWRITE)
+                    .withDictionaryEncoding(true)
+                    .withConf(parquetConfig.parquetConfiguration())
+                    .withCompressionCodec(parquetConfig.compressionCodecName())
+                    .build();
+        }
+        for (final var record : sinkRecords) {
+            parquetWriter.write(sinkRecordConverter.convert(record, parquetSchema));
         }
     }
 
     @Override
     public void writeRecord(final SinkRecord record) throws IOException {
         this.writeRecords(List.of(record));
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            if (parquetWriter != null) {
+                parquetWriter.close();
+            }
+        } finally {
+            super.close();
+        }
     }
 
     private static final class OutputStreamWriterStub implements OutputStreamWriter {

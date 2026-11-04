@@ -87,7 +87,7 @@ dependencies {
   compileOnly(apache.kafka.connect.runtime)
 
   implementation(project(":commons"))
-  implementation("com.google.cloud:google-cloud-storage:2.72.0")
+  implementation("com.google.cloud:google-cloud-storage:2.76.0")
   implementation(tools.spotbugs.annotations)
   implementation(logginglibs.slf4j)
   implementation("io.aiven.commons:google-utils:1.1.0")
@@ -105,7 +105,7 @@ dependencies {
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
   testImplementation(apache.commons.io)
-  testImplementation("com.google.cloud:google-cloud-nio:0.136.0")
+  testImplementation("com.google.cloud:google-cloud-nio:0.140.0")
 
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
