@@ -83,6 +83,7 @@ dependencies {
 
   testImplementation(apache.commons.io)
   testImplementation(testFixtures(project(":commons")))
+  testImplementation(apache.avro)
   testImplementation(compressionlibs.snappy)
   testImplementation(compressionlibs.zstd.jni)
   testImplementation(project(":s3-commons"))

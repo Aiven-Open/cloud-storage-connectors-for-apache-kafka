@@ -189,6 +189,26 @@ final class S3OutputStreamTest {
     }
 
     @Test
+    void failsToWriteAfterClose() throws IOException {
+        when(mockedAmazonS3.createMultipartUpload(any(CreateMultipartUploadRequest.class)))
+                .thenReturn(createMultipartUploadResult());
+        when(mockedAmazonS3.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
+                .thenReturn(newUploadPartResponse("SOME_ETAG"));
+        when(mockedAmazonS3.completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
+                .thenReturn(CompleteMultipartUploadResponse.builder().build());
+
+        final var out = new S3OutputStream(BUCKET_NAME, FILE_KEY, 10, mockedAmazonS3); // NOPMD CloseResource
+        out.write(1);
+        out.close();
+
+        assertThatThrownBy(() -> out.write(1)).isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> out.write(new byte[] { 1, 2, 3 }, 0, 3)).isInstanceOf(IOException.class);
+
+        verify(mockedAmazonS3).createMultipartUpload(any(CreateMultipartUploadRequest.class));
+        verify(mockedAmazonS3).completeMultipartUpload(any(CompleteMultipartUploadRequest.class));
+    }
+
+    @Test
     void writesOneByte() throws IOException {
         when(mockedAmazonS3.createMultipartUpload(any(CreateMultipartUploadRequest.class)))
                 .thenReturn(createMultipartUploadResult());
