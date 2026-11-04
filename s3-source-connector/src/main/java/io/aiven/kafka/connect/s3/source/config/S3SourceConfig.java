@@ -133,6 +133,10 @@ final public class S3SourceConfig extends SourceCommonConfig {
         return s3ConfigFragment.getFetchPageSize();
     }
 
+    public boolean useSmartPrefix() {
+        return s3ConfigFragment.useSmartPRefix();
+    }
+
     public AwsCredentialsProvider getAwsV2Provider() {
         return awsCredentialsProviderFactory.getAwsV2Provider(s3ConfigFragment);
     }

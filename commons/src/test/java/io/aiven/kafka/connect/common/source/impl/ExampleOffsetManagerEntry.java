@@ -102,9 +102,26 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
         recordCount++;
     }
 
+    /**
+     * Set the record to be completed
+     */
+    @Override
+    public void setComplete() {
+        // TODO do nothing for now
+    }
+
     @Override
     public long getRecordCount() {
         return recordCount;
+    }
+
+    /**
+     * Set the record to be completed
+     */
+    @Override
+    public boolean isComplete() {
+        // TODO this is to be updated
+        return false;
     }
 
     @Override
