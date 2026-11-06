@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.common.source;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -224,7 +225,15 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
 
     @Override
     final public T next() {
-        return outer.next();
+        // retrieve the next transformed record.
+        final T result = outer.next();
+        // if it was the last record then set the entry as complete.
+        if (!outer.hasNext()) {
+            final O ome = result.getOffsetManagerEntry();
+            ome.setComplete();
+            result.setOffsetManagerEntry(ome);
+        }
+        return result;
     }
 
     @Override
@@ -345,6 +354,10 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
         @Override
         public Optional<T> apply(final N nativeItem) {
             final K itemName = getNativeKey(nativeItem);
+            final OffsetManager.OffsetManagerKey key = getOffsetManagerKey(itemName);
+            if (key != null) {
+                offsetManager.populateOffsetManager(List.of(key));
+            }
             final Optional<Context<K>> optionalContext = utils.process(itemName);
             if (optionalContext.isPresent() && !ringBuffer.contains(itemName)) {
                 final T sourceRecord = createSourceRecord(nativeItem);
@@ -356,6 +369,11 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
                         .getEntry(offsetManagerEntry.getManagerKey(), offsetManagerEntry::fromProperties)
                         .orElse(offsetManagerEntry);
                 sourceRecord.setOffsetManagerEntry(offsetManagerEntry);
+                if (offsetManagerEntry.isComplete()) {
+                    getLogger().debug("Skipping entry {} as entry is already marked as complete : {}", nativeItem,
+                            offsetManagerEntry.isComplete());
+                    return Optional.empty();
+                }
                 return Optional.of(sourceRecord);
             }
             return Optional.empty();

@@ -135,6 +135,14 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
      */
     abstract protected SourceCommonConfig createMockedConfig();
 
+    /**
+     * Create the offsetManager key that matches the offset entry
+     *
+     * @param key
+     *            The string value of the key that identifies the object
+     * @return OffsetManagerKey
+     */
+    abstract protected OffsetManager.OffsetManagerKey createKey(K key);
     // concrete methods.
 
     @BeforeEach
@@ -172,6 +180,83 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
         when(mockConfig.getTransformerMaxBufferSize()).thenReturn(4096);
         when(mockConfig.getSourceName()).thenReturn(filePattern);
         return mockConfig;
+    }
+
+    /**
+     * This test checks that when processing objects, it retrieves and checks the object to see if it has already been
+     * processed.
+     */
+    @Test
+    void testOffsetSetToCompleteWhenIteratorExhausted() {
+        // Create our own offsetManager for this test
+        final SourceTaskContext sourceTaskContext = mock(SourceTaskContext.class);
+        final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
+        when(offsetStorageReader.offset(anyMap())).thenReturn(Collections.emptyMap());
+        when(offsetStorageReader.offsets(anyCollection())).thenReturn(Collections.emptyMap());
+        when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
+
+        final OffsetManager<O> offsetManager = new OffsetManager<>(sourceTaskContext);
+
+        final Transformer transformer = TransformerFactory.getTransformer(InputFormat.JSONL);
+        final SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
+        when(mockConfig.getInputFormat()).thenReturn(InputFormat.JSONL);
+        when(mockConfig.getCompressionType()).thenReturn(CompressionType.NONE);
+
+        // create Multiline file for data
+        byte[] bytes;
+        bytes = JsonTestDataFixture.generateJsonRecs(3).getBytes(StandardCharsets.UTF_8);
+
+        // verify one data has one data
+        createClientMutator().reset().addObject(key, ByteBuffer.wrap(bytes)).endOfBlock().build();
+        final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
+                transformer);
+        assertThat(iterator).hasNext();
+        T nxt = iterator.next();
+        assertThat(nxt).isNotNull();
+        assertThat(nxt.getOffsetManagerEntry().isComplete()).isFalse();
+
+        assertThat(iterator).hasNext();
+        nxt = iterator.next();
+        assertThat(nxt).isNotNull();
+        assertThat(nxt.getOffsetManagerEntry().isComplete()).isFalse();
+
+        assertThat(iterator).hasNext();
+        nxt = iterator.next();
+        assertThat(nxt).isNotNull();
+        assertThat(nxt.getOffsetManagerEntry().isComplete()).isTrue();
+        assertThat(iterator).isExhausted();
+        assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
+
+    }
+
+    @Test
+    void skipAlreadyProcessedFiles() {
+        // Create our own offsetManager for this test
+        final SourceTaskContext sourceTaskContext = mock(SourceTaskContext.class);
+        final OffsetStorageReader offsetStorageReader = mock(OffsetStorageReader.class);
+        when(offsetStorageReader.offset(anyMap())).thenReturn(Map.of("recordCount", 3, "completed", true));
+        when(sourceTaskContext.offsetStorageReader()).thenReturn(offsetStorageReader);
+
+        final OffsetManager<O> offsetManager = new OffsetManager<>(sourceTaskContext);
+
+        final Transformer transformer = TransformerFactory.getTransformer(InputFormat.JSONL);
+        final SourceCommonConfig mockConfig = mockSourceConfig(FILE_PATTERN, 0, 1, null);
+        when(mockConfig.getInputFormat()).thenReturn(InputFormat.JSONL);
+        when(mockConfig.getCompressionType()).thenReturn(CompressionType.NONE);
+
+        // create Multiline file for data
+        byte[] bytes;
+        bytes = JsonTestDataFixture.generateJsonRecs(3).getBytes(StandardCharsets.UTF_8);
+
+        // verify one data has one data
+        createClientMutator().reset().addObject(key, ByteBuffer.wrap(bytes)).endOfBlock().build();
+        final AbstractSourceRecordIterator<K, N, O, T> iterator = createSourceRecordIterator(mockConfig, offsetManager,
+                transformer);
+
+        // Files are
+        assertThat(iterator).isExhausted();
+        assertThatThrownBy(iterator::next).isInstanceOf(NoSuchElementException.class);
+
     }
 
     @ParameterizedTest(name = "{index} {0}")
