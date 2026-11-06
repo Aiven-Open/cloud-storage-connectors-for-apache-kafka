@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.s3.source.utils;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,10 +33,11 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     public static final String OBJECT_KEY = "objectKey";
     public static final String RECORD_COUNT = "recordCount";
 
+    public static final String COMPLETED = "completed";
     /**
      * THe list of Keys that may not be set via {@link #setProperty(String, Object)}.
      */
-    static final List<String> RESTRICTED_KEYS = List.of(RECORD_COUNT);
+    static final List<String> RESTRICTED_KEYS = List.of(RECORD_COUNT, COMPLETED);
     /** The data map that stores all the values */
     private final Map<String, Object> data;
     /** THe record count for the data map. Extracted here because it is used/updated frequently during processing */
@@ -43,6 +45,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
 
     private final String bucket;
     private final String objectKey;
+    private boolean completed;
 
     /**
      * Construct the S3OffsetManagerEntry.
@@ -72,6 +75,10 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         if (recordCountProperty instanceof Number) {
             recordCount = ((Number) recordCountProperty).longValue();
         }
+        final Object completedProperty = data.computeIfAbsent(COMPLETED, b -> false);
+        if (completedProperty instanceof Boolean) {
+            completed = (Boolean) completedProperty;
+        }
     }
 
     /**
@@ -83,7 +90,12 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      * @return a new instance of OffsetManagerKey
      */
     public static OffsetManager.OffsetManagerKey asKey(final String bucket, final String s3ObjectKey) {
-        return () -> Map.of(BUCKET, bucket, OBJECT_KEY, s3ObjectKey);
+        return () -> {
+            final Map<String, Object> map = new LinkedHashMap<>();
+            map.put(BUCKET, bucket);
+            map.put(OBJECT_KEY, s3ObjectKey);
+            return map;
+        };
     }
 
     /**
@@ -108,6 +120,9 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         if (RECORD_COUNT.equals(key)) {
             return recordCount;
         }
+        if (COMPLETED.equals(key)) {
+            return completed;
+        }
         return data.get(key);
     }
 
@@ -125,6 +140,11 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
         recordCount++;
     }
 
+    @Override
+    public void setComplete() {
+        completed = true;
+    }
+
     /**
      * Gets the umber of records extracted from data returned from S3.
      *
@@ -133,6 +153,16 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     @Override
     public long getRecordCount() {
         return recordCount;
+    }
+
+    /**
+     * Gets the umber of records extracted from data returned from S3.
+     *
+     * @return the umber of records extracted from data returned from S3.
+     */
+    @Override
+    public boolean isComplete() {
+        return completed;
     }
 
     /**
@@ -161,6 +191,7 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
     public Map<String, Object> getProperties() {
         final Map<String, Object> result = new HashMap<>(data);
         result.put(RECORD_COUNT, recordCount);
+        result.put(COMPLETED, completed);
         return result;
     }
     /**
@@ -170,7 +201,12 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
      */
     @Override
     public OffsetManager.OffsetManagerKey getManagerKey() {
-        return () -> Map.of(BUCKET, bucket, OBJECT_KEY, objectKey);
+        return () -> {
+            final Map<String, Object> map = new LinkedHashMap<>();
+            map.put(BUCKET, bucket);
+            map.put(OBJECT_KEY, objectKey);
+            return map;
+        };
     }
 
     @Override
@@ -196,6 +232,9 @@ public final class S3OffsetManagerEntry implements OffsetManager.OffsetManagerEn
             result = getKey().compareTo(other.getKey());
             if (result == 0) {
                 result = Long.compare(getRecordCount(), other.getRecordCount());
+            }
+            if (result == 0) {
+                result = Boolean.compare(isComplete(), other.isComplete());
             }
         }
         return result;

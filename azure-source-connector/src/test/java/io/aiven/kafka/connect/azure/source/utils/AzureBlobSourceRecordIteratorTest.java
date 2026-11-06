@@ -37,7 +37,8 @@ import reactor.core.publisher.Flux;
 final public class AzureBlobSourceRecordIteratorTest
         extends
             AbstractSourceRecordIteratorTest<String, BlobItem, AzureBlobOffsetManagerEntry, AzureBlobSourceRecord> { // NOPMD
-    // TestClassWithoutTestCases
+                                                                                                                     // TestClassWithoutTestCases
+    public static final String TEST_CONTAINER = "container1";
 
     private AzureBlobClient azureBlobClient;
 
@@ -60,9 +61,14 @@ final public class AzureBlobSourceRecordIteratorTest
     }
 
     @Override
+    protected OffsetManager.OffsetManagerKey createKey(final String key) {
+        return AzureBlobOffsetManagerEntry.asKey(TEST_CONTAINER, key);
+    }
+
+    @Override
     protected SourceCommonConfig createMockedConfig() {
         final AzureBlobSourceConfig config = mock(AzureBlobSourceConfig.class);
-        when(config.getAzureContainerName()).thenReturn("container1");
+        when(config.getAzureContainerName()).thenReturn(TEST_CONTAINER);
         return config;
     }
 
