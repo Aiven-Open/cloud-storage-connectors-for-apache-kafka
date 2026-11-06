@@ -65,6 +65,18 @@ public class ExampleSourceRecordIteratorTest
         return mock(SourceCommonConfig.class);
     }
 
+    /**
+     * Create the offsetManager key that matches the offset entry
+     *
+     * @param key
+     *            The string value of the key that identifies the object
+     * @return OffsetManagerKey
+     */
+    @Override
+    protected OffsetManager.OffsetManagerKey createKey(final String key) {
+        return ExampleOffsetManagerEntry.asKey("GROUPING_KEY", key);
+    }
+
     @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "stores mutable fields in offset manager to be reviewed before release")
     public class Mutator extends ClientMutator<ExampleNativeObject, String, Mutator> {
 

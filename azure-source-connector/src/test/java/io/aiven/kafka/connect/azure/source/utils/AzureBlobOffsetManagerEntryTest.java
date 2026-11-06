@@ -108,4 +108,21 @@ final class AzureBlobOffsetManagerEntryTest {
         assertThat(other.getProperty("random_entry")).isEqualTo(5L);
 
     }
+
+    @Test
+    void testSetAndGetCompleted() {
+        final AzureBlobOffsetManagerEntry entry = new AzureBlobOffsetManagerEntry(TEST_CONTAINER, BLOB_NAME);
+        assertThat(entry.getRecordCount()).isEqualTo(0L);
+        assertThat(entry.getProperty("random_entry")).isNull();
+        assertThat(entry.isComplete()).isFalse();
+
+        entry.setProperty("random_entry", 5L);
+        entry.incrementRecordCount();
+        entry.setComplete();
+
+        assertThat(entry.getRecordCount()).isEqualTo(1L);
+        assertThat(entry.getProperty("random_entry")).isEqualTo(5L);
+        assertThat(entry.isComplete()).isTrue();
+
+    }
 }
