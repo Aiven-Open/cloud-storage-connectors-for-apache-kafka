@@ -26,6 +26,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Setup Java SDK
+        uses: actions/setup-java@v4
+        with:
+           java-version: 17
+           distribution: 'temurin'
+
       - name: Checkout
         uses: actions/checkout@v4
 
