@@ -111,7 +111,7 @@ public class S3OutputStream extends OutputStream {
 
         final var initialRequest = client.createMultipartUpload(CreateMultipartUploadRequest.builder()
                 .bucket(bucketName)
-                .sseCustomerAlgorithm(this.serverSideEncryptionAlgorithm)
+                .serverSideEncryption(this.serverSideEncryptionAlgorithm)
                 .key(key)
                 .build());
         logger.debug("Upload ID: {}", initialRequest.uploadId());

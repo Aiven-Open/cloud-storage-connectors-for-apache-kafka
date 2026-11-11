@@ -32,6 +32,8 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -56,8 +58,6 @@ final class S3OutputStreamTest {
     static final String FILE_KEY = "some_key";
 
     static final String UPLOAD_ID = "some_upload_id";
-
-    static final String SSEA_NAME = "AES256";
 
     @Mock
     S3Client mockedAmazonS3;
@@ -143,8 +143,9 @@ final class S3OutputStreamTest {
         assertAbortMultipartUploadRequest(abortMultipartUploadRequestCaptor.getValue());
     }
 
-    @Test
-    void sendsServerSideEncryptionAlgorithmNameWhenPassed() throws IOException {
+    @ParameterizedTest
+    @ValueSource(strings = { "AES256", "aws:kms", "aws:kms:dsse" })
+    void sendsServerSideEncryptionAlgorithmNameWhenPassed(final String algorithm) throws IOException {
         when(mockedAmazonS3.createMultipartUpload(any(CreateMultipartUploadRequest.class)))
                 .thenReturn(createMultipartUploadResult());
         when(mockedAmazonS3.uploadPart(any(UploadPartRequest.class) ,any(RequestBody.class)))
@@ -153,7 +154,7 @@ final class S3OutputStreamTest {
         when(mockedAmazonS3.completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
                 .thenReturn(CompleteMultipartUploadResponse.builder().build());
 
-        try (var out = new S3OutputStream(BUCKET_NAME, FILE_KEY, 100, mockedAmazonS3, SSEA_NAME)) {
+        try (var out = new S3OutputStream(BUCKET_NAME, FILE_KEY, 100, mockedAmazonS3, algorithm)) {
             out.write(1);
         }
 
@@ -161,7 +162,30 @@ final class S3OutputStreamTest {
 
         final var initiateMultipartUploadRequest = createMultipartUploadRequestCaptor.getValue();
 
-        assertThat(initiateMultipartUploadRequest.sseCustomerAlgorithm()).isEqualTo(SSEA_NAME);
+        assertThat(initiateMultipartUploadRequest.serverSideEncryptionAsString()).isEqualTo(algorithm);
+        assertThat(initiateMultipartUploadRequest.sseCustomerAlgorithm()).isNull();
+    }
+
+    @Test
+    void sendsNoServerSideEncryptionHeadersWhenAlgorithmIsNotSet() throws IOException {
+        when(mockedAmazonS3.createMultipartUpload(any(CreateMultipartUploadRequest.class)))
+                .thenReturn(createMultipartUploadResult());
+        when(mockedAmazonS3.uploadPart(any(UploadPartRequest.class) ,any(RequestBody.class)))
+                .thenReturn(newUploadPartResponse( "SOME_ETAG"));
+
+        when(mockedAmazonS3.completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
+                .thenReturn(CompleteMultipartUploadResponse.builder().build());
+
+        try (var out = new S3OutputStream(BUCKET_NAME, FILE_KEY, 100, mockedAmazonS3)) {
+            out.write(1);
+        }
+
+        verify(mockedAmazonS3).createMultipartUpload(createMultipartUploadRequestCaptor.capture());
+
+        final var initiateMultipartUploadRequest = createMultipartUploadRequestCaptor.getValue();
+
+        assertThat(initiateMultipartUploadRequest.serverSideEncryptionAsString()).isNull();
+        assertThat(initiateMultipartUploadRequest.sseCustomerAlgorithm()).isNull();
     }
 
     @Test
