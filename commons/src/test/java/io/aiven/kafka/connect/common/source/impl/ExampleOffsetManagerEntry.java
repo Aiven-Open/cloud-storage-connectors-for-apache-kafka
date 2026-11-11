@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.source.impl;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.aiven.kafka.connect.common.source.OffsetManager;
@@ -34,6 +35,8 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
     private static final String KEY = "key";
     private static final String GROUPING_KEY = "groupingKey";
     private static final String RECORD_COUNT = "recordCount";
+    public static final String COMPLETED = "completed";
+    private boolean completed;
 
     /**
      * Constructor.
@@ -48,6 +51,10 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
         this();
         data.put(KEY, nativeKey);
         data.put(GROUPING_KEY, grouping);
+        final Object completedProperty = data.computeIfAbsent(COMPLETED, b -> false);
+        if (completedProperty instanceof Boolean) {
+            completed = (Boolean) completedProperty;
+        }
     }
 
     /**
@@ -69,6 +76,9 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
         if (data.containsKey(RECORD_COUNT)) {
             recordCount = getInt(RECORD_COUNT);
         }
+        if (data.containsKey(COMPLETED)) {
+            completed = (boolean) data.get(COMPLETED);
+        }
     }
 
     @Override
@@ -79,7 +89,25 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
     @Override
     public Map<String, Object> getProperties() {
         data.put(RECORD_COUNT, recordCount);
+        data.put(COMPLETED, completed);
         return data;
+    }
+
+    /**
+     *
+     * @param groupingKey
+     *            the bucket we are using.
+     * @param key
+     *            the S3Object key.
+     * @return a new instance of OffsetManagerKey
+     */
+    public static OffsetManager.OffsetManagerKey asKey(final String groupingKey, final String key) {
+        return () -> {
+            final Map<String, Object> map = new LinkedHashMap<>();
+            map.put(GROUPING_KEY, groupingKey);
+            map.put(KEY, key);
+            return map;
+        };
     }
 
     @Override
@@ -102,9 +130,25 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
         recordCount++;
     }
 
+    /**
+     * Set the record to be completed
+     */
+    @Override
+    public void setComplete() {
+        completed = true;
+    }
+
     @Override
     public long getRecordCount() {
         return recordCount;
+    }
+
+    /**
+     * Set the record to be completed
+     */
+    @Override
+    public boolean isComplete() {
+        return completed;
     }
 
     @Override
@@ -130,6 +174,9 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
             result = ((String) getProperty(GROUPING_KEY)).compareTo((String) other.getProperty(GROUPING_KEY));
             if (result == 0) {
                 result = Long.compare(getRecordCount(), other.getRecordCount());
+            }
+            if (result == 0) {
+                result = Boolean.compare(isComplete(), other.isComplete());
             }
         }
         return result;

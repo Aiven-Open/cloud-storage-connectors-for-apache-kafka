@@ -45,6 +45,7 @@ final class S3SourceRecordIteratorTest
         extends
             AbstractSourceRecordIteratorTest<String, S3Object, S3OffsetManagerEntry, S3SourceRecord> {
 
+    public static final String TEST_BUCKET = "testBucket";
     /** The client that we build the iterator from */
     private S3Client s3Client;
 
@@ -74,9 +75,19 @@ final class S3SourceRecordIteratorTest
         // create a mocked config with the values required by the S3CSourceConfig
         final S3SourceConfig s3SourceConfig = mock(S3SourceConfig.class);
         when(s3SourceConfig.getRingBufferSize()).thenReturn(1);
-        when(s3SourceConfig.getAwsS3BucketName()).thenReturn("testBucket");
+        when(s3SourceConfig.getAwsS3BucketName()).thenReturn(TEST_BUCKET);
         when(s3SourceConfig.getFetchPageSize()).thenReturn(10);
         return s3SourceConfig;
+    }
+
+    /**
+     * Create the offsetManager key that matches the offset entry
+     *
+     * @return OffsetManagerKey
+     */
+    @Override
+    protected OffsetManager.OffsetManagerKey createKey(final String key) {
+        return S3OffsetManagerEntry.asKey(TEST_BUCKET, key);
     }
 
     /**
