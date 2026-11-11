@@ -161,7 +161,8 @@ final class S3OutputStreamTest {
 
         final var initiateMultipartUploadRequest = createMultipartUploadRequestCaptor.getValue();
 
-        assertThat(initiateMultipartUploadRequest.sseCustomerAlgorithm()).isEqualTo(SSEA_NAME);
+        assertThat(initiateMultipartUploadRequest.serverSideEncryptionAsString()).isEqualTo(SSEA_NAME);
+        assertThat(initiateMultipartUploadRequest.sseCustomerAlgorithm()).isNull();
     }
 
     @Test
