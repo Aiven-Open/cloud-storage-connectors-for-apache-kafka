@@ -385,7 +385,7 @@ public abstract class AbstractSourceRecordIteratorTest<K extends Comparable<K>, 
     }
 
     static List<Arguments> parameterizedNativeStartKey() {
-        return List.of(Arguments.of("startKeyOne", 2), Arguments.of("startKeyOne", 2), Arguments.of(null, 1));
+        return List.of(Arguments.of("startKeyOne", 1), Arguments.of("startKeyOne", 1), Arguments.of(null, 1));
     }
 
     /**

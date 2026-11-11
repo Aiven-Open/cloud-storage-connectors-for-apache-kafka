@@ -125,6 +125,7 @@ public final class S3ConfigFragment extends ConfigFragment {
     public static final String AWS_S3_RETRY_BACKOFF_MAX_DELAY_MS_CONFIG = "aws.s3.backoff.max.delay.ms";
     public static final String AWS_S3_RETRY_BACKOFF_MAX_RETRIES_CONFIG = "aws.s3.backoff.max.retries";
 
+    public static final String AWS_S3_SMART_PREFIX = "aws.s3.smart.prefix";
     public static final String FETCH_PAGE_SIZE = "aws.s3.fetch.page.size";
     /** @deprecated use SourceConfigFragment.RING_BUFFER_SIZE */
     @Deprecated
@@ -261,6 +262,10 @@ public final class S3ConfigFragment extends ConfigFragment {
         }, ConfigDef.Importance.MEDIUM,
                 "AWS S3 Fetch buffer size, this is the number of s3object keys kept in a buffer to ensure lexically older objet keys aren't skipped for processing if they are slower to upload.",
                 GROUP_AWS, ++awsGroupCounter, ConfigDef.Width.NONE, AWS_S3_FETCH_BUFFER_SIZE);
+
+        configDef.define(AWS_S3_SMART_PREFIX, ConfigDef.Type.BOOLEAN, false, null, ConfigDef.Importance.MEDIUM,
+                "AWS S3 list object client will adapt to a more restricted prefix in a bucket to improve the performance of the listing of objects.",
+                GROUP_AWS, ++awsGroupCounter, ConfigDef.Width.NONE, AWS_S3_SMART_PREFIX);
     }
 
     static void addAwsStsConfigGroup(final ConfigDef configDef) {
@@ -576,6 +581,10 @@ public final class S3ConfigFragment extends ConfigFragment {
 
     public int getFetchPageSize() {
         return cfg.getInt(FETCH_PAGE_SIZE);
+    }
+
+    public boolean useSmartPRefix() {
+        return cfg.getBoolean(AWS_S3_SMART_PREFIX);
     }
 
     /**

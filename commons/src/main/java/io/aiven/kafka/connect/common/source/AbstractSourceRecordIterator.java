@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.common.source;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -123,9 +124,7 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
         this.transformer = transformer;
         this.taskId = sourceConfig.getTaskId() % maxTasks;
         this.taskAssignment = new TaskAssignment(distributionType.getDistributionStrategy(maxTasks));
-        this.nativeStartKey = sourceConfig.getNativeStartKey() != null
-                ? parseNativeKey(sourceConfig.getNativeStartKey())
-                : null;
+        this.nativeStartKey = getNativeStartKey(sourceConfig.getNativeStartKey());
         this.fileMatching = new FileMatching(new FilePatternUtils(sourceConfig.getSourceName()));
         this.inner = Collections.emptyIterator();
         this.outer = Collections.emptyIterator();
@@ -224,7 +223,15 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
 
     @Override
     final public T next() {
-        return outer.next();
+        // retrieve the next transformed record.
+        final T result = outer.next();
+        // if it was the last record then set the entry as complete.
+        if (!outer.hasNext()) {
+            final O ome = result.getOffsetManagerEntry();
+            ome.setComplete();
+            result.setOffsetManagerEntry(ome);
+        }
+        return result;
     }
 
     @Override
@@ -345,6 +352,12 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
         @Override
         public Optional<T> apply(final N nativeItem) {
             final K itemName = getNativeKey(nativeItem);
+
+            final OffsetManager.OffsetManagerKey key = getOffsetManagerKey(itemName);
+            if (key != null) {
+                offsetManager.populateOffsetManager(List.of(key));
+            }
+
             final Optional<Context<K>> optionalContext = utils.process(itemName);
             if (optionalContext.isPresent() && !ringBuffer.contains(itemName)) {
                 final T sourceRecord = createSourceRecord(nativeItem);
@@ -355,7 +368,13 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
                 offsetManagerEntry = offsetManager
                         .getEntry(offsetManagerEntry.getManagerKey(), offsetManagerEntry::fromProperties)
                         .orElse(offsetManagerEntry);
+                if (offsetManagerEntry.isComplete()) {
+                    getLogger().debug("Skipping entry {} as entry is already marked as complete : {}", nativeItem,
+                            offsetManagerEntry.isComplete());
+                    return Optional.empty();
+                }
                 sourceRecord.setOffsetManagerEntry(offsetManagerEntry);
+
                 return Optional.of(sourceRecord);
             }
             return Optional.empty();
@@ -378,5 +397,23 @@ public abstract class AbstractSourceRecordIterator<K extends Comparable<K>, N, O
                 context.setTopic(targetTopic);
             }
         }
+    }
+
+    /**
+     * Checks if an Object K has already been processed and added to the ringBuffer
+     */
+    protected Predicate<K> isAlreadyProcessed() {
+        return ringBuffer::contains;
+    }
+
+    /**
+     * Returns the native start key on restarts to allow users to select where they want to start streaming data from.
+     *
+     * @param nativeKey
+     *            The native key used in the start-up of the connector
+     * @return the native Key
+     */
+    final protected K getNativeStartKey(final String nativeKey) {
+        return nativeKey != null ? parseNativeKey(nativeKey) : null;
     }
 }

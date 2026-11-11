@@ -59,6 +59,8 @@ public final class S3SourceRecordIterator
         super(s3SourceConfig, offsetManager, transformer, s3SourceConfig.getRingBufferSize());
         this.bucket = s3SourceConfig.getAwsS3BucketName();
         this.sourceClient = sourceClient;
+        // TODO FIX THIS to speed up removal of already processed files
+        // this.sourceClient.addPredicate( s3Object -> isAlreadyProcessed);
     }
 
     @Override

@@ -245,11 +245,21 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
         void incrementRecordCount();
 
         /**
+         * Set the record to be completed
+         */
+        void setComplete();
+
+        /**
          * Gets the current record count.
          *
          * @return The current record count.
          */
         long getRecordCount();
+
+        /**
+         * Set the record to be completed
+         */
+        boolean isComplete();
     }
 
     /**
