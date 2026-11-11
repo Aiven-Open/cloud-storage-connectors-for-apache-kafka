@@ -232,8 +232,10 @@ public final class S3ConfigFragment extends ConfigFragment {
                 ++awsGroupCounter, ConfigDef.Width.NONE, AWS_S3_ENDPOINT_CONFIG);
 
         configDef.define(AWS_S3_REGION_CONFIG, ConfigDef.Type.STRING, null, new AwsRegionValidator(),
-                ConfigDef.Importance.MEDIUM, "AWS S3 Region, e.g. us-east-1", GROUP_AWS, ++awsGroupCounter,
-                ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
+                ConfigDef.Importance.MEDIUM,
+                "AWS S3 Region, e.g. us-east-1. A region outside the AWS list is accepted when "
+                        + AWS_S3_ENDPOINT_CONFIG + " is set.",
+                GROUP_AWS, ++awsGroupCounter, ConfigDef.Width.NONE, AWS_S3_REGION_CONFIG);
 
         configDef.define(AWS_S3_PREFIX_CONFIG, ConfigDef.Type.STRING, null, new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM, "Prefix for stored objects, e.g. cluster-1/", GROUP_AWS, ++awsGroupCounter,
@@ -407,6 +409,19 @@ public final class S3ConfigFragment extends ConfigFragment {
     public void validate() {
         validateCredentials();
         validateBucket();
+        validateRegion();
+    }
+
+    /**
+     * Accepts a region outside the AWS list only together with an explicit endpoint, for S3-compatible storage that
+     * checks the signing region, such as one that accepts only ru-central-1.
+     */
+    public void validateRegion() {
+        final String name = Objects.nonNull(cfg.getString(AWS_S3_REGION_CONFIG)) ? AWS_S3_REGION_CONFIG : AWS_S3_REGION;
+        final String value = cfg.getString(name);
+        if (Objects.nonNull(value) && !AwsRegionValidator.isAwsRegion(value) && Objects.isNull(getAwsS3EndPoint())) {
+            throw new ConfigException(name, value, new AwsRegionValidator().toString());
+        }
     }
 
     public void validateCredentials() {
@@ -445,11 +460,18 @@ public final class S3ConfigFragment extends ConfigFragment {
                 .map(Region::id)
                 .collect(Collectors.joining(", "));
 
+        private static final Pattern REGION_ID = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*");
+
+        static boolean isAwsRegion(final String value) {
+            return Region.regions().stream().anyMatch(r -> r.id().equals(value));
+        }
+
         @Override
         public void ensureValid(final String name, final Object value) {
             if (Objects.nonNull(value)) {
                 final String valueStr = (String) value;
-                if (Region.regions().stream().noneMatch(r -> r.id().equals(valueStr))) {
+                // A well-formed region outside the AWS list is checked against the endpoint in validateRegion().
+                if (!isAwsRegion(valueStr) && !REGION_ID.matcher(valueStr).matches()) {
                     throw new ConfigException(name, valueStr, toString());
                 }
             }
