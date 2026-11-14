@@ -291,6 +291,7 @@ public final class S3SinkTask extends SinkTask {
             }
         }
         s3ObjectWriters.clear();
+        s3Client.close();
         recordGrouper.clear();
         bufferTracker.clearAll();
         currentBufferedBytes = 0;
