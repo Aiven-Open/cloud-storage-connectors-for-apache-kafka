@@ -19,11 +19,17 @@ package io.aiven.kafka.connect.gcs;
 import static java.util.Map.entry;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -37,6 +43,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -57,6 +65,8 @@ import io.aiven.kafka.connect.gcs.testutils.Record;
 import io.aiven.kafka.connect.gcs.testutils.Utils;
 
 import com.google.api.gax.rpc.NoHeaderProvider;
+import com.google.cloud.WriteChannel;
+import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -68,6 +78,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
+@SuppressWarnings("PMD.ExcessiveImports")
 final class GcsSinkTaskTest {
 
     private static final String TEST_BUCKET = "test-bucket";
@@ -461,6 +472,126 @@ final class GcsSinkTaskTest {
 
         task.flush(null);
         assertThat(testBucketAccessor.getBlobNames()).containsExactly("key0" + compressionType.extension());
+    }
+
+    @Test
+    void oneRecordPerFileKeepsAtMostOneWriterOpen() {
+        properties.put("file.name.template", "{{key}}");
+        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
+
+        final AtomicInteger openChannels = new AtomicInteger();
+        final AtomicInteger maxOpenChannels = new AtomicInteger();
+        final GcsSinkTask task = new GcsSinkTask(properties, channelCountingStorage(openChannels, maxOpenChannels));
+        task.put(IntStream.range(0, 10)
+                .mapToObj(i -> createRecordStringKey("topic0", 0, "key" + i, "value" + i, i, 1000 + i))
+                .collect(Collectors.toList()));
+        task.flush(null);
+
+        assertThat(testBucketAccessor.getBlobNames()).hasSize(10);
+        assertThat(maxOpenChannels.get()).isEqualTo(1);
+        assertThat(openChannels.get()).isZero();
+    }
+
+    @Test
+    void maxRecordsPerFileKeepsAtMostOneWriterOpen() {
+        properties.put(SinkCommonConfig.FILE_MAX_RECORDS, "10");
+        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, "none");
+        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
+
+        final AtomicInteger openChannels = new AtomicInteger();
+        final AtomicInteger maxOpenChannels = new AtomicInteger();
+        final MutableClock testClock = new MutableClock(Instant.now());
+        final GcsSinkTask task = new GcsSinkTask(properties, channelCountingStorage(openChannels, maxOpenChannels),
+                testClock);
+        task.initialize(mock(SinkTaskContext.class));
+
+        task.put(IntStream.range(0, 5)
+                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value0", 0, 1000))
+                .collect(Collectors.toList()));
+        testClock.advance(Duration.ofSeconds(11));
+        // Triggers an intermediate write, after which each partition continues in a new file.
+        task.put(IntStream.range(0, 5)
+                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value1", 1, 1001))
+                .collect(Collectors.toList()));
+        task.put(IntStream.range(0, 5)
+                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value2", 2, 1002))
+                .collect(Collectors.toList()));
+        task.flush(null);
+
+        assertThat(maxOpenChannels.get()).isEqualTo(1);
+        assertThat(openChannels.get()).isZero();
+        assertThat(testBucketAccessor.getBlobNames()).hasSize(10);
+        for (int p = 0; p < 5; p++) {
+            assertThat(readSplittedAndDecodedLinesFromBlob("topic0-" + p + "-0", "none", 0, 1))
+                    .containsExactly(Arrays.asList("key" + p, "value0"), Arrays.asList("key" + p, "value1"));
+            assertThat(readSplittedAndDecodedLinesFromBlob("topic0-" + p + "-2", "none", 0, 1))
+                    .containsExactly(Arrays.asList("key" + p, "value2"));
+        }
+    }
+
+    @Test
+    @SuppressWarnings("PMD.CloseResource")
+    void failedWritesAmongMultipleFilesCloseTheirWriters() throws IOException {
+        properties.put("file.name.template", "{{key}}");
+        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, "none");
+        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
+
+        final Map<String, WriteChannel> channels = new HashMap<>();
+        final Storage spiedStorage = spy(storage);
+        doAnswer(invocation -> {
+            final BlobInfo blob = invocation.getArgument(0);
+            final WriteChannel channel = spy((WriteChannel) invocation.callRealMethod());
+            if ("key1".equals(blob.getName())) {
+                doAnswer(ignored -> {
+                    throw new IOException("test upload failure");
+                }).when(channel).write(any(ByteBuffer.class));
+            }
+            channels.put(blob.getName(), channel);
+            return channel;
+        }).when(spiedStorage).writer(any(BlobInfo.class));
+
+        final GcsSinkTask task = new GcsSinkTask(properties, spiedStorage);
+        task.put(List.of(createRecordStringKey("topic0", 0, "key0", "value0", 0, 1000),
+                // fails in the GCS upload
+                createRecordStringKey("topic0", 0, "key1", "value1", 1, 1001),
+                // fails in the output format, as STRING values are not supported by default
+                new SinkRecord("topic0", 0, Schema.OPTIONAL_STRING_SCHEMA, "key2", Schema.STRING_SCHEMA, "value2", 2,
+                        1002L, TimestampType.CREATE_TIME),
+                createRecordStringKey("topic0", 0, "key3", "value3", 3, 1003)));
+
+        assertThatThrownBy(() -> task.flush(null)).isInstanceOf(ConnectException.class);
+
+        // Every writer is closed, including the failed ones, so no upload buffer is left behind.
+        assertThat(channels).containsOnlyKeys("key0", "key1", "key2", "key3");
+        for (final WriteChannel channel : channels.values()) {
+            verify(channel, atLeastOnce()).close();
+        }
+        assertThat(FieldSupport.EXTRACTION.fieldValue("activeBlobWriters", Map.class, task)).isEmpty();
+        assertThat(readSplittedAndDecodedLinesFromBlob("key0", "none", 0, 1))
+                .containsExactly(Arrays.asList("key0", "value0"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("key3", "none", 0, 1))
+                .containsExactly(Arrays.asList("key3", "value3"));
+    }
+
+    // Returns a Storage that tracks how many WriteChannels are open at the same time.
+    @SuppressWarnings("PMD.CloseResource")
+    private static Storage channelCountingStorage(final AtomicInteger openChannels,
+            final AtomicInteger maxOpenChannels) {
+        final Storage spiedStorage = spy(storage);
+        doAnswer(invocation -> {
+            final WriteChannel channel = spy((WriteChannel) invocation.callRealMethod());
+            maxOpenChannels.accumulateAndGet(openChannels.incrementAndGet(), Math::max);
+            // GcsBlobWriter closes the channel twice (via the OutputStream and directly), so count it only once.
+            final AtomicBoolean closed = new AtomicBoolean();
+            doAnswer(closeInvocation -> {
+                if (closed.compareAndSet(false, true)) {
+                    openChannels.decrementAndGet();
+                }
+                return closeInvocation.callRealMethod();
+            }).when(channel).close();
+            return channel;
+        }).when(spiedStorage).writer(any(BlobInfo.class));
+        return spiedStorage;
     }
 
     @Test
