@@ -245,11 +245,24 @@ public final class OffsetManager<E extends OffsetManager.OffsetManagerEntry<E>> 
         void incrementRecordCount();
 
         /**
+         * Set the record as completed
+         */
+        void setComplete();
+
+        /**
          * Gets the current record count.
          *
          * @return The current record count.
          */
         long getRecordCount();
+
+        /**
+         * Gets the completion status of the data source
+         *
+         * @return a boolean value indicating if the entire data source was processed for this offset, true of fully
+         *         processed, false if not fully processed
+         */
+        boolean isComplete();
     }
 
     /**
