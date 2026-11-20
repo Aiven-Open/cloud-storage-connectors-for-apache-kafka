@@ -37,6 +37,7 @@ public class SinkCommonConfig extends CommonConfig {
     public static final String FILE_MAX_RECORDS = "file.max.records";
 
     public static final String FILE_MAX_BYTES = "file.max.bytes";
+    public static final String MAX_LINGER_MS = "max.linger.ms";
     /**
      * FileNameFragment to handle FileName based configuration queries.
      */
@@ -107,6 +108,10 @@ public class SinkCommonConfig extends CommonConfig {
 
     public long getMaxBytesPerFile() {
         return sinkConfigFragment.getMaxBytesPerFile();
+    }
+
+    public long getMinLingerMs() {
+        return sinkConfigFragment.getMaxLingerMs();
     }
 
     public boolean isMaxBytesPerFileLimited() {

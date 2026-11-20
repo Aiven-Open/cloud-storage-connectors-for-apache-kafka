@@ -58,6 +58,7 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.specialized.BlobOutputStream;
 import com.azure.storage.blob.specialized.BlockBlobClient;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -127,7 +128,8 @@ final class AzureBlobSinkTaskTest {
     }
 
     @Test
-    void noWriteWhenUnderThresholds() {
+    void noWriteWhenUnderThresholds() throws IllegalAccessException {
+        FieldUtils.writeField(task, "azureWriteIntervalMs", 10_000L, true);
         // Buffered size < AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK AND time < AZURE_WRITE_INTERVAL_MS -> no write.
         task.put(Collections.singletonList(createRecord("topic0", 0, "key0", "value0", 0, 1000)));
         verify(blockBlobClient, never()).getBlobOutputStream(anyBoolean());
@@ -138,10 +140,11 @@ final class AzureBlobSinkTaskTest {
     }
 
     @Test
-    void writeWhenTimeThresholdExceeded() throws IOException {
+    void writeWhenTimeThresholdExceeded() throws IOException, IllegalAccessException {
         // Time interval > AZURE_WRITE_INTERVAL_MS -> trigger write during put().
         final MutableClock testClock = new MutableClock(Instant.now());
         task = new AzureBlobSinkTask(properties, blobServiceClient, testClock);
+        FieldUtils.writeField(task, "azureWriteIntervalMs", 10_000L, true);
         task.initialize(taskContext);
 
         task.put(Collections.singletonList(createRecord("topic0", 0, "key0", "value0", 0, 1000)));
@@ -157,9 +160,11 @@ final class AzureBlobSinkTaskTest {
     }
 
     @Test
-    void shouldRequestCommitWhenMaxRecordsPerFileExceeded() {
+    void shouldRequestCommitWhenMaxRecordsPerFileExceeded() throws IllegalAccessException {
         properties.put(AzureBlobSinkConfig.FILE_MAX_RECORDS, "2");
         task = new AzureBlobSinkTask(properties, blobServiceClient);
+        FieldUtils.writeField(task, "azureWriteIntervalMs", 10_000L, true);
+
         task.initialize(taskContext);
 
         task.put(Collections.singletonList(createRecord("topic0", 0, "key0", "val0", 10, 1000)));

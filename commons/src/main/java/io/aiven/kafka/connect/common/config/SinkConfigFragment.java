@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.common.config;
 
 import static io.aiven.kafka.connect.common.config.SinkCommonConfig.FILE_MAX_BYTES;
+import static io.aiven.kafka.connect.common.config.SinkCommonConfig.MAX_LINGER_MS;
 
 import java.util.Map;
 
@@ -54,6 +55,11 @@ public final class SinkConfigFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM,
                 "The maximum number of bytes to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.");
+        configDef.define(MAX_LINGER_MS, ConfigDef.Type.LONG, 10_000L, ConfigDef.Range.atLeast(1000L),
+                ConfigDef.Importance.MEDIUM,
+                "The maximum amount of time in milliseconds for the sink connector to wait before starting to upload data if no other threshold is met."
+                        + " The default is 10 seconds, while the minimum allowed is 1 second.");
+
         return configDef;
     }
 
@@ -65,6 +71,16 @@ public final class SinkConfigFragment extends ConfigFragment {
      */
     public long getMaxBytesPerFile() {
         return cfg.getLong(FILE_MAX_BYTES);
+    }
+
+    /**
+     * A long value that represents the minimum amount of time in milliseconds to wait before a Sink Task will being
+     * uploading data to its target system
+     *
+     * @return Get the minimum amount of time a sink task should wait before uploading data to its target system
+     */
+    public long getMaxLingerMs() {
+        return cfg.getLong(MAX_LINGER_MS);
     }
 
     /**

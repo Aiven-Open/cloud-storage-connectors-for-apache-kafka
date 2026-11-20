@@ -75,8 +75,8 @@ public final class S3SinkTask extends SinkTask {
     private long lastWriteMs;
     private boolean isOneRecordPerFile;
 
-    private long s3WriteBufferSizeBytesPerTask; // 5 MiB by default
-    private static final long S3_WRITE_INTERVAL_MS = 10_000L; // 10 seconds
+    private long s3WriteBufferSizeBytesPerTask; // 60 MiB by default
+    private long s3WriteIntervalMs; // 10 seconds
 
     S3ClientFactory s3ClientFactory = new S3ClientFactory();
 
@@ -101,6 +101,7 @@ public final class S3SinkTask extends SinkTask {
         Objects.requireNonNull(props, "props hasn't been set");
         config = new S3SinkConfig(props);
         s3WriteBufferSizeBytesPerTask = config.getAwsS3PartSize();
+        s3WriteIntervalMs = config.getMinLingerMs();
         this.topicPartitionManager = new TopicPartitionManager();
         this.recordGrouper = RecordGrouperFactory.newRecordGrouper(config);
         s3Client = s3ClientFactory.createAmazonS3Client(config);
@@ -142,13 +143,12 @@ public final class S3SinkTask extends SinkTask {
         checkRecordSize();
         // Trigger write to S3 if the buffer size threshold is reached or the time interval has passed.
         if (currentBufferedBytes >= s3WriteBufferSizeBytesPerTask
-                || clock.millis() - lastWriteMs >= S3_WRITE_INTERVAL_MS) {
+                || clock.millis() - lastWriteMs >= s3WriteIntervalMs) {
             if (currentBufferedBytes >= s3WriteBufferSizeBytesPerTask) {
                 LOGGER.debug("S3 write buffer size of {} bytes reached. Writing buffered records to S3.",
                         currentBufferedBytes);
             } else {
-                LOGGER.debug("S3 write interval of {} ms reached. Writing buffered records to S3.",
-                        S3_WRITE_INTERVAL_MS);
+                LOGGER.debug("S3 write interval of {} ms reached. Writing buffered records to S3.", s3WriteIntervalMs);
             }
             writeBufferedRecordsToS3();
         }
@@ -372,6 +372,7 @@ public final class S3SinkTask extends SinkTask {
                     return true;
                 }
             }
+
             return config.getMaxRecordsPerFile() > 0
                     && fileRecordCounts.getOrDefault(recordKey, 0) >= config.getMaxRecordsPerFile();
         }

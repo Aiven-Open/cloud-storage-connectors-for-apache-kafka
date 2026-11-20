@@ -59,7 +59,7 @@ public final class GcsSinkTask extends SinkTask {
     private BufferTracker bufferTracker;
     private final Map<String, GcsBlobWriter> activeBlobWriters = new HashMap<>();
     private static final long GCS_WRITE_BUFFER_SIZE_BYTES_PER_TASK = 60 * 1024 * 1024L; // 60 MiB
-    private static final long GCS_WRITE_INTERVAL_MS = 10_000L; // 10 seconds
+    private long gcsWriteIntervalMs = 10_000L; // 10 seconds
 
     private long currentBufferedBytes;
     final Clock clock;
@@ -95,6 +95,7 @@ public final class GcsSinkTask extends SinkTask {
         Objects.requireNonNull(props, "props cannot be null");
 
         this.config = new GcsSinkConfig(props);
+        gcsWriteIntervalMs = config.getMinLingerMs();
         this.storage = StorageOptions.newBuilder()
                 .setHost(config.getGcsEndpoint())
                 .setCredentials(config.getCredentials())
@@ -154,13 +155,12 @@ public final class GcsSinkTask extends SinkTask {
         checkRecordSize();
         // Trigger write to GCS if the buffer size threshold is reached or the time interval has passed.
         if (currentBufferedBytes >= GCS_WRITE_BUFFER_SIZE_BYTES_PER_TASK
-                || clock.millis() - lastWriteMs >= GCS_WRITE_INTERVAL_MS) {
+                || clock.millis() - lastWriteMs >= gcsWriteIntervalMs) {
             if (currentBufferedBytes >= GCS_WRITE_BUFFER_SIZE_BYTES_PER_TASK) {
                 LOG.debug("GCS write buffer size of {} bytes reached. Writing buffered records to GCS.",
                         currentBufferedBytes);
             } else {
-                LOG.debug("GCS write interval of {} ms reached. Writing buffered records to GCS.",
-                        GCS_WRITE_INTERVAL_MS);
+                LOG.debug("GCS write interval of {} ms reached. Writing buffered records to GCS.", gcsWriteIntervalMs);
             }
             writeBufferedRecordsToGcs();
         }
