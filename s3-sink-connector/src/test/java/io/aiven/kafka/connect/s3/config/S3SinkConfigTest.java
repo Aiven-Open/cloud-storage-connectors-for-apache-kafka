@@ -51,7 +51,7 @@ final class S3SinkConfigTest {
     public static final String US_EAST_ONE_ID = Region.US_EAST_1.id();
 
     @Test
-    void correctFullConfig() {
+    void correctFullConfig() { // NOPMD too many asserts
         final var props = new HashMap<String, String>();
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "AWS_ACCESS_KEY_ID");
@@ -88,6 +88,7 @@ final class S3SinkConfigTest {
                 new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE));
         assertThat(conf.getFormatType()).isEqualTo(FormatType.forName("csv"));
         assertThat(conf.getAwsS3PartSize()).isEqualTo(S3SinkConfig.DEFAULT_PART_SIZE);
+        assertThat(conf.getMaxLingerMs()).isEqualTo(10_000L);
         assertThat(conf.getKafkaRetryBackoffMs()).isNull();
         assertThat(conf.getS3RetryBackoffDelayMs()).isEqualTo(S3SinkConfig.AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT);
         assertThat(conf.getS3RetryBackoffMaxDelayMs())

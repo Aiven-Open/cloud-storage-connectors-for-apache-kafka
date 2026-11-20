@@ -103,7 +103,7 @@ public final class AzureBlobSinkTask extends SinkTask {
         this.config = new AzureBlobSinkConfig(props);
         BlobServiceClient blobServiceClient;
         final UserAgentPolicy userAgentPolicy = new UserAgentPolicy(config.getUserAgent());
-        azureWriteIntervalMs = config.getMinLingerMs();
+        azureWriteIntervalMs = config.getMaxLingerMs();
 
         final RetryOptions retryOptions = new RetryOptions(
                 new ExponentialBackoffOptions().setMaxRetries(config.getAzureRetryBackoffMaxAttempts())

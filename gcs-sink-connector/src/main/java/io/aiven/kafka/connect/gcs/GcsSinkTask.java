@@ -95,7 +95,7 @@ public final class GcsSinkTask extends SinkTask {
         Objects.requireNonNull(props, "props cannot be null");
 
         this.config = new GcsSinkConfig(props);
-        gcsWriteIntervalMs = config.getMinLingerMs();
+        gcsWriteIntervalMs = config.getMaxLingerMs();
         this.storage = StorageOptions.newBuilder()
                 .setHost(config.getGcsEndpoint())
                 .setCredentials(config.getCredentials())

@@ -101,7 +101,7 @@ public final class S3SinkTask extends SinkTask {
         Objects.requireNonNull(props, "props hasn't been set");
         config = new S3SinkConfig(props);
         s3WriteBufferSizeBytesPerTask = config.getAwsS3PartSize();
-        s3WriteIntervalMs = config.getMinLingerMs();
+        s3WriteIntervalMs = config.getMaxLingerMs();
         this.topicPartitionManager = new TopicPartitionManager();
         this.recordGrouper = RecordGrouperFactory.newRecordGrouper(config);
         s3Client = s3ClientFactory.createAmazonS3Client(config);

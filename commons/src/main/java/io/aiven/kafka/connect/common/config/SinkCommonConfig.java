@@ -110,7 +110,7 @@ public class SinkCommonConfig extends CommonConfig {
         return sinkConfigFragment.getMaxBytesPerFile();
     }
 
-    public long getMinLingerMs() {
+    public long getMaxLingerMs() {
         return sinkConfigFragment.getMaxLingerMs();
     }
 
