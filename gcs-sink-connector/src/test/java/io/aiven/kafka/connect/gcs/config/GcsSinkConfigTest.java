@@ -152,6 +152,7 @@ final class GcsSinkConfigTest {
                 .bindVariable("partition", () -> "b")
                 .bindVariable("start_offset", () -> "c")
                 .render()).isEqualTo("a-b-c");
+        assertThat(config.getMaxLingerMs()).isEqualTo(10_000L);
         assertThat(config.getOutputFields())
                 .containsExactly(new OutputField(OutputFieldType.VALUE, OutputFieldEncodingType.BASE64));
         assertThat(config.getFormatType()).isEqualTo(FormatType.forName("csv"));
