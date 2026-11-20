@@ -722,6 +722,23 @@ final class S3SinkTaskTest {
     }
 
     @Test
+    void closeS3ClientOnStop() {
+        final S3SinkTask task = new S3SinkTask();
+
+        final S3ClientFactory mockedFactory = Mockito.mock(S3ClientFactory.class);
+        try (S3Client s3ClientMock = Mockito.mock(S3Client.class)) {
+
+            task.s3ClientFactory = mockedFactory;
+            when(mockedFactory.createAmazonS3Client(any(S3SinkConfig.class))).thenReturn(s3ClientMock);
+
+            task.start(properties);
+            task.stop();
+
+            verify(s3ClientMock, times(1)).close();
+        }
+    }
+
+    @Test
     void mutliPartUploadWriteOnlyExpectedRecordsAndFilesToS3() throws IOException {
         final String compression = "none";
         properties.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, compression);
