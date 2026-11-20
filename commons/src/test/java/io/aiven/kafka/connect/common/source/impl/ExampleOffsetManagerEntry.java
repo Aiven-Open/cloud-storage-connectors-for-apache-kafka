@@ -130,9 +130,6 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
         recordCount++;
     }
 
-    /**
-     * Set the record to be completed
-     */
     @Override
     public void setComplete() {
         completed = true;
@@ -143,9 +140,6 @@ public class ExampleOffsetManagerEntry implements OffsetManager.OffsetManagerEnt
         return recordCount;
     }
 
-    /**
-     * Set the record to be completed
-     */
     @Override
     public boolean isComplete() {
         return completed;
