@@ -17,10 +17,13 @@
 package io.aiven.kafka.connect.azure.sink;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -28,6 +31,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -36,15 +40,18 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTaskContext;
 
@@ -59,6 +66,7 @@ import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.specialized.BlobOutputStream;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.assertj.core.util.introspection.FieldSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -68,6 +76,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("PMD.ExcessiveImports")
 final class AzureBlobSinkTaskTest {
     private static final String TEST_CONTAINER_NAME = "test-container";
 
@@ -212,6 +221,138 @@ final class AzureBlobSinkTaskTest {
 
         task.put(Collections.singletonList(record));
         verify(taskContext, never()).requestCommit();
+    }
+
+    @Test
+    void oneRecordPerFileKeepsAtMostOneWriterOpen() {
+        properties.put("file.name.template", "{{key}}");
+        final UploadRecorder uploads = new UploadRecorder(blobContainerClient);
+        task = new AzureBlobSinkTask(properties, blobServiceClient);
+        task.initialize(taskContext);
+
+        task.put(IntStream.range(0, 10)
+                .mapToObj(i -> createRecordWithStringKey("key" + i, "value" + i, 0, i))
+                .collect(Collectors.toList()));
+        task.flush(null);
+
+        assertThat(uploads.maxOpen).isEqualTo(1);
+        assertThat(uploads.open).isZero();
+        for (int i = 0; i < 10; i++) {
+            assertThat(uploads.lastContent("key" + i)).containsExactly("value" + i);
+        }
+    }
+
+    @Test
+    void maxRecordsPerFileKeepsAtMostOneWriterOpen() throws IllegalAccessException {
+        properties.put(AzureBlobSinkConfig.FILE_MAX_RECORDS, "10");
+        final UploadRecorder uploads = new UploadRecorder(blobContainerClient);
+        final MutableClock testClock = new MutableClock(Instant.now());
+        task = new AzureBlobSinkTask(properties, blobServiceClient, testClock);
+        FieldUtils.writeField(task, "azureWriteIntervalMs", 10_000L, true);
+        task.initialize(taskContext);
+
+        task.put(IntStream.range(0, 5)
+                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value0", 0, 1000))
+                .collect(Collectors.toList()));
+        testClock.advance(Duration.ofSeconds(11));
+        // Triggers an intermediate write, after which each partition continues in a new file.
+        task.put(IntStream.range(0, 5)
+                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value1", 1, 1001))
+                .collect(Collectors.toList()));
+        task.put(IntStream.range(0, 5)
+                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value2", 2, 1002))
+                .collect(Collectors.toList()));
+        task.flush(null);
+
+        assertThat(uploads.maxOpen).isEqualTo(1);
+        assertThat(uploads.open).isZero();
+        for (int p = 0; p < 5; p++) {
+            assertThat(uploads.lastContent("topic0-" + p + "-0")).containsExactly("value0", "value1");
+            assertThat(uploads.lastContent("topic0-" + p + "-2")).containsExactly("value2");
+        }
+    }
+
+    @Test
+    void failedWritesAmongMultipleFilesCloseTheirWritersAndRetryWithoutDuplicates() {
+        properties.put("file.name.template", "{{key}}");
+        final UploadRecorder uploads = new UploadRecorder(blobContainerClient);
+        task = new AzureBlobSinkTask(properties, blobServiceClient);
+        task.initialize(taskContext);
+
+        task.put(List.of(createRecordWithStringKey("key0", "value0", 0, 0),
+                // fails in the output format, as STRING values are not supported by default
+                new SinkRecord("topic0", 0, Schema.STRING_SCHEMA, "key1", Schema.STRING_SCHEMA, "value1", 1),
+                createRecordWithStringKey("key2", "value2", 0, 2)));
+        assertThatThrownBy(() -> task.flush(null)).isInstanceOf(ConnectException.class);
+
+        // The failed writer is closed as well, so no writer or upload is left behind.
+        assertThat(FieldSupport.EXTRACTION.fieldValue("activeBlobWriters", Map.class, task)).isEmpty();
+        assertThat(uploads.open).isZero();
+
+        // Connect rewinds and re-delivers the records that were not committed.
+        task.put(List.of(createRecordWithStringKey("key0", "value0", 0, 0),
+                createRecordWithStringKey("key1", "value1", 0, 1), createRecordWithStringKey("key2", "value2", 0, 2)));
+        task.flush(null);
+
+        // Each retried file is written by a new upload, so it contains its record only once.
+        assertThat(uploads.lastContent("key0")).containsExactly("value0");
+        assertThat(uploads.lastContent("key1")).containsExactly("value1");
+        assertThat(uploads.lastContent("key2")).containsExactly("value2");
+        assertThat(uploads.open).isZero();
+    }
+
+    // Gives every blob its own mocked output stream, recording the content of each upload and how many uploads are
+    // open at the same time.
+    private static final class UploadRecorder {
+        private final Map<String, List<ByteArrayOutputStream>> contents = new HashMap<>();
+        private int open;
+        private int maxOpen;
+
+        @SuppressWarnings("PMD.CloseResource")
+        UploadRecorder(final BlobContainerClient containerClient) {
+            when(containerClient.getBlobClient(anyString())).thenAnswer(invocation -> {
+                final String blobName = invocation.getArgument(0);
+                final BlobClient blobClient = mock(BlobClient.class);
+                final BlockBlobClient blockBlobClient = mock(BlockBlobClient.class);
+                when(blobClient.getBlockBlobClient()).thenReturn(blockBlobClient);
+                when(blockBlobClient.getBlobOutputStream(anyBoolean())).thenAnswer(ignored -> newUpload(blobName));
+                return blobClient;
+            });
+        }
+
+        @SuppressWarnings("PMD.CloseResource")
+        private BlobOutputStream newUpload(final String blobName) throws IOException {
+            final ByteArrayOutputStream content = new ByteArrayOutputStream();
+            contents.computeIfAbsent(blobName, ignored -> new ArrayList<>()).add(content);
+            maxOpen = Math.max(maxOpen, ++open);
+            final BlobOutputStream stream = mock(BlobOutputStream.class);
+            lenient().doAnswer(invocation -> {
+                content.write(invocation.<byte[]>getArgument(0), invocation.getArgument(1), invocation.getArgument(2));
+                return null;
+            }).when(stream).write(any(byte[].class), anyInt(), anyInt());
+            doAnswer(invocation -> {
+                open--;
+                return null;
+            }).when(stream).close();
+            return stream;
+        }
+
+        // Returns the decoded values written by the latest upload of the given blob.
+        List<String> lastContent(final String blobName) {
+            final List<ByteArrayOutputStream> blobUploads = contents.get(blobName);
+            assertThat(blobUploads).as("uploads of " + blobName).isNotEmpty();
+            return blobUploads.get(blobUploads.size() - 1)
+                    .toString(StandardCharsets.UTF_8)
+                    .lines()
+                    .map(line -> new String(Base64.getDecoder().decode(line), StandardCharsets.UTF_8))
+                    .collect(Collectors.toList());
+        }
+    }
+
+    private SinkRecord createRecordWithStringKey(final String key, final String value, final int partition,
+            final int offset) {
+        return new SinkRecord("topic0", partition, Schema.STRING_SCHEMA, key, Schema.BYTES_SCHEMA,
+                value.getBytes(StandardCharsets.UTF_8), offset);
     }
 
     @ParameterizedTest
