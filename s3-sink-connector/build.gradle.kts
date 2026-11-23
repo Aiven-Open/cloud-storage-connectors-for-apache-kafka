@@ -80,6 +80,7 @@ dependencies {
   implementation(logginglibs.slf4j)
   implementation(amazonawssdk.s3)
   implementation(amazonawssdk.sts)
+  implementation(aiven.kafka.config)
 
   testImplementation(apache.commons.io)
   testImplementation(testFixtures(project(":commons")))
@@ -90,10 +91,10 @@ dependencies {
   testImplementation(apache.kafka.connect.api)
   testImplementation(apache.kafka.connect.runtime)
   testImplementation(apache.kafka.connect.json)
-  testImplementation(apache.commons.io)
   testImplementation(testinglibs.junit.jupiter)
   testImplementation(testinglibs.assertj.core)
   testImplementation("io.findify:s3mock_2.13:$s3mockVersion")
+  testImplementation(aiven.kafka.config)
 
   testImplementation(testinglibs.mockito.core)
   testImplementation(testinglibs.mockito.junit.jupiter)

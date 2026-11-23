@@ -187,17 +187,17 @@ final class S3SinkConfigTest {
     void wrongPartSize() {
         final var wrongMaxPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
                 S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
-                Long.toString(2_000_000_001L));
+                Long.toString(Integer.MAX_VALUE + 1L), S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "test.bucket");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMaxPartSizeProps)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value 2000000001 for configuration aws.s3.part.size.bytes: "
-                        + "Part size must be no more: 2000000000 bytes (2GB)");
+                .hasMessage(
+                        "Invalid value 2147483648 for configuration aws.s3.part.size.bytes: Not a number of type INT");
 
         final var wrongMinPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
                 S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
                 "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMinPartSizeProps)).isInstanceOf(ConfigException.class)
                 .hasMessage(
-                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Part size must be at least 5242880 5(MB)");
+                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Value must be at least 5.0 MiB (5242880 B)");
     }
 
     @Test

@@ -24,6 +24,8 @@ import java.util.Map;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.commons.kafka.config.validator.TimeScaleValidator;
+
 /**
  * Defines properties that are shared across all Sink implementations.
  */
@@ -55,7 +57,7 @@ public final class SinkConfigFragment extends ConfigFragment {
                 ConfigDef.Importance.MEDIUM,
                 "The maximum number of bytes to put in a single file. " + "Must be a non-negative integer number. "
                         + "0 is interpreted as \"unlimited\", which is the default.");
-        configDef.define(MAX_LINGER_MS, ConfigDef.Type.LONG, 10_000L, ConfigDef.Range.atLeast(1000L),
+        configDef.define(MAX_LINGER_MS, ConfigDef.Type.LONG, 10_000L, TimeScaleValidator.between(1000, 60_000),
                 ConfigDef.Importance.MEDIUM,
                 "The maximum amount of time in milliseconds for the sink connector to wait before starting to upload data if no other threshold is met."
                         + " The default is 10 seconds, while the minimum allowed is 1 second.");

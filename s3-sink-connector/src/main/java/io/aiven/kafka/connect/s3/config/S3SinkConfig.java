@@ -26,8 +26,9 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Type;
-import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.commons.kafka.config.validator.ScaleValidator;
+import io.aiven.commons.util.collections.Scale;
 import io.aiven.kafka.connect.common.config.CompressionType;
 import io.aiven.kafka.connect.common.config.FileNameFragment;
 import io.aiven.kafka.connect.common.config.OutputField;
@@ -94,26 +95,8 @@ final public class S3SinkConfig extends S3SinkBaseConfig {
 
         // add awsS3SinkCounter if more S3 Sink Specific config is added
         // This is used to set orderInGroup
-        configDef.define(S3ConfigFragment.AWS_S3_PART_SIZE, Type.INT, DEFAULT_PART_SIZE, new ConfigDef.Validator() {
-
-            static final int MAX_BUFFER_SIZE = 2_000_000_000;
-
-            @Override
-            public void ensureValid(final String name, final Object value) {
-                if (value == null) {
-                    throw new ConfigException(name, null, "Part size must be non-null");
-                }
-                final var number = (Number) value;
-                if (number.longValue() < S3OutputStream.DEFAULT_PART_SIZE) {
-                    throw new ConfigException(name, value,
-                            "Part size must be at least " + S3OutputStream.DEFAULT_PART_SIZE + " 5(MB)");
-                }
-                if (number.longValue() > MAX_BUFFER_SIZE) {
-                    throw new ConfigException(name, value,
-                            "Part size must be no more: " + MAX_BUFFER_SIZE + " bytes (2GB)");
-                }
-            }
-        }, Importance.MEDIUM,
+        configDef.define(S3ConfigFragment.AWS_S3_PART_SIZE, Type.INT, DEFAULT_PART_SIZE,
+                ScaleValidator.between(Scale.MiB.asBytes(5), Scale.GiB.asBytes(2), Scale.IEC), Importance.MEDIUM,
                 "The Part Size in S3 Multi-part Uploads in bytes. Maximum is " + Integer.MAX_VALUE
                         + " (2GB) and default is " + S3OutputStream.DEFAULT_PART_SIZE + " (5MB)",
                 GROUP_AWS, 0, ConfigDef.Width.NONE, S3ConfigFragment.AWS_S3_PART_SIZE);
