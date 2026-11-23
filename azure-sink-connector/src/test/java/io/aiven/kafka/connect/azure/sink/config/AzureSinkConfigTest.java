@@ -183,6 +183,7 @@ final class AzureSinkConfigTest {
         assertThat(config.getCompressionType()).isEqualTo(CompressionType.forName(compression));
         assertThat(config.getMaxRecordsPerFile()).isEqualTo(42);
         assertThat(config.getPrefix()).isEqualTo("test-prefix");
+        assertThat(config.getMaxLingerMs()).isEqualTo(10_000L);
         assertThat(config.getFilenameTemplate()
                 .instance()
                 .bindVariable("topic", () -> "a")

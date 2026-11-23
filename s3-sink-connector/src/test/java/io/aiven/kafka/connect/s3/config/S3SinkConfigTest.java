@@ -37,7 +37,6 @@ import io.aiven.kafka.connect.common.config.OutputFieldType;
 import io.aiven.kafka.connect.common.config.OutputFormatFragmentFixture.OutputFormatArgs;
 import io.aiven.kafka.connect.common.config.StableTimeFormatter;
 import io.aiven.kafka.connect.config.s3.S3ConfigFragment;
-import io.aiven.kafka.connect.s3.S3OutputStream;
 
 import com.google.common.collect.Maps;
 import org.junit.jupiter.api.Test;
@@ -52,7 +51,7 @@ final class S3SinkConfigTest {
     public static final String US_EAST_ONE_ID = Region.US_EAST_1.id();
 
     @Test
-    void correctFullConfig() {
+    void correctFullConfig() { // NOPMD too many asserts
         final var props = new HashMap<String, String>();
 
         props.put(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "AWS_ACCESS_KEY_ID");
@@ -88,7 +87,8 @@ final class S3SinkConfigTest {
                 new OutputField(OutputFieldType.TIMESTAMP, OutputFieldEncodingType.NONE),
                 new OutputField(OutputFieldType.HEADERS, OutputFieldEncodingType.NONE));
         assertThat(conf.getFormatType()).isEqualTo(FormatType.forName("csv"));
-        assertThat(conf.getAwsS3PartSize()).isEqualTo(S3OutputStream.DEFAULT_PART_SIZE);
+        assertThat(conf.getAwsS3PartSize()).isEqualTo(S3SinkConfig.DEFAULT_PART_SIZE);
+        assertThat(conf.getMaxLingerMs()).isEqualTo(10_000L);
         assertThat(conf.getKafkaRetryBackoffMs()).isNull();
         assertThat(conf.getS3RetryBackoffDelayMs()).isEqualTo(S3SinkConfig.AWS_S3_RETRY_BACKOFF_DELAY_MS_DEFAULT);
         assertThat(conf.getS3RetryBackoffMaxDelayMs())
@@ -187,17 +187,17 @@ final class S3SinkConfigTest {
     void wrongPartSize() {
         final var wrongMaxPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
                 S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
-                Long.toString(2_000_000_001L));
+                Long.toString(Integer.MAX_VALUE + 1L), S3ConfigFragment.AWS_S3_BUCKET_NAME_CONFIG, "test.bucket");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMaxPartSizeProps)).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value 2000000001 for configuration aws.s3.part.size.bytes: "
-                        + "Part size must be no more: 2000000000 bytes (2GB)");
+                .hasMessage(
+                        "Invalid value 2147483648 for configuration aws.s3.part.size.bytes: Not a number of type INT");
 
         final var wrongMinPartSizeProps = Map.of(S3ConfigFragment.AWS_ACCESS_KEY_ID_CONFIG, "blah-blah-key-id",
                 S3ConfigFragment.AWS_SECRET_ACCESS_KEY_CONFIG, "bla-bla-access-key", S3ConfigFragment.AWS_S3_PART_SIZE,
                 "0");
         assertThatThrownBy(() -> new S3SinkConfig(wrongMinPartSizeProps)).isInstanceOf(ConfigException.class)
                 .hasMessage(
-                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Part size must be greater than 0");
+                        "Invalid value 0 for configuration aws.s3.part.size.bytes: Value must be at least 5.0 MiB (5242880 B)");
     }
 
     @Test

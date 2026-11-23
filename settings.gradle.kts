@@ -31,7 +31,7 @@ val wireMockVersion by extra("2.35.0")
 val azureVersion by extra("12.31.3")
 val velocityCoreVersion by extra("2.4.1")
 val velocityToolsVersion by extra("3.1")
-val kafkaConfigVersion by extra("0.2.0")
+val kafkaConfigVersion by extra("0.3.0")
 
 dependencyResolutionManagement {
   versionCatalogs {

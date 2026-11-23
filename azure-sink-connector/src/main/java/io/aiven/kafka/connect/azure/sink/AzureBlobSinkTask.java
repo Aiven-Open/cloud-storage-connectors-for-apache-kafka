@@ -64,7 +64,7 @@ public final class AzureBlobSinkTask extends SinkTask {
     private BufferTracker bufferTracker;
     private final Map<String, AzureBlobWriter> activeBlobWriters = new HashMap<>();
     private static final long AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK = 60 * 1024 * 1024L; // 60 MiB
-    private static final long AZURE_WRITE_INTERVAL_MS = 10_000L; // 10 seconds
+    private long azureWriteIntervalMs; // 10 seconds by default
 
     private long currentBufferedBytes;
     final Clock clock;
@@ -103,6 +103,7 @@ public final class AzureBlobSinkTask extends SinkTask {
         this.config = new AzureBlobSinkConfig(props);
         BlobServiceClient blobServiceClient;
         final UserAgentPolicy userAgentPolicy = new UserAgentPolicy(config.getUserAgent());
+        azureWriteIntervalMs = config.getMaxLingerMs();
 
         final RetryOptions retryOptions = new RetryOptions(
                 new ExponentialBackoffOptions().setMaxRetries(config.getAzureRetryBackoffMaxAttempts())
@@ -173,13 +174,13 @@ public final class AzureBlobSinkTask extends SinkTask {
         checkRecordSize();
         // Trigger write to Azure if the buffer size threshold is reached or the time interval has passed.
         if (currentBufferedBytes >= AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK
-                || clock.millis() - lastWriteMs >= AZURE_WRITE_INTERVAL_MS) {
+                || clock.millis() - lastWriteMs >= azureWriteIntervalMs) {
             if (currentBufferedBytes >= AZURE_WRITE_BUFFER_SIZE_BYTES_PER_TASK) {
                 LOG.debug("Azure write buffer size of {} bytes reached. Writing buffered records to Azure.",
                         currentBufferedBytes);
             } else {
                 LOG.debug("Azure write interval of {} ms reached. Writing buffered records to Azure.",
-                        AZURE_WRITE_INTERVAL_MS);
+                        azureWriteIntervalMs);
             }
             writeBufferedRecordsToAzure();
         }
