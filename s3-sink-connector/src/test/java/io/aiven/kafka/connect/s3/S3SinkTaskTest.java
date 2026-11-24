@@ -1047,42 +1047,6 @@ final class S3SinkTaskTest {
     }
 
     @Test
-    void maxRecordsPerFileKeepsAtMostOneWriterOpen() throws IOException {
-        properties.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, "none");
-        properties.put(FILE_MAX_RECORDS, "10");
-        properties.put(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, "{{topic}}-{{partition}}-{{start_offset}}");
-        properties.put(OUTPUT_FIELDS, "key,value");
-
-        final AtomicInteger openUploads = new AtomicInteger();
-        final AtomicInteger maxOpenUploads = new AtomicInteger();
-        final S3SinkTask task = new S3SinkTask(properties, uploadCountingS3Client(openUploads, maxOpenUploads),
-                testClock);
-        task.initialize(mockedSinkTaskContext);
-
-        task.put(IntStream.range(0, 5)
-                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value0", 0, 1000))
-                .collect(Collectors.toList()));
-        testClock.advance(Duration.ofSeconds(11));
-        // Triggers an intermediate write, after which each partition continues in a new file.
-        task.put(IntStream.range(0, 5)
-                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value1", 1, 1001))
-                .collect(Collectors.toList()));
-        task.put(IntStream.range(0, 5)
-                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value2", 2, 1002))
-                .collect(Collectors.toList()));
-        task.flush(null);
-
-        assertThat(maxOpenUploads.get()).isEqualTo(1);
-        assertThat(openUploads.get()).isZero();
-        for (int p = 0; p < 5; p++) {
-            assertThat(testBucketAccessor.readAndDecodeLines("topic0-" + p + "-0", CompressionType.NONE, 0, 1))
-                    .containsExactly(List.of("key" + p, "topic0value0"), List.of("key" + p, "topic0value1"));
-            assertThat(testBucketAccessor.readAndDecodeLines("topic0-" + p + "-2", CompressionType.NONE, 0, 1))
-                    .containsExactly(List.of("key" + p, "topic0value2"));
-        }
-    }
-
-    @Test
     void failedWritesAmongMultipleFilesCloseTheirWriters() throws IOException {
         properties.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, "none");
         properties.put(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, "{{key}}");

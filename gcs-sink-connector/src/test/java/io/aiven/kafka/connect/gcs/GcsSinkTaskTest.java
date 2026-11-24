@@ -493,43 +493,6 @@ final class GcsSinkTaskTest {
     }
 
     @Test
-    void maxRecordsPerFileKeepsAtMostOneWriterOpen() {
-        properties.put(SinkCommonConfig.FILE_MAX_RECORDS, "10");
-        properties.put(GcsSinkConfig.FILE_COMPRESSION_TYPE_CONFIG, "none");
-        properties.put(GcsSinkConfig.FORMAT_OUTPUT_FIELDS_CONFIG, "key,value");
-
-        final AtomicInteger openChannels = new AtomicInteger();
-        final AtomicInteger maxOpenChannels = new AtomicInteger();
-        final MutableClock testClock = new MutableClock(Instant.now());
-        final GcsSinkTask task = new GcsSinkTask(properties, channelCountingStorage(openChannels, maxOpenChannels),
-                testClock);
-        task.initialize(mock(SinkTaskContext.class));
-
-        task.put(IntStream.range(0, 5)
-                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value0", 0, 1000))
-                .collect(Collectors.toList()));
-        testClock.advance(Duration.ofSeconds(11));
-        // Triggers an intermediate write, after which each partition continues in a new file.
-        task.put(IntStream.range(0, 5)
-                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value1", 1, 1001))
-                .collect(Collectors.toList()));
-        task.put(IntStream.range(0, 5)
-                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value2", 2, 1002))
-                .collect(Collectors.toList()));
-        task.flush(null);
-
-        assertThat(maxOpenChannels.get()).isEqualTo(1);
-        assertThat(openChannels.get()).isZero();
-        assertThat(testBucketAccessor.getBlobNames()).hasSize(10);
-        for (int p = 0; p < 5; p++) {
-            assertThat(readSplittedAndDecodedLinesFromBlob("topic0-" + p + "-0", "none", 0, 1))
-                    .containsExactly(Arrays.asList("key" + p, "value0"), Arrays.asList("key" + p, "value1"));
-            assertThat(readSplittedAndDecodedLinesFromBlob("topic0-" + p + "-2", "none", 0, 1))
-                    .containsExactly(Arrays.asList("key" + p, "value2"));
-        }
-    }
-
-    @Test
     @SuppressWarnings("PMD.CloseResource")
     void failedWritesAmongMultipleFilesCloseTheirWriters() throws IOException {
         properties.put("file.name.template", "{{key}}");

@@ -74,7 +74,6 @@ public final class S3SinkTask extends SinkTask {
     final Clock clock;
     private long lastWriteMs;
     private boolean isOneRecordPerFile;
-    private boolean closeAfterWrite;
 
     private long s3WriteBufferSizeBytesPerTask; // 60 MiB by default
     private long s3WriteIntervalMs; // 10 seconds
@@ -108,9 +107,6 @@ public final class S3SinkTask extends SinkTask {
         s3Client = s3ClientFactory.createAmazonS3Client(config);
         s3ObjectWriters = new HashMap<>();
         isOneRecordPerFile = isOfTypeKeyRecordGrouper(config.getFilenameTemplate());
-        // With a record limit, the grouper starts a new file after each write, so a written file never receives
-        // more records and its writer can be closed right away.
-        closeAfterWrite = isOneRecordPerFile || config.getMaxRecordsPerFile() > 0;
         try {
             recordGrouper = RecordGrouperFactory.newRecordGrouper(config);
         } catch (final Exception e) { // NOPMD AvoidCatchingGenericException
@@ -210,7 +206,7 @@ public final class S3SinkTask extends SinkTask {
 
     @SuppressWarnings("PMD.CloseResource")
     private void processSingleFileWrite(final String filename, final List<SinkRecord> records) {
-        if (closeAfterWrite) {
+        if (isOneRecordPerFile) {
             writeAndCloseSingleFile(filename, records);
             return;
         }

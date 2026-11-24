@@ -243,36 +243,6 @@ final class AzureBlobSinkTaskTest {
     }
 
     @Test
-    void maxRecordsPerFileKeepsAtMostOneWriterOpen() throws IllegalAccessException {
-        properties.put(AzureBlobSinkConfig.FILE_MAX_RECORDS, "10");
-        final UploadRecorder uploads = new UploadRecorder(blobContainerClient);
-        final MutableClock testClock = new MutableClock(Instant.now());
-        task = new AzureBlobSinkTask(properties, blobServiceClient, testClock);
-        FieldUtils.writeField(task, "azureWriteIntervalMs", 10_000L, true);
-        task.initialize(taskContext);
-
-        task.put(IntStream.range(0, 5)
-                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value0", 0, 1000))
-                .collect(Collectors.toList()));
-        testClock.advance(Duration.ofSeconds(11));
-        // Triggers an intermediate write, after which each partition continues in a new file.
-        task.put(IntStream.range(0, 5)
-                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value1", 1, 1001))
-                .collect(Collectors.toList()));
-        task.put(IntStream.range(0, 5)
-                .mapToObj(p -> createRecord("topic0", p, "key" + p, "value2", 2, 1002))
-                .collect(Collectors.toList()));
-        task.flush(null);
-
-        assertThat(uploads.maxOpen).isEqualTo(1);
-        assertThat(uploads.open).isZero();
-        for (int p = 0; p < 5; p++) {
-            assertThat(uploads.lastContent("topic0-" + p + "-0")).containsExactly("value0", "value1");
-            assertThat(uploads.lastContent("topic0-" + p + "-2")).containsExactly("value2");
-        }
-    }
-
-    @Test
     void failedWritesAmongMultipleFilesCloseTheirWritersAndRetryWithoutDuplicates() {
         properties.put("file.name.template", "{{key}}");
         final UploadRecorder uploads = new UploadRecorder(blobContainerClient);

@@ -65,7 +65,6 @@ public final class GcsSinkTask extends SinkTask {
     final Clock clock;
     private long lastWriteMs;
     private boolean isOneRecordPerFile;
-    private boolean closeAfterWrite;
 
     // required by Connect
     public GcsSinkTask() {
@@ -125,9 +124,6 @@ public final class GcsSinkTask extends SinkTask {
                     || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(grType)) {
                 this.isOneRecordPerFile = true;
             }
-            // With a record limit, the grouper starts a new file after each write, so a written file never receives
-            // more records and its writer can be closed right away.
-            this.closeAfterWrite = isOneRecordPerFile || config.getMaxRecordsPerFile() > 0;
             this.lastWriteMs = clock.millis();
             this.bufferTracker = new BufferTracker(config);
         } catch (final Exception e) { // NOPMD broad exception caught
@@ -287,7 +283,7 @@ public final class GcsSinkTask extends SinkTask {
 
     @SuppressWarnings("PMD.CloseResource")
     private void processSingleFileWrite(final String filename, final List<SinkRecord> records) {
-        if (closeAfterWrite) {
+        if (isOneRecordPerFile) {
             writeAndCloseSingleFile(filename, records);
             return;
         }
