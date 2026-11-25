@@ -206,6 +206,10 @@ public final class S3SinkTask extends SinkTask {
 
     @SuppressWarnings("PMD.CloseResource")
     private void processSingleFileWrite(final String filename, final List<SinkRecord> records) {
+        if (isOneRecordPerFile) {
+            writeAndCloseSingleFile(filename, records);
+            return;
+        }
         try {
             final S3ObjectWriter s3ObjectWriter = s3ObjectWriters.computeIfAbsent(filename, k -> {
                 try {
@@ -215,6 +219,20 @@ public final class S3SinkTask extends SinkTask {
                     throw new ConnectException("Failed to initialize S3ObjectWriter", e);
                 }
             });
+            s3ObjectWriter.writeRecords(records);
+        } catch (final IOException e) {
+            throw new ConnectException("Failed to write records to S3 for " + filename, e);
+        }
+    }
+
+    // Each file is complete after a single write, so the writer is closed immediately instead of being kept in
+    // s3ObjectWriters. This keeps at most one part buffer alive at a time, regardless of the number of files.
+    // The writer is also closed when the write fails, so that its resources are released right away. Closing
+    // completes the upload of the records written so far, and the partial object is replaced when the write is
+    // retried.
+    private void writeAndCloseSingleFile(final String filename, final List<SinkRecord> records) {
+        try (S3ObjectWriter s3ObjectWriter = new S3ObjectWriter(s3Client, config,
+                getFileNameTemplate(filename, records.get(0)))) {
             s3ObjectWriter.writeRecords(records);
         } catch (final IOException e) {
             throw new ConnectException("Failed to write records to S3 for " + filename, e);

@@ -62,6 +62,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -1018,6 +1021,76 @@ final class S3SinkTaskTest {
 
         task.put(Collections.singletonList(record));
         verify(mockedSinkTaskContext, never()).requestCommit();
+    }
+
+    @Test
+    void oneRecordPerFileKeepsAtMostOneWriterOpen() throws IOException {
+        properties.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, "none");
+        properties.put(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, "{{key}}");
+        properties.put(OUTPUT_FIELDS, "key,value");
+
+        final AtomicInteger openUploads = new AtomicInteger();
+        final AtomicInteger maxOpenUploads = new AtomicInteger();
+        final S3SinkTask task = new S3SinkTask(properties, uploadCountingS3Client(openUploads, maxOpenUploads),
+                testClock);
+        task.put(IntStream.range(0, 10)
+                .mapToObj(i -> createRecordWithStringKey("topic0", 0, "key" + i, "value" + i, i, 1000 + i))
+                .collect(Collectors.toList()));
+        task.flush(null);
+
+        assertThat(maxOpenUploads.get()).isEqualTo(1);
+        assertThat(openUploads.get()).isZero();
+        for (int i = 0; i < 10; i++) {
+            assertThat(testBucketAccessor.readAndDecodeLines("key" + i, CompressionType.NONE, 0, 1))
+                    .containsExactly(List.of("key" + i, "topic0value" + i));
+        }
+    }
+
+    @Test
+    void failedWritesAmongMultipleFilesCloseTheirWriters() throws IOException {
+        properties.put(FileNameFragment.FILE_COMPRESSION_TYPE_CONFIG, "none");
+        properties.put(FileNameFragment.FILE_NAME_TEMPLATE_CONFIG, "{{key}}");
+        properties.put(OUTPUT_FIELDS, "key,value");
+
+        final AtomicInteger openUploads = new AtomicInteger();
+        final AtomicInteger maxOpenUploads = new AtomicInteger();
+        final S3SinkTask task = new S3SinkTask(properties, uploadCountingS3Client(openUploads, maxOpenUploads),
+                testClock);
+        task.put(List.of(createRecordWithStringKey("topic0", 0, "key0", "value0", 0, 1000),
+                // fails in the output format, as STRING values are not supported by default
+                createRecordWithStringValueSchema("topic0", 0, "key1", "value1", 1, 1001),
+                createRecordWithStringKey("topic0", 0, "key2", "value2", 2, 1002)));
+
+        assertThatThrownBy(() -> task.flush(null)).isInstanceOf(ConnectException.class);
+
+        // The failed writer is closed as well, so no writer or upload is left behind.
+        assertThat(FieldSupport.EXTRACTION.fieldValue("s3ObjectWriters", Map.class, task)).isEmpty();
+        assertThat(openUploads.get()).isZero();
+        assertThat(testBucketAccessor.readAndDecodeLines("key0", CompressionType.NONE, 0, 1))
+                .containsExactly(List.of("key0", "topic0value0"));
+        assertThat(testBucketAccessor.readAndDecodeLines("key2", CompressionType.NONE, 0, 1))
+                .containsExactly(List.of("key2", "topic0value2"));
+    }
+
+    // Returns an S3Client that tracks how many multipart uploads are in progress at the same time.
+    private static S3Client uploadCountingS3Client(final AtomicInteger openUploads,
+            final AtomicInteger maxOpenUploads) {
+        final S3Client spiedClient = Mockito.spy(s3Client); // NOPMD close resource after use this is a spy
+        Mockito.lenient().doAnswer(invocation -> {
+            maxOpenUploads.accumulateAndGet(openUploads.incrementAndGet(), Math::max);
+            return invocation.callRealMethod();
+        }).when(spiedClient).createMultipartUpload(any(CreateMultipartUploadRequest.class));
+        Mockito.lenient().doAnswer(invocation -> {
+            openUploads.decrementAndGet();
+            return invocation.callRealMethod();
+        }).when(spiedClient).completeMultipartUpload(any(CompleteMultipartUploadRequest.class));
+        return spiedClient;
+    }
+
+    private SinkRecord createRecordWithStringKey(final String topic, final int partition, final String key,
+            final String name, final int offset, final long timestamp) {
+        return new SinkRecord(topic, partition, Schema.STRING_SCHEMA, key, Schema.BYTES_SCHEMA,
+                (topic + name).getBytes(StandardCharsets.UTF_8), offset, timestamp, TimestampType.CREATE_TIME);
     }
 
     private SinkRecord createRecordWithStringValueSchema(final String topic, final int partition, final String key,

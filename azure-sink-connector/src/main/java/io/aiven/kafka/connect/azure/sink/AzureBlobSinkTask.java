@@ -304,6 +304,10 @@ public final class AzureBlobSinkTask extends SinkTask {
 
     @SuppressWarnings("PMD.CloseResource")
     private void processSingleFileWrite(final String filename, final List<SinkRecord> records) {
+        if (isOneRecordPerFile) {
+            writeAndCloseSingleFile(filename, records);
+            return;
+        }
         try {
             final AzureBlobWriter blobWriter = activeBlobWriters.computeIfAbsent(filename, k -> {
                 try {
@@ -312,6 +316,18 @@ public final class AzureBlobSinkTask extends SinkTask {
                     throw new ConnectException("Failed to initialize AzureBlobWriter", e);
                 }
             });
+            blobWriter.writeRecords(records);
+        } catch (final IOException e) {
+            throw new ConnectException("Failed to write records to Azure for " + filename, e);
+        }
+    }
+
+    // Each file is complete after a single write, so the writer is closed immediately instead of being kept in
+    // activeBlobWriters. This keeps at most one upload alive at a time, regardless of the number of files.
+    // The writer is also closed when the write fails, so that its resources are released right away. Closing
+    // commits the records written so far, and the partial blob is replaced when the write is retried.
+    private void writeAndCloseSingleFile(final String filename, final List<SinkRecord> records) {
+        try (AzureBlobWriter blobWriter = new AzureBlobWriter(containerClient, config, filename)) {
             blobWriter.writeRecords(records);
         } catch (final IOException e) {
             throw new ConnectException("Failed to write records to Azure for " + filename, e);
