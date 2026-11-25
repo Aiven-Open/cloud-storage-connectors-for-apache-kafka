@@ -57,6 +57,8 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
         withEnv("KARAPACE_ADVERTISED_HOSTNAME", "karapace-registry");
         withEnv("KARAPACE_BOOTSTRAP_URI", bootstrapServer);
         withEnv("KARAPACE_PORT", String.valueOf(SCHEMA_REGISTRY_PORT));
+        // Lets Karapace recognise its own advertised URL as the primary, instead of trying to forward to it.
+        withEnv("KARAPACE_ADVERTISED_PORT", String.valueOf(SCHEMA_REGISTRY_PORT));
         withEnv("KARAPACE_HOST", "0.0.0.0");
         withEnv("KARAPACE_CLIENT_ID", "karapace");
         withEnv("KARAPACE_GROUP_ID", "karapace-registry");
@@ -67,16 +69,19 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
         withEnv("KARAPACE_KAFKA_SCHEMA_READER_STRICT_MODE", "false");
         withEnv("KARAPACE_KAFKA_RETRIABLE_ERRORS_SILENCED", "true");
         withExposedPorts(SCHEMA_REGISTRY_PORT);
+        // Print Karapace output directly; not every test classpath has an SLF4J provider.
+        withLogConsumer(frame -> System.err.print("[karapace] " + frame.getUtf8String()));
         // Karapace 5.x+ no longer ships start.sh; the service is launched as a python module.
         withCreateContainerCmdModifier(cmd -> cmd.withEntrypoint("python3", "-m", "karapace"));
 
-        // When started, check any API to see if the service is ready, which also
-        // indicates that it is connected to the
-        // Kafka bootstrap server.
+        // Wait until the schema reader has caught up with Kafka AND this node acts as primary. Since Karapace 5.x a
+        // newly elected primary waits a few seconds before accepting writes; registering a schema before that fails.
         waitingFor(Wait.forHttp("/_health")
-                .forPort(8081)
+                .forPort(SCHEMA_REGISTRY_PORT)
                 .withReadTimeout(Duration.ofMinutes(1))
-                .forResponsePredicate(response -> response.contains("\"schema_registry_ready\":true")));
+                .forResponsePredicate(response -> response.contains("\"schema_registry_ready\":true")
+                        && response.contains("\"schema_registry_is_primary\":true"))
+                .withStartupTimeout(Duration.ofMinutes(2)));
 
         withCreateContainerCmdModifier(
                 cmd -> cmd.getHostConfig().withUlimits(new Ulimit[] { new Ulimit("nofile", 30_000L, 30_000L) }));
