@@ -19,7 +19,9 @@ package io.aiven.commons.kafka.testkit;
 import java.time.Duration;
 
 import com.github.dockerjava.api.model.Ulimit;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 /**
@@ -69,8 +71,9 @@ public final class SchemaRegistryContainer extends GenericContainer<SchemaRegist
         withEnv("KARAPACE_KAFKA_SCHEMA_READER_STRICT_MODE", "false");
         withEnv("KARAPACE_KAFKA_RETRIABLE_ERRORS_SILENCED", "true");
         withExposedPorts(SCHEMA_REGISTRY_PORT);
-        // Print Karapace output directly; not every test classpath has an SLF4J provider.
-        withLogConsumer(frame -> System.err.print("[karapace] " + frame.getUtf8String()));
+        // Forward Karapace output to the test logs (requires an SLF4J provider on the test classpath).
+        withLogConsumer(
+                new Slf4jLogConsumer(LoggerFactory.getLogger(SchemaRegistryContainer.class)).withPrefix("karapace"));
         // Karapace 5.x+ no longer ships start.sh; the service is launched as a python module.
         withCreateContainerCmdModifier(cmd -> cmd.withEntrypoint("python3", "-m", "karapace"));
 
