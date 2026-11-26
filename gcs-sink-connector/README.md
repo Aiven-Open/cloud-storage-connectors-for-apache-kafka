@@ -33,12 +33,15 @@ template for file names. It supports placeholders with variable names:
 - `topic` - the Kafka topic;
 - `partition:padding=true|false` - the Kafka partition, if `padding` set to `true` it will set leading zeroes for offset, the default value is `false`;
 - `start_offset:padding=true|false` - the Kafka offset of the first record in the file, if `padding` set to `true` it will set leading zeroes for offset, the default value is `false`;
-- `timestamp:unit=yyyy|MM|dd|HH` - the timestamp of when the Kafka record has been processed by the connector.
+- `timestamp:unit=yyyy|MM|dd|HH|M|d|H` - the timestamp of when the Kafka record has been processed by the connector.
    - `unit` parameter values:
      - `yyyy` - year, e.g. `2020` (please note that `YYYY` is deprecated and is interpreted as `yyyy`)
      - `MM` - month, e.g. `03`
      - `dd` - day, e.g. `01`
      - `HH` - hour, e.g. `24`
+     - `M` - month, without a leading zero for single-digit values, e.g. `3`
+     - `d` - day, without a leading zero for single-digit values, e.g. `1`
+     - `H` - hour, without a leading zero for single-digit values, e.g. `2`
 - `key` - the Kafka key.
 
 To add zero padding to Kafka offsets, you need to add additional parameter `padding` in the `start_offset` variable,
