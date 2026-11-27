@@ -20,6 +20,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.stream.Stream;
 
@@ -32,7 +36,6 @@ import io.aiven.kafka.connect.common.source.input.Transformer;
 
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobItemProperties;
-import reactor.core.publisher.Flux;
 
 final public class AzureBlobSourceRecordIteratorTest
         extends
@@ -95,12 +98,15 @@ final public class AzureBlobSourceRecordIteratorTest
             return objects.stream();
         }
 
-        private Flux<ByteBuffer> getStream(final String key) {
+        private InputStream getStream(final String key) {
             final ByteBuffer buffer = getData(key);
-            if (buffer != null) {
-                return Flux.just(buffer);
+            if (buffer == null) {
+                return InputStream.nullInputStream();
             }
-            return Flux.empty();
+            final ByteBuffer copy = buffer.duplicate();
+            final byte[] bytes = new byte[copy.remaining()];
+            copy.get(bytes);
+            return new ByteArrayInputStream(bytes);
         }
 
         @Override
@@ -112,7 +118,11 @@ final public class AzureBlobSourceRecordIteratorTest
 
             azureBlobClient = mock(AzureBlobClient.class);
             when(azureBlobClient.getAzureBlobStream(null)).thenAnswer(env -> dequeueData());
-            when(azureBlobClient.getBlob(anyString())).thenAnswer(env -> getStream(env.getArgument(0)));
+            try {
+                when(azureBlobClient.openBlob(anyString())).thenAnswer(env -> getStream(env.getArgument(0)));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
         }
     }
 }

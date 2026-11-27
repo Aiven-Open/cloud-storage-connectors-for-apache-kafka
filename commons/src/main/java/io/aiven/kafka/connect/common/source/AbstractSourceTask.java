@@ -140,6 +140,10 @@ public abstract class AbstractSourceTask extends SourceTask {
                     logger.warn("{} interrupted -- EXITING", this.toString());
                 } catch (RuntimeException e) { // NOPMD AvoidCatchingGenericException
                     logger.error("{} failed -- EXITING", this.toString(), e);
+                } catch (Error e) { // NOPMD AvoidCatchingThrowable
+                    // without this an Error such as NoClassDefFoundError never reaches the connector log
+                    logger.error("{} failed -- EXITING", this.toString(), e);
+                    throw e;
                 }
                 logger.info("{} finished", this.toString());
 
