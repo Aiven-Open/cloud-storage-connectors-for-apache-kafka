@@ -18,15 +18,21 @@ package io.aiven.kafka.connect.azure.source.utils;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -110,6 +116,36 @@ class AzureBlobClientTest {
         assertThat(content).isNotNull();
         final String downloadedContent = UTF_8.decode(content).toString();
         assertThat(blobContent).isEqualTo(downloadedContent);
+    }
+
+    @Test
+    void testOpenBlobRemovesTemporaryFileWhenDownloadFails() {
+        client = new AzureBlobClient(config);
+        final AtomicReference<String> target = new AtomicReference<>();
+        when(blobClient.downloadToFile(anyString(), eq(true))).thenAnswer(invocation -> {
+            target.set(invocation.getArgument(0));
+            return Mono.error(new IllegalStateException("download failed"));
+        });
+
+        assertThatThrownBy(() -> client.openBlob("teste-1")).hasMessageContaining("download failed");
+        assertThat(Path.of(target.get())).doesNotExist();
+    }
+
+    @Test
+    void testOpenBlobReturnsWholeFile() throws IOException {
+        client = new AzureBlobClient(config);
+        final byte[] content = "x".repeat(100_000).getBytes(UTF_8);
+        final AtomicReference<String> target = new AtomicReference<>();
+        when(blobClient.downloadToFile(anyString(), eq(true))).thenAnswer(invocation -> {
+            target.set(invocation.getArgument(0));
+            Files.write(Path.of(target.get()), content);
+            return Mono.empty();
+        });
+
+        try (InputStream stream = client.openBlob("teste-1")) {
+            assertThat(stream.readAllBytes()).isEqualTo(content);
+        }
+        assertThat(Path.of(target.get())).doesNotExist();
     }
 
     private static Stream<BlobItem> createListOfBlobs(final int numberOfItems) {

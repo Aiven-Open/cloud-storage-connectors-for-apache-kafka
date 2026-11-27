@@ -16,7 +16,12 @@
 
 package io.aiven.kafka.connect.azure.source.utils;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -74,6 +79,32 @@ public class AzureBlobClient {
      */
     public Flux<ByteBuffer> getBlob(final String blobName) {
         return getBlobAsyncClient(blobName).downloadStream();
+    }
+
+    /**
+     * Downloads the complete blob into a temporary file and opens it for reading. The file is deleted when the stream
+     * is closed. The whole object is never held in memory.
+     *
+     * @param blobName
+     *            Name of the blob which is to be downloaded from Azure.
+     * @return A stream over the complete content of the blob.
+     * @throws IOException
+     *             if the temporary file cannot be created or opened.
+     */
+    public InputStream openBlob(final String blobName) throws IOException {
+        final Path tempFile = Files.createTempFile("azure-source-", ".blob");
+        boolean opened = false;
+        try {
+            // overwrite = true because the temporary file already exists
+            getBlobAsyncClient(blobName).downloadToFile(tempFile.toString(), true).block();
+            final InputStream stream = Files.newInputStream(tempFile, StandardOpenOption.DELETE_ON_CLOSE);
+            opened = true;
+            return stream;
+        } finally {
+            if (!opened) {
+                Files.deleteIfExists(tempFile);
+            }
+        }
     }
 
     /**

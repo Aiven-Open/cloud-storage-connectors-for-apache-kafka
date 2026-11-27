@@ -25,7 +25,6 @@ import io.aiven.kafka.connect.common.source.OffsetManager;
 import io.aiven.kafka.connect.common.source.input.Transformer;
 
 import com.azure.storage.blob.models.BlobItem;
-import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 import org.apache.commons.io.function.IOSupplier;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -67,7 +66,7 @@ public final class AzureBlobSourceRecordIterator
 
     @Override
     protected IOSupplier<InputStream> getInputStream(final AzureBlobSourceRecord sourceRecord) {
-        return () -> new ByteBufferBackedInputStream(azureBlobClient.getBlob(sourceRecord.getNativeKey()).blockFirst());
+        return () -> azureBlobClient.openBlob(sourceRecord.getNativeKey());
     }
 
     @Override
