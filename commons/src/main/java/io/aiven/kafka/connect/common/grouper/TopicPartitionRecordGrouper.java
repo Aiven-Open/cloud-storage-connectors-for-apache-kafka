@@ -43,7 +43,7 @@ import io.aiven.kafka.connect.common.templating.VariableTemplatePart.Parameter;
  * <p>
  * The class supports limited and unlimited number of records in files.
  */
-public class TopicPartitionRecordGrouper implements RecordGrouper {
+public class TopicPartitionRecordGrouper implements FileRecordGrouper {
 
     private final Template filenameTemplate;
 
@@ -53,7 +53,7 @@ public class TopicPartitionRecordGrouper implements RecordGrouper {
 
     private final StableTimeFormatter timeFormatter;
 
-    private final Rotator<List<SinkRecord>> rotator;
+    private final FileRotationTracker rotationTracker;
 
     /**
      * A constructor.
@@ -73,14 +73,7 @@ public class TopicPartitionRecordGrouper implements RecordGrouper {
 
         this.timeFormatter = new StableTimeFormatter(tsSource);
 
-        this.rotator = buffer -> {
-            final var unlimited = maxRecordsPerFile == null;
-            if (unlimited) {
-                return false;
-            } else {
-                return buffer == null || buffer.size() >= maxRecordsPerFile;
-            }
-        };
+        this.rotationTracker = new FileRotationTracker(maxRecordsPerFile);
     }
 
     @Override
@@ -88,6 +81,7 @@ public class TopicPartitionRecordGrouper implements RecordGrouper {
         Objects.requireNonNull(record, "record cannot be null");
         final String recordKey = resolveRecordKeyFor(record);
         fileBuffers.computeIfAbsent(recordKey, ignored -> new ArrayList<>()).add(record);
+        rotationTracker.recordAdded(recordKey);
 
         return recordKey;
     }
@@ -96,8 +90,9 @@ public class TopicPartitionRecordGrouper implements RecordGrouper {
         final TopicPartition topicPartition = new TopicPartition(record.topic(), record.kafkaPartition());
         final SinkRecord currentHeadRecord = currentHeadRecords.computeIfAbsent(topicPartition, ignored -> record);
         String recordKey = generateRecordKey(topicPartition, currentHeadRecord, record);
-        if (rotator.rotate(fileBuffers.get(recordKey))) {
+        if (rotationTracker.shouldRotate(recordKey)) {
             // Create new file using this record as the head record.
+            rotationTracker.remove(recordKey);
             recordKey = generateNewRecordKey(record);
         }
         return recordKey;
@@ -130,12 +125,26 @@ public class TopicPartitionRecordGrouper implements RecordGrouper {
     public void clear() {
         currentHeadRecords.clear();
         fileBuffers.clear();
+        rotationTracker.clear();
     }
 
-    // Clears only the buffered records, keeping the head records for consistent record keys.
+    @Override
     public void clearFileBuffers(final String recordKey) {
         Objects.requireNonNull(recordKey, "record key cannot be null");
         fileBuffers.remove(recordKey);
+    }
+
+    @Override
+    public boolean isFileFull(final String recordKey) {
+        Objects.requireNonNull(recordKey, "record key cannot be null");
+        return rotationTracker.isFileFull(recordKey);
+    }
+
+    @Override
+    public void completeFile(final String recordKey) {
+        Objects.requireNonNull(recordKey, "record key cannot be null");
+        fileBuffers.remove(recordKey);
+        rotationTracker.completeFile(recordKey);
     }
 
     @Override
