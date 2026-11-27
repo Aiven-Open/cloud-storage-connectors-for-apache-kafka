@@ -88,6 +88,11 @@ dependencies {
     exclude(group = "io.netty", module = "netty")
   }
 
+  // Needed at runtime to read Parquet: ParquetReadOptions loads
+  // org.apache.hadoop.mapreduce.lib.input.FileInputFormat. Without this jar in the
+  // distribution the source task dies with NoClassDefFoundError.
+  runtimeOnly(apache.hadoop.mapreduce.client.core) { isTransitive = false }
+
   testFixturesImplementation(apache.kafka.connect.api)
   testFixturesImplementation("javax.validation:validation-api:2.0.1.Final")
   testFixturesImplementation("org.apache.kafka:connect-runtime:${kafkaTestingVersion}:test")
