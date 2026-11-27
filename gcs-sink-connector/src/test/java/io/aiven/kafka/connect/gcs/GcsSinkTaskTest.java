@@ -78,7 +78,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
-@SuppressWarnings("PMD.ExcessiveImports")
+@SuppressWarnings({ "PMD.ExcessiveImports", "PMD.TooManyMethods" })
 final class GcsSinkTaskTest {
 
     private static final String TEST_BUCKET = "test-bucket";
@@ -689,6 +689,58 @@ final class GcsSinkTaskTest {
                     readSplittedAndDecodedLinesFromBlob("topic0-0-" + i + compressionType.extension(), compression, 0))
                     .containsExactly(Collections.singletonList("value" + i));
         }
+    }
+
+    @Test
+    void closesWriterWhenMaxRecordsPerFileReached() {
+        properties.put(SinkCommonConfig.FILE_MAX_RECORDS, "2");
+        final SinkTaskContext mockedContext = mock(SinkTaskContext.class);
+        final GcsSinkTask task = new GcsSinkTask(properties, storage);
+        task.initialize(mockedContext);
+
+        task.put(List.of(createRecord("topic0", 0, "key0", "value0", 10, 1000),
+                createRecord("topic0", 1, "key1", "value1", 20, 1001),
+                createRecord("topic0", 0, "key2", "value2", 11, 1002)));
+
+        // The full file is finalized right away; the other partition's file stays buffered.
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10");
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-10", "none", 0)).containsExactly(List.of("value0"),
+                List.of("value2"));
+        assertThat(FieldSupport.EXTRACTION.fieldValue("activeBlobWriters", Map.class, task)).isEmpty();
+        verify(mockedContext).requestCommit();
+
+        // The next record for that partition starts a new file; the finalized one is left untouched.
+        task.put(List.of(createRecord("topic0", 0, "key3", "value3", 12, 1003)));
+        task.flush(null);
+
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10", "topic0-0-12", "topic0-1-20");
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-10", "none", 0)).containsExactly(List.of("value0"),
+                List.of("value2"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-12", "none", 0)).containsExactly(List.of("value3"));
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-1-20", "none", 0)).containsExactly(List.of("value1"));
+        assertThat(FieldSupport.EXTRACTION.fieldValue("activeBlobWriters", Map.class, task)).isEmpty();
+    }
+
+    @Test
+    void maxRecordsPerFileReachedAcrossInterimWrite() {
+        properties.put(SinkCommonConfig.FILE_MAX_RECORDS, "3");
+        final MutableClock testClock = new MutableClock(Instant.now());
+        final GcsSinkTask task = new GcsSinkTask(properties, storage, testClock);
+        task.initialize(mock(SinkTaskContext.class));
+
+        task.put(List.of(createRecord("topic0", 0, "key0", "value0", 10, 1000)));
+        testClock.advance(Duration.ofSeconds(11));
+        // Interim write: records are streamed to the open writer, but the file is not finished yet.
+        task.put(List.of(createRecord("topic0", 0, "key1", "value1", 11, 1001)));
+        assertThat(FieldSupport.EXTRACTION.fieldValue("activeBlobWriters", Map.class, task))
+                .containsOnlyKeys("topic0-0-10");
+
+        task.put(List.of(createRecord("topic0", 0, "key2", "value2", 12, 1002)));
+
+        assertThat(testBucketAccessor.getBlobNames()).containsExactly("topic0-0-10");
+        assertThat(readSplittedAndDecodedLinesFromBlob("topic0-0-10", "none", 0)).containsExactly(List.of("value0"),
+                List.of("value1"), List.of("value2"));
+        assertThat(FieldSupport.EXTRACTION.fieldValue("activeBlobWriters", Map.class, task)).isEmpty();
     }
 
     @SuppressWarnings("deprecation")

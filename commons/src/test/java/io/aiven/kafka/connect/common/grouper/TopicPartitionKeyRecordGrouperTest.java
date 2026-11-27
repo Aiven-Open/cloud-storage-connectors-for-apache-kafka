@@ -199,6 +199,47 @@ final class TopicPartitionKeyRecordGrouperTest {
     }
 
     @Test
+    void clearFileBuffersKeepsFileIdentityAndRecordCount() {
+        final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{key}}-{{start_offset}}");
+        final TopicPartitionKeyRecordGrouper grouper = new TopicPartitionKeyRecordGrouper(filenameTemplate, 2,
+                DEFAULT_TS_SOURCE);
+
+        assertThat(grouper.put(T0P0R0)).isEqualTo("topic0-0-null-0");
+        assertThat(grouper.isFileFull("topic0-0-null-0")).isFalse();
+
+        grouper.clearFileBuffers("topic0-0-null-0");
+        assertThat(grouper.records()).isEmpty();
+
+        // Still the same file: the record already released counts towards its limit.
+        assertThat(grouper.put(T0P0R2)).isEqualTo("topic0-0-null-0");
+        assertThat(grouper.isFileFull("topic0-0-null-0")).isTrue();
+
+        assertThat(grouper.put(T0P0R3)).isEqualTo("topic0-0-null-3");
+        assertThat(grouper.records()).containsOnly(entry("topic0-0-null-0", list(T0P0R2)),
+                entry("topic0-0-null-3", list(T0P0R3)));
+    }
+
+    @Test
+    void completeFileStartsNewFileForNextRecord() {
+        final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{key}}-{{start_offset}}");
+        final TopicPartitionKeyRecordGrouper grouper = new TopicPartitionKeyRecordGrouper(filenameTemplate, null,
+                DEFAULT_TS_SOURCE);
+
+        assertThat(grouper.put(T0P0R0)).isEqualTo("topic0-0-null-0");
+        assertThat(grouper.put(T0P0R1)).isEqualTo("topic0-0-some_key-1");
+
+        grouper.completeFile("topic0-0-null-0");
+        assertThat(grouper.records()).containsOnly(entry("topic0-0-some_key-1", list(T0P0R1)));
+
+        // Only the completed topic/partition/key combination moves to a new file.
+        assertThat(grouper.put(T0P0R2)).isEqualTo("topic0-0-null-2");
+        assertThat(grouper.put(T0P0R3)).isEqualTo("topic0-0-null-2");
+        assertThat(grouper.put(T0P0R4)).isEqualTo("topic0-0-some_key-1");
+        assertThat(grouper.records()).containsOnly(entry("topic0-0-null-2", list(T0P0R2, T0P0R3)),
+                entry("topic0-0-some_key-1", list(T0P0R1, T0P0R4)));
+    }
+
+    @Test
     void setZeroPaddingForKafkaOffset() {
         final Template filenameTemplate = Template.of("{{topic}}-{{partition}}-{{key}}-{{start_offset:padding=true}}");
         final TopicPartitionKeyRecordGrouper grouper = new TopicPartitionKeyRecordGrouper(filenameTemplate, null,

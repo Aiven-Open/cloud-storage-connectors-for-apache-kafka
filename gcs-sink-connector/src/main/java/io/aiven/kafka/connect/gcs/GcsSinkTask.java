@@ -33,10 +33,9 @@ import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 
+import io.aiven.kafka.connect.common.grouper.FileRecordGrouper;
 import io.aiven.kafka.connect.common.grouper.RecordGrouper;
 import io.aiven.kafka.connect.common.grouper.RecordGrouperFactory;
-import io.aiven.kafka.connect.common.grouper.TopicPartitionKeyRecordGrouper;
-import io.aiven.kafka.connect.common.grouper.TopicPartitionRecordGrouper;
 
 import com.google.api.gax.retrying.RetrySettings;
 import com.google.api.gax.rpc.FixedHeaderProvider;
@@ -45,11 +44,14 @@ import com.google.cloud.storage.StorageOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("PMD.TooManyMethods")
 public final class GcsSinkTask extends SinkTask {
     private static final Logger LOG = LoggerFactory.getLogger(GcsSinkTask.class);
     private static final String USER_AGENT_HEADER_KEY = "user-agent";
 
     private RecordGrouper recordGrouper;
+    // Same instance as recordGrouper when files stay open across writes; null for one-record-per-file groupers.
+    private FileRecordGrouper fileRecordGrouper;
 
     private GcsSinkConfig config;
 
@@ -119,6 +121,9 @@ public final class GcsSinkTask extends SinkTask {
         try {
             this.topicPartitionManager = new TopicPartitionManager();
             this.recordGrouper = RecordGrouperFactory.newRecordGrouper(config);
+            if (recordGrouper instanceof FileRecordGrouper) {
+                this.fileRecordGrouper = (FileRecordGrouper) recordGrouper;
+            }
             final String grType = RecordGrouperFactory.resolveRecordGrouperType(config.getFilenameTemplate());
             if (RecordGrouperFactory.KEY_RECORD.equals(grType)
                     || RecordGrouperFactory.KEY_TOPIC_PARTITION_RECORD.equals(grType)) {
@@ -137,14 +142,7 @@ public final class GcsSinkTask extends SinkTask {
         LOG.debug("Buffering {} records. Current buffer size: {} bytes", records.size(), currentBufferedBytes);
         boolean shouldRequestCommit = false;
         for (final SinkRecord record : records) {
-            final String recordKey = recordGrouper.put(record);
-            if (!isOneRecordPerFile) {
-                final long recordSize = bufferTracker.addRecord(recordKey, record);
-                currentBufferedBytes += recordSize;
-                if (bufferTracker.isThresholdReached(recordKey)) {
-                    shouldRequestCommit = true;
-                }
-            }
+            shouldRequestCommit |= bufferRecord(record);
         }
 
         if (isOneRecordPerFile) {
@@ -170,6 +168,20 @@ public final class GcsSinkTask extends SinkTask {
         if (shouldRequestCommit) {
             topicPartitionManager.requestCommit();
         }
+    }
+
+    // Buffers one record and returns whether a file limit was reached, i.e. an offset commit should be requested.
+    private boolean bufferRecord(final SinkRecord record) {
+        final String recordKey = recordGrouper.put(record);
+        if (!isOneRecordPerFile) {
+            currentBufferedBytes += bufferTracker.addRecord(recordKey, record);
+            if (fileRecordGrouper != null && fileRecordGrouper.isFileFull(recordKey)) {
+                closeCompletedFile(recordKey);
+                return true;
+            }
+            return bufferTracker.isThresholdReached(recordKey);
+        }
+        return false;
     }
 
     @Override
@@ -248,10 +260,8 @@ public final class GcsSinkTask extends SinkTask {
         for (final String recordKey : recordKeys) {
             try {
                 processSingleFileWrite(recordKey, recordsToWrite.get(recordKey));
-                if (recordGrouper instanceof TopicPartitionRecordGrouper) {
-                    ((TopicPartitionRecordGrouper) recordGrouper).clearFileBuffers(recordKey);
-                } else if (recordGrouper instanceof TopicPartitionKeyRecordGrouper) {
-                    ((TopicPartitionKeyRecordGrouper) recordGrouper).clearFileBuffers(recordKey);
+                if (fileRecordGrouper != null) {
+                    fileRecordGrouper.clearFileBuffers(recordKey);
                 }
             } catch (final ConnectException e) {
                 LOG.error("Failed to write records for record key {}: {}", recordKey, e.getMessage());
@@ -275,8 +285,7 @@ public final class GcsSinkTask extends SinkTask {
             throw firstException;
         }
 
-        if (!(recordGrouper instanceof TopicPartitionRecordGrouper
-                || recordGrouper instanceof TopicPartitionKeyRecordGrouper)) {
+        if (fileRecordGrouper == null) {
             recordGrouper.clear();
         }
     }
@@ -313,6 +322,43 @@ public final class GcsSinkTask extends SinkTask {
         }
     }
 
+    // Called as soon as a file reaches file.max.records: its remaining buffered records are written and the writer
+    // is closed right away instead of lingering in activeBlobWriters until the next flush(). The writer is removed
+    // and closed even when the write fails, mirroring writeAndCloseSingleFile; the records then stay buffered and
+    // the partial object is replaced when the write is retried.
+    @SuppressWarnings("PMD.CloseResource")
+    private void closeCompletedFile(final String filename) {
+        final List<SinkRecord> records = recordGrouper.records().getOrDefault(filename, List.of());
+        LOG.debug("File {} reached file.max.records ({}). Writing {} buffered records and closing it.", filename,
+                config.getMaxRecordsPerFile(), records.size());
+
+        ConnectException writeFailure = null;
+        try {
+            processSingleFileWrite(filename, records);
+        } catch (final ConnectException e) {
+            writeFailure = e;
+        }
+
+        final GcsBlobWriter blobWriter = activeBlobWriters.remove(filename);
+        if (blobWriter != null) {
+            try {
+                blobWriter.close();
+            } catch (final IOException e) {
+                if (writeFailure == null) {
+                    throw new ConnectException("Failed to close GCS file " + filename, e);
+                }
+                writeFailure.addSuppressed(e);
+            }
+        }
+        if (writeFailure != null) {
+            throw writeFailure;
+        }
+
+        currentBufferedBytes -= records.stream().mapToLong(bufferTracker::estimateRecordSize).sum();
+        fileRecordGrouper.completeFile(filename);
+        bufferTracker.remove(filename);
+    }
+
     // Important: this method is only safe to call during put(), flush(), or preCommit(); otherwise,
     // a ConcurrentModificationException may be triggered if the Connect framework is in the middle of
     // a method invocation on the consumer for this task. This becomes especially likely if all topics
@@ -334,7 +380,6 @@ public final class GcsSinkTask extends SinkTask {
 
     private final static class BufferTracker {
         private final Map<String, Long> fileBufferBytes = new HashMap<>();
-        private final Map<String, Integer> fileRecordCounts = new HashMap<>();
         private final GcsSinkConfig config;
 
         BufferTracker(final GcsSinkConfig config) {
@@ -345,7 +390,6 @@ public final class GcsSinkTask extends SinkTask {
         long addRecord(final String recordKey, final SinkRecord record) {
             final long recordSize = estimateRecordSize(record);
             fileBufferBytes.put(recordKey, fileBufferBytes.getOrDefault(recordKey, 0L) + recordSize);
-            fileRecordCounts.put(recordKey, fileRecordCounts.getOrDefault(recordKey, 0) + 1);
             return recordSize;
         }
 
@@ -356,13 +400,15 @@ public final class GcsSinkTask extends SinkTask {
                     return true;
                 }
             }
-            return config.getMaxRecordsPerFile() > 0
-                    && fileRecordCounts.getOrDefault(recordKey, 0) >= config.getMaxRecordsPerFile();
+            return false;
+        }
+
+        void remove(final String recordKey) {
+            fileBufferBytes.remove(recordKey);
         }
 
         void clearAll() {
             fileBufferBytes.clear();
-            fileRecordCounts.clear();
         }
 
         // Estimates the size of a SinkRecord in bytes. This is a rough approximation based on the byte
