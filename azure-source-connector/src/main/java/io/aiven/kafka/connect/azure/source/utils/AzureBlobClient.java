@@ -66,9 +66,10 @@ public class AzureBlobClient {
     public Stream<BlobItem> getAzureBlobStream(final String offset) {
         final ListBlobsOptions options = new ListBlobsOptions().setPrefix(config.getAzurePrefix())
                 .setMaxResultsPerPage(config.getAzureFetchPageSize());
-        return offset == null
-                ? containerAsyncClient.listBlobs(options).toStream().filter(filterPredicate)
-                : containerAsyncClient.listBlobs(options, offset).toStream().filter(filterPredicate);
+        final Stream<BlobItem> blobs = containerAsyncClient.listBlobs(options).toStream().filter(filterPredicate);
+        // The second argument of listBlobs is an opaque continuation token returned by the service, not a blob name, so
+        // "start after this blob" has to be applied here.
+        return offset == null ? blobs : blobs.filter(blobItem -> blobItem.getName().compareTo(offset) > 0);
     }
 
     /**

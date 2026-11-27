@@ -119,6 +119,18 @@ class AzureBlobClientTest {
     }
 
     @Test
+    void testListAllBlobsWithOffsetReturnsOnlyLexicallyLaterBlobs() {
+        client = new AzureBlobClient(config);
+        final PagedFlux<BlobItem> flux = mock(PagedFlux.class);
+        when(flux.toStream()).thenReturn(createListOfBlobs(100));
+        when(containerClient.listBlobs(any())).thenReturn(flux);
+
+        // names are "0".."99"; lexically after "97" are only "98" and "99"
+        assertThat(client.getAzureBlobStream("97").map(BlobItem::getName).collect(Collectors.toList()))
+                .containsExactly("98", "99");
+    }
+
+    @Test
     void testOpenBlobRemovesTemporaryFileWhenDownloadFails() {
         client = new AzureBlobClient(config);
         final AtomicReference<String> target = new AtomicReference<>();
